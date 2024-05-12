@@ -10,6 +10,9 @@
  * @property {string} sortOrder
  */
 
+/**
+ * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
+ */
 export class DataTable {
   /** @type {HTMLElement} */
   #table;
@@ -39,9 +42,9 @@ export class DataTable {
 
   /**
    * @param {Object} options
-   * @param {Element | string} options.table
-   * @param {Column[]} options.columns
-   * @param {Object[]} options.data
+   * @param {Element | string} options.table  - Selector or HTMLElement for the table.
+   * @param {Column[]} options.columns        - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
+   * @param {Object[]} options.data           - Data to be loaded to the table.
    */
   constructor({ table, columns, data }) {
     table = getElement(table, "table");
@@ -352,7 +355,8 @@ export class DataTable {
           }
 
           if (typeof col.sorter === "function") {
-            return col.sorter(aValue, bValue);
+            const ret = col.sorter(aValue, bValue);
+            if (ret !== 0) return ret;
           }
 
           if (aValue < bValue) return -1;

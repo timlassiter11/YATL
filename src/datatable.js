@@ -6,6 +6,7 @@
  * @property {boolean} searchable
  * @property {function} formatter
  * @property {function} sorter
+ * @property {function} compare
  * @property {Element} element
  * @property {string} sortOrder
  */
@@ -162,6 +163,14 @@ export class DataTable {
   }
 
   /**
+   * Get total row count of visible data.
+   * @returns {number}
+   */
+  get length() {
+    return this.#filterRows ? this.#filterRows.length : 0;
+  }
+
+  /**
    * Loads the given rows into the table.
    * This will overwrite any already existing rows.
    *
@@ -276,7 +285,7 @@ export class DataTable {
     return String(value).includes(query);
   }
 
-  #filterField(value, filter) {
+  #filterField(value, filter, compareFunction) {
     if (Array.isArray(filter)) {
       // If it's an array, we will use an OR filter.
       // If any filters in the array match, keep it.
@@ -286,6 +295,10 @@ export class DataTable {
         }
       }
       return false;
+    }
+
+    if (typeof compareFunction === "function") {
+      return compareFunction(value, filter);
     }
 
     if (filter instanceof RegExp) {
@@ -298,8 +311,9 @@ export class DataTable {
   #filterRow(row, index) {
     for (const field in this.#filters) {
       const filter = this.#filters[field];
+      const col = this.#columns[field];
       const value = row[field];
-      if (!this.#filterField(value, filter)) {
+      if (!this.#filterField(value, filter, col.compare)) {
         return false;
       }
     }

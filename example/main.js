@@ -12,7 +12,8 @@ function createData(count) {
   return new Array(count).fill(null).map((v, i) => ({
     // Uncomment this to provide your own random indexes.
     //index: Math.floor(Math.random() * count),
-    name: `Name ${i}`,
+    name: `Row ${i}`,
+    // Random date within a year
     date: today.addDays(Math.floor(Math.random() * 365)),
     quantity: Math.floor(Math.random() * 10),
     cost: Math.random() * 1000,
@@ -55,5 +56,6 @@ const dt = new DataTable({
   ],
 });
 
+// Search table on input
 const input = document.querySelector("input");
 input.addEventListener("input", (event) => dt.search(new RegExp(input.value)));

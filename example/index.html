@@ -13,6 +13,9 @@
 
         .filter-wrapper {
             min-width: 200px;
+            display: flex;
+            flex-direction: column;
+            margin-right: 20px;
         }
 
         .table-wrapper {
@@ -23,15 +26,25 @@
         }
 
         .dt-wrapper {
-            flex-grow: 1;
+            height: 100%;
+        }
+
+        .dt-sortable:hover {
+            background-color: var(--bs-secondary);
         }
     </style>
 </head>
 <body data-bs-theme="dark" class="container-fluid">
     <div class="filter-wrapper">
+        <h5>Filters</h5>
+        <div>
+            <label for="dateInput" class="form-label">Date</label>
+            <input id="dateInput" class="form-control" type="date">
+        </div>
+
     </div>
     <div class="table-wrapper">
-        <input type="search" placeholder="Search by string or regex">
+        <input id="searchInput" type="search" placeholder="Search by string or regex">
         <table id="table" class="table table-hover table-striped"></table>
     </div>
     <script src="./main.js" type="module"></script>

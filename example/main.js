@@ -1,14 +1,15 @@
 import { DataTable } from "../src/datatable.js";
 
-Date.prototype.addDays = function(days) {
+Date.prototype.addDays = function (days) {
   const date = new Date(this.valueOf());
   date.setDate(date.getDate() + days);
   return date;
-}
+};
 
 // Generate random rows of data
 function createData(count) {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   return new Array(count).fill(null).map((v, i) => ({
     // Uncomment this to provide your own random indexes.
     //index: Math.floor(Math.random() * count),
@@ -20,13 +21,16 @@ function createData(count) {
   }));
 }
 
-const dateFormatter = new Intl.DateTimeFormat('en-US');
-const moneyFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const dateFormatter = new Intl.DateTimeFormat("en-US");
+const moneyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 const dt = new DataTable({
   table: "#table",
   // Create lots of data
-  data: createData(100_000),
+  data: createData(1_000_000),
   columns: [
     {
       field: "name",
@@ -39,7 +43,8 @@ const dt = new DataTable({
       title: "Date Created",
       sortable: true,
       sorter: (a, b) => a.getTime() - b.getTime(),
-      formatter: (date, element) => dateFormatter.format(date)
+      compare: (value, filter) => value.getTime() === filter.getTime(),
+      formatter: (date, element) => dateFormatter.format(date),
     },
     {
       field: "quantity",
@@ -51,11 +56,26 @@ const dt = new DataTable({
       field: "cost",
       title: "Cost",
       sortable: true,
-      formatter: (cost, element) => moneyFormatter.format(cost)
-    }
+      formatter: (cost, element) => moneyFormatter.format(cost),
+    },
   ],
 });
 
 // Search table on input
-const input = document.querySelector("input");
-input.addEventListener("input", (event) => dt.search(new RegExp(input.value)));
+const searchInput = document.getElementById("searchInput");
+searchInput.addEventListener("input", (event) =>
+  dt.search(new RegExp(searchInput.value))
+);
+
+// Filter table on date change
+const dateInput = document.getElementById("dateInput");
+dateInput.addEventListener("change", (event) => {
+  const filters = {};
+  if (dateInput.value !== "") {
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format:~:text=date%2Donly%20forms%20are%20interpreted%20as%20a%20UTC%20time%20and%20date%2Dtime%20forms%20are%20interpreted%20as%20local%20time
+    // Date only strings are parsed as UTC timezone but datetime strings are parsed as local time.
+    // Make sure this is parsed as local time to match our generated dates.
+    filters["date"] = new Date(dateInput.value + "T00:00:00");
+  }
+  dt.filter(filters);
+});

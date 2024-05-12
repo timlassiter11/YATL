@@ -167,7 +167,7 @@ export class DataTable {
    * @returns {number}
    */
   get length() {
-    return this.#filterRows ? this.#filterRows.length : 0;
+    return this.#filteredRows ? this.#filteredRows.length : 0;
   }
 
   /**

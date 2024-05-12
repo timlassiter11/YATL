@@ -61,21 +61,30 @@ const dt = new DataTable({
   ],
 });
 
-// Search table on input
-const searchInput = document.getElementById("searchInput");
-searchInput.addEventListener("input", (event) =>
-  dt.search(new RegExp(searchInput.value))
-);
+window.addEventListener("load", () => {
+  const searchInput = document.getElementById("searchInput");
+  const dateInput = document.getElementById("dateInput");
+  const caption = document.getElementById("rowCount");
+  const updateRowCount = () => (caption.innerText = dt.length);
 
-// Filter table on date change
-const dateInput = document.getElementById("dateInput");
-dateInput.addEventListener("change", (event) => {
-  const filters = {};
-  if (dateInput.value !== "") {
-    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format:~:text=date%2Donly%20forms%20are%20interpreted%20as%20a%20UTC%20time%20and%20date%2Dtime%20forms%20are%20interpreted%20as%20local%20time
-    // Date only strings are parsed as UTC timezone but datetime strings are parsed as local time.
-    // Make sure this is parsed as local time to match our generated dates.
-    filters["date"] = new Date(dateInput.value + "T00:00:00");
-  }
-  dt.filter(filters);
+  // Search table on input
+  searchInput.addEventListener("input", (event) => {
+    dt.search(new RegExp(searchInput.value));
+    updateRowCount();
+  });
+
+  // Filter table on date change
+  dateInput.addEventListener("change", (event) => {
+    const filters = {};
+    if (dateInput.value !== "") {
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format:~:text=date%2Donly%20forms%20are%20interpreted%20as%20a%20UTC%20time%20and%20date%2Dtime%20forms%20are%20interpreted%20as%20local%20time
+      // Date only strings are parsed as UTC timezone but datetime strings are parsed as local time.
+      // Make sure this is parsed as local time to match our generated dates.
+      filters["date"] = new Date(dateInput.value + "T00:00:00");
+    }
+    dt.filter(filters);
+    updateRowCount();
+  });
+
+  updateRowCount();
 });

@@ -7,8 +7,7 @@ table.data-table {
 table.dt-headers {
   /* Seamless transition between headers table and body table */
   margin-bottom: 0;
-  /* Keeps headers and columns aligned when there is a scrollbar on tbody */
-  width: calc(100% - var(--scrollbar-width));
+  width: 100%;
 }
 
 .dt-wrapper {
@@ -20,8 +19,18 @@ table.dt-headers {
 }
 
 .dt-scroller {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
+}
+
+.dt-scroller > table.data-table {
+  /* Make the table extend under the scroll bar. */
+  width: calc(100% + var(--scrollbar-width));
+}
+
+.dt-scroller > table.data-table > tbody > tr > *:last-child {
+  padding-right: var(--scrollbar-width);
 }
 
 th.dt-sortable {
@@ -34,16 +43,16 @@ th.dt-sortable::after {
   right: 0px;
   width: 20px;
   height: 20px;
-  content: '';
+  content: "";
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAQAAADYWf5HAAAAkElEQVQoz7X QMQ5AQBCF4dWQSJxC5wwax1Cq1e7BAdxD5SL+Tq/QCM1oNiJidwox0355mXnG/DrEtIQ6azioNZQxI0ykPhTQIwhCR+BmBYtlK7kLJYwWCcJA9M4qdrZrd8pPjZWPtOqdRQy320YSV17OatFC4euts6z39GYMKRPCTKY9UnPQ6P+GtMRfGtPnBCiqhAeJPmkqAAAAAElFTkSuQmCC");
 }
 
 th.dt-sortable.dt-descending::after {
-  content: '';
+  content: "";
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAZUlEQVQ4y2NgGAWjYBSggaqGu5FA/BOIv2PBIPFEUgxjB+IdQPwfC94HxLykus4GiD+hGfQOiB3J8SojEE9EM2wuSJzcsFMG4ttQgx4DsRalkZENxL+AuJQaMcsGxBOAmGvopk8AVz1sLZgg0bsAAAAASUVORK5CYII= ");
 }
 
 th.dt-sortable.dt-ascending::after {
-  content: '';
+  content: "";
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAZ0lEQVQ4y2NgGLKgquEuFxBPAGI2ahhWCsS/gDibUoO0gPgxEP8H4ttArEyuQYxAPBdqEAxPBImTY5gjEL9DM+wTENuQahAvEO9DMwiGdwAxOymGJQLxTyD+jgWDxCMZRsEoGAVoAADeemwtPcZI2wAAAABJRU5ErkJggg==");
 }

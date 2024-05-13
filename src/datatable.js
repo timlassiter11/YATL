@@ -30,7 +30,6 @@ export class DataTable {
   /** @type {Set<string>} */
   #sortPriority = new Set();
 
-
   /**
    * @param {Object} options
    * @param {Element | string} options.table  - Selector or HTMLElement for the table.
@@ -113,9 +112,10 @@ export class DataTable {
         th = document.createElement("th");
       }
 
-      th.dataset.field = col.field;
+      th.dataset.dtField = col.field;
       th.innerHTML = col.title;
       col.element = th;
+      col.visible = col.visible === undefined ? true : col.visible;
       this.#columns[col.field] = col;
       headerRow.append(th);
     }
@@ -123,6 +123,7 @@ export class DataTable {
     // See if user provided columns in thead.
     for (const th of this.#thead.querySelectorAll("th[data-field]")) {
       const field = th.dataset.field;
+      // Columns passed as argument take precedence.
       if (!(field in this.#columns)) {
         this.#columns[field] = {
           field: field,
@@ -130,15 +131,23 @@ export class DataTable {
           element: th,
           sortable: th.dataset.sortable === "true",
           searchable: th.dataset.searchable === "true",
+          visible: th.dataset.visible !== "false",
         };
       }
     }
 
-    // Handle sort events
+    let colVisible = false;
     for (const field in this.#columns) {
       const col = this.#columns[field];
+      const th = col.element;
+      // We need at least one column visible
+      if (col.visible) {
+        colVisible = true;
+        th.style.display = "";
+      } else {
+        th.style.display = "none";
+      }
       if (col.sortable) {
-        const th = col.element;
         th.classList.add("dt-sortable");
         th.addEventListener("click", () => {
           if (!col.sortOrder) {
@@ -150,6 +159,10 @@ export class DataTable {
           }
         });
       }
+    }
+
+    if (!colVisible) {
+      throw new Error("At least one column must be visible");
     }
 
     this.loadData(data);
@@ -174,7 +187,7 @@ export class DataTable {
       if ("index" in rows[0]) {
         console.warn(
           "DataTable uses the index property to keep track of the initial sort order but the\n" +
-            "provided data already contains an index. Rows will be sorted by the given index"
+          "provided data already contains an index. Rows will be sorted by the given index"
         );
       } else {
         // Store initial index so we can "unsort" data.
@@ -234,8 +247,8 @@ export class DataTable {
    * Sort the given column using the given order (asc or desc).
    * If order is none, the columns will be "unsorted" and revert
    * revert back to sorting the by the index ascending.
-   * @param {string} colName 
-   * @param {string} order 
+   * @param {string} colName
+   * @param {string} order
    */
   sort(colName, order) {
     const col = this.#columns[colName];
@@ -260,6 +273,29 @@ export class DataTable {
     }
 
     this.#sortRows();
+  }
+
+  setColumnVisibility(colName, visisble) {
+    const col = this.#columns[colName];
+    if (!col) {
+      console.warn(`Attempting to ${visisble ? "show" : "hide"} non-existent column ${colName}`);
+      return;
+    }
+
+    col.visible = visisble;
+    this.#wrapper
+      .querySelectorAll(
+        `.data-table td[data-dt-field="${colName}"], .dt-headers th[data-dt-field="${colName}"]`
+      )
+      .forEach((element) => (element.style.display = visisble ? "" : "none"));
+  }
+
+  showColumn(colName) {
+    this.setColumnVisibility(colName, true);
+  }
+
+  hideColumn(colName) {
+    this.setColumnVisibility(colName, false);
   }
 
   #searchField(value, query) {
@@ -415,13 +451,17 @@ export class DataTable {
       td.dataset.dtField = field;
       td.innerText = value || "-";
       tr.append(td);
+
+      if (!col.visible) {
+        td.style.display = "none";
+      }
     }
 
     if (typeof this.#rowFormatter === "function") {
       this.#rowFormatter(row, tr);
     }
 
-    return tr.outerHTML
+    return tr.outerHTML;
   }
 }
 
@@ -447,6 +487,13 @@ class TableVirtualScroll {
     }
     tbody.innerHTML = html.join("\n");
     const rowHeight = tbody.offsetHeight / renderSize;
+
+    if (rowHeight <= 0) {
+      throw new Error(
+        "First 1000 rows had no rendered height. Virtual scroll can't be used."
+      );
+    }
+
     const totalContentHeight = rowHeight * rows.length;
     tbody.innerHTML = "";
 
@@ -529,6 +576,7 @@ const getElement = (element, name = "element", parent = document) => {
  * @property {function} compare
  * @property {Element} element
  * @property {string} sortOrder
+ * @property {boolean} visible
  */
 
 /**

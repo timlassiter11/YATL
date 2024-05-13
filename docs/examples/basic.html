@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<head>
+  <title>Basic Example</title>
+  <link href="/src/datatable.css" rel="stylesheet" />
+  <style>
+    .dt-wrapper {
+      width: 400px;
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <table></table>
+  <script src="/src/datatable.js" type="module"></script>
+  <script type="module">
+    import { DataTable } from "/src/datatable.js";
+
+    // Generate random rows of data
+    function createData(count) {
+      return new Array(count).fill(null).map((v, i) => ({
+        name: `Row ${i}`,
+        value: Math.random() * 1000,
+      }));
+    }
+
+    window.addEventListener("load", () => {
+      const dt = new DataTable({
+        table: "table",
+        // Create lots of data
+        data: createData(100),
+        columns: [
+          {
+            field: "name",
+            title: "Name",
+          },
+          {
+            field: "value",
+            title: "Value",
+          },
+        ],
+      });
+    });
+  </script>
+</body>

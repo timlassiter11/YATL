@@ -1,6 +1,7 @@
 table.data-table {
   /* Keeps headers and columns aligned */
   table-layout: fixed;
+  width: 100%;
 }
 
 table.dt-headers {

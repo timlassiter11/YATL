@@ -1,17 +1,4 @@
 /**
- * @typedef {Object} Column
- * @property {string} field
- * @property {string} title
- * @property {boolean} sortable
- * @property {boolean} searchable
- * @property {function} formatter
- * @property {function} sorter
- * @property {function} compare
- * @property {Element} element
- * @property {string} sortOrder
- */
-
-/**
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
  */
 export class DataTable {
@@ -37,21 +24,27 @@ export class DataTable {
   #query;
   /** @type {Object} */
   #filters;
+  /** @type {RowFormatter} */
+  #rowFormatter;
 
   /** @type {Set<string>} */
   #sortPriority = new Set();
 
+
   /**
    * @param {Object} options
    * @param {Element | string} options.table  - Selector or HTMLElement for the table.
+   * @param {RowFormatter} options.formatter  - Callback used to apply any custom formatting to a row.
    * @param {Column[]} options.columns        - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
    * @param {Object[]} options.data           - Data to be loaded to the table.
    */
-  constructor({ table, columns, data }) {
+  constructor({ table, formatter, columns, data }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
     }
+
+    this.#rowFormatter = formatter;
 
     this.#table = table;
     this.#table.classList.add("data-table");
@@ -409,17 +402,26 @@ export class DataTable {
 
   #createRow(index) {
     const row = this.#filteredRows[index];
-    const html = [`<tr data-index="${index}">`];
+    const tr = document.createElement("tr");
+    tr.dataset.dtIndex = index;
+
     for (const field in this.#columns) {
       let value = row[field];
       const col = this.#columns[field];
       if (typeof col.formatter === "function") {
         value = col.formatter(value);
       }
-      html.push(`<td>${value || "-"}</td>`);
+      const td = document.createElement("td");
+      td.dataset.dtField = field;
+      td.innerText = value || "-";
+      tr.append(td);
     }
-    html.push("</tr>");
-    return html.join("");
+
+    if (typeof this.#rowFormatter === "function") {
+      this.#rowFormatter(row, tr);
+    }
+
+    return tr.outerHTML
   }
 }
 
@@ -515,3 +517,22 @@ const getElement = (element, name = "element", parent = document) => {
   }
   return element;
 };
+
+/**
+ * @typedef {Object} Column
+ * @property {string} field
+ * @property {string} title
+ * @property {boolean} sortable
+ * @property {boolean} searchable
+ * @property {function} formatter
+ * @property {function} sorter
+ * @property {function} compare
+ * @property {Element} element
+ * @property {string} sortOrder
+ */
+
+/**
+ * @callback RowFormatter
+ * @param {Object} row
+ * @param {HTMLElement} element
+ */

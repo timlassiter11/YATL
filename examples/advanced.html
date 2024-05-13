@@ -37,7 +37,7 @@
 
     .past-due,
     .past-due>td {
-      background-color: rgba(var(--bs-danger-rgb), 0.2);
+      background-color: rgba(var(--bs-danger-rgb), 0.2) !important;
     }
   </style>
 </head>
@@ -51,7 +51,7 @@
     </div>
   </div>
   <div class="table-wrapper">
-    <input id="searchInput" type="search" placeholder="Search by string or regex" />
+    <input id="searchInput" class="form-control" type="search" placeholder="Search by string or regex" />
     <table id="table" class="table table-hover table-striped"></table>
     <p style="margin-top: 10px">Total Rows: <span id="rowCount"></span></p>
   </div>
@@ -98,41 +98,43 @@
       currency: "USD",
     });
 
-    const dt = new DataTable({
-      table: "#table",
-      formatter: rowFormatter,
-      data: createData(100_000),
-      columns: [
-        {
-          field: "name",
-          title: "Name",
-          searchable: true,
-          sortable: true,
-        },
-        {
-          field: "due_date",
-          title: "Due Date",
-          sortable: true,
-          sorter: (a, b) => a.getTime() - b.getTime(),
-          compare: (value, filter) => value.getTime() === filter.getTime(),
-          formatter: (date, element) => dateFormatter.format(date),
-        },
-        {
-          field: "quantity",
-          title: "Quantity",
-          sortable: true,
-          formatter: (qty, element) => qty.toFixed(1),
-        },
-        {
-          field: "cost",
-          title: "Cost",
-          sortable: true,
-          formatter: (cost, element) => moneyFormatter.format(cost),
-        },
-      ],
-    });
+
 
     window.addEventListener("load", () => {
+      const dt = new DataTable({
+        table: "#table",
+        formatter: rowFormatter,
+        data: createData(100_000),
+        columns: [
+          {
+            field: "name",
+            title: "Name",
+            searchable: true,
+            sortable: true,
+          },
+          {
+            field: "due_date",
+            title: "Due Date",
+            sortable: true,
+            sorter: (a, b) => a.getTime() - b.getTime(),
+            compare: (value, filter) => value.getTime() === filter.getTime(),
+            formatter: (date, element) => dateFormatter.format(date),
+          },
+          {
+            field: "quantity",
+            title: "Quantity",
+            sortable: true,
+            formatter: (qty, element) => qty.toFixed(1),
+          },
+          {
+            field: "cost",
+            title: "Cost",
+            sortable: true,
+            formatter: (cost, element) => moneyFormatter.format(cost),
+          },
+        ],
+      });
+
       const searchInput = document.getElementById("searchInput");
       const dateInput = document.getElementById("dateInput");
       const caption = document.getElementById("rowCount");

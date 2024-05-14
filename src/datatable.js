@@ -12,9 +12,7 @@ export class DataTable {
   #tfoot;
   /** @type {HTMLElement} */
   #scroller;
-  /** @type {HTMLElement} */
-  #wrapper;
-  /** @type {Object.<string> & Column} */
+  /** @type {Object} */
   #columns = {};
   /** @type {Object[]} */
   #rows;
@@ -33,15 +31,10 @@ export class DataTable {
 
   /** @type {Set<string>} */
   #sortPriority = new Set();
+  #emptyText = "No matching records found";
 
   /**
-   * @param {Object} options
-   * @param {Element | string} options.table            - Selector or HTMLElement for the table.
-   * @param {RowFormatter} options.formatter            - Callback used to apply any custom formatting to a row.
-   * @param {Column[]} options.columns                  - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
-   * @param {Object[]} options.data                     - Data to be loaded to the table.
-   * @param {boolean | number} options.virtualScroll    - Automatically enables virtual scroll for the given number of rows.
-   *                                                      If boolean, completely enables or disables it. Defaults to 1000.
+   * @param {TableOptions} options
    */
   constructor({ table, formatter, columns, data, virtualScroll = 1000 }) {
     table = getElement(table, "table");
@@ -65,13 +58,9 @@ export class DataTable {
     this.#scroller = document.createElement("div");
     this.#scroller.classList.add("dt-scroller");
 
-    // Add the wrapper before the table so when we move the
-    // table into the wrapper it stays in the same place.
-    const parent = table.parentElement;
-    this.#wrapper = document.createElement("div");
-    this.#wrapper.className = "dt-wrapper";
-    parent.insertBefore(this.#wrapper, table);
-
+    // Add the scroller before the table so when we move the
+    // table into the scroller it stays in the same place.
+    table.parentElement.insertBefore(this.#scroller, table);
     this.#scroller.append(this.#table);
 
     if (this.#table.querySelectorAll("thead").length > 1) {
@@ -94,18 +83,14 @@ export class DataTable {
       this.#table.insertBefore(this.#thead, this.#tbody);
     }
 
+    this.#thead.classList.add("dt-headers");
+
     // Create the row for the thead if there isn't one
     let headerRow = this.#thead.querySelector("tr:last-of-type");
     if (!headerRow) {
       headerRow = document.createElement("tr");
       this.#thead.append(headerRow);
     }
-
-    // We create a new table for the headers to allow the body
-    // to scroll but the headers to stay in place.
-    const headerTable = document.createElement("table");
-    headerTable.className = this.#table.className + " dt-headers";
-    headerTable.append(this.#thead);
 
     // Create the tbody if it doesn't exists
     if (!this.#tbody) {
@@ -125,14 +110,13 @@ export class DataTable {
 
       if (tr) {
         const index = parseInt(tr.dataset.dtIndex);
-        tr.dispatchEvent(new DataTableRowClickEvent(this.#rows[index], field));
+        if (!isNaN(index)) {
+          tr.dispatchEvent(
+            new DataTableRowClickEvent(this.#rows[index], field)
+          );
+        }
       }
     });
-
-    // Wrapper is a flex column. Add the header table
-    // and then the scroll which wraps the body table.
-    this.#wrapper.append(headerTable);
-    this.#wrapper.append(this.#scroller);
 
     // Initialize columns from argument
     for (const col of columns) {
@@ -167,12 +151,12 @@ export class DataTable {
 
     let colVisible = false;
     for (const field in this.#columns) {
-      const col = this.#columns[field];
+      const col = this.#getColumn(field);
       const th = col.element;
+      th.innerHTML = `<div>${col.title}</div>`;
       // We need at least one column visible
       if (col.visible) {
         colVisible = true;
-        th.style.display = "";
       } else {
         th.style.display = "none";
       }
@@ -205,12 +189,21 @@ export class DataTable {
     this.loadData(data);
   }
 
+  get rows() {
+    return this.#filteredRows;
+  }
+
   /**
    * Get total row count of visible data.
    * @returns {number}
    */
   get length() {
     return this.#filteredRows ? this.#filteredRows.length : 0;
+  }
+
+  /**@returns {HTMLTableElement} */
+  get table() {
+    return this.#table;
   }
 
   /**
@@ -242,12 +235,25 @@ export class DataTable {
     this.#updateTable();
   }
 
+  showMessage(text, classes) {
+    if (Array.isArray(classes)) {
+      tr.className = classes.join(" ");
+    }
+
+    const colSpan = Object.keys(this.#columns).length;
+    this.#tbody.innerHTML = `<tr class="${classes}"><td colSpan=${colSpan}>${text}</td></tr>`;
+  }
+
   /**
    * Search the table using the given string or regular expression
    * @param {string | RegExp} query
    */
   search(query) {
-    this.#query = query;
+    if (typeof query === "string") {
+      query = query.toLocaleLowerCase();
+    }
+
+    this.#query = query === "" ? null : query;
     this.#filterRows();
   }
 
@@ -267,14 +273,7 @@ export class DataTable {
    * @param {Object | filterCallback} filters
    */
   filter(filters) {
-    if (typeof filters === "object") {
-      for (const field in filters) {
-        if (!(field in this.#columns)) {
-          console.warn(`Ignoring filter for unknown column ${field}`);
-          delete filters[field];
-        }
-      }
-    } else if (typeof filters !== "function") {
+    if (typeof filters !== "object" && typeof filters !== "function") {
       throw new TypeError("filters must be object or function");
     }
     this.#filters = filters;
@@ -289,7 +288,7 @@ export class DataTable {
    * @param {string} order
    */
   sort(colName, order) {
-    const col = this.#columns[colName];
+    const col = this.#getColumn(colName);
     if (!col) {
       console.warn(`Attempting to sort non-existent column ${colName}`);
       return;
@@ -314,7 +313,7 @@ export class DataTable {
   }
 
   setColumnVisibility(colName, visisble) {
-    const col = this.#columns[colName];
+    const col = this.#getColumn(colName);
     if (!col) {
       console.warn(
         `Attempting to ${
@@ -325,11 +324,15 @@ export class DataTable {
     }
 
     col.visible = visisble;
-    this.#wrapper
+    this.#table
       .querySelectorAll(
-        `.data-table td[data-dt-field="${colName}"], .dt-headers th[data-dt-field="${colName}"]`
+        `td[data-dt-field="${colName}"], th[data-dt-field="${colName}"]`
       )
       .forEach((element) => (element.style.display = visisble ? "" : "none"));
+
+    this.#table.dispatchEvent(
+      new DataTableColEvent(visisble ? "show" : "hide", col)
+    );
   }
 
   showColumn(colName) {
@@ -359,10 +362,10 @@ export class DataTable {
         const list = [];
         for (let [key, value] of Object.entries(row)) {
           if (key in this.#columns) {
-            const col = this.#columns[key];
+            const col = this.#getColumn(key);
             if (all || col.visible) {
               if (typeof col.formatter === "function") {
-                value = col.formatter(value);
+                value = col.valueFormatter(value);
               }
               list.push(`"${value}"`);
             }
@@ -396,7 +399,7 @@ export class DataTable {
     if (query instanceof RegExp) {
       return query.test(String(value));
     }
-    return String(value).includes(query);
+    return String(value).toLowerCase().includes(query);
   }
 
   #filterField(value, filter, compareFunction) {
@@ -425,9 +428,10 @@ export class DataTable {
   #filterRow(row, index) {
     for (const field in this.#filters) {
       const filter = this.#filters[field];
-      const col = this.#columns[field];
+      const col = this.#getColumn(field);
+      const compare = col ? col.compare : null;
       const value = row[field];
-      if (!this.#filterField(value, filter, col.compare)) {
+      if (!this.#filterField(value, filter, compare)) {
         return false;
       }
     }
@@ -439,6 +443,7 @@ export class DataTable {
       typeof this.#filters === "function"
         ? this.#filters
         : (row, index) => this.#filterRow(row, index);
+
     this.#filteredRows = this.#rows.filter((row, index) => {
       // Filter takes precedence over search.
       if (!filter(row, index)) {
@@ -447,13 +452,14 @@ export class DataTable {
 
       if (this.#query) {
         for (const field in this.#columns) {
-          const col = this.#columns[field];
+          const col = this.#getColumn(field);
           if (col.searchable) {
-            if (!this.#searchField(row[field], this.#query)) {
-              return false;
+            if (this.#searchField(row[field], this.#query)) {
+              return true;
             }
           }
         }
+        return false;
       }
 
       return true;
@@ -472,7 +478,7 @@ export class DataTable {
     } else {
       this.#filteredRows.sort((a, b) => {
         for (const field of this.#sortPriority) {
-          const col = this.#columns[field];
+          const col = this.#getColumn(field);
           let aValue, bValue;
           if (col.sortOrder === "asc") {
             aValue = a[field];
@@ -519,18 +525,8 @@ export class DataTable {
           .join("\n");
       }
     } else {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.innerText = "No entries found...";
-      td.colSpan = Object.keys(this.#columns).length;
-      tr.append(td);
-      this.#tbody.append(tr);
+      this.showMessage(this.#emptyText, "dt-empty");
     }
-
-    const scrollbarWidth =
-      this.#scroller.offsetWidth - this.#scroller.clientWidth;
-    // Fixes issue where headers don't line up with columns when the scrollbar is visible.
-    this.#wrapper.style.setProperty("--scrollbar-width", `${scrollbarWidth}px`);
   }
 
   #createRow(index) {
@@ -540,13 +536,17 @@ export class DataTable {
 
     for (const field in this.#columns) {
       let value = row[field];
-      const col = this.#columns[field];
-      if (typeof col.formatter === "function") {
-        value = col.formatter(value);
-      }
+      const col = this.#getColumn(field);
       const td = document.createElement("td");
       td.dataset.dtField = field;
+      if (typeof col.valueFormatter === "function") {
+        value = col.valueFormatter(value);
+      }
       td.innerText = value || "-";
+
+      if (typeof col.elementFormatter === "function") {
+        col.elementFormatter(value, row, td);
+      }
       tr.append(td);
 
       if (!col.visible) {
@@ -559,6 +559,15 @@ export class DataTable {
     }
 
     return tr.outerHTML;
+  }
+
+  /**
+   * Just a convenience function that helps with type hints
+   * @param {string} field
+   * @returns {ColumnOptions}
+   */
+  #getColumn(field) {
+    return this.#columns[field];
   }
 }
 
@@ -621,32 +630,35 @@ class TableVirtualScroll {
     }
   }
 
+  scrollCallback = () => {
+    if (this.#animationFrame) {
+      cancelAnimationFrame(this.#animationFrame);
+    }
+    this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
+  };
+
+  renderCallback = () => {
+    this.#renderChunk();
+  };
+
   start() {
     if (this.#started) return;
-
     this.#started = true;
-    const scrollCallback = () => {
-      if (this.#animationFrame) {
-        cancelAnimationFrame(this.#animationFrame);
-      }
-      this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
-    };
-    const renderCallback = () => this.#renderChunk();
 
-    this.#container.addEventListener("scroll", scrollCallback);
-    window.addEventListener("resize", renderCallback);
-
-    this.stop = function stop() {
-      if (this.#animationFrame) {
-        cancelAnimationFrame(this.#animationFrame);
-      }
-
-      this.#container.removeEventListener("scroll", scrollCallback);
-      window.removeEventListener("resize", renderCallback);
-      this.#started = false;
-    };
+    this.#container.addEventListener("scroll", this.scrollCallback);
+    window.addEventListener("resize", this.renderCallback);
 
     this.#renderChunk();
+  }
+
+  stop() {
+    if (this.#animationFrame) {
+      cancelAnimationFrame(this.#animationFrame);
+    }
+
+    this.#container.removeEventListener("scroll", this.scrollCallback);
+    window.removeEventListener("resize", this.renderCallback);
+    this.#started = false;
   }
 
   #renderChunk() {
@@ -695,16 +707,23 @@ export class DataTableEvent extends Event {
   }
 }
 
+export class DataTableColEvent extends DataTableEvent {
+  constructor(type, col) {
+    super(`col.${type}`);
+    this.col = col;
+  }
+}
+
 export class DataTableRowEvent extends DataTableEvent {
   constructor(type, row) {
-    super(type);
+    super(`row.${type}`);
     this.row = row;
   }
 }
 
 export class DataTableRowClickEvent extends DataTableRowEvent {
   constructor(row, field) {
-    super("row.click", row);
+    super("click", row);
     this.field = field;
   }
 }
@@ -733,12 +752,13 @@ let warned = false;
 const WARN_ROW_COUNT = 10_000;
 
 /**
- * @typedef {Object} Column
+ * @typedef {Object} ColumnOptions
  * @property {string} field
  * @property {string} title
  * @property {boolean} sortable
  * @property {boolean} searchable
- * @property {function} formatter
+ * @property {ValueFormatter} valueFormatter
+ * @property {ElementFormatter} elementFormatter
  * @property {function} sorter
  * @property {function} compare
  * @property {Element} element
@@ -747,7 +767,30 @@ const WARN_ROW_COUNT = 10_000;
  */
 
 /**
+ * @typedef {Object} TableOptions
+ * @property {Element | string} table            - Selector or HTMLElement for the table.
+ * @property {RowFormatter} formatter            - Callback used to apply any custom formatting to a row.
+ * @property {ColumnOptions[]} columns           - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
+ * @property {Object[]} data                     - Data to be loaded to the table.
+ * @property {boolean | number} virtualScroll    - Automatically enables virtual scroll for the given number of rows.
+ *                                                 If boolean, completely enables or disables it. Defaults to 1000.
+ */
+
+/**
  * @callback RowFormatter
  * @param {Object} row
+ * @param {HTMLElement} element
+ */
+
+/**
+ * @callback ValueFormatter
+ * @param {any} value
+ * @returns {string}
+ */
+
+/**
+ * @callback ElementFormatter
+ * @param {any} value
+ * @param {object} row
  * @param {HTMLElement} element
  */

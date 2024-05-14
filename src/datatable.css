@@ -1,36 +1,16 @@
 table.data-table {
-  /* Keeps headers and columns aligned */
-  table-layout: fixed;
+  position: relative;
   width: 100%;
 }
 
-table.dt-headers {
-  /* Seamless transition between headers table and body table */
-  margin-bottom: 0;
-  width: 100%;
-}
-
-.dt-wrapper {
-  /* Layout table headers and table body in a column */
-  display: flex;
-  flex-direction: column;
-  /* Fixes issue where wrapper overflows and breaks virtual scroll */
-  min-height: 0;
+table.data-table thead.dt-headers {
+  position: sticky;
+  top: 0;
 }
 
 .dt-scroller {
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: auto;
   height: 100%;
-}
-
-.dt-scroller > table.data-table {
-  /* Make the table extend under the scroll bar. */
-  width: calc(100% + var(--scrollbar-width));
-}
-
-.dt-scroller > table.data-table > tbody > tr > *:last-child {
-  padding-right: var(--scrollbar-width);
 }
 
 th.dt-sortable {
@@ -38,8 +18,13 @@ th.dt-sortable {
   position: relative;
 }
 
+th.dt-sortable > * {
+  padding-right: 15px;
+}
+
 th.dt-sortable::after {
   position: absolute;
+  top: calc(50% - 10px);
   right: 0px;
   width: 20px;
   height: 20px;
@@ -55,4 +40,12 @@ th.dt-sortable.dt-descending::after {
 th.dt-sortable.dt-ascending::after {
   content: "";
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAZ0lEQVQ4y2NgGLKgquEuFxBPAGI2ahhWCsS/gDibUoO0gPgxEP8H4ttArEyuQYxAPBdqEAxPBImTY5gjEL9DM+wTENuQahAvEO9DMwiGdwAxOymGJQLxTyD+jgWDxCMZRsEoGAVoAADeemwtPcZI2wAAAABJRU5ErkJggg==");
+}
+
+.dt-hidden {
+  display: none;
+}
+
+.dt-empty {
+  text-align: center;
 }

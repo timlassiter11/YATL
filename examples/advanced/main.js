@@ -1,6 +1,6 @@
 import { DataTable, DataTableRowEvent } from "../../src/datatable.js";
 
-let dt;
+let dataTable;
 
 window.addEventListener("load", () => {
   const columns = [
@@ -56,11 +56,12 @@ window.addEventListener("load", () => {
   let count = parseInt(url.searchParams.get("count"));
   count = isNaN(count) ? 100000 : count;
 
-  dt = new DataTable({
+  dataTable = new DataTable({
     table: table,
     columns: columns,
     formatter: rowFormatter,
     data: createData(count),
+    virtualScroll: 1000,
   });
 
   // Create visibility toggles for each column
@@ -87,7 +88,7 @@ window.addEventListener("load", () => {
 
     wrapper.onclick = () => input.click();
     input.onchange = (event) => {
-      dt.setColumnVisibility(col.field, input.checked);
+      dataTable.setColumnVisibility(col.field, input.checked);
 
       // Count all visiable columns
       const visibleColumns = columns.reduce((accumulator, col) => {
@@ -114,7 +115,7 @@ window.addEventListener("load", () => {
   const searchInput = document.getElementById("searchInput");
   // Search table on input
   searchInput.addEventListener("input", (event) => {
-    dt.search(new RegExp(searchInput.value));
+    dataTable.search(new RegExp(searchInput.value));
     updateRowCount();
   });
 
@@ -122,7 +123,7 @@ window.addEventListener("load", () => {
 
   document
     .getElementById("exportTable")
-    .addEventListener("click", () => dt.export("DataTable", false));
+    .addEventListener("click", () => dataTable.export("DataTable", false));
 });
 
 Date.prototype.addDays = function (days) {
@@ -163,7 +164,7 @@ function createData(count) {
 }
 
 function updateRowCount() {
-  document.getElementById("rowCount").innerText = dt.length.toLocaleString();
+  document.getElementById("rowCount").innerText = dataTable.length.toLocaleString();
 }
 
 function rowFormatter(row, element) {
@@ -181,7 +182,7 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 const startDateInput = document.getElementById("startDateInput");
 const endDateInput = document.getElementById("endDateInput");
 function updateFilters() {
-  dt.filter({ due_date: { startDate, endDate } });
+  dataTable.filter({ due_date: { startDate, endDate } });
   updateRowCount();
 }
 

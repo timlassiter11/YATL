@@ -100,6 +100,22 @@ export class DataTable {
       this.#table.append(this.#tbody);
     }
 
+    this.#tbody.addEventListener("click", (event) => {
+      let tr, td, field;
+      if (event.target instanceof HTMLTableCellElement) {
+        td = event.target;
+        tr = td.parentElement;
+        field = td.dataset.dtField;
+      } else if (event.target instanceof HTMLTableRowElement) {
+        tr = event.target;
+      }
+
+      if (tr) {
+        const index = parseInt(tr.dataset.dtIndex);
+        tr.dispatchEvent(new DataTableRowClickEvent(this.#rows[index], field));
+      }
+    });
+
     // Wrapper is a flex column. Add the header table
     // and then the scroll which wraps the body table.
     this.#wrapper.append(headerTable);
@@ -187,7 +203,7 @@ export class DataTable {
       if ("index" in rows[0]) {
         console.warn(
           "DataTable uses the index property to keep track of the initial sort order but the\n" +
-          "provided data already contains an index. Rows will be sorted by the given index"
+            "provided data already contains an index. Rows will be sorted by the given index"
         );
       } else {
         // Store initial index so we can "unsort" data.
@@ -278,7 +294,11 @@ export class DataTable {
   setColumnVisibility(colName, visisble) {
     const col = this.#columns[colName];
     if (!col) {
-      console.warn(`Attempting to ${visisble ? "show" : "hide"} non-existent column ${colName}`);
+      console.warn(
+        `Attempting to ${
+          visisble ? "show" : "hide"
+        } non-existent column ${colName}`
+      );
       return;
     }
 
@@ -296,6 +316,49 @@ export class DataTable {
 
   hideColumn(colName) {
     this.setColumnVisibility(colName, false);
+  }
+
+  export(name, all = false) {
+    const rows = all ? this.#rows : this.#filteredRows;
+    if (rows.length === 0) {
+      return;
+    }
+
+    const csvHeaders = Object.keys(rows[0]).filter((value) => {
+      if (!(value in this.#columns)) {
+        return false;
+      }
+
+      return all ? true : this.#columns[value].visible;
+    });
+
+    const csvRows = rows
+      .map((row) => {
+        const list = [];
+        for (let [key, value] of Object.entries(row)) {
+          if (key in this.#columns) {
+            const col = this.#columns[key];
+            if (all || col.visible) {
+              if (typeof col.formatter === "function") {
+                value = col.formatter(value);
+              }
+              list.push(`"${value}"`);
+            }
+          }
+        }
+        return list.join(",");
+      })
+      .join("\n");
+
+    const csvContent = csvHeaders + "\n" + csvRows;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8," });
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name}.csv`;
+    document.body.append(a);
+    a.click();
+    a.remove();
   }
 
   #searchField(value, query) {
@@ -542,6 +605,26 @@ class TableVirtualScroll {
     window.addEventListener("resize", () => renderChunk());
 
     renderChunk();
+  }
+}
+
+export class DataTableEvent extends Event {
+  constructor(type) {
+    super(`dt.${type}`, { bubbles: true });
+  }
+}
+
+export class DataTableRowEvent extends DataTableEvent {
+  constructor(type, row) {
+    super(type);
+    this.row = row;
+  }
+}
+
+export class DataTableRowClickEvent extends DataTableRowEvent {
+  constructor(row, field) {
+    super("row.click", row);
+    this.field = field;
   }
 }
 

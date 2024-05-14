@@ -26,24 +26,37 @@ export class DataTable {
   #filters;
   /** @type {RowFormatter} */
   #rowFormatter;
+  /** @type {TableVirtualScroll} */
+  #virtualScroll;
+  /** @type {number} */
+  #virtualScrollCount;
 
   /** @type {Set<string>} */
   #sortPriority = new Set();
 
   /**
    * @param {Object} options
-   * @param {Element | string} options.table  - Selector or HTMLElement for the table.
-   * @param {RowFormatter} options.formatter  - Callback used to apply any custom formatting to a row.
-   * @param {Column[]} options.columns        - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
-   * @param {Object[]} options.data           - Data to be loaded to the table.
+   * @param {Element | string} options.table            - Selector or HTMLElement for the table.
+   * @param {RowFormatter} options.formatter            - Callback used to apply any custom formatting to a row.
+   * @param {Column[]} options.columns                  - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
+   * @param {Object[]} options.data                     - Data to be loaded to the table.
+   * @param {boolean | number} options.virtualScroll    - Automatically enables virtual scroll for the given number of rows.
+   *                                                      If boolean, completely enables or disables it. Defaults to 1000.
    */
-  constructor({ table, formatter, columns, data }) {
+  constructor({ table, formatter, columns, data, virtualScroll = 1000 }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
     }
 
     this.#rowFormatter = formatter;
+    if (typeof virtualScroll === "number") {
+      this.#virtualScrollCount = virtualScroll;
+    } else if (virtualScroll) {
+      this.#virtualScrollCount = 0;
+    } else {
+      this.#virtualScrollCount = Number.MAX_VALUE;
+    }
 
     this.#table = table;
     this.#table.classList.add("data-table");
@@ -181,6 +194,14 @@ export class DataTable {
       throw new Error("At least one column must be visible");
     }
 
+    this.#virtualScroll = new TableVirtualScroll({
+      container: this.#scroller,
+      table: this.#table,
+      tbody: this.#tbody,
+      generator: (index) => this.#createRow(index),
+      rows: this.#filteredRows,
+    });
+
     this.loadData(data);
   }
 
@@ -211,6 +232,7 @@ export class DataTable {
       }
       this.#rows = rows;
       this.#filteredRows = rows;
+      this.#virtualScroll.rowCount = rows.length;
     } else {
       this.#rows = [];
       this.#filteredRows = [];
@@ -477,13 +499,25 @@ export class DataTable {
   #updateTable() {
     this.#tbody.innerHTML = "";
     if (this.#filteredRows.length) {
-      this.scroller = new TableVirtualScroll({
-        container: this.#scroller,
-        table: this.#table,
-        tbody: this.#tbody,
-        generator: (row) => this.#createRow(row),
-        rows: this.#filteredRows,
-      });
+      if (this.#filteredRows.length >= this.#virtualScrollCount) {
+        this.#virtualScroll.rowCount = this.#filteredRows.length;
+        this.#virtualScroll.start();
+      } else {
+        if (!warned && this.#filteredRows.length > WARN_ROW_COUNT) {
+          warned = true;
+          const count = WARN_ROW_COUNT.toLocaleString();
+          console.warn(
+            `Virtual scroll disabled with more than ${count} rows... Good luck with that!`
+          );
+        }
+
+        if (this.#virtualScroll) {
+          this.#virtualScroll.stop();
+        }
+        this.#tbody.innerHTML = this.#filteredRows
+          .map((row, index) => this.#createRow(index))
+          .join("\n");
+      }
     } else {
       const tr = document.createElement("tr");
       const td = document.createElement("td");
@@ -529,82 +563,129 @@ export class DataTable {
 }
 
 class TableVirtualScroll {
+  #container;
+  #tbody;
+  #generator;
+  #rowCount = 0;
+  #rowHeight = 0;
+  #padding = 2;
+  #animationFrame;
+  #started = false;
+
   /**
    *
    * @param {Object} options
    * @param {HTMLElement} options.container
-   * @param {HTMLElement} options.table
    * @param {HTMLElement} options.tbody
    * @param {Array<Object>} options.rows
    * @param {function} options.generator
    */
-  constructor({ container, table, tbody, generator, rows, nodePadding = 2 }) {
-    let animationFrame;
+  constructor({ container, tbody, generator, nodePadding = 2 }) {
+    this.#container = container;
+    this.#tbody = tbody;
+    this.#generator = generator;
+    this.#padding = nodePadding;
+  }
 
-    const renderSize = Math.min(1000, rows.length);
+  get rowCount() {
+    return this.#rowCount;
+  }
 
+  set rowCount(count) {
+    this.#rowCount = count;
+    if (!this.#rowHeight) {
+      this.updateRowHeight();
+    }
+    this.#renderChunk();
+  }
+
+  updateRowHeight() {
+    if (this.#rowCount === 0) {
+      this.#rowHeight = 0;
+      return;
+    }
+
+    const renderSize = Math.min(1000, this.#rowCount);
     // Create an average row height by rendering the first N rows.
     const html = [];
     for (let i = 0; i < renderSize; ++i) {
-      html.push(generator(i));
+      html.push(this.#generator(i));
     }
-    tbody.innerHTML = html.join("\n");
-    const rowHeight = tbody.offsetHeight / renderSize;
+    this.#tbody.innerHTML = html.join("\n");
+    this.#rowHeight = this.#tbody.offsetHeight / renderSize;
 
-    if (rowHeight <= 0) {
+    if (this.#rowHeight <= 0) {
       throw new Error(
         "First 1000 rows had no rendered height. Virtual scroll can't be used."
       );
     }
+  }
 
-    const totalContentHeight = rowHeight * rows.length;
-    tbody.innerHTML = "";
+  start() {
+    if (this.#started) return;
 
-    let scrollTop = tbody.scrollTop;
-    table.style.overflow = "hidden";
+    this.#started = true;
+    const scrollCallback = () => {
+      if (this.#animationFrame) {
+        cancelAnimationFrame(this.#animationFrame);
+      }
+      this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
+    };
+    const renderCallback = () => this.#renderChunk();
 
-    const renderChunk = () => {
-      let startNode = Math.floor(scrollTop / rowHeight) - nodePadding;
-      startNode = Math.max(0, startNode);
+    this.#container.addEventListener("scroll", scrollCallback);
+    window.addEventListener("resize", renderCallback);
 
-      let visibleNodesCount =
-        Math.ceil(container.offsetHeight / rowHeight) + 2 * nodePadding;
-      visibleNodesCount = Math.min(rows.length - startNode, visibleNodesCount);
+    this.stop = function stop() {
+      if (this.#animationFrame) {
+        cancelAnimationFrame(this.#animationFrame);
+      }
 
-      const offsetY = startNode * rowHeight;
-      const remainingHeight =
-        totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
+      this.#container.removeEventListener("scroll", scrollCallback);
+      window.removeEventListener("resize", renderCallback);
+      this.#started = false;
+    };
 
-      try {
-        const visibleChildren = new Array(visibleNodesCount)
-          .fill(null)
-          .map((_, index) => generator(index + startNode));
-        // We create two empty rows. One at the top and one at the bottom.
-        // Resize the rows accordingly to move the rendered rows to where we want.
-        tbody.innerHTML = `
+    this.#renderChunk();
+  }
+
+  #renderChunk() {
+    const scrollTop = this.#container.scrollTop;
+    const rowCount = this.#rowCount;
+    const rowHeight = this.#rowHeight;
+    const padding = this.#padding;
+    const viewHeight = this.#container.offsetHeight;
+    const totalContentHeight = rowHeight * rowCount;
+
+    if (!rowCount || !rowHeight) {
+      return;
+    }
+
+    let startNode = Math.floor(scrollTop / rowHeight) - padding;
+    startNode = Math.max(0, startNode);
+
+    let visibleNodesCount = Math.ceil(viewHeight / rowHeight) + 2 * padding;
+    visibleNodesCount = Math.min(rowCount - startNode, visibleNodesCount);
+
+    const offsetY = startNode * rowHeight;
+    const remainingHeight =
+      totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
+
+    try {
+      const visibleChildren = new Array(visibleNodesCount)
+        .fill(null)
+        .map((_, index) => this.#generator(index + startNode));
+      // We create two empty rows. One at the top and one at the bottom.
+      // Resize the rows accordingly to move the rendered rows to where we want.
+      this.#tbody.innerHTML = `
         <tr style="height: ${offsetY}px;"></tr>
         ${visibleChildren.join("\n")}
         <tr style="height: ${remainingHeight}px;"></tr>`;
-      } catch (e) {
-        if (e instanceof RangeError) {
-          console.log(e);
-        }
+    } catch (e) {
+      if (e instanceof RangeError) {
+        console.log(e);
       }
-    };
-
-    container.addEventListener("scroll", (e) => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-      animationFrame = requestAnimationFrame(() => {
-        scrollTop = e.target.scrollTop;
-        renderChunk();
-      });
-    });
-
-    window.addEventListener("resize", () => renderChunk());
-
-    renderChunk();
+    }
   }
 }
 
@@ -647,6 +728,9 @@ const getElement = (element, name = "element", parent = document) => {
   }
   return element;
 };
+
+let warned = false;
+const WARN_ROW_COUNT = 10_000;
 
 /**
  * @typedef {Object} Column

@@ -28,19 +28,19 @@ window.addEventListener("load", () => {
         }
         return true;
       },
-      formatter: (date, element) => dateFormatter.format(date),
+      valueFormatter: (date) => dateFormatter.format(date),
     },
     {
       field: "quantity",
       title: "Quantity",
       sortable: true,
-      formatter: (qty, element) => qty.toFixed(1),
+      valueFormatter: (qty) => qty.toFixed(1),
     },
     {
       field: "cost",
       title: "Cost",
       sortable: true,
-      formatter: (cost, element) => moneyFormatter.format(cost),
+      valueFormatter: (cost) => moneyFormatter.format(cost),
     },
   ];
 
@@ -164,7 +164,8 @@ function createData(count) {
 }
 
 function updateRowCount() {
-  document.getElementById("rowCount").innerText = dataTable.length.toLocaleString();
+  document.getElementById("rowCount").innerText =
+    dataTable.length.toLocaleString();
 }
 
 function rowFormatter(row, element) {

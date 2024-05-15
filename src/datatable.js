@@ -238,6 +238,8 @@ export class DataTable {
   showMessage(text, classes) {
     if (Array.isArray(classes)) {
       tr.className = classes.join(" ");
+    } else if (typeof classes !== "string") {
+      classes = "";
     }
 
     const colSpan = Object.keys(this.#columns).length;

@@ -3,9 +3,14 @@ table.data-table {
   width: 100%;
 }
 
-table.data-table thead.dt-headers {
+table.data-table > thead.dt-headers {
   position: sticky;
   top: 0;
+  z-index: 1;
+}
+
+table.data-table > thead.dt-headers > tr {
+  height: 5px;
 }
 
 .dt-scroller {

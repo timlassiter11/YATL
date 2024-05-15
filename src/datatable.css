@@ -53,4 +53,5 @@ th.dt-sortable.dt-ascending::after {
 
 .dt-empty {
   text-align: center;
+  pointer-events: none;
 }

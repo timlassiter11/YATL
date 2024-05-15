@@ -31,7 +31,8 @@ export class DataTable {
 
   /** @type {number} */
   #sortPriority = 0;
-  #emptyText = "No matching records found";
+  #noDataText;
+  #noMatchText;
 
   /** @type {ColumnOptions} */
   #indexCol;
@@ -39,11 +40,22 @@ export class DataTable {
   /**
    * @param {TableOptions} options
    */
-  constructor({ table, formatter, columns = [], data, virtualScroll = 1000 }) {
+  constructor({
+    table,
+    formatter,
+    columns = [],
+    data,
+    virtualScroll = 1000,
+    noDataText,
+    noMatchText,
+  }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
     }
+
+    this.#noDataText = noDataText || "No records found";
+    this.#noMatchText = noMatchText || "No matching records found";
 
     this.#rowFormatter = formatter;
     if (typeof virtualScroll === "number") {
@@ -569,8 +581,10 @@ export class DataTable {
           .map((row, index) => this.#createRow(index))
           .join("\n");
       }
+    } else if (this.#rows.length === 0) {
+      this.showMessage(this.#noDataText, "dt-empty");
     } else {
-      this.showMessage(this.#emptyText, "dt-empty");
+      this.showMessage(this.#noMatchText, "dt-empty");
     }
   }
 
@@ -814,12 +828,14 @@ const WARN_ROW_COUNT = 10_000;
 
 /**
  * @typedef {Object} TableOptions
- * @property {Element | string} table            - Selector or HTMLElement for the table.
- * @property {RowFormatter} formatter            - Callback used to apply any custom formatting to a row.
- * @property {ColumnOptions[]} columns           - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
- * @property {Object[]} data                     - Data to be loaded to the table.
- * @property {boolean | number} virtualScroll    - Automatically enables virtual scroll for the given number of rows.
- *                                                 If boolean, completely enables or disables it. Defaults to 1000.
+ * @property {Element | string} table             - Selector or HTMLElement for the table.
+ * @property {RowFormatter} formatter             - Callback used to apply any custom formatting to a row.
+ * @property {ColumnOptions[]} columns            - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
+ * @property {Object[]} data                      - Data to be loaded to the table.
+ * @property {boolean | number} virtualScroll     - Automatically enables virtual scroll for the given number of rows.
+ *                                                  If boolean, completely enables or disables it. Defaults to 1000.
+ * @property {string} noDataText                  - Text to display if the provided data is empty.
+ * @property {string} noMatchText                 - Text to display if search / filter result is empty.
  */
 
 /**

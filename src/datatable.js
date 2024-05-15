@@ -542,7 +542,7 @@ export class DataTable {
       if (typeof col.valueFormatter === "function") {
         value = col.valueFormatter(value);
       }
-      td.innerText = value || "-";
+      td.innerText = value == null ? "-" : value;
 
       if (typeof col.elementFormatter === "function") {
         col.elementFormatter(value, row, td);

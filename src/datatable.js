@@ -115,7 +115,7 @@ export class DataTable {
         const index = parseInt(tr.dataset.dtIndex);
         if (!isNaN(index)) {
           tr.dispatchEvent(
-            new DataTableRowClickEvent(this.#rows[index], field)
+            new DataTableRowClickEvent(this.#filteredRows[index], field)
           );
         }
       }

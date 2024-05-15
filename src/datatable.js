@@ -29,14 +29,17 @@ export class DataTable {
   /** @type {number} */
   #virtualScrollCount;
 
-  /** @type {Set<string>} */
-  #sortPriority = new Set();
+  /** @type {number} */
+  #sortPriority = 0;
   #emptyText = "No matching records found";
+
+  /** @type {ColumnOptions} */
+  #indexCol;
 
   /**
    * @param {TableOptions} options
    */
-  constructor({ table, formatter, columns, data, virtualScroll = 1000 }) {
+  constructor({ table, formatter, columns = [], data, virtualScroll = 1000 }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
@@ -118,6 +121,24 @@ export class DataTable {
       }
     });
 
+    for (const col of columns) {
+      if (col.field === "index") {
+        this.#indexCol = col;
+        break;
+      }
+    }
+
+    if (!this.#indexCol) {
+      this.#indexCol = {
+        field: "index",
+        title: "Index",
+        visible: false,
+        sortable: true,
+        sortOrder: "asc",
+        searchable: false,
+      };
+    }
+
     // Initialize columns from argument
     for (const col of columns) {
       let th = this.#thead.querySelector(`th[data-field="${col.field}"]`);
@@ -189,6 +210,11 @@ export class DataTable {
     this.loadData(data);
   }
 
+  /** @returns {ColumnOptions[]} */
+  get columns() {
+    return Object.values(this.#columns);
+  }
+
   get rows() {
     return this.#filteredRows;
   }
@@ -231,8 +257,8 @@ export class DataTable {
       this.#filteredRows = [];
     }
 
+    this.#updateHeaders();
     this.#sortRows();
-    this.#updateTable();
   }
 
   showMessage(text, classes) {
@@ -296,22 +322,19 @@ export class DataTable {
       return;
     }
 
-    col.sortOrder = order;
-    if (order === "asc") {
-      col.element.classList.add("dt-ascending");
-      col.element.classList.remove("dt-descending");
-      this.#sortPriority.add(col.field);
-    } else if (order === "desc") {
-      col.element.classList.add("dt-descending");
-      col.element.classList.remove("dt-ascending");
-      this.#sortPriority.add(col.field);
-    } else {
-      col.element.classList.remove("dt-ascending");
-      col.element.classList.remove("dt-descending");
-      this.#sortPriority.delete(col.field);
+    if (order != col.sortOrder) {
+      if (order === "asc" || order === "desc") {
+        col.sortPriority = this.#sortPriority++;
+      } else {
+        col.sortPriority = null;
+        this.#sortPriority--;
+      }
+      col.sortOrder = order;
     }
 
+    this.#updateHeaders();
     this.#sortRows();
+    this.#table.dispatchEvent(new DataTableColEvent("sort", col));
   }
 
   setColumnVisibility(colName, visisble) {
@@ -471,37 +494,57 @@ export class DataTable {
   }
 
   #sortRows() {
-    if (this.#sortPriority.size === 0) {
-      this.#filteredRows.sort((a, b) => {
-        if (a.index < b.index) return -1;
-        if (b.index < a.index) return 1;
-        return 0;
+    const sortedColumns = Object.values(this.#columns)
+      .filter((col) => typeof col.sortPriority === "number")
+      .sort((a, b) => {
+        const aPriority =
+          typeof a.sortPriority === "number" ? a.sortPriority : 0;
+        const bPriority =
+          typeof b.sortPriority === "number" ? b.sortPriority : 0;
+        return aPriority - bPriority;
       });
-    } else {
-      this.#filteredRows.sort((a, b) => {
-        for (const field of this.#sortPriority) {
-          const col = this.#getColumn(field);
-          let aValue, bValue;
-          if (col.sortOrder === "asc") {
-            aValue = a[field];
-            bValue = b[field];
-          } else if (col.sortOrder === "desc") {
-            aValue = b[field];
-            bValue = a[field];
-          }
 
-          if (typeof col.sorter === "function") {
-            const ret = col.sorter(aValue, bValue);
-            if (ret !== 0) return ret;
-          }
+    // If all other fields are equal, sort by index.
+    sortedColumns.push(this.#indexCol);
 
-          if (aValue < bValue) return -1;
-          if (aValue > bValue) return 1;
+    this.#filteredRows.sort((a, b) => {
+      for (const col of sortedColumns) {
+        let aValue, bValue;
+        if (col.sortOrder === "asc") {
+          aValue = a[col.field];
+          bValue = b[col.field];
+        } else if (col.sortOrder === "desc") {
+          aValue = b[col.field];
+          bValue = a[col.field];
         }
-        return 0;
-      });
-    }
+
+        if (typeof col.sorter === "function") {
+          const ret = col.sorter(aValue, bValue);
+          if (ret !== 0) return ret;
+        }
+
+        if (aValue < bValue) return -1;
+        if (aValue > bValue) return 1;
+      }
+      return 0;
+    });
     this.#updateTable();
+  }
+
+  #updateHeaders() {
+    for (const field in this.#columns) {
+      const col = this.#getColumn(field);
+      if (col.sortOrder === "asc") {
+        col.element.classList.add("dt-ascending");
+        col.element.classList.remove("dt-descending");
+      } else if (col.sortOrder === "desc") {
+        col.element.classList.add("dt-descending");
+        col.element.classList.remove("dt-ascending");
+      } else {
+        col.element.classList.remove("dt-ascending");
+        col.element.classList.remove("dt-descending");
+      }
+    }
   }
 
   #updateTable() {
@@ -765,6 +808,7 @@ const WARN_ROW_COUNT = 10_000;
  * @property {function} compare
  * @property {Element} element
  * @property {string} sortOrder
+ * @property {number} sortPriority
  * @property {boolean} visible
  */
 

@@ -1,6 +1,7 @@
 table.data-table {
   position: relative;
   width: 100%;
+  white-space: nowrap;
 }
 
 table.data-table > thead.dt-headers {
@@ -29,7 +30,7 @@ th.dt-sortable > * {
 
 th.dt-sortable::after {
   position: absolute;
-  top: calc(50% - 10px);
+  top: 10px;
   right: 0px;
   width: 20px;
   height: 20px;

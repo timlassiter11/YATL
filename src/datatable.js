@@ -22,9 +22,11 @@ export class DataTable {
   #query;
   /** @type {Object} */
   #filters;
+  /** @type {string[]} */
+  #extraFields;
   /** @type {RowFormatter} */
   #rowFormatter;
-  /** @type {TableVirtualScroll} */
+  /** @type {VirtualScroll} */
   #virtualScroll;
   /** @type {number} */
   #virtualScrollCount;
@@ -33,7 +35,8 @@ export class DataTable {
   #sortPriority = 0;
   #noDataText;
   #noMatchText;
-
+  /** @type {TableClasses} */
+  #classes;
   /** @type {ColumnOptions} */
   #indexCol;
 
@@ -46,16 +49,20 @@ export class DataTable {
     columns = [],
     data,
     virtualScroll = 1000,
+    extraSearchFields,
     noDataText,
     noMatchText,
+    classes,
   }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
     }
 
+    this.#extraFields = extraSearchFields;
     this.#noDataText = noDataText || "No records found";
     this.#noMatchText = noMatchText || "No matching records found";
+    this.#classes = { ...DEFAULT_CLASSES, ...classes };
 
     this.#rowFormatter = formatter;
     if (typeof virtualScroll === "number") {
@@ -71,7 +78,7 @@ export class DataTable {
 
     // Inner element that handles the virtual scroll.
     this.#scroller = document.createElement("div");
-    this.#scroller.classList.add("dt-scroller");
+    this.#scroller.classList.add(...classesToArray(this.#classes.scroller));
 
     // Add the scroller before the table so when we move the
     // table into the scroller it stays in the same place.
@@ -98,7 +105,7 @@ export class DataTable {
       this.#table.insertBefore(this.#thead, this.#tbody);
     }
 
-    this.#thead.classList.add("dt-headers");
+    this.#thead.classList.add(...classesToArray(this.#classes.thead));
 
     // Create the row for the thead if there isn't one
     let headerRow = this.#thead.querySelector("tr:last-of-type");
@@ -107,11 +114,15 @@ export class DataTable {
       this.#thead.append(headerRow);
     }
 
+    headerRow.classList.add(...classesToArray(this.#classes.tr));
+
     // Create the tbody if it doesn't exists
     if (!this.#tbody) {
       this.#tbody = document.createElement("tbody");
       this.#table.append(this.#tbody);
     }
+
+    this.#tbody.classList.add(...classesToArray(this.#classes.tbody));
 
     this.#tbody.addEventListener("click", (event) => {
       let tr, td, field;
@@ -126,9 +137,9 @@ export class DataTable {
       if (tr) {
         const index = parseInt(tr.dataset.dtIndex);
         if (!isNaN(index)) {
-          tr.dispatchEvent(
-            new DataTableRowClickEvent(this.#filteredRows[index], field)
-          );
+          const row = this.#filteredRows[index];
+          const event = new DataTableRowClickEvent(row, field);
+          tr.dispatchEvent(event);
         }
       }
     });
@@ -153,27 +164,30 @@ export class DataTable {
 
     // Initialize columns from argument
     for (const col of columns) {
-      let th = this.#thead.querySelector(`th[data-field="${col.field}"]`);
+      let th = this.#thead.querySelector(`th[data-dt-field="${col.field}"]`);
       if (!th) {
         th = document.createElement("th");
+        th.classList.add(...classesToArray(this.#classes.th));
+        th.dataset.dtField = col.field;
+        th.innerText = col.title;
+        headerRow.append(th);
+      } else {
+        col.title = th.innerText;
       }
 
-      th.dataset.dtField = col.field;
-      th.innerHTML = col.title;
       col.element = th;
       col.visible = col.visible === undefined ? true : col.visible;
       this.#columns[col.field] = col;
-      headerRow.append(th);
     }
 
     // See if user provided columns in thead.
-    for (const th of this.#thead.querySelectorAll("th[data-field]")) {
-      const field = th.dataset.field;
+    for (const th of this.#thead.querySelectorAll("th[data-dt-field]")) {
+      const field = th.dataset.dtField;
       // Columns passed as argument take precedence.
       if (!(field in this.#columns)) {
         this.#columns[field] = {
           field: field,
-          title: th.innertText,
+          title: th.innerText,
           element: th,
           sortable: th.dataset.sortable === "true",
           searchable: th.dataset.searchable === "true",
@@ -211,10 +225,9 @@ export class DataTable {
       throw new Error("At least one column must be visible");
     }
 
-    this.#virtualScroll = new TableVirtualScroll({
+    this.#virtualScroll = new VirtualScroll({
       container: this.#scroller,
-      table: this.#table,
-      tbody: this.#tbody,
+      element: this.#tbody,
       generator: (index) => this.#createRow(index),
       rows: this.#filteredRows,
     });
@@ -253,24 +266,26 @@ export class DataTable {
   loadData(rows) {
     if (Array.isArray(rows) && rows.length > 0) {
       if ("index" in rows[0]) {
+        /*
         console.warn(
           "DataTable uses the index property to keep track of the initial sort order but the\n" +
             "provided data already contains an index. Rows will be sorted by the given index"
         );
+         */
       } else {
         // Store initial index so we can "unsort" data.
         rows.forEach((element, index) => (element.index = index));
       }
+
       this.#rows = rows;
       this.#filteredRows = rows;
-      this.#virtualScroll.rowCount = rows.length;
     } else {
       this.#rows = [];
       this.#filteredRows = [];
     }
 
     this.#updateHeaders();
-    this.#sortRows();
+    this.#filterRows();
   }
 
   showMessage(text, classes) {
@@ -367,6 +382,8 @@ export class DataTable {
       )
       .forEach((element) => (element.style.display = visisble ? "" : "none"));
 
+    this.#sortRows();
+
     this.#table.dispatchEvent(
       new DataTableColEvent(visisble ? "show" : "hide", col)
     );
@@ -404,7 +421,11 @@ export class DataTable {
               if (typeof col.formatter === "function") {
                 value = col.valueFormatter(value);
               }
-              list.push(`"${value}"`);
+
+              if (typeof value === "string") {
+                value.replace('"', '""');
+                list.push(`"${value}"`);
+              }
             }
           }
         }
@@ -421,6 +442,19 @@ export class DataTable {
     document.body.append(a);
     a.click();
     a.remove();
+  }
+
+  scrollTo(index) {
+    if (this.#virtualScroll.started) {
+      this.#virtualScroll.scrollTo(index);
+    }
+
+    const row = this.#tbody.querySelector(`tr[data-dt-index="${index}"]`);
+    if (row) {
+      row.scrollIntoView(true);
+      const theadHeight = parseFloat(getComputedStyle(this.#thead).height);
+      this.#scroller.scrollTop -= theadHeight;
+    }
   }
 
   #searchField(value, query) {
@@ -488,9 +522,12 @@ export class DataTable {
       }
 
       if (this.#query) {
-        for (const field in this.#columns) {
+        const fields = [...Object.keys(this.#columns), ...this.#extraFields];
+        for (const field of fields) {
           const col = this.#getColumn(field);
-          if (col.searchable) {
+          // If we can't find the column it probably means that
+          // the field came from the extra keys so just search it.
+          if (!col || col.searchable) {
             if (this.#searchField(row[field], this.#query)) {
               return true;
             }
@@ -503,11 +540,13 @@ export class DataTable {
     });
     this.#sortRows();
     this.#updateTable();
+
+    this.#table.dispatchEvent(new DataTableEvent("rows.changed"));
   }
 
   #sortRows() {
     const sortedColumns = Object.values(this.#columns)
-      .filter((col) => typeof col.sortPriority === "number")
+      .filter((col) => col.visible && typeof col.sortPriority === "number")
       .sort((a, b) => {
         const aPriority =
           typeof a.sortPriority === "number" ? a.sortPriority : 0;
@@ -562,10 +601,23 @@ export class DataTable {
   #updateTable() {
     this.#tbody.innerHTML = "";
     if (this.#filteredRows.length) {
+      let virtualScroll = false;
       if (this.#filteredRows.length >= this.#virtualScrollCount) {
-        this.#virtualScroll.rowCount = this.#filteredRows.length;
-        this.#virtualScroll.start();
-      } else {
+        try {
+          this.#virtualScroll.rowCount = this.#filteredRows.length;
+          this.#virtualScroll.start();
+          virtualScroll = true;
+        } catch (error) {
+          if (error instanceof VirtualScrollError) {
+            console.warn(
+              "Failed to start virtual scroll... falling back to standard rendering"
+            );
+            console.warn(error.stack);
+          }
+        }
+      }
+
+      if (!virtualScroll) {
         if (!warned && this.#filteredRows.length > WARN_ROW_COUNT) {
           warned = true;
           const count = WARN_ROW_COUNT.toLocaleString();
@@ -591,12 +643,14 @@ export class DataTable {
   #createRow(index) {
     const row = this.#filteredRows[index];
     const tr = document.createElement("tr");
+    tr.classList.add(...classesToArray(this.#classes.tr));
     tr.dataset.dtIndex = index;
 
     for (const field in this.#columns) {
       let value = row[field];
       const col = this.#getColumn(field);
       const td = document.createElement("td");
+      td.classList.add(...classesToArray(this.#classes.td));
       td.dataset.dtField = field;
       if (typeof col.valueFormatter === "function") {
         value = col.valueFormatter(value);
@@ -630,9 +684,9 @@ export class DataTable {
   }
 }
 
-class TableVirtualScroll {
+class VirtualScroll {
   #container;
-  #tbody;
+  #element;
   #generator;
   #rowCount = 0;
   #rowHeight = 0;
@@ -644,13 +698,13 @@ class TableVirtualScroll {
    *
    * @param {Object} options
    * @param {HTMLElement} options.container
-   * @param {HTMLElement} options.tbody
+   * @param {HTMLElement} options.element
    * @param {Array<Object>} options.rows
    * @param {function} options.generator
    */
-  constructor({ container, tbody, generator, nodePadding = 2 }) {
+  constructor({ container, element, generator, nodePadding = 2 }) {
     this.#container = container;
-    this.#tbody = tbody;
+    this.#element = element;
     this.#generator = generator;
     this.#padding = nodePadding;
   }
@@ -661,42 +715,33 @@ class TableVirtualScroll {
 
   set rowCount(count) {
     this.#rowCount = count;
-    if (!this.#rowHeight) {
-      this.updateRowHeight();
-    }
     this.#renderChunk();
   }
 
-  updateRowHeight() {
-    if (this.#rowCount === 0) {
-      this.#rowHeight = 0;
-      return;
+  get rowHeight() {
+    if (!this.#rowHeight) {
+      this.#updateRowHeight();
     }
-
-    const renderSize = Math.min(1000, this.#rowCount);
-    // Create an average row height by rendering the first N rows.
-    const html = [];
-    for (let i = 0; i < renderSize; ++i) {
-      html.push(this.#generator(i));
-    }
-    this.#tbody.innerHTML = html.join("\n");
-    this.#rowHeight = this.#tbody.offsetHeight / renderSize;
-
-    if (this.#rowHeight <= 0) {
-      throw new Error(
-        "First 1000 rows had no rendered height. Virtual scroll can't be used."
-      );
-    }
+    return this.#rowHeight;
   }
 
-  scrollCallback = () => {
+  get started() {
+    return this.#started;
+  }
+
+  scrollTo(index) {
+    this.#container.scrollTop = this.rowHeight * index;
+    this.#renderChunk();
+  }
+
+  #scrollCallback = () => {
     if (this.#animationFrame) {
       cancelAnimationFrame(this.#animationFrame);
     }
     this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
   };
 
-  renderCallback = () => {
+  #renderCallback = () => {
     this.#renderChunk();
   };
 
@@ -704,8 +749,8 @@ class TableVirtualScroll {
     if (this.#started) return;
     this.#started = true;
 
-    this.#container.addEventListener("scroll", this.scrollCallback);
-    window.addEventListener("resize", this.renderCallback);
+    this.#container.addEventListener("scroll", this.#scrollCallback);
+    window.addEventListener("resize", this.#renderCallback);
 
     this.#renderChunk();
   }
@@ -715,15 +760,15 @@ class TableVirtualScroll {
       cancelAnimationFrame(this.#animationFrame);
     }
 
-    this.#container.removeEventListener("scroll", this.scrollCallback);
-    window.removeEventListener("resize", this.renderCallback);
+    this.#container.removeEventListener("scroll", this.#scrollCallback);
+    window.removeEventListener("resize", this.#renderCallback);
     this.#started = false;
   }
 
   #renderChunk() {
     const scrollTop = this.#container.scrollTop;
-    const rowCount = this.#rowCount;
-    const rowHeight = this.#rowHeight;
+    const rowCount = this.rowCount;
+    const rowHeight = this.rowHeight;
     const padding = this.#padding;
     const viewHeight = this.#container.offsetHeight;
     const totalContentHeight = rowHeight * rowCount;
@@ -748,7 +793,7 @@ class TableVirtualScroll {
         .map((_, index) => this.#generator(index + startNode));
       // We create two empty rows. One at the top and one at the bottom.
       // Resize the rows accordingly to move the rendered rows to where we want.
-      this.#tbody.innerHTML = `
+      this.#element.innerHTML = `
         <tr style="height: ${offsetY}px;"></tr>
         ${visibleChildren.join("\n")}
         <tr style="height: ${remainingHeight}px;"></tr>`;
@@ -756,6 +801,28 @@ class TableVirtualScroll {
       if (e instanceof RangeError) {
         console.log(e);
       }
+    }
+  }
+
+  #updateRowHeight() {
+    if (this.#rowCount === 0) {
+      this.#rowHeight = 0;
+      return;
+    }
+
+    const renderSize = Math.min(1000, this.#rowCount);
+    // Create an average row height by rendering the first N rows.
+    const html = [];
+    for (let i = 0; i < renderSize; ++i) {
+      html.push(this.#generator(i));
+    }
+    this.#element.innerHTML = html.join("\n");
+    this.#rowHeight = this.#element.offsetHeight / renderSize;
+
+    if (this.#rowHeight <= 0) {
+      throw new VirtualScrollError(
+        "First 1000 rows had no rendered height. Virtual scroll can't be used."
+      );
     }
   }
 }
@@ -787,6 +854,12 @@ export class DataTableRowClickEvent extends DataTableRowEvent {
   }
 }
 
+class VirtualScrollError extends Error {
+  constructor(message) {
+    super(message);
+  }
+}
+
 /**
  *
  * @param {string | Element} element
@@ -807,8 +880,25 @@ const getElement = (element, name = "element", parent = document) => {
   return element;
 };
 
+const classesToArray = (classes) => {
+  if (typeof classes === "string") {
+    return classes.split(" ");
+  } else if (Array.isArray(classes)) {
+    return classes;
+  } else if (classes == null) {
+    return [];
+  }
+  throw new TypeError("classes must be string or array of strings");
+};
+
 let warned = false;
 const WARN_ROW_COUNT = 10_000;
+
+/** @type {TableClasses} */
+const DEFAULT_CLASSES = {
+  scroller: "dt-scroller",
+  thead: "dt-headers",
+};
 
 /**
  * @typedef {Object} ColumnOptions
@@ -827,6 +917,17 @@ const WARN_ROW_COUNT = 10_000;
  */
 
 /**
+ * @typedef {Object} TableClasses
+ * @property {string | string[]} scroller
+ * @property {string | string[]} thead
+ * @property {string | string[]} tbody
+ * @property {string | string[]} tfoot
+ * @property {string | string[]} tr
+ * @property {string | string[]} th
+ * @property {string | string[]} td
+ */
+
+/**
  * @typedef {Object} TableOptions
  * @property {Element | string} table             - Selector or HTMLElement for the table.
  * @property {RowFormatter} formatter             - Callback used to apply any custom formatting to a row.
@@ -834,8 +935,10 @@ const WARN_ROW_COUNT = 10_000;
  * @property {Object[]} data                      - Data to be loaded to the table.
  * @property {boolean | number} virtualScroll     - Automatically enables virtual scroll for the given number of rows.
  *                                                  If boolean, completely enables or disables it. Defaults to 1000.
+ * @property {string[]} extraSearchFields         - Extra fields in the row to be searched. Used for data that doesn't have a column.
  * @property {string} noDataText                  - Text to display if the provided data is empty.
  * @property {string} noMatchText                 - Text to display if search / filter result is empty.
+ * @property {TableClasses} classes               - Classes to be applied to created elements.
  */
 
 /**

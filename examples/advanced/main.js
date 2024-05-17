@@ -113,17 +113,59 @@ window.addEventListener("load", () => {
   }
 
   const searchInput = document.getElementById("searchInput");
+
+  const regexToggle = document.getElementById("regexToggle");
+  regexToggle.onclick = () =>
+    (searchInput.placeholder = regexToggle.classList.contains("active")
+      ? "Regex Search"
+      : "Search");
+
   // Search table on input
   searchInput.addEventListener("input", (event) => {
-    dataTable.search(new RegExp(searchInput.value));
-    updateRowCount();
+    try {
+      const query = searchInput.value === "" ? null : searchInput.value;
+      if (regexToggle.classList.contains("active") && query) {
+        dataTable.search(new RegExp(query, "i"));
+      } else {
+        dataTable.search(query);
+      }
+      updateRowCount();
+    } catch {}
   });
 
-  updateRowCount();
+  const startDateInput = document.getElementById("startDateInput");
+  const endDateInput = document.getElementById("endDateInput");
+  function updateFilters() {
+    dataTable.filter({ due_date: { startDate, endDate } });
+    updateRowCount();
+  }
+
+  // Parse our strings when the inputs change to speed up filter performance
+  startDateInput.onchange = (event) => {
+    startDate = Date.fromIsoString(startDateInput.value);
+    endDateInput.min = startDateInput.value;
+    updateFilters();
+  };
+  endDateInput.onchange = (event) => {
+    endDate = Date.fromIsoString(endDateInput.value);
+    startDateInput.max = endDateInput.value;
+    updateFilters();
+  };
+
+  const filterWrapper = document.querySelector(".filter-wrapper");
+  document.getElementById("filterToggle").onclick = () => {
+    if (filterWrapper.classList.contains("hide")) {
+      filterWrapper.classList.remove("hide");
+    } else {
+      filterWrapper.classList.add("hide");
+    }
+  };
 
   document
     .getElementById("exportTable")
     .addEventListener("click", () => dataTable.export("DataTable", false));
+
+  updateRowCount();
 });
 
 Date.prototype.addDays = function (days) {
@@ -141,6 +183,13 @@ Date.fromIsoString = function (date) {
 
 const today = new Date();
 today.setHours(0, 0, 0, 0);
+let startDate, endDate;
+
+const dateFormatter = new Intl.DateTimeFormat("en-US");
+const moneyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 // Generate random rows of data
 function createData(count) {
@@ -173,38 +222,3 @@ function rowFormatter(row, element) {
     element.classList.add("past-due");
   }
 }
-
-const dateFormatter = new Intl.DateTimeFormat("en-US");
-const moneyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
-
-const startDateInput = document.getElementById("startDateInput");
-const endDateInput = document.getElementById("endDateInput");
-function updateFilters() {
-  dataTable.filter({ due_date: { startDate, endDate } });
-  updateRowCount();
-}
-
-// Parse our strings when the inputs change to speed up filter performance
-let startDate, endDate;
-startDateInput.onchange = (event) => {
-  startDate = Date.fromIsoString(startDateInput.value);
-  endDateInput.min = startDateInput.value;
-  updateFilters();
-};
-endDateInput.onchange = (event) => {
-  endDate = Date.fromIsoString(endDateInput.value);
-  startDateInput.max = endDateInput.value;
-  updateFilters();
-};
-
-const filterWrapper = document.querySelector(".filter-wrapper");
-document.getElementById("filterToggle").onclick = () => {
-  if (filterWrapper.classList.contains("hide")) {
-    filterWrapper.classList.remove("hide");
-  } else {
-    filterWrapper.classList.add("hide");
-  }
-};

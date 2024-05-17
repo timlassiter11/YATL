@@ -850,6 +850,9 @@ class VirtualScroll {
       throw new VirtualScrollError(
         "First 1000 rows had no rendered height. Virtual scroll can't be used."
       );
+    } else if (this.#rowHeight * this.#rowCount > 33554400) {
+      // This seems to be Chrome's max height of an element based on some random testing.
+      console.warn("Virtual scroll height exceeded maximum known element height.");
     }
   }
 }

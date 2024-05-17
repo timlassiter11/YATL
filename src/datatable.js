@@ -18,7 +18,7 @@ export class DataTable {
   #rows;
   /** @type {Object[]} */
   #filteredRows;
-  /** @type {Object[]} */
+  /** @type {RegExp | string} */
   #query;
   /** @type {Object} */
   #filters;
@@ -30,6 +30,8 @@ export class DataTable {
   #virtualScroll;
   /** @type {number} */
   #virtualScrollCount;
+  /** @type {boolean} */
+  #highlightSearch;
 
   /** @type {number} */
   #sortPriority = 0;
@@ -49,6 +51,7 @@ export class DataTable {
     columns = [],
     data,
     virtualScroll = 1000,
+    highlightSearch = true,
     extraSearchFields,
     noDataText,
     noMatchText,
@@ -59,7 +62,8 @@ export class DataTable {
       throw new TypeError("columns must be a list of columns");
     }
 
-    this.#extraFields = extraSearchFields;
+    this.#highlightSearch = highlightSearch;
+    this.#extraFields = extraSearchFields || [];
     this.#noDataText = noDataText || "No records found";
     this.#noMatchText = noMatchText || "No matching records found";
     this.#classes = { ...DEFAULT_CLASSES, ...classes };
@@ -304,11 +308,18 @@ export class DataTable {
    * @param {string | RegExp} query
    */
   search(query) {
-    if (typeof query === "string") {
-      query = query.toLocaleLowerCase();
+    if (query && query !== "") {
+      if (typeof query === "string") {
+        this.#query = query.toLocaleLowerCase();
+      } else if (query instanceof RegExp) {
+        this.#query = query;
+      } else {
+        throw new TypeError("Search query must be string or regex");
+      }
+    } else {
+      this.#query = null;
     }
 
-    this.#query = query === "" ? null : query;
     this.#filterRows();
   }
 
@@ -457,6 +468,12 @@ export class DataTable {
     }
   }
 
+  /**
+   * 
+   * @param {any} value 
+   * @param {RegExp | string} query 
+   * @returns 
+   */
   #searchField(value, query) {
     if (Array.isArray(value)) {
       for (const element of value) {
@@ -470,7 +487,7 @@ export class DataTable {
     if (query instanceof RegExp) {
       return query.test(String(value));
     }
-    return String(value).toLowerCase().includes(query);
+    return String(value).toLocaleLowerCase().includes(query);
   }
 
   #filterField(value, filter, compareFunction) {
@@ -660,6 +677,16 @@ export class DataTable {
       if (typeof col.elementFormatter === "function") {
         col.elementFormatter(value, row, td);
       }
+
+      if (
+        this.#highlightSearch &&
+        this.#query &&
+        this.#query != "" &&
+        col.searchable
+      ) {
+        td.innerHTML = td.innerText.replace(new RegExp(this.#query, "i"), "<mark>$&</mark>");
+      }
+
       tr.append(td);
 
       if (!col.visible) {
@@ -935,6 +962,7 @@ const DEFAULT_CLASSES = {
  * @property {Object[]} data                      - Data to be loaded to the table.
  * @property {boolean | number} virtualScroll     - Automatically enables virtual scroll for the given number of rows.
  *                                                  If boolean, completely enables or disables it. Defaults to 1000.
+ * @property {boolean} highlightSearch            - If true, search results will be wrapped in a mark tag.
  * @property {string[]} extraSearchFields         - Extra fields in the row to be searched. Used for data that doesn't have a column.
  * @property {string} noDataText                  - Text to display if the provided data is empty.
  * @property {string} noMatchText                 - Text to display if search / filter result is empty.

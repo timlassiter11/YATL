@@ -469,10 +469,10 @@ export class DataTable {
   }
 
   /**
-   * 
-   * @param {any} value 
-   * @param {RegExp | string} query 
-   * @returns 
+   *
+   * @param {any} value
+   * @param {RegExp | string} query
+   * @returns
    */
   #searchField(value, query) {
     if (Array.isArray(value)) {
@@ -684,7 +684,10 @@ export class DataTable {
         this.#query != "" &&
         col.searchable
       ) {
-        td.innerHTML = td.innerText.replace(new RegExp(this.#query, "i"), "<mark>$&</mark>");
+        td.innerHTML = td.innerText.replace(
+          new RegExp(this.#query, "i"),
+          "<mark>$&</mark>"
+        );
       }
 
       tr.append(td);
@@ -720,6 +723,7 @@ class VirtualScroll {
   #padding = 2;
   #animationFrame;
   #started = false;
+  #scrollTop = 0;
 
   /**
    *
@@ -762,10 +766,15 @@ class VirtualScroll {
   }
 
   #scrollCallback = () => {
-    if (this.#animationFrame) {
-      cancelAnimationFrame(this.#animationFrame);
+    // Only update if we are vertically scrolling.
+    // Fixes horizontal scroll bug.
+    if (this.#container.scrollTop !== this.#scrollTop) {
+      this.#scrollTop = this.#container.scrollTop;
+      if (this.#animationFrame) {
+        cancelAnimationFrame(this.#animationFrame);
+      }
+      this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
     }
-    this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
   };
 
   #renderCallback = () => {
@@ -797,8 +806,12 @@ class VirtualScroll {
     const rowCount = this.rowCount;
     const rowHeight = this.rowHeight;
     const padding = this.#padding;
-    const viewHeight = this.#container.offsetHeight;
     const totalContentHeight = rowHeight * rowCount;
+    // Max out the element height so we can get a real height of the container.
+    // This fixes an issue when the parent isn't set to grow causing only a
+    // small number of rows to render until you scroll.
+    this.#element.innerHTML = `<tr style="height: ${totalContentHeight}px;"></tr>`;
+    const viewHeight = this.#container.offsetHeight;
 
     if (!rowCount || !rowHeight) {
       return;
@@ -852,7 +865,9 @@ class VirtualScroll {
       );
     } else if (this.#rowHeight * this.#rowCount > 33554400) {
       // This seems to be Chrome's max height of an element based on some random testing.
-      console.warn("Virtual scroll height exceeded maximum known element height.");
+      console.warn(
+        "Virtual scroll height exceeded maximum known element height."
+      );
     }
   }
 }

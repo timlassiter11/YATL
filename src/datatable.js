@@ -423,14 +423,16 @@ export class DataTable {
           if (key in this.#columns) {
             const col = this.#getColumn(key);
             if (all || col.visible) {
-              if (typeof col.formatter === "function") {
-                value = col.valueFormatter(value);
+              if (typeof col.valueFormatter === "function") {
+                value = col.valueFormatter(value, row);
               }
 
-              if (typeof value === "string") {
-                value.replace('"', '""');
-                list.push(`"${value}"`);
+              if (typeof value !== "string") {
+                value = value.toString();
               }
+              
+              value.replace('"', '""');
+              list.push(`"${value}"`);
             }
           }
         }

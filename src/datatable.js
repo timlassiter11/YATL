@@ -728,6 +728,9 @@ export class DataTable {
   #updateRow(row) {
     const identity = row[this.#identityCol.field];
     const tr = this.#rowElements[identity];
+    if (!tr) {
+      return;
+    }
     const index = tr.dataset.dtIndex;
     this.#rows[index] = row;
     row.index = index;

@@ -3,7 +3,16 @@ import { DataTable, DataTableRowEvent } from "../../src/datatable.js";
 let dataTable;
 
 window.addEventListener("load", () => {
+  /** @type {import("../../src/datatable.js").ColumnOptions[]} */
   const columns = [
+    {
+      field: "id",
+      title: "Id",
+      searchable: false,
+      sortable: false,
+      visible: false,
+      identity: true,
+    },
     {
       field: "name",
       title: "Name",
@@ -202,6 +211,7 @@ function createData(count) {
 
   today.setHours(0, 0, 0, 0);
   return new Array(count).fill(null).map((v, i) => ({
+    id: i,
     // Uncomment below to provide your own random indexes.
     //index: Math.floor(Math.random() * count),
     name: `Row ${i}`,

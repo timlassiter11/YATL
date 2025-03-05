@@ -579,11 +579,11 @@ export class DataTable {
       for (const col of sortedColumns) {
         let aValue, bValue;
         if (col.sortOrder === "asc") {
-          aValue = a[col.field];
-          bValue = b[col.field];
+          aValue = this.#getNestedValue(a, col.field);
+          bValue = this.#getNestedValue(b, col.field);
         } else if (col.sortOrder === "desc") {
-          aValue = b[col.field];
-          bValue = a[col.field];
+          aValue = this.#getNestedValue(b, col.field);
+          bValue = this.#getNestedValue(a, col.field);
         }
 
         if (typeof col.sorter === "function") {

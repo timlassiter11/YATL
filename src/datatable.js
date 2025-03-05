@@ -223,6 +223,12 @@ export class DataTable {
           }
         });
       }
+
+      // If the caller provided a sort function but not a compare
+      // function we can use the sort function for a comparison
+      if (!col.compare && typeof col.sorter === "function") {
+        col.compare = (a, b) => col.sorter(a, b) != 0;
+      }
     }
 
     if (!colVisible) {

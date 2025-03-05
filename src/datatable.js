@@ -664,7 +664,7 @@ export class DataTable {
     tr.dataset.dtIndex = index;
 
     for (const field in this.#columns) {
-      let value = row[field];
+      let value = this.#getNestedValue(row, field);
       const col = this.#getColumn(field);
       const td = document.createElement("td");
       td.classList.add(...classesToArray(this.#classes.td));
@@ -702,6 +702,21 @@ export class DataTable {
     }
 
     return tr.outerHTML;
+  }
+
+  #getNestedValue(obj, path) {
+    const keys = path.split('.');
+    let current = obj;
+  
+    for (const key of keys) {
+      if (current && typeof current === 'object' && current.hasOwnProperty(key)) {
+        current = current[key];
+      } else {
+        return undefined; // Or handle the error as needed
+      }
+    }
+  
+    return current;
   }
 
   /**

@@ -524,7 +524,7 @@ export class DataTable {
       const filter = this.#filters[field];
       const col = this.#getColumn(field);
       const compare = col ? col.compare : null;
-      const value = row[field];
+      const value = this.#getNestedValue(row, field);
       if (!this.#filterField(value, filter, compare)) {
         return false;
       }
@@ -551,7 +551,8 @@ export class DataTable {
           // If we can't find the column it probably means that
           // the field came from the extra keys so just search it.
           if (!col || col.searchable) {
-            if (this.#searchField(row[field], this.#query)) {
+            const value = this.#getNestedValue(row, field);
+            if (this.#searchField(value, this.#query)) {
               return true;
             }
           }

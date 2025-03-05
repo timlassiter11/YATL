@@ -709,7 +709,7 @@ export class DataTable {
     let current = obj;
   
     for (const key of keys) {
-      if (current && typeof current === 'object' && current.hasOwnProperty(key)) {
+      if (current && typeof current === 'object') {
         current = current[key];
       } else {
         return undefined; // Or handle the error as needed

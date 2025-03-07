@@ -32,6 +32,14 @@ export class DataTable {
   #virtualScrollCount;
   /** @type {boolean} */
   #highlightSearch;
+  /** @type {boolean} */
+  #tokenize;
+  /** @type {TokenizerFunction} */
+  #tokenizer = (value) => String(value)
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .trim()
+    .split(/\s+/);
 
   /** @type {number} */
   #sortPriority = 0;
@@ -56,6 +64,7 @@ export class DataTable {
     noDataText,
     noMatchText,
     classes,
+    tokenize = false,
   }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
@@ -67,6 +76,7 @@ export class DataTable {
     this.#noDataText = noDataText || "No records found";
     this.#noMatchText = noMatchText || "No matching records found";
     this.#classes = { ...DEFAULT_CLASSES, ...classes };
+    this.#tokenize = tokenize;
 
     this.#rowFormatter = formatter;
     if (typeof virtualScroll === "number") {
@@ -276,12 +286,10 @@ export class DataTable {
   loadData(rows) {
     if (Array.isArray(rows) && rows.length > 0) {
       if ("index" in rows[0]) {
-        /*
         console.warn(
           "DataTable uses the index property to keep track of the initial sort order but the\n" +
-            "provided data already contains an index. Rows will be sorted by the given index"
+          "provided data already contains an index. Rows will be sorted by the given index"
         );
-         */
       } else {
         // Store initial index so we can "unsort" data.
         rows.forEach((element, index) => (element.index = index));
@@ -289,6 +297,9 @@ export class DataTable {
 
       this.#rows = rows;
       this.#filteredRows = rows;
+      if (this.#tokenize) {
+        this.#tokenizeData(this.#rows);
+      }
     } else {
       this.#rows = [];
       this.#filteredRows = [];
@@ -316,7 +327,7 @@ export class DataTable {
   search(query) {
     if (query && query !== "") {
       if (typeof query === "string") {
-        this.#query = query.toLocaleLowerCase();
+        this.#query = this.#tokenize ? this.#tokenizer(query) : query.toLocaleLowerCase();
       } else if (query instanceof RegExp) {
         this.#query = query;
       } else {
@@ -385,8 +396,7 @@ export class DataTable {
     const col = this.#getColumn(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${
-          visisble ? "show" : "hide"
+        `Attempting to ${visisble ? "show" : "hide"
         } non-existent column ${colName}`
       );
       return;
@@ -482,12 +492,7 @@ export class DataTable {
    */
   #searchField(value, query) {
     if (Array.isArray(value)) {
-      for (const element of value) {
-        if (this.#searchField(element, query)) {
-          return true;
-        }
-      }
-      return false;
+      return value.some(element => this.#searchField(element, query))
     }
 
     if (query instanceof RegExp) {
@@ -532,11 +537,19 @@ export class DataTable {
     return true;
   }
 
+  #getRowTokens(row, field) {
+    return row[`_${field}_tokens`] || [String(this.#getNestedValue(row, field)).toLocaleLowerCase()];
+  }
+
   #filterRows() {
     const filter =
       typeof this.#filters === "function"
         ? this.#filters
         : (row, index) => this.#filterRow(row, index);
+    
+    const query = Array.isArray(this.#query)
+      ? this.#query
+      : [this.#query];
 
     this.#filteredRows = this.#rows.filter((row, index) => {
       // Filter takes precedence over search.
@@ -551,8 +564,16 @@ export class DataTable {
           // If we can't find the column it probably means that
           // the field came from the extra keys so just search it.
           if (!col || col.searchable) {
-            const value = this.#getNestedValue(row, field);
-            if (this.#searchField(value, this.#query)) {
+            const rowTokens = this.#getRowTokens(row, field);
+
+            row._searchScore = 0;
+            for (const token of query) {
+              if (this.#searchField(rowTokens, token)) {
+                row._searchScore += 1;
+              }
+            }
+
+            if (row._searchScore > 0) {
               return true;
             }
           }
@@ -691,10 +712,18 @@ export class DataTable {
         this.#query != "" &&
         col.searchable
       ) {
-        td.innerHTML = td.innerText.replace(
-          new RegExp(this.#query, "i"),
-          "<mark>$&</mark>"
-        );
+        // FIXME: When search query contains a character that is removed
+        // during tokenization, the highlighting doesn't work.
+        const tokens = Array.isArray(this.#query) ? this.#query : [this.#query];
+        
+        let innerText = td.innerText;
+        for (const token of tokens) {
+          innerText = innerText.replace(
+            new RegExp(token, "i"),
+            "<mark>$&</mark>"
+          );
+        }
+        td.innerHTML = innerText;
       }
 
       tr.append(td);
@@ -714,7 +743,7 @@ export class DataTable {
   #getNestedValue(obj, path) {
     const keys = path.split('.');
     let current = obj;
-  
+
     for (const key of keys) {
       if (current && typeof current === 'object') {
         current = current[key];
@@ -722,7 +751,7 @@ export class DataTable {
         return undefined; // Or handle the error as needed
       }
     }
-  
+
     return current;
   }
 
@@ -733,6 +762,18 @@ export class DataTable {
    */
   #getColumn(field) {
     return this.#columns[field];
+  }
+
+  #tokenizeData(data) {
+    const searchableCols = this.columns.filter(col => col.searchable);
+    for (const row of data) {
+      for (const col of searchableCols) {
+        const field = col.field;
+        const value = this.#getNestedValue(row, field);
+        if (value && typeof value === 'string')
+          row[`_${field}_tokens`] = this.#tokenizer(value);
+      }
+    }
   }
 }
 
@@ -1026,4 +1067,10 @@ const DEFAULT_CLASSES = {
  * @param {any} value
  * @param {object} row
  * @param {HTMLElement} element
+ */
+
+/**
+ * @callback TokenizerFunction
+ * @param {object} value
+ * @returns {string[]}
  */

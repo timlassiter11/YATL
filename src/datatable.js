@@ -32,12 +32,10 @@ export class DataTable {
   #virtualScrollCount;
   /** @type {boolean} */
   #highlightSearch;
-  /** @type {boolean} */
-  #tokenize;
   /** @type {TokenizerFunction} */
   #tokenizer = (value) => String(value)
     .toLowerCase()
-    .replace(/[^\w\s]/g, '')
+    .replace(/[^\w\s-]/g, ' ')
     .trim()
     .split(/\s+/);
 
@@ -64,7 +62,6 @@ export class DataTable {
     noDataText,
     noMatchText,
     classes,
-    tokenize = false,
   }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
@@ -76,7 +73,6 @@ export class DataTable {
     this.#noDataText = noDataText || "No records found";
     this.#noMatchText = noMatchText || "No matching records found";
     this.#classes = { ...DEFAULT_CLASSES, ...classes };
-    this.#tokenize = tokenize;
 
     this.#rowFormatter = formatter;
     if (typeof virtualScroll === "number") {
@@ -297,9 +293,7 @@ export class DataTable {
 
       this.#rows = rows;
       this.#filteredRows = rows;
-      if (this.#tokenize) {
-        this.#tokenizeData(this.#rows);
-      }
+      this.#tokenizeData(this.#rows);
     } else {
       this.#rows = [];
       this.#filteredRows = [];
@@ -325,18 +319,7 @@ export class DataTable {
    * @param {string | RegExp} query
    */
   search(query) {
-    if (query && query !== "") {
-      if (typeof query === "string") {
-        this.#query = this.#tokenize ? this.#tokenizer(query) : query.toLocaleLowerCase();
-      } else if (query instanceof RegExp) {
-        this.#query = query;
-      } else {
-        throw new TypeError("Search query must be string or regex");
-      }
-    } else {
-      this.#query = null;
-    }
-
+    this.#query = query !== "" ? query : null;
     this.#filterRows();
   }
 
@@ -498,6 +481,7 @@ export class DataTable {
     if (query instanceof RegExp) {
       return query.test(String(value));
     }
+
     return String(value).toLocaleLowerCase().includes(query);
   }
 
@@ -537,56 +521,89 @@ export class DataTable {
     return true;
   }
 
-  #getRowTokens(row, field) {
-    return row[`_${field}_tokens`] || [String(this.#getNestedValue(row, field)).toLocaleLowerCase()];
-  }
-
   #filterRows() {
     const filter =
       typeof this.#filters === "function"
         ? this.#filters
         : (row, index) => this.#filterRow(row, index);
-    
-    const query = Array.isArray(this.#query)
-      ? this.#query
-      : [this.#query];
+
+    let query, queryTokens;
+    if (this.#query instanceof RegExp) {
+      query = this.#query;
+      queryTokens = [query]
+    } else if (typeof this.#query === "string") {
+      query = this.#query.toLocaleLowerCase();
+      queryTokens = this.#tokenizer(query);
+    }
 
     this.#filteredRows = this.#rows.filter((row, index) => {
+      row._searchScore = 0;
       // Filter takes precedence over search.
       if (!filter(row, index)) {
         return false;
       }
 
-      if (this.#query) {
-        const fields = [...Object.keys(this.#columns), ...this.#extraFields];
-        for (const field of fields) {
-          const col = this.#getColumn(field);
-          // If we can't find the column it probably means that
-          // the field came from the extra keys so just search it.
-          if (!col || col.searchable) {
-            const rowTokens = this.#getRowTokens(row, field);
+      if (!query) {
+        return true;
+      }
 
-            row._searchScore = 0;
-            for (const token of query) {
-              if (this.#searchField(rowTokens, token)) {
-                row._searchScore += 1;
-              }
-            }
+      const searchableFields = this.columns
+        .filter(col => col.searchable)
+        .map(c => c.field);
 
-            if (row._searchScore > 0) {
-              return true;
+      const fields = [...searchableFields, ...this.#extraFields];
+
+      for (const field of fields) {
+        const col = this.#getColumn(field);
+        if (col && col.tokenize) {
+          const fieldTokens = row[`_${field}_tokens`] || [];
+          for (const query of queryTokens) {
+            if (this.#searchField(fieldTokens, query)) {
+              row._searchScore++;
             }
           }
         }
-        return false;
+
+        const value = this.#getNestedValue(row, field);
+        if (this.#searchField(value, query)) {
+          row._searchScore += 100;
+        }
       }
 
-      return true;
+      return row._searchScore > 0;
     });
+
     this.#sortRows();
     this.#updateTable();
 
     this.#table.dispatchEvent(new DataTableEvent("rows.changed"));
+  }
+
+  /**
+   * 
+   * @param {object} a 
+   * @param {object} b 
+   * @param {ColumnOptions} col 
+   * @returns {number}
+   */
+  #compareRows(a, b, col) {
+    let aValue, bValue;
+    if (col.sortOrder === "asc") {
+      aValue = this.#getNestedValue(a, col.field);
+      bValue = this.#getNestedValue(b, col.field);
+    } else if (col.sortOrder === "desc") {
+      aValue = this.#getNestedValue(b, col.field);
+      bValue = this.#getNestedValue(a, col.field);
+    }
+
+    if (typeof col.sorter === "function") {
+      const ret = col.sorter(aValue, bValue);
+      if (ret !== 0) return ret;
+    }
+
+    if (aValue < bValue) return -1;
+    if (aValue > bValue) return 1;
+    return 0;
   }
 
   #sortRows() {
@@ -600,29 +617,21 @@ export class DataTable {
         return aPriority - bPriority;
       });
 
-    // If all other fields are equal, sort by index.
-    sortedColumns.push(this.#indexCol);
-
     this.#filteredRows.sort((a, b) => {
       for (const col of sortedColumns) {
-        let aValue, bValue;
-        if (col.sortOrder === "asc") {
-          aValue = this.#getNestedValue(a, col.field);
-          bValue = this.#getNestedValue(b, col.field);
-        } else if (col.sortOrder === "desc") {
-          aValue = this.#getNestedValue(b, col.field);
-          bValue = this.#getNestedValue(a, col.field);
+        const comp = this.#compareRows(a, b, col);
+        if (comp !== 0) {
+          return comp;
         }
-
-        if (typeof col.sorter === "function") {
-          const ret = col.sorter(aValue, bValue);
-          if (ret !== 0) return ret;
-        }
-
-        if (aValue < bValue) return -1;
-        if (aValue > bValue) return 1;
       }
-      return 0;
+
+      // Try to sort by search score if there is a query.
+      let aValue = a._searchScore || 0;
+      let bValue = b._searchScore || 0;
+      if (aValue > bValue) return -1;
+      if (aValue < bValue) return 1;
+
+      return this.#compareRows(a, b, this.#indexCol);
     });
     this.#updateTable();
   }
@@ -706,20 +715,24 @@ export class DataTable {
         col.elementFormatter(value, row, td);
       }
 
+      const queryTokens = this.#tokenizer(this.#query);
+
       if (
         this.#highlightSearch &&
         this.#query &&
-        this.#query != "" &&
         col.searchable
       ) {
-        // FIXME: When search query contains a character that is removed
-        // during tokenization, the highlighting doesn't work.
-        const tokens = Array.isArray(this.#query) ? this.#query : [this.#query];
-        
         let innerText = td.innerText;
-        for (const token of tokens) {
+        if (col.tokenize) {
+          for (const token of queryTokens) {
+            innerText = innerText.replace(
+              new RegExp(token, "i"),
+              "<mark>$&</mark>"
+            );
+          }
+        } else {
           innerText = innerText.replace(
-            new RegExp(token, "i"),
+            new RegExp(this.#query, "i"),
             "<mark>$&</mark>"
           );
         }
@@ -765,12 +778,12 @@ export class DataTable {
   }
 
   #tokenizeData(data) {
-    const searchableCols = this.columns.filter(col => col.searchable);
+    const cols = this.columns.filter(c => c.searchable && c.tokenize);
     for (const row of data) {
-      for (const col of searchableCols) {
+      for (const col of cols) {
         const field = col.field;
         const value = this.#getNestedValue(row, field);
-        if (value && typeof value === 'string')
+        if (value)
           row[`_${field}_tokens`] = this.#tokenizer(value);
       }
     }
@@ -1014,6 +1027,7 @@ const DEFAULT_CLASSES = {
  * @property {string} title
  * @property {boolean} sortable
  * @property {boolean} searchable
+ * @property {boolean} tokenize
  * @property {ValueFormatter} valueFormatter
  * @property {ElementFormatter} elementFormatter
  * @property {function} sorter

@@ -33,11 +33,12 @@ export class DataTable {
   /** @type {boolean} */
   #highlightSearch;
   /** @type {TokenizerFunction} */
-  #tokenizer = (value) => String(value)
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, ' ')
-    .trim()
-    .split(/\s+/);
+  #tokenizer = (value) =>
+    String(value)
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
+      .trim()
+      .split(/\s+/);
 
   /** @type {number} */
   #sortPriority = 0;
@@ -62,11 +63,14 @@ export class DataTable {
     noDataText,
     noMatchText,
     classes,
+    tokenizer,
   }) {
     table = getElement(table, "table");
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
     }
+
+    this.#tokenizer = tokenizer || this.#tokenizer;
 
     this.#highlightSearch = highlightSearch;
     this.#extraFields = extraSearchFields || [];
@@ -284,7 +288,7 @@ export class DataTable {
       if ("index" in rows[0]) {
         console.warn(
           "DataTable uses the index property to keep track of the initial sort order but the\n" +
-          "provided data already contains an index. Rows will be sorted by the given index"
+            "provided data already contains an index. Rows will be sorted by the given index"
         );
       } else {
         // Store initial index so we can "unsort" data.
@@ -379,7 +383,8 @@ export class DataTable {
     const col = this.#getColumn(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${visisble ? "show" : "hide"
+        `Attempting to ${
+          visisble ? "show" : "hide"
         } non-existent column ${colName}`
       );
       return;
@@ -475,7 +480,7 @@ export class DataTable {
    */
   #searchField(value, query) {
     if (Array.isArray(value)) {
-      return value.some(element => this.#searchField(element, query))
+      return value.some((element) => this.#searchField(element, query));
     }
 
     if (query instanceof RegExp) {
@@ -530,7 +535,7 @@ export class DataTable {
     let query, queryTokens;
     if (this.#query instanceof RegExp) {
       query = this.#query;
-      queryTokens = [query]
+      queryTokens = [query];
     } else if (typeof this.#query === "string") {
       query = this.#query.toLocaleLowerCase();
       queryTokens = this.#tokenizer(query);
@@ -548,8 +553,8 @@ export class DataTable {
       }
 
       const searchableFields = this.columns
-        .filter(col => col.searchable)
-        .map(c => c.field);
+        .filter((col) => col.searchable)
+        .map((c) => c.field);
 
       const fields = [...searchableFields, ...this.#extraFields];
 
@@ -557,16 +562,24 @@ export class DataTable {
         const col = this.#getColumn(field);
         if (col && col.tokenize) {
           const fieldTokens = row[`_${field}_tokens`] || [];
-          for (const query of queryTokens) {
-            if (this.#searchField(fieldTokens, query)) {
+          for (const token of queryTokens) {
+            if (this.#searchField(fieldTokens, token)) {
+              if (typeof token === "string") {
+                row._searchScore += token.length;
+              } else {
+                row.searchScore++;
+              }
+            }
+          }
+        } else {
+          const value = this.#getNestedValue(row, field);
+          if (this.#searchField(value, query)) {
+            if (typeof query === "string") {
+              row._searchScore += query.length;
+            } else {
               row._searchScore++;
             }
           }
-        }
-
-        const value = this.#getNestedValue(row, field);
-        if (this.#searchField(value, query)) {
-          row._searchScore += 100;
         }
       }
 
@@ -580,10 +593,10 @@ export class DataTable {
   }
 
   /**
-   * 
-   * @param {object} a 
-   * @param {object} b 
-   * @param {ColumnOptions} col 
+   *
+   * @param {object} a
+   * @param {object} b
+   * @param {ColumnOptions} col
    * @returns {number}
    */
   #compareRows(a, b, col) {
@@ -599,6 +612,10 @@ export class DataTable {
     if (typeof col.sorter === "function") {
       const ret = col.sorter(aValue, bValue);
       if (ret !== 0) return ret;
+    }
+
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return aValue.localeCompare(bValue, "en", { sensitivity: "base" });
     }
 
     if (aValue < bValue) return -1;
@@ -618,18 +635,18 @@ export class DataTable {
       });
 
     this.#filteredRows.sort((a, b) => {
+      // Try to sort by search score if there is a query.
+      let aValue = a._searchScore || 0;
+      let bValue = b._searchScore || 0;
+      if (aValue > bValue) return -1;
+      if (aValue < bValue) return 1;
+
       for (const col of sortedColumns) {
         const comp = this.#compareRows(a, b, col);
         if (comp !== 0) {
           return comp;
         }
       }
-
-      // Try to sort by search score if there is a query.
-      let aValue = a._searchScore || 0;
-      let bValue = b._searchScore || 0;
-      if (aValue > bValue) return -1;
-      if (aValue < bValue) return 1;
 
       return this.#compareRows(a, b, this.#indexCol);
     });
@@ -717,11 +734,7 @@ export class DataTable {
 
       const queryTokens = this.#tokenizer(this.#query);
 
-      if (
-        this.#highlightSearch &&
-        this.#query &&
-        col.searchable
-      ) {
+      if (this.#highlightSearch && this.#query && col.searchable) {
         let innerText = td.innerText;
         if (col.tokenize) {
           for (const token of queryTokens) {
@@ -754,11 +767,11 @@ export class DataTable {
   }
 
   #getNestedValue(obj, path) {
-    const keys = path.split('.');
+    const keys = path.split(".");
     let current = obj;
 
     for (const key of keys) {
-      if (current && typeof current === 'object') {
+      if (current && typeof current === "object") {
         current = current[key];
       } else {
         return undefined; // Or handle the error as needed
@@ -778,13 +791,12 @@ export class DataTable {
   }
 
   #tokenizeData(data) {
-    const cols = this.columns.filter(c => c.searchable && c.tokenize);
+    const cols = this.columns.filter((c) => c.searchable && c.tokenize);
     for (const row of data) {
       for (const col of cols) {
         const field = col.field;
         const value = this.#getNestedValue(row, field);
-        if (value)
-          row[`_${field}_tokens`] = this.#tokenizer(value);
+        if (value) row[`_${field}_tokens`] = this.#tokenizer(value);
       }
     }
   }
@@ -1062,6 +1074,7 @@ const DEFAULT_CLASSES = {
  * @property {string} noDataText                  - Text to display if the provided data is empty.
  * @property {string} noMatchText                 - Text to display if search / filter result is empty.
  * @property {TableClasses} classes               - Classes to be applied to created elements.
+ * @property {TokenizerFunction} tokenizer        - Function used to tokenize queries and field values.
  */
 
 /**

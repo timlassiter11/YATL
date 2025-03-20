@@ -231,12 +231,6 @@ export class DataTable {
           }
         });
       }
-
-      // If the caller provided a sort function but not a compare
-      // function we can use the sort function for a comparison
-      if (!col.compare && typeof col.sorter === "function") {
-        col.compare = (a, b) => col.sorter(a, b) != 0;
-      }
     }
 
     if (!colVisible) {
@@ -293,17 +287,18 @@ export class DataTable {
           const field = col.field;
           const value = this.#getNestedValue(row, field);
 
-          if (typeof value === "string") {
-            // Tokenize any searchable columns
-            if (col.searchable && col.tokenize) {
-              row[`_${field}_tokens`] = this.#tokenizer(value);
-            }
-
-            // Cache precomputed values for sorting
-            row[`_${col.field}_sort`] = value.toLocaleLowerCase();
+          // Cache precomputed values for sorting
+          if (typeof col.sortValue === "function") {
+            row[`_${field}_sort`] = col.sortValue(value, row);
+          } else if (typeof value === "string") {
+            row[`_${field}_sort`] = value.toLocaleLowerCase();
           } else {
-            // Cache precomputed values for sorting
-            row[`_${col.field}_sort`] = value
+            row[`_${field}_sort`] = value;
+          }
+
+          // Tokenize any searchable columns
+          if (col.searchable && col.tokenize && value) {
+            row[`_${field}_tokens`] = this.#tokenizer(value);
           }
         }
       }
@@ -344,7 +339,7 @@ export class DataTable {
    * to be filtered and values to match against the underlying data.
    * E.g. {quantity: 1} will only show rows where the quantity column = 1
    * Can also be a function that will be called for each row.
-   * @param {object | FilterCallback} filters
+   * @param {object | FilterRowCallback} filters
    */
   filter(filters) {
     if (typeof filters !== "object" && typeof filters !== "function") {
@@ -495,7 +490,14 @@ export class DataTable {
     return String(value).toLocaleLowerCase().includes(query);
   }
 
-  #filterField(value, filter, compareFunction) {
+  /**
+   * 
+   * @param {any} value 
+   * @param {any} filter 
+   * @param {FilterValueCallback} filterFunction 
+   * @returns {boolean}
+   */
+  #filterField(value, filter, filterFunction) {
     if (Array.isArray(filter)) {
       // If it's an array, we will use an OR filter.
       // If any filters in the array match, keep it.
@@ -507,8 +509,8 @@ export class DataTable {
       return false;
     }
 
-    if (typeof compareFunction === "function") {
-      return compareFunction(value, filter);
+    if (typeof filterFunction === "function") {
+      return filterFunction(value, filter);
     }
 
     if (filter instanceof RegExp) {
@@ -522,9 +524,9 @@ export class DataTable {
     for (const field in this.#filters) {
       const filter = this.#filters[field];
       const col = this.#getColumn(field);
-      const compare = col ? col.compare : null;
+      const filterCallback = col ? col.filter : null;
       const value = this.#getNestedValue(row, field);
-      if (!this.#filterField(value, filter, compare)) {
+      if (!this.#filterField(value, filter, filterCallback)) {
         return false;
       }
     }
@@ -1019,19 +1021,20 @@ const DEFAULT_CLASSES = {
 
 /**
  * @typedef {object} ColumnOptions
- * @property {string} field
- * @property {string} title
- * @property {boolean} sortable
- * @property {boolean} searchable
- * @property {boolean} tokenize
- * @property {ValueFormatter} valueFormatter
- * @property {ElementFormatter} elementFormatter
- * @property {function} sorter
- * @property {function} compare
- * @property {Element} element
- * @property {string} sortOrder
- * @property {number} sortPriority
- * @property {boolean} visible
+ * @property {string} field                       - Field name within the data object. Can be nested.
+ * @property {string} title                       - Column title to be displayed in the header.
+ * @property {boolean} sortable                   - If true, the column can be sorted.
+ * @property {boolean} searchable                 - If true, the column can be searched.
+ * @property {boolean} tokenize                   - If true, the column will be tokenized for search.
+ * @property {ValueFormatter} valueFormatter      - Callback used to format the value for display.
+ * @property {ElementFormatter} elementFormatter  - Callback used to format the element for display.
+ * @property {function} sorter                    - Function used to sort the column.
+ * @property {function} sortValue                 - Function used to get the value to sort on. Will be cached on initial data load
+ * @property {FilterValueCallback} filter         - Function used to filter the column.
+ * @property {Element} element                    - The header element for the column.
+ * @property {string} sortOrder                   - The current sort order of the column.
+ * @property {number} sortPriority                - The sort priority of the column.
+ * @property {boolean} visible                    - If true, the column is visible.
  */
 
 /**
@@ -1088,8 +1091,15 @@ const DEFAULT_CLASSES = {
  */
 
 /**
- * @callback FilterCallback
+ * @callback FilterRowCallback
  * @param {object} row - The row to be tested.
  * @param {number} index - Index of the given row.
+ * @returns {boolean} True to keep value, false to filter it out.
+ */
+
+/**
+ * @callback FilterValueCallback
+ * @param {any} value - The value to be tested.
+ * @param {any} filter - The filter to be tested against.
  * @returns {boolean} True to keep value, false to filter it out.
  */

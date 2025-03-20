@@ -3,47 +3,6 @@ import { DataTable, DataTableRowEvent } from "../../src/datatable.js";
 let dataTable;
 
 window.addEventListener("load", () => {
-  const columns = [
-    {
-      field: "name",
-      title: "Name",
-      searchable: true,
-      sortable: true,
-    },
-    {
-      field: "due_date",
-      title: "Due Date",
-      sortable: true,
-      sorter: (a, b) => a.getTime() - b.getTime(),
-      compare: (value, filter) => {
-        if (filter.startDate && filter.endDate) {
-          return (
-            filter.startDate.getTime() <= value.getTime() &&
-            filter.endDate.getTime() >= value.getTime()
-          );
-        } else if (filter.startDate) {
-          return filter.startDate.getTime() <= value.getTime();
-        } else if (filter.endDate) {
-          return filter.endDate.getTime() >= value.getTime();
-        }
-        return true;
-      },
-      valueFormatter: (date) => dateFormatter.format(date),
-    },
-    {
-      field: "quantity",
-      title: "Quantity",
-      sortable: true,
-      valueFormatter: (qty) => qty.toFixed(1),
-    },
-    {
-      field: "cost",
-      title: "Cost",
-      sortable: true,
-      valueFormatter: (cost) => moneyFormatter.format(cost),
-    },
-  ];
-
   const table = document.getElementById("table");
   table.addEventListener("dt.row.click", (event) => {
     if (event instanceof DataTableRowEvent) {
@@ -58,7 +17,46 @@ window.addEventListener("load", () => {
 
   dataTable = new DataTable({
     table: table,
-    columns: columns,
+    columns: [
+      {
+        field: "name",
+        title: "Name",
+        searchable: true,
+        sortable: true,
+      },
+      {
+        field: "due_date",
+        title: "Due Date",
+        sortable: true,
+        sortValue: (value) => value.getTime(),
+        filter: (value, filter) => {
+          if (filter.startDate && filter.endDate) {
+            return (
+              filter.startDate.getTime() <= value.getTime() &&
+              filter.endDate.getTime() >= value.getTime()
+            );
+          } else if (filter.startDate) {
+            return filter.startDate.getTime() <= value.getTime();
+          } else if (filter.endDate) {
+            return filter.endDate.getTime() >= value.getTime();
+          }
+          return true;
+        },
+        valueFormatter: (date) => dateFormatter.format(date),
+      },
+      {
+        field: "quantity",
+        title: "Quantity",
+        sortable: true,
+        valueFormatter: (qty) => qty.toFixed(1),
+      },
+      {
+        field: "cost",
+        title: "Cost",
+        sortable: true,
+        valueFormatter: (cost) => moneyFormatter.format(cost),
+      },
+    ],
     formatter: rowFormatter,
     data: createData(count),
     virtualScroll: 1000,
@@ -66,7 +64,7 @@ window.addEventListener("load", () => {
 
   // Create visibility toggles for each column
   const colList = document.getElementById("colSelectDropdown");
-  for (const col of columns) {
+  for (const col of dataTable.columns) {
     const li = document.createElement("li");
     const wrapper = document.createElement("div");
     wrapper.className = "form-check dropdown-item";

@@ -65,16 +65,11 @@ export class DataTable {
     classes,
     tokenizer,
   }) {
-    if (!table) {
-      throw new TypeError(`table can't be null`);
-    }
-
     if (typeof table === "string") {
       this.#table = document.querySelector(table);
       if (!this.#table)
-        throw new TypeError(`Failed to find table using selector ${table}`);
-    }
-    else if (table instanceof HTMLTableElement) {
+        throw new SyntaxError(`Failed to find table using selector ${table}`);
+    } else {
       this.#table = table;
     }
 
@@ -279,25 +274,25 @@ export class DataTable {
     if (Array.isArray(rows) && rows.length > 0) {
       let index = 0;
 
-      for (const row of rows) {
+      for (const originalRow of rows) {
         // Add the index
-        row[INDEX_COL_FIELD] = index++;
+        originalRow[INDEX_COL_FIELD] = index++;
         for (const col of this.columns) {
           const field = col.field;
-          const value = this.#getNestedValue(row, field);
+          const value = this.#getNestedValue(originalRow, field);
 
           // Cache precomputed values for sorting
           if (typeof col.sortValue === "function") {
-            row[`_${field}_sort`] = col.sortValue(value, row);
+            originalRow[`_${field}_sort`] = col.sortValue(value, originalRow);
           } else if (typeof value === "string") {
-            row[`_${field}_sort`] = value.toLocaleLowerCase();
+            originalRow[`_${field}_sort`] = value.toLocaleLowerCase();
           } else {
-            row[`_${field}_sort`] = value;
+            originalRow[`_${field}_sort`] = value;
           }
 
           // Tokenize any searchable columns
           if (col.searchable && col.tokenize && value) {
-            row[`_${field}_tokens`] = this.#tokenizer(value);
+            originalRow[`_${field}_tokens`] = this.#tokenizer(value);
           }
         }
       }

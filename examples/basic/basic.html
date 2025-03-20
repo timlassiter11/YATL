@@ -1,17 +1,13 @@
 <!DOCTYPE html>
+<html lang="en" color-scheme="dark">
 
 <head>
   <title>Basic Example</title>
   <link href="../../src/datatable.css" rel="stylesheet" />
-  <style>
-    .dt-wrapper {
-      width: 400px;
-      height: 200px;
-    }
-  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/digitallytailored/classless@latest/classless.min.css">
 </head>
 
-<body>
+<body style="height: 100vh; padding: 20px;">
   <table></table>
   <script type="module">
     import { DataTable } from "../../src/datatable.js";
@@ -33,13 +29,17 @@
           {
             field: "name",
             title: "Name",
+            sortable: true,
           },
           {
             field: "value",
             title: "Value",
+            sortable: true,
           },
         ],
       });
     });
   </script>
 </body>
+
+</html>

@@ -72,6 +72,7 @@ window.addEventListener("load", () => {
     wrapper.className = "form-check dropdown-item";
     const input = document.createElement("input");
     input.type = "checkbox";
+    input.style.pointerEvents = "none";
     input.className = "form-check-input";
     input.id = `${col.field}ColToggle`;
     input.checked = col.visible;
@@ -84,10 +85,10 @@ window.addEventListener("load", () => {
     li.append(wrapper);
     colList.append(li);
 
-    col.input = input;
+    col.input = wrapper;
 
-    wrapper.onclick = () => input.click();
-    input.onchange = (event) => {
+    wrapper.onclick = () => {
+      input.checked = !input.checked;
       dataTable.setColumnVisibility(col.field, input.checked);
 
       // Count all visiable columns
@@ -101,12 +102,12 @@ window.addEventListener("load", () => {
       // If we only have one visible column left, disable it.
       // We have to have at least one column!
       if (visibleColumns.length === 1) {
-        visibleColumns[0].input.disabled = true;
+        visibleColumns[0].input.classList.add("disabled");
       } else {
         // Easier to just enable all columns
         // than it is to check which one is disabled.
         for (const col of visibleColumns) {
-          col.input.disabled = false;
+          col.input.classList.remove("disabled");
         }
       }
     };

@@ -2,7 +2,7 @@
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
  */
 export class DataTable {
-  /** @type {HTMLElement} */
+  /** @type {HTMLTableElement} */
   #table;
   /** @type {HTMLElement} */
   #thead;
@@ -32,10 +32,19 @@ export class DataTable {
   #virtualScrollCount;
   /** @type {boolean} */
   #highlightSearch;
+  /** @type {TokenizerFunction} */
+  #tokenizer = (value) =>
+    String(value)
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
+      .trim()
+      .split(/\s+/);
 
   /** @type {number} */
   #sortPriority = 0;
+  /** @type {string} */
   #noDataText;
+  /** @type {string} */
   #noMatchText;
   /** @type {TableClasses} */
   #classes;
@@ -58,11 +67,30 @@ export class DataTable {
     noDataText,
     noMatchText,
     classes,
+    tokenizer,
   }) {
-    table = getElement(table, "table");
+    if (!table) {
+      throw new TypeError(`table can't be null`);
+    }
+
+    if (typeof table === "string") {
+      this.#table = parent.querySelector(table);
+      if (!this.#table)
+        throw new TypeError(`Failed to find table using selector ${table}`);
+    }
+    else if (table instanceof HTMLTableElement) {
+      this.#table = table;
+    }
+
+    if (!(this.#table instanceof HTMLTableElement)) {
+      throw new TypeError(`Invalid table element type. Must be HTMLTableElement`);
+    }
+
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
     }
+
+    this.#tokenizer = tokenizer || this.#tokenizer;
 
     this.#highlightSearch = highlightSearch;
     this.#extraFields = extraSearchFields || [];
@@ -191,7 +219,9 @@ export class DataTable {
       th.innerHTML = `<div>${col.title}</div>`;
       // We need at least one column visible
       if (col.identity) {
-        this.#identityCol = col;
+        if (!this.#identityCol) {
+          this.#identityCol = col;
+        }
       }
 
       if (col.visible) {
@@ -199,6 +229,7 @@ export class DataTable {
       } else {
         th.style.display = "none";
       }
+
       if (col.sortable) {
         th.classList.add("dt-sortable");
         th.addEventListener("click", () => {
@@ -211,16 +242,29 @@ export class DataTable {
           }
         });
       }
+
+      // If the caller provided a sort function but not a compare
+      // function we can use the sort function for a comparison
+      if (!col.compare && typeof col.sorter === "function") {
+        col.compare = (a, b) => col.sorter(a, b) != 0;
+      }
     }
 
-    if (this.#identityCol === undefined) {
-      throw new Error(
-        "At least one column must be marked as an identity column."
-      );
+    const identityColumns = this.columns.filter(c => c.identity);
+    if (identityColumns.length > 1) {
+      console.warn(`DataTable only supports a single identity column but multiple were provided. Using ${this.#identityCol.name}.`);
+    }
+
+    // If no identity was provided, we will use the index
+    if (this.#identityCol == null) {
+      this.#identityCol = {
+        field: INDEX_COL_FIELD
+      };
     }
 
     if (!colVisible) {
-      throw new Error("At least one column must be visible");
+      console.warn("At least a single column must be visible. Showing the first column.");
+      this.showColumn(this.columns[0].field);
     }
 
     this.#virtualScroll = new VirtualScroll({
@@ -262,27 +306,33 @@ export class DataTable {
    * @param {Object[]} rows
    */
   loadData(rows) {
+    this.#rows = [];
+    this.#filteredRows = [];
     this.#rowElements = {};
-    if (Array.isArray(rows) && rows.length > 0) {
-      if (!("index" in rows[0])) {
-        // Store initial index so we can "unsort" data.
-        rows.forEach((element, index) => (element.index = index));
-      }
-
-      this.#rows = rows;
-      this.#filteredRows = rows;
-    } else {
-      this.#rows = [];
-      this.#filteredRows = [];
-    }
-
+    this.updateData(rows);
     this.#updateHeaders();
     this.#filterRows();
   }
 
   updateData(rows) {
-    for (const row of rows) {
-      this.#updateRow(row);
+    if (Array.isArray(rows) && rows.length > 0) {
+      let index = 0;
+      const tokenizedCols = this.columns.filter((c) => c.searchable && c.tokenize);
+      for (const row of rows) {
+        // Add the index
+        row[INDEX_COL_FIELD] = index++;
+        // Tokenize any searchable columns
+        for (const col of tokenizedCols) {
+          const field = col.field;
+          const value = this.#getNestedValue(row, field);
+          if (value) row[`_${field}_tokens`] = this.#tokenizer(value);
+        }
+
+        this.#updateRow(row);
+      }
+
+      this.#rows = rows;
+      this.#filteredRows = rows;
     }
   }
 
@@ -302,27 +352,9 @@ export class DataTable {
    * @param {string | RegExp} query
    */
   search(query) {
-    if (query && query !== "") {
-      if (typeof query === "string") {
-        this.#query = query.toLocaleLowerCase();
-      } else if (query instanceof RegExp) {
-        this.#query = query;
-      } else {
-        throw new TypeError("Search query must be string or regex");
-      }
-    } else {
-      this.#query = null;
-    }
-
+    this.#query = query !== "" ? query : null;
     this.#filterRows();
   }
-
-  /**
-   * @callback filterCallback
-   * @param {Object} row - The row to be tested.
-   * @param {number} index - Index of the given row.
-   * @returns {boolean} True to keep value, false to filter it out.
-   */
 
   /**
    * Apply the given filters to the table.
@@ -330,7 +362,7 @@ export class DataTable {
    * to be filtered and values to match against the underlying data.
    * E.g. {quantity: 1} will only show rows where the quantity column = 1
    * Can also be a function that will be called for each row.
-   * @param {Object | filterCallback} filters
+   * @param {Object | FilterCallback} filters
    */
   filter(filters) {
     if (typeof filters !== "object" && typeof filters !== "function") {
@@ -373,21 +405,23 @@ export class DataTable {
     const col = this.#getColumn(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${
-          visisble ? "show" : "hide"
+        `Attempting to ${visisble ? "show" : "hide"
         } non-existent column ${colName}`
       );
       return;
     }
 
-    col.visible = visisble;
-    this.#table
-      .querySelectorAll(
-        `td[data-dt-field="${colName}"], th[data-dt-field="${colName}"]`
-      )
-      .forEach((element) => (element.style.display = visisble ? "" : "none"));
+    const selector = `th[data-dt-field="${colName}"], td[data-dt-field="${colName}"]`;
 
-    this.#sortRows();
+    col.visible = visisble;
+    const cells = [];
+    cells.push(...this.#table.querySelectorAll(selector));
+    Object.values(this.#rowElements).forEach((row) => cells.push(...row.querySelectorAll(selector)));
+
+    cells.forEach((element) => (element.style.display = visisble ? "" : "none"));
+
+    // This causes the table to jump back to the top when a column is hidden / shown.
+    //this.#sortRows();
 
     this.#table.dispatchEvent(
       new DataTableColEvent(visisble ? "show" : "hide", col)
@@ -430,7 +464,7 @@ export class DataTable {
               if (typeof value !== "string") {
                 value = value.toString();
               }
-              
+
               value.replace('"', '""');
               list.push(`"${value}"`);
             }
@@ -472,17 +506,13 @@ export class DataTable {
    */
   #searchField(value, query) {
     if (Array.isArray(value)) {
-      for (const element of value) {
-        if (this.#searchField(element, query)) {
-          return true;
-        }
-      }
-      return false;
+      return value.some((element) => this.#searchField(element, query));
     }
 
     if (query instanceof RegExp) {
       return query.test(String(value));
     }
+
     return String(value).toLocaleLowerCase().includes(query);
   }
 
@@ -514,7 +544,7 @@ export class DataTable {
       const filter = this.#filters[field];
       const col = this.#getColumn(field);
       const compare = col ? col.compare : null;
-      const value = row[field];
+      const value = this.#getNestedValue(row, field);
       if (!this.#filterField(value, filter, compare)) {
         return false;
       }
@@ -528,38 +558,103 @@ export class DataTable {
         ? this.#filters
         : (row, index) => this.#filterRow(row, index);
 
+    let query, queryTokens;
+    if (this.#query instanceof RegExp) {
+      query = this.#query;
+      queryTokens = [query];
+    } else if (typeof this.#query === "string") {
+      query = this.#query.toLocaleLowerCase();
+      queryTokens = this.#tokenizer(query);
+    }
+
     this.#filteredRows = this.#rows.filter((row, index) => {
+      row._searchScore = 0;
       // Filter takes precedence over search.
       if (!filter(row, index)) {
         return false;
       }
 
-      if (this.#query) {
-        const fields = [...Object.keys(this.#columns), ...this.#extraFields];
-        for (const field of fields) {
-          const col = this.#getColumn(field);
-          // If we can't find the column it probably means that
-          // the field came from the extra keys so just search it.
-          if (!col || col.searchable) {
-            if (this.#searchField(row[field], this.#query)) {
-              return true;
+      if (!query) {
+        return true;
+      }
+
+      const searchableFields = this.columns
+        .filter((col) => col.searchable)
+        .map((c) => c.field);
+
+      const fields = [...searchableFields, ...this.#extraFields];
+
+      for (const field of fields) {
+        const col = this.#getColumn(field);
+        if (col && col.tokenize) {
+          const fieldTokens = row[`_${field}_tokens`] || [];
+          for (const token of queryTokens) {
+            if (this.#searchField(fieldTokens, token)) {
+              if (typeof token === "string") {
+                row._searchScore += token.length;
+              } else {
+                row.searchScore++;
+              }
+            }
+          }
+        } else {
+          const value = this.#getNestedValue(row, field);
+          if (this.#searchField(value, query)) {
+            if (typeof query === "string") {
+              row._searchScore += query.length;
+            } else {
+              row._searchScore++;
             }
           }
         }
-        return false;
       }
 
-      return true;
+      return row._searchScore > 0;
     });
+
     this.#sortRows();
     this.#updateTable();
 
     this.#table.dispatchEvent(new DataTableEvent("rows.changed"));
   }
 
+  /**
+   *
+   * @param {object} a
+   * @param {object} b
+   * @param {ColumnOptions} col
+   * @returns {number}
+   */
+  #compareRows(a, b, col) {
+    let aValue, bValue;
+    if (col.sortOrder === "asc") {
+      aValue = this.#getNestedValue(a, col.field);
+      bValue = this.#getNestedValue(b, col.field);
+    } else if (col.sortOrder === "desc") {
+      aValue = this.#getNestedValue(b, col.field);
+      bValue = this.#getNestedValue(a, col.field);
+    }
+
+    if (typeof col.sorter === "function") {
+      const ret = col.sorter(aValue, bValue);
+      if (ret !== 0) return ret;
+    }
+
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return aValue.localeCompare(bValue, "en", { sensitivity: "base" });
+    }
+
+    if (aValue < bValue) return -1;
+    if (aValue > bValue) return 1;
+    return 0;
+  }
+
   #sortRows() {
     const sortedColumns = Object.values(this.#columns)
+      // Only sort by visible columns with valid sort priorities
       .filter((col) => col.visible && typeof col.sortPriority === "number")
+      // Sort our columns by their sort priority.
+      // This is how sorting by multiple columns is handled.
       .sort((a, b) => {
         const aPriority =
           typeof a.sortPriority === "number" ? a.sortPriority : 0;
@@ -569,31 +664,20 @@ export class DataTable {
       });
 
     this.#filteredRows.sort((a, b) => {
+      // Try to sort by search score if there is a query.
+      let aValue = a._searchScore || 0;
+      let bValue = b._searchScore || 0;
+      if (aValue > bValue) return -1;
+      if (aValue < bValue) return 1;
+
       for (const col of sortedColumns) {
-        let aValue, bValue;
-        if (col.sortOrder === "asc") {
-          aValue = a[col.field];
-          bValue = b[col.field];
-        } else if (col.sortOrder === "desc") {
-          aValue = b[col.field];
-          bValue = a[col.field];
+        const comp = this.#compareRows(a, b, col);
+        if (comp !== 0) {
+          return comp;
         }
-
-        if (typeof col.sorter === "function") {
-          const ret = col.sorter(aValue, bValue);
-          if (ret !== 0) return ret;
-        }
-
-        if (aValue < bValue) return -1;
-        if (aValue > bValue) return 1;
       }
-
-      if ("index" in a && "index" in b)
-      {
-        return a.index - b.index;
-      }
-
-      return 0;
+      // Always fall back to the index column
+      return a[INDEX_COL_FIELD] - b[INDEX_COL_FIELD];
     });
     this.#updateTable();
   }
@@ -616,7 +700,7 @@ export class DataTable {
 
   #getRowElement(index) {
     const row = this.#filteredRows[index];
-    const identity = row[this.#identityCol.field];
+    const identity = this.#getNestedValue(row, this.#identityCol.field);
     let element = this.#rowElements[identity];
     if (element == null) element = this.#createRowElement(row);
     return element;
@@ -697,10 +781,10 @@ export class DataTable {
   #createRowElement(row) {
     const tr = document.createElement("tr");
     tr.classList.add(...classesToArray(this.#classes.tr));
-    tr.dataset.dtIndex = row.index;
+    tr.dataset.dtIndex = row[INDEX_COL_FIELD];
 
     for (const field in this.#columns) {
-      let value = row[field];
+      let value = this.#getNestedValue(row, field);
       const col = this.#getColumn(field);
       const td = document.createElement("td");
       td.classList.add(...classesToArray(this.#classes.td));
@@ -717,7 +801,7 @@ export class DataTable {
       this.#rowFormatter(row, tr);
     }
 
-    const identity = row[this.#identityCol.field];
+    const identity = this.#getNestedValue(row, this.#identityCol.field);
     if (identity != null) {
       this.#rowElements[identity] = tr;
     }
@@ -726,17 +810,17 @@ export class DataTable {
   }
 
   #updateRow(row) {
-    const identity = row[this.#identityCol.field];
+    const identity = this.#getNestedValue(row, this.#identityCol.field);
     const tr = this.#rowElements[identity];
     if (!tr) {
       return;
     }
-    const index = tr.dataset.dtIndex;
-    this.#rows[index] = row;
-    row.index = index;
-
+    
+    // TODO: Switch this to iterating over the cells
+    // That should be faster than calling query selector so much.
+    // for (const cell in tr.cells)
     for (const field in this.#columns) {
-      let value = row[field];
+      let value = this.#getNestedValue(row, field);
       const col = this.#getColumn(field);
       const td = tr.querySelector(`td[data-dt-field=${field}]`);
       this.#updateCell(td, value, col, row);
@@ -746,6 +830,21 @@ export class DataTable {
       this.#rowFormatter(row, tr);
     }
     return tr;
+  }
+
+  #getNestedValue(obj, path) {
+    const keys = path.split(".");
+    let current = obj;
+
+    for (const key of keys) {
+      if (current && typeof current === "object") {
+        current = current[key];
+      } else {
+        return undefined; // Or handle the error as needed
+      }
+    }
+
+    return current;
   }
 
   /**
@@ -954,26 +1053,6 @@ class VirtualScrollError extends Error {
   }
 }
 
-/**
- *
- * @param {string | Element} element
- * @param {Element | Document}
- */
-const getElement = (element, name = "element", parent = document) => {
-  if (!element) {
-    throw new TypeError(`${name} can't be null`);
-  }
-  if (typeof element === "string") {
-    element = parent.querySelector(element);
-    if (!element)
-      throw new TypeError(`Failed to find ${name} using selector ${element}`);
-  }
-  if (!(element instanceof Element)) {
-    throw new TypeError(`${name} must be string or HTML element`);
-  }
-  return element;
-};
-
 const classesToArray = (classes) => {
   if (typeof classes === "string") {
     return classes.split(" ");
@@ -985,8 +1064,13 @@ const classesToArray = (classes) => {
   throw new TypeError("classes must be string or array of strings");
 };
 
+// Simple flag to know if the caller has been warned about
+// disabling virtual scroll with large data sets.
 let warned = false;
+// Max number of rows before warning the user.
 const WARN_ROW_COUNT = 10_000;
+// Field to store the index in
+const INDEX_COL_FIELD = "dt_index";
 
 /** @type {TableClasses} */
 const DEFAULT_CLASSES = {
@@ -1000,6 +1084,7 @@ const DEFAULT_CLASSES = {
  * @property {string} title
  * @property {boolean} sortable
  * @property {boolean} searchable
+ * @property {boolean} tokenize
  * @property {ValueFormatter} valueFormatter
  * @property {ElementFormatter} elementFormatter
  * @property {function} sorter
@@ -1035,6 +1120,7 @@ const DEFAULT_CLASSES = {
  * @property {string} noDataText                  - Text to display if the provided data is empty.
  * @property {string} noMatchText                 - Text to display if search / filter result is empty.
  * @property {TableClasses} classes               - Classes to be applied to created elements.
+ * @property {TokenizerFunction} tokenizer        - Function used to tokenize queries and field values.
  */
 
 /**
@@ -1055,4 +1141,17 @@ const DEFAULT_CLASSES = {
  * @param {any} value
  * @param {object} row
  * @param {HTMLElement} element
+ */
+
+/**
+ * @callback TokenizerFunction
+ * @param {object} value
+ * @returns {string[]}
+ */
+
+/**
+ * @callback FilterCallback
+ * @param {Object} row - The row to be tested.
+ * @param {number} index - Index of the given row.
+ * @returns {boolean} True to keep value, false to filter it out.
  */

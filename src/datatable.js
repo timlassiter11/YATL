@@ -205,6 +205,11 @@ export class DataTable {
     let colVisible = false;
     for (const field in this.#columns) {
       const col = this.#getColumn(field);
+
+      if (!col.title) {
+        col.title = toHumanReadable(field);
+      }
+
       const th = col.element;
       th.innerHTML = `<div>${col.title}</div>`;
       // We need at least one column visible
@@ -1002,6 +1007,21 @@ const classesToArray = (classes) => {
   }
   throw new TypeError("classes must be string or array of strings");
 };
+
+/**
+ * Converts a string from camelCase or snake_case to a human-readable format.
+ * @param {string} str - The input string (e.g., "camelCase" or "snake_case").
+ * @returns {string} - The human-readable string (e.g., "Camel Case" or "Snake Case").
+ */
+const toHumanReadable = (str) => {
+  return str
+    // Replace underscores with spaces
+    .replace(/_/g, " ")
+    // Insert spaces before uppercase letters (for camelCase)
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    // Capitalize the first letter of each word
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 let warned = false;
 const WARN_ROW_COUNT = 10_000;

@@ -20,13 +20,11 @@ window.addEventListener("load", () => {
     columns: [
       {
         field: "name",
-        title: "Name",
         searchable: true,
         sortable: true,
       },
       {
         field: "due_date",
-        title: "Due Date",
         sortable: true,
         sortValue: (value) => value.getTime(),
         filter: (value, filter) => {
@@ -46,13 +44,11 @@ window.addEventListener("load", () => {
       },
       {
         field: "quantity",
-        title: "Quantity",
         sortable: true,
         valueFormatter: (qty) => qty.toFixed(1),
       },
       {
         field: "cost",
-        title: "Cost",
         sortable: true,
         valueFormatter: (cost) => moneyFormatter.format(cost),
       },

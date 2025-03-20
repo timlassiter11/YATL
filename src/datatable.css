@@ -2,6 +2,7 @@ table.data-table {
   position: relative;
   width: 100%;
   white-space: nowrap;
+  overflow: auto;
 }
 
 table.data-table > thead.dt-headers {

@@ -750,6 +750,13 @@ export class DataTable {
     }
   }
 
+  /**
+   * 
+   * @param {HTMLTableCellElement} td 
+   * @param {any} value 
+   * @param {ColumnOptions} col 
+   * @param {object} row 
+   */
   #updateCell(td, value, col, row) {
     if (typeof col.valueFormatter === "function") {
       value = col.valueFormatter(value, row);
@@ -768,7 +775,7 @@ export class DataTable {
     ) {
       td.innerHTML = td.innerText.replace(
         new RegExp(this.#query, "i"),
-        "<mark>$&</mark>"
+        (match) => `<mark>${match}</mark>`
       );
     }
   }
@@ -816,13 +823,11 @@ export class DataTable {
       return;
     }
     
-    // TODO: Switch this to iterating over the cells
-    // That should be faster than calling query selector so much.
-    // for (const cell in tr.cells)
-    for (const field in this.#columns) {
-      let value = this.#getNestedValue(row, field);
+    for (let i = 0; i < tr.cells.length; i++) {
+      const td = tr.cells[i];
+      const field = td.dataset.dtField;
+      const value = this.#getNestedValue(row, field);
       const col = this.#getColumn(field);
-      const td = tr.querySelector(`td[data-dt-field=${field}]`);
       this.#updateCell(td, value, col, row);
     }
 

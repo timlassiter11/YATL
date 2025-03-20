@@ -2,7 +2,7 @@
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
  */
 export class DataTable {
-  /** @type {HTMLElement} */
+  /** @type {HTMLTableElement} */
   #table;
   /** @type {HTMLElement} */
   #thead;
@@ -12,15 +12,15 @@ export class DataTable {
   #tfoot;
   /** @type {HTMLElement} */
   #scroller;
-  /** @type {Object} */
+  /** @type {object<string, ColumnOptions>} */
   #columns = {};
-  /** @type {Object[]} */
+  /** @type {object[]} */
   #rows;
-  /** @type {Object[]} */
+  /** @type {object[]} */
   #filteredRows;
   /** @type {RegExp | string} */
   #query;
-  /** @type {Object} */
+  /** @type {object} */
   #filters;
   /** @type {string[]} */
   #extraFields;
@@ -42,12 +42,12 @@ export class DataTable {
 
   /** @type {number} */
   #sortPriority = 0;
+  /** @type {string} */
   #noDataText;
+  /** @type {string} */
   #noMatchText;
   /** @type {TableClasses} */
   #classes;
-  /** @type {ColumnOptions} */
-  #indexCol;
 
   /**
    * @param {TableOptions} options
@@ -65,7 +65,23 @@ export class DataTable {
     classes,
     tokenizer,
   }) {
-    table = getElement(table, "table");
+    if (!table) {
+      throw new TypeError(`table can't be null`);
+    }
+
+    if (typeof table === "string") {
+      this.#table = parent.querySelector(table);
+      if (!this.#table)
+        throw new TypeError(`Failed to find table using selector ${table}`);
+    }
+    else if (table instanceof HTMLTableElement) {
+      this.#table = table;
+    }
+
+    if (!(this.#table instanceof HTMLTableElement)) {
+      throw new TypeError(`Invalid table element type. Must be HTMLTableElement`);
+    }
+
     if (!Array.isArray(columns)) {
       throw new TypeError("columns must be a list of columns");
     }
@@ -158,24 +174,6 @@ export class DataTable {
       }
     });
 
-    for (const col of columns) {
-      if (col.field === "index") {
-        this.#indexCol = col;
-        break;
-      }
-    }
-
-    if (!this.#indexCol) {
-      this.#indexCol = {
-        field: "index",
-        title: "Index",
-        visible: false,
-        sortable: true,
-        sortOrder: "asc",
-        searchable: false,
-      };
-    }
-
     // Initialize columns from argument
     for (const col of columns) {
       let th = this.#thead.querySelector(`th[data-dt-field="${col.field}"]`);
@@ -242,7 +240,8 @@ export class DataTable {
     }
 
     if (!colVisible) {
-      throw new Error("At least one column must be visible");
+      console.warn("At least a single column must be visible. Showing the first column.");
+      this.showColumn(this.columns[0].field);
     }
 
     this.#virtualScroll = new VirtualScroll({
@@ -281,23 +280,35 @@ export class DataTable {
    * Loads the given rows into the table.
    * This will overwrite any already existing rows.
    *
-   * @param {Object[]} rows
+   * @param {object[]} rows
    */
   loadData(rows) {
     if (Array.isArray(rows) && rows.length > 0) {
-      if ("index" in rows[0]) {
-        console.warn(
-          "DataTable uses the index property to keep track of the initial sort order but the\n" +
-            "provided data already contains an index. Rows will be sorted by the given index"
-        );
-      } else {
-        // Store initial index so we can "unsort" data.
-        rows.forEach((element, index) => (element.index = index));
-      }
+      let index = 0;
 
+      for (const row of rows) {
+        // Add the index
+        row[INDEX_COL_FIELD] = index++;
+        for (const col of this.columns) {
+          const field = col.field;
+          const value = this.#getNestedValue(row, field);
+
+          if (typeof value === "string") {
+            // Tokenize any searchable columns
+            if (col.searchable && col.tokenize) {
+              row[`_${field}_tokens`] = this.#tokenizer(value);
+            }
+
+            // Cache precomputed values for sorting
+            row[`_${col.field}_sort`] = value.toLocaleLowerCase();
+          } else {
+            // Cache precomputed values for sorting
+            row[`_${col.field}_sort`] = value
+          }
+        }
+      }
       this.#rows = rows;
       this.#filteredRows = rows;
-      this.#tokenizeData(this.#rows);
     } else {
       this.#rows = [];
       this.#filteredRows = [];
@@ -328,19 +339,12 @@ export class DataTable {
   }
 
   /**
-   * @callback filterCallback
-   * @param {Object} row - The row to be tested.
-   * @param {number} index - Index of the given row.
-   * @returns {boolean} True to keep value, false to filter it out.
-   */
-
-  /**
    * Apply the given filters to the table.
    * Filters should be an object with keys for any columns
    * to be filtered and values to match against the underlying data.
    * E.g. {quantity: 1} will only show rows where the quantity column = 1
    * Can also be a function that will be called for each row.
-   * @param {Object | filterCallback} filters
+   * @param {object | FilterCallback} filters
    */
   filter(filters) {
     if (typeof filters !== "object" && typeof filters !== "function") {
@@ -383,8 +387,7 @@ export class DataTable {
     const col = this.#getColumn(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${
-          visisble ? "show" : "hide"
+        `Attempting to ${visisble ? "show" : "hide"
         } non-existent column ${colName}`
       );
       return;
@@ -433,14 +436,16 @@ export class DataTable {
           if (key in this.#columns) {
             const col = this.#getColumn(key);
             if (all || col.visible) {
-              if (typeof col.formatter === "function") {
-                value = col.valueFormatter(value);
+              if (typeof col.valueFormatter === "function") {
+                value = col.valueFormatter(value, row);
               }
 
-              if (typeof value === "string") {
-                value.replace('"', '""');
-                list.push(`"${value}"`);
+              if (typeof value !== "string") {
+                value = value.toString();
               }
+
+              value.replace('"', '""');
+              list.push(`"${value}"`);
             }
           }
         }
@@ -602,20 +607,16 @@ export class DataTable {
   #compareRows(a, b, col) {
     let aValue, bValue;
     if (col.sortOrder === "asc") {
-      aValue = this.#getNestedValue(a, col.field);
-      bValue = this.#getNestedValue(b, col.field);
+      aValue = a[`_${col.field}_sort`]
+      bValue = b[`_${col.field}_sort`]
     } else if (col.sortOrder === "desc") {
-      aValue = this.#getNestedValue(b, col.field);
-      bValue = this.#getNestedValue(a, col.field);
+      aValue = b[`_${col.field}_sort`]
+      bValue = a[`_${col.field}_sort`]
     }
 
     if (typeof col.sorter === "function") {
       const ret = col.sorter(aValue, bValue);
       if (ret !== 0) return ret;
-    }
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return aValue.localeCompare(bValue, "en", { sensitivity: "base" });
     }
 
     if (aValue < bValue) return -1;
@@ -625,7 +626,10 @@ export class DataTable {
 
   #sortRows() {
     const sortedColumns = Object.values(this.#columns)
+      // Only sort by visible columns with valid sort priorities
       .filter((col) => col.visible && typeof col.sortPriority === "number")
+      // Sort our columns by their sort priority.
+      // This is how sorting by multiple columns is handled.
       .sort((a, b) => {
         const aPriority =
           typeof a.sortPriority === "number" ? a.sortPriority : 0;
@@ -648,7 +652,8 @@ export class DataTable {
         }
       }
 
-      return this.#compareRows(a, b, this.#indexCol);
+      // Always fall back to the index column
+      return a[INDEX_COL_FIELD] - b[INDEX_COL_FIELD];
     });
     this.#updateTable();
   }
@@ -700,9 +705,8 @@ export class DataTable {
         if (this.#virtualScroll) {
           this.#virtualScroll.stop();
         }
-        this.#tbody.innerHTML = this.#filteredRows
-          .map((row, index) => this.#createRow(index))
-          .join("\n");
+        const rowElements = this.#filteredRows.map((_, index) => this.#createRow(index));
+        this.#tbody.append(...rowElements);
       }
     } else if (this.#rows.length === 0) {
       this.showMessage(this.#noDataText, "dt-empty");
@@ -711,6 +715,43 @@ export class DataTable {
     }
   }
 
+  /**
+   * 
+   * @param {HTMLTableCellElement} td 
+   * @param {any} value 
+   * @param {ColumnOptions} col 
+   * @param {object} row 
+   */
+  #updateCell(td, value, col, row) {
+    if (typeof col.valueFormatter === "function") {
+      value = col.valueFormatter(value, row);
+    }
+    td.innerText = value == null ? "-" : value;
+
+    if (typeof col.elementFormatter === "function") {
+      col.elementFormatter(value, row, td);
+    }
+
+    if (
+      this.#highlightSearch &&
+      this.#query &&
+      this.#query != "" &&
+      col.searchable
+    ) {
+      td.innerHTML = td.innerText.replace(
+        new RegExp(this.#query, "i"),
+        (match) => `<mark>${match}</mark>`
+      );
+    }
+
+    td.style.display = col.visible ? "" : "none";
+  }
+
+  /**
+   *
+   * @param {number} index
+   * @returns {HTMLTableRowElement}
+   */
   #createRow(index) {
     const row = this.#filteredRows[index];
     const tr = document.createElement("tr");
@@ -723,47 +764,15 @@ export class DataTable {
       const td = document.createElement("td");
       td.classList.add(...classesToArray(this.#classes.td));
       td.dataset.dtField = field;
-      if (typeof col.valueFormatter === "function") {
-        value = col.valueFormatter(value);
-      }
-      td.innerText = value == null ? "-" : value;
-
-      if (typeof col.elementFormatter === "function") {
-        col.elementFormatter(value, row, td);
-      }
-
-      const queryTokens = this.#tokenizer(this.#query);
-
-      if (this.#highlightSearch && this.#query && col.searchable) {
-        let innerText = td.innerText;
-        if (col.tokenize) {
-          for (const token of queryTokens) {
-            innerText = innerText.replace(
-              new RegExp(token, "i"),
-              "<mark>$&</mark>"
-            );
-          }
-        } else {
-          innerText = innerText.replace(
-            new RegExp(this.#query, "i"),
-            "<mark>$&</mark>"
-          );
-        }
-        td.innerHTML = innerText;
-      }
-
+      this.#updateCell(td, value, col, row);
       tr.append(td);
-
-      if (!col.visible) {
-        td.style.display = "none";
-      }
     }
 
     if (typeof this.#rowFormatter === "function") {
       this.#rowFormatter(row, tr);
     }
 
-    return tr.outerHTML;
+    return tr;
   }
 
   #getNestedValue(obj, path) {
@@ -789,17 +798,6 @@ export class DataTable {
   #getColumn(field) {
     return this.#columns[field];
   }
-
-  #tokenizeData(data) {
-    const cols = this.columns.filter((c) => c.searchable && c.tokenize);
-    for (const row of data) {
-      for (const col of cols) {
-        const field = col.field;
-        const value = this.#getNestedValue(row, field);
-        if (value) row[`_${field}_tokens`] = this.#tokenizer(value);
-      }
-    }
-  }
 }
 
 class VirtualScroll {
@@ -815,7 +813,7 @@ class VirtualScroll {
 
   /**
    *
-   * @param {Object} options
+   * @param {object} options
    * @param {HTMLElement} options.container
    * @param {HTMLElement} options.element
    * @param {Array<Object>} options.rows
@@ -916,15 +914,19 @@ class VirtualScroll {
       totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
 
     try {
+      this.#element.innerHTML = "";
       const visibleChildren = new Array(visibleNodesCount)
         .fill(null)
         .map((_, index) => this.#generator(index + startNode));
       // We create two empty rows. One at the top and one at the bottom.
       // Resize the rows accordingly to move the rendered rows to where we want.
-      this.#element.innerHTML = `
-        <tr style="height: ${offsetY}px;"></tr>
-        ${visibleChildren.join("\n")}
-        <tr style="height: ${remainingHeight}px;"></tr>`;
+      let topRow = document.createElement("tr");
+      let bottomRow = document.createElement("tr");
+      topRow.style.height = offsetY + "px";
+      bottomRow.style.height = remainingHeight + "px";
+      this.#element.append(topRow);
+      this.#element.append(...visibleChildren);
+      this.#element.append(bottomRow);
     } catch (e) {
       if (e instanceof RangeError) {
         console.log(e);
@@ -940,11 +942,12 @@ class VirtualScroll {
 
     const renderSize = Math.min(1000, this.#rowCount);
     // Create an average row height by rendering the first N rows.
-    const html = [];
+    const elements = [];
     for (let i = 0; i < renderSize; ++i) {
-      html.push(this.#generator(i));
+      elements.push(this.#generator(i));
     }
-    this.#element.innerHTML = html.join("\n");
+    this.#element.innerHTML = "";
+    this.#element.append(...elements);
     this.#rowHeight = this.#element.offsetHeight / renderSize;
 
     if (this.#rowHeight <= 0) {
@@ -993,26 +996,6 @@ class VirtualScrollError extends Error {
   }
 }
 
-/**
- *
- * @param {string | Element} element
- * @param {Element | Document}
- */
-const getElement = (element, name = "element", parent = document) => {
-  if (!element) {
-    throw new TypeError(`${name} can't be null`);
-  }
-  if (typeof element === "string") {
-    element = parent.querySelector(element);
-    if (!element)
-      throw new TypeError(`Failed to find ${name} using selector ${element}`);
-  }
-  if (!(element instanceof Element)) {
-    throw new TypeError(`${name} must be string or HTML element`);
-  }
-  return element;
-};
-
 const classesToArray = (classes) => {
   if (typeof classes === "string") {
     return classes.split(" ");
@@ -1026,6 +1009,7 @@ const classesToArray = (classes) => {
 
 let warned = false;
 const WARN_ROW_COUNT = 10_000;
+const INDEX_COL_FIELD = "_dt_index";
 
 /** @type {TableClasses} */
 const DEFAULT_CLASSES = {
@@ -1034,7 +1018,7 @@ const DEFAULT_CLASSES = {
 };
 
 /**
- * @typedef {Object} ColumnOptions
+ * @typedef {object} ColumnOptions
  * @property {string} field
  * @property {string} title
  * @property {boolean} sortable
@@ -1051,7 +1035,7 @@ const DEFAULT_CLASSES = {
  */
 
 /**
- * @typedef {Object} TableClasses
+ * @typedef {object} TableClasses
  * @property {string | string[]} scroller
  * @property {string | string[]} thead
  * @property {string | string[]} tbody
@@ -1062,11 +1046,11 @@ const DEFAULT_CLASSES = {
  */
 
 /**
- * @typedef {Object} TableOptions
+ * @typedef {object} TableOptions
  * @property {Element | string} table             - Selector or HTMLElement for the table.
  * @property {RowFormatter} formatter             - Callback used to apply any custom formatting to a row.
  * @property {ColumnOptions[]} columns            - List of columns to be created. Will be merged with any headers in the DOM that have a matching data-field attribute.
- * @property {Object[]} data                      - Data to be loaded to the table.
+ * @property {object[]} data                      - Data to be loaded to the table.
  * @property {boolean | number} virtualScroll     - Automatically enables virtual scroll for the given number of rows.
  *                                                  If boolean, completely enables or disables it. Defaults to 1000.
  * @property {boolean} highlightSearch            - If true, search results will be wrapped in a mark tag.
@@ -1079,13 +1063,14 @@ const DEFAULT_CLASSES = {
 
 /**
  * @callback RowFormatter
- * @param {Object} row
+ * @param {object} row
  * @param {HTMLElement} element
  */
 
 /**
  * @callback ValueFormatter
  * @param {any} value
+ * @param {object} row
  * @returns {string}
  */
 
@@ -1100,4 +1085,11 @@ const DEFAULT_CLASSES = {
  * @callback TokenizerFunction
  * @param {object} value
  * @returns {string[]}
+ */
+
+/**
+ * @callback FilterCallback
+ * @param {object} row - The row to be tested.
+ * @param {number} index - Index of the given row.
+ * @returns {boolean} True to keep value, false to filter it out.
  */

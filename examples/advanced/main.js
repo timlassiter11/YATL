@@ -1,5 +1,6 @@
 import { DataTable, DataTableRowEvent } from "../../src/datatable.js";
 
+/** @type {DataTable} */
 let dataTable;
 
 window.addEventListener("load", () => {
@@ -81,6 +82,7 @@ window.addEventListener("load", () => {
     wrapper.className = "form-check dropdown-item";
     const input = document.createElement("input");
     input.type = "checkbox";
+    input.style.pointerEvents = "none";
     input.className = "form-check-input";
     input.id = `${col.field}ColToggle`;
     input.checked = col.visible;
@@ -95,8 +97,8 @@ window.addEventListener("load", () => {
 
     col.input = input;
 
-    wrapper.onclick = () => input.click();
-    input.onchange = (event) => {
+    wrapper.onclick = () => {
+      input.checked = !input.checked;
       dataTable.setColumnVisibility(col.field, input.checked);
 
       // Count all visiable columns
@@ -122,6 +124,11 @@ window.addEventListener("load", () => {
   }
 
   const searchInput = document.getElementById("searchInput");
+
+  const reloadButton = document.getElementById("reloadButton");
+  reloadButton.onclick = () => {
+    dataTable.updateData(createData(dataTable.length));
+  }
 
   const regexToggle = document.getElementById("regexToggle");
   regexToggle.onclick = () =>
@@ -230,5 +237,7 @@ function updateRowCount() {
 function rowFormatter(row, element) {
   if (row.due_date.getTime() < today.getTime()) {
     element.classList.add("past-due");
+  } else {
+    element.classList.remove("past-due");
   }
 }

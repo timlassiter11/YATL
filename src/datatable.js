@@ -70,7 +70,7 @@ export class DataTable {
     }
 
     if (typeof table === "string") {
-      this.#table = parent.querySelector(table);
+      this.#table = document.querySelector(table);
       if (!this.#table)
         throw new TypeError(`Failed to find table using selector ${table}`);
     }
@@ -103,7 +103,6 @@ export class DataTable {
       this.#virtualScrollCount = Number.MAX_VALUE;
     }
 
-    this.#table = table;
     this.#table.classList.add("data-table");
 
     // Inner element that handles the virtual scroll.
@@ -112,7 +111,7 @@ export class DataTable {
 
     // Add the scroller before the table so when we move the
     // table into the scroller it stays in the same place.
-    table.parentElement.insertBefore(this.#scroller, table);
+    this.#table.parentElement.insertBefore(this.#scroller, this.#table);
     this.#scroller.append(this.#table);
 
     if (this.#table.querySelectorAll("thead").length > 1) {

@@ -11,36 +11,39 @@ YATL is a lightweight and customizable JavaScript library for creating dynamic, 
 - **Customizable Columns**: Define column properties like visibility, formatting, and sorting behavior.
 - **Export to CSV**: Export table data to a CSV file.
 
-### Searching
-YATL provides a powerful and flexible search feature that allows you to search across table data. Key capabilities include:
-
-1. **Case-Insensitive Search**:
-   - By default, searches are case-insensitive, making it easy to find matches regardless of capitalization.
-
-2. **Tokenization**:
-   - Columns can be configured to tokenize their values for more advanced search capabilities. For example, a column containing a string like `"John Doe"` can be tokenized into `["john", "doe"]`, allowing partial matches on individual words.
-   - Tokenization happens when the data is loaded to help improve performance
-
-3. **Regular Expression Support**:
-   - You can use regular expressions to perform complex searches. For example, searching with `/^A/` will match all rows where the search field starts with the letter "A".
-
-4. **Per-Column Searchability**:
-   - You can specify which columns are searchable and tokenized by setting their respective property in the column definition. Non-searchable columns will be ignored during searches.
-
-
 ## Installation
 Include the library in your project by downloading the source files
 
-### Using `<script>` Tag
+### Using standard script tag
 ```html
-<script src="path/to/yatl.js"></script>
+<script src="path/to/datatable.umd.js"></script>
+<script>
+   const datatble = new yatl.DataTable("#myTable", {
+      ...
+   });
+</script>
+```
+
+### Using ES6 module
+```javascript
+import { DataTable } from "path/to/datatable.esm.js";
+
+const datatable = new DataTable("#myTable", {
+   ...
+});
+```
+
+## Styling
+Some optional styling is included which adds sorting indicators and sticky headers. To use them simply include the stylesheet.
+
+```html
+<link rel="stylesheet" href="path/to/datatable.css">
 ```
 
 ## Usage
 ```javascript
 // Initialize the DataTable
-const dataTable = new DataTable({
-    table: "table",
+const dataTable = new DataTable("#myTable", {
     columns: [
         { field: "name", title: "First Name", sortable: true, searchable: true },
         // Titles will be created from the field name
@@ -90,4 +93,44 @@ const dataTable = new DataTable({
 });
 ```
 
-[Live Examples](https://timlassiter11.github.io/YATL/index.html)
+### Virtual Scroll
+Virtual scrolling is used to render only the rows that are visible (with some extras before an after). This allows the library to support tables with hundreads of thousands of rows without issue. This is done using some magic (*simple math...*) but requires it's parent enforce a height. To do this you can simply add a height to the table.
+
+```html
+<body>
+   <table style="height: 500px;"></table>
+</body>
+```
+
+This will result in the following HTML after the table is initialized
+```html
+<body>
+   <div class="dt-scroller" style="overflow: auto; height: 500px;">
+      <table></table>
+   </div>
+</body>
+```
+
+Many times this isn't ideal though and instead we'd like to let the layout work it's magic (*probably also simple math...*). To do this, it's best to wrap the table in an element that can enforce a height.
+
+```html
+<body style="height: 100vh;">
+   <div style="display: flex; flex-direction: column; overflow: auto; height: 100%;">
+      <div>
+         ... Lot's of cool table controls or filters
+      </div>
+      <table></table>
+      <div>
+         ... Some boring footer info or something
+      </div>
+   </div>
+</body>
+```
+
+Since the `dt-scroller` wrapper listens to scroll and resize events, this allows the table to be responsive and update what is rendered as the layout changes. 
+
+# Known Issues
+There are some limitations to virtual scrolling. For one, rows need to be a uniform height to accurately calculate the table height. Also, there seems to be a maximum element size that once exceeded, the contents are no longer rendered. I've found this to occur with datasets approaching 1 million rows in Chrome and unfortunately I have no workaround for it. If you have that many rows you definitely need some server side pagination and this is probably not the library for you.
+
+# Examples
+Examples can be found in the [examples](./examples/) directoy and are also hosted [here](https://timlassiter11.github.io/YATL/index.html) to view live.

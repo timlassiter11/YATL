@@ -9,6 +9,12 @@
             "request": "launch",
             "name": "Chrome",
             "url": "http://127.0.0.1:3000/index.html"
+        },
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Edge",
+            "url": "http://127.0.0.1:3000/index.html"
         }
     ]
 }

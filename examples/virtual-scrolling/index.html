@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" color-scheme="dark">
+
+<head>
+  <meta charset="utf-8">
+  <title>Virtual Scrolling Example</title>
+  <link rel="stylesheet" href="../../dist/datatable.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/digitallytailored/classless@latest/classless.min.css">
+  <link rel="stylesheet" href="../site.css">
+  <style>
+    body {
+      height: 100vh;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .options-wrapper {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .table-wrapper {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+      margin-left: 10px;
+      margin-right: 10px;
+      flex-grow: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="options-wrapper">
+    <label>
+      Data Rows
+      <input type="number" id="rowCount" value="10000">
+    </label>
+    <div id="virtualScrolling">
+      <label>Virtual Scrolling</label>
+      <label>
+        <input type="radio" id="virtualScrollingOff" name="virtualScrolling" value="off">
+        Off
+      </label>
+      <label>
+        <input type="radio" id="virtualScrollingOn" name="virtualScrolling" value="on">
+        On
+      </label>
+      <label>
+        <input type="radio" id="virtualScrollingAuto" name="virtualScrolling" value="auto" checked>
+        Auto
+      </label>
+    </div>
+    <div>
+      <label>Total Rows</label>
+      <p id="totalRows">0</p>
+      <label>Virtual Scroll Status</label>
+      <p id="virtualScrollStatus">Active</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table></table>
+  </div>
+  <script src="./main.js" type="module"></script>
+</body>
+
+</html>

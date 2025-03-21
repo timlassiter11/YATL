@@ -1,4 +1,4 @@
-import { DataTable, DataTableRowEvent } from "../../src/datatable.js";
+import { DataTable, DataTableRowEvent } from "../../dist/datatable.esm.js";
 
 let dataTable;
 
@@ -15,8 +15,7 @@ window.addEventListener("load", () => {
   let count = parseInt(url.searchParams.get("count"));
   count = isNaN(count) ? 100000 : count;
 
-  dataTable = new DataTable({
-    table: table,
+  dataTable = new DataTable(table, {
     columns: [
       {
         field: "name",

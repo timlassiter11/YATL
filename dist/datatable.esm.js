@@ -1,7 +1,7 @@
 /**
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
  */
-export class DataTable {
+class DataTable {
   /** @type {HTMLTableElement} */
   #table;
   /** @type {HTMLElement} */
@@ -639,11 +639,11 @@ export class DataTable {
   #compareRows(a, b, col) {
     let aValue, bValue;
     if (col.sortOrder === "asc") {
-      aValue = a[`_${col.field}_sort`]
-      bValue = b[`_${col.field}_sort`]
+      aValue = a[`_${col.field}_sort`];
+      bValue = b[`_${col.field}_sort`];
     } else if (col.sortOrder === "desc") {
-      aValue = b[`_${col.field}_sort`]
-      bValue = a[`_${col.field}_sort`]
+      aValue = b[`_${col.field}_sort`];
+      bValue = a[`_${col.field}_sort`];
     }
 
     if (typeof col.sorter === "function") {
@@ -995,27 +995,27 @@ class VirtualScroll {
   }
 }
 
-export class DataTableEvent extends Event {
+class DataTableEvent extends Event {
   constructor(type) {
     super(`dt.${type}`, { bubbles: true });
   }
 }
 
-export class DataTableColEvent extends DataTableEvent {
+class DataTableColEvent extends DataTableEvent {
   constructor(type, col) {
     super(`col.${type}`);
     this.col = col;
   }
 }
 
-export class DataTableRowEvent extends DataTableEvent {
+class DataTableRowEvent extends DataTableEvent {
   constructor(type, row) {
     super(`row.${type}`);
     this.row = row;
   }
 }
 
-export class DataTableRowClickEvent extends DataTableRowEvent {
+class DataTableRowClickEvent extends DataTableRowEvent {
   constructor(row, field) {
     super("click", row);
     this.field = field;
@@ -1052,7 +1052,7 @@ const toHumanReadable = (str) => {
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     // Capitalize the first letter of each word
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
+};
 
 let warned = false;
 const WARN_ROW_COUNT = 10_000;
@@ -1148,3 +1148,5 @@ const DEFAULT_CLASSES = {
  * @param {any} filter - The filter to be tested against.
  * @returns {boolean} True to keep value, false to filter it out.
  */
+
+export { DataTable, DataTableColEvent, DataTableEvent, DataTableRowClickEvent, DataTableRowEvent };

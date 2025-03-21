@@ -1,4 +1,4 @@
-import { DataTable } from "./datatable";
+import { DataTable } from "../src/datatable";
 
 describe("DataTable", () => {
 	let tableElement;
@@ -15,8 +15,7 @@ describe("DataTable", () => {
 	});
 
 	test("should initialize with valid table element", () => {
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [{ field: "name", title: "Name" }],
 			data: [],
 		});
@@ -27,8 +26,7 @@ describe("DataTable", () => {
 
 	test("should throw error if table is null", () => {
 		expect(() => {
-			new DataTable({
-				table: null,
+			new DataTable(null, {
 				columns: [],
 				data: [],
 			});
@@ -37,8 +35,7 @@ describe("DataTable", () => {
 
 	test("should throw error if invalid selector", () => {
 		expect(() => {
-			new DataTable({
-				table: "#table",
+			new DataTable("#table", {
 				columns: [],
 				data: [],
 			});
@@ -51,8 +48,7 @@ describe("DataTable", () => {
 			{ name: "Bob", age: 30 },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name" },
 				{ field: "age", title: "Age" },
@@ -73,8 +69,7 @@ describe("DataTable", () => {
 			{ name: "Bob", age: 30 },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name" },
 				{ field: "age", title: "Age" },
@@ -94,8 +89,7 @@ describe("DataTable", () => {
 			{ name: "Bob", age: 30 },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name", searchable: true },
 				{ field: "age", title: "Age" },
@@ -115,8 +109,7 @@ describe("DataTable", () => {
 			{ name: "Bob", age: 25 },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name" },
 				{ field: "age", title: "Age", sortable: true },
@@ -137,8 +130,7 @@ describe("DataTable", () => {
 			{ name: "Charlie", age: 25, city: "New York" },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name" },
 				{ field: "age", title: "Age" },
@@ -160,8 +152,7 @@ describe("DataTable", () => {
 			{ name: "Bob", age: 30 },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name" },
 				{ field: "age", title: "Age" },
@@ -181,8 +172,7 @@ describe("DataTable", () => {
 			{ name: "Charlie", age: 35 },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name" },
 				{ field: "age", title: "Age" },
@@ -204,8 +194,7 @@ describe("DataTable", () => {
 			{ name: "Bob", age: 30 },
 		];
 
-		const dataTable = new DataTable({
-			table: tableElement,
+		const dataTable = new DataTable(tableElement, {
 			columns: [
 				{ field: "name", title: "Name" },
 				{ field: "age", title: "Age" },

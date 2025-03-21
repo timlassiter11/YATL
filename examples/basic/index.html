@@ -3,15 +3,15 @@
 
 <head>
   <title>Basic Example</title>
-  <link href="../../src/datatable.css" rel="stylesheet" />
+  <link rel="stylesheet" href="../../dist/datatable.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/digitallytailored/classless@latest/classless.min.css">
+  <link rel="stylesheet" href="../site.css">
 </head>
 
 <body style="height: 100vh; padding: 20px;">
   <table></table>
-  <script type="module">
-    import { DataTable } from "../../src/datatable.js";
-
+  <script src="../../dist/datatable.umd.js"></script>
+  <script>
     // Generate random rows of data
     function createData(count) {
       return new Array(count).fill(null).map((v, i) => ({
@@ -21,8 +21,7 @@
     }
 
     window.addEventListener("load", () => {
-      const dt = new DataTable({
-        table: "table",
+      const dt = new yatl.DataTable("table", {
         // Create lots of data
         data: createData(100),
         columns: [

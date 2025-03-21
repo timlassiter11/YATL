@@ -85,7 +85,7 @@ window.addEventListener("load", () => {
       dataTable.setColumnVisibility(col.field, input.checked);
 
       // Count all visiable columns
-      const visibleColumns = columns.reduce((accumulator, col) => {
+      const visibleColumns = dataTable.columns.reduce((accumulator, col) => {
         if (col.visible) {
           accumulator.push(col);
         }
@@ -110,9 +110,9 @@ window.addEventListener("load", () => {
 
   const regexToggle = document.getElementById("regexToggle");
   regexToggle.onclick = () =>
-    (searchInput.placeholder = regexToggle.classList.contains("active")
-      ? "Regex Search"
-      : "Search");
+  (searchInput.placeholder = regexToggle.classList.contains("active")
+    ? "Regex Search"
+    : "Search");
 
   // Search table on input
   searchInput.addEventListener("input", (event) => {
@@ -124,7 +124,7 @@ window.addEventListener("load", () => {
         dataTable.search(query);
       }
       updateRowCount();
-    } catch {}
+    } catch { }
   });
 
   const startDateInput = document.getElementById("startDateInput");
@@ -146,18 +146,7 @@ window.addEventListener("load", () => {
     updateFilters();
   };
 
-  const filterWrapper = document.querySelector(".filter-wrapper");
-  document.getElementById("filterToggle").onclick = () => {
-    if (filterWrapper.classList.contains("hide")) {
-      filterWrapper.classList.remove("hide");
-    } else {
-      filterWrapper.classList.add("hide");
-    }
-  };
-
-  document
-    .getElementById("exportTable")
-    .addEventListener("click", () => dataTable.export("DataTable", false));
+  document.getElementById("exportTable").addEventListener("click", () => dataTable.export("DataTable", false));
 
   updateRowCount();
 });

@@ -9,41 +9,6 @@
   <link rel="stylesheet" href="../../dist/datatable.css">
   <link rel="stylesheet" href="../site.css">
   <style>
-    body {
-      height: 100vh;
-      display: flex;
-      flex-direction: row;
-      padding-top: 20px;
-      justify-content: space-between;
-    }
-
-    .filter-wrapper {
-      overflow: hidden;
-      min-width: 300px;
-    }
-
-    .filter-wrapper.hide {
-      min-width: 0;
-      width: 0;
-    }
-
-    .filter-wrapper input[type="date"] {
-      display: inline-block;
-    }
-
-    .filter-wrapper .input-group {
-      flex-wrap: nowrap;
-    }
-
-    .table-wrapper {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 10px;
-      margin-left: 10px;
-      margin-right: 10px;
-      flex-grow: 1;
-    }
-
     .dt-sortable:hover {
       background-color: var(--bs-secondary);
     }
@@ -67,7 +32,7 @@
   </style>
 </head>
 
-<body data-bs-theme="dark" class="container-fluid d-flex flex-column vh-100">
+<body data-bs-theme="dark" class="container-fluid d-flex flex-row vh-100 gap-3 p-3">
   <div class="filter-wrapper">
     <h5>Filters</h5>
     <div>
@@ -81,7 +46,7 @@
       </div>
     </div>
   </div>
-  <div class="table-wrapper">
+  <div class="d-flex flex-column flex-grow-1">
     <div class="toolbar">
       <input id="searchInput" class="form-control" type="search" placeholder="Regex Search" />
       <div class="btn-group">
@@ -94,8 +59,6 @@
         </div>
         <button type="button" class="bi bi-regex btn btn-sm btn-secondary active" id="regexToggle"
           title="Enable / Disable regex search" data-bs-toggle="button"></button>
-        <button type="button" class="bi bi-filter btn btn-sm btn-secondary active" id="filterToggle"
-          title="Show/Hide Filters" data-bs-toggle="button"></button>
         <button type="button" class="bi bi-download btn btn-sm btn-secondary" id="exportTable"
           title="Export Table"></button>
       </div>

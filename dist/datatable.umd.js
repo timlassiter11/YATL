@@ -935,7 +935,13 @@
       // This fixes an issue when the parent isn't set to grow causing only a
       // small number of rows to render until you scroll.
       this.#element.innerHTML = `<tr style="height: ${totalContentHeight}px;"></tr>`;
+      const actualHeight = this.#element.offsetHeight;
       const viewHeight = this.#container.offsetHeight;
+
+      if (!warned && actualHeight < totalContentHeight.toFixed(0) - 1) {
+        warned = true;
+        console.error("Max element height exceeded. Virtual scroll may not work.");
+      }
 
       if (!rowCount || !rowHeight) {
         return;

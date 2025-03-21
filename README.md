@@ -12,7 +12,7 @@ YATL is a lightweight and customizable JavaScript library for creating dynamic, 
 - **Export to CSV**: Export table data to a CSV file.
 
 ## Installation
-Include the library in your project by downloading the source files
+Include the library in your project by downloading the source files from the [dist](./dist/) folder.
 
 ### Using standard script tag
 ```html
@@ -66,7 +66,7 @@ dataTable.filter({ age: 25 });
 // Filter rows to only people over 25
 dataTable.filter((row) => row.age > 25);
 
-// Search for rows containing "Alice"
+// Search for Bob
 dataTable.search("bob");
 
 // Export table data to CSV
@@ -94,7 +94,7 @@ const dataTable = new DataTable({
 ```
 
 ### Virtual Scroll
-Virtual scrolling is used to render only the rows that are visible (with some extras before an after). This allows the library to support tables with hundreads of thousands of rows without issue. This is done using some magic (*simple math...*) but requires it's parent enforce a height. To do this you can simply add a height to the table.
+Virtual scrolling is used to render only the rows that are visible (with some extras before and after). This allows the library to support tables with hundreads of thousands of rows without issue. This is done using some magic (*simple math...*) but requires it's parent enforce a height. To do this you can simply add a height to the table.
 
 ```html
 <body>
@@ -111,7 +111,7 @@ This will result in the following HTML after the table is initialized
 </body>
 ```
 
-Many times this isn't ideal though and instead we'd like to let the layout work it's magic (*probably also simple math...*). To do this, it's best to wrap the table in an element that can enforce a height.
+Most of the time this isn't ideal though and instead we'd like to let the layout work it's magic (*probably also simple math...*). To do this, it's best to wrap the table in an element that can enforce a height.
 
 ```html
 <body style="height: 100vh;">

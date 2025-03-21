@@ -70,7 +70,7 @@
       noMatchText,
       classes,
       tokenizer,
-    }) {
+    } = {}) {
       if (typeof table === "string") {
         this.#table = document.querySelector(table);
         if (!this.#table)

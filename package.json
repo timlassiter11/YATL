@@ -5,7 +5,7 @@
   "files": [ "dist" ],
   "scripts": {
     "build": "rollup -c",
-    "test": "node --experimental-vm-modules node_modules/bin/jest"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",

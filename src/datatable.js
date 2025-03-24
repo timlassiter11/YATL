@@ -233,7 +233,9 @@ export class DataTable {
       }
     }
 
-    if (!colVisible) {
+    if (this.#columns.length === 0) {
+      console.warn("No columns found. At least one column is required.");
+    } else if (!colVisible) {
       console.warn("At least a single column must be visible. Showing the first column.");
       this.showColumn(this.columns[0].field);
     }

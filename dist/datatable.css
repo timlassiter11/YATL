@@ -15,13 +15,20 @@
   z-index: 1;
 }
 
-.dt-headers > tr {
-  height: 5px;
-}
-
 .dt-headers > tr > th {
   position: relative;
+}
+
+.dt-headers > tr > th.dt-sortable {
+  padding-right: var(--dt-header-sorter-width);
+}
+
+.dt-headers > tr > th.dt-sortable:has(.dt-resizer) {
   padding-right: calc(var(--dt-header-sorter-width) + var(--dt-header-resizer-width));
+}
+
+.dt-headers > tr > th.dt-sortable:has(.dt-resizer)::after {
+  right: var(--dt-header-resizer-width);
 }
 
 .dt-sortable {
@@ -32,7 +39,7 @@
   content: "";
   position: absolute;
   top: 0;
-  right: var(--dt-header-resizer-width);
+  right: 0;
   width: var(--dt-header-sorter-width);
   height: 100%;
   background-color: currentColor;
@@ -56,6 +63,7 @@
 }
 
 .dt-resizer {
+  display: none; /* Only show if not the last visible header */
   position: absolute;
   top: 0;
   right: 0; /* Position it slightly to the right of the cell content, adjust as needed */
@@ -85,4 +93,8 @@ th:hover .dt-resizer::after,
 .dt-headers > tr > th.dt-drag-over,
 .dt-headers > tr > th:has(.dt-drag-over) {
   background-color: var(--dt-header-drop-color);
+}
+
+.dt-headers > tr > th:not([hidden]):has(~ th:not([hidden])) > .dt-resizer {
+  display: unset;
 }

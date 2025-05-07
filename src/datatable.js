@@ -53,12 +53,13 @@ export class DataTable {
    * @param {string | HTMLTableElement} table - Selector or HTMLElement for the table.
    * @param {TableOptions} options
    */
-  constructor(table ,{
+  constructor(table, {
     formatter,
     columns = [],
     data,
     virtualScroll = 1000,
     highlightSearch = true,
+    resizeable = true,
     extraSearchFields,
     noDataText,
     noMatchText,
@@ -212,16 +213,24 @@ export class DataTable {
       }
 
       const th = col.element;
-      th.innerHTML = `<div>${col.title}</div>`;
+      const nameElement = document.createElement("div");
+      nameElement.classList.add("dt-header-name");
+      nameElement.innerText = col.title;
+      th.innerHTML = '';
+      th.append(nameElement);
+
       // We need at least one column visible
       if (col.visible) {
         colVisible = true;
       } else {
         th.style.display = "none";
       }
+
       if (col.sortable) {
         th.classList.add("dt-sortable");
-        th.addEventListener("click", () => {
+        // Add the event listener to the name element
+        // to prevent clicking on the resizer from sorting.
+        nameElement.addEventListener("click", () => {
           if (!col.sortOrder) {
             this.sort(field, "asc");
           } else if (col.sortOrder === "asc") {
@@ -229,6 +238,41 @@ export class DataTable {
           } else if (col.sortOrder) {
             this.sort(field, null);
           }
+        });
+      }
+
+      if (resizeable) {
+        const resizer = document.createElement("div");
+        resizer.classList.add("dt-resizer");
+        th.append(resizer);
+
+        let isResizing = false;
+        let startX, startWidth;
+
+        const onMouseMove = (moveEvent) => {
+          if (!isResizing) return;
+
+          const newWidth = startWidth + (moveEvent.clientX - startX);
+          th.style.width = `${newWidth}px`;
+        };
+
+        const onMouseUp = () => {
+          isResizing = false;
+          document.removeEventListener("mousemove", onMouseMove);
+          document.removeEventListener("mouseup", onMouseUp);
+        };
+
+        resizer.addEventListener("mousedown", (event) => {
+          isResizing = true;
+          startX = event.clientX;
+          startWidth = th.offsetWidth;
+
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
+        });
+
+        resizer.addEventListener("dblclick", (event) => {
+          th.style.width = "0px";
         });
       }
     }
@@ -832,6 +876,49 @@ export class DataTable {
   #getColumn(field) {
     return this.#columns[field];
   }
+
+  #enableColumnRearranging() {
+    const headers = this.#thead.querySelectorAll("th[data-dt-field]");
+    headers.forEach((header) => {
+      header.draggable = true;
+
+      header.addEventListener("dragstart", (event) => {
+        event.dataTransfer.setData("text/plain", header.dataset.dtField);
+      });
+
+      header.addEventListener("dragover", (event) => {
+        event.preventDefault(); // Allow dropping
+      });
+
+      header.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const draggedField = event.dataTransfer.getData("text/plain");
+        const targetField = header.dataset.dtField;
+
+        if (draggedField && targetField && draggedField !== targetField) {
+          this.#rearrangeColumns(draggedField, targetField);
+        }
+      });
+    });
+  }
+
+  #rearrangeColumns(draggedField, targetField) {
+    const columns = Object.values(this.#columns);
+    const draggedIndex = columns.findIndex((col) => col.field === draggedField);
+    const targetIndex = columns.findIndex((col) => col.field === targetField);
+
+    if (draggedIndex > -1 && targetIndex > -1) {
+      const [draggedColumn] = columns.splice(draggedIndex, 1);
+      columns.splice(targetIndex, 0, draggedColumn);
+
+      // Update the #columns object
+      this.#columns = Object.fromEntries(columns.map((col) => [col.field, col]));
+
+      // Re-render the table
+      this.#updateHeaders();
+      this.#updateTable();
+    }
+  }
 }
 
 class VirtualScroll {
@@ -1110,6 +1197,7 @@ const DEFAULT_CLASSES = {
  * @property {boolean | number} virtualScroll     - Automatically enables virtual scroll for the given number of rows.
  *                                                  If boolean, completely enables or disables it. Defaults to 1000.
  * @property {boolean} highlightSearch            - If true, search results will be wrapped in a mark tag.
+ * @property {boolean} resizeable                 - If true, columns can be resized by dragging the header.
  * @property {string[]} extraSearchFields         - Extra fields in the row to be searched. Used for data that doesn't have a column.
  * @property {string} noDataText                  - Text to display if the provided data is empty.
  * @property {string} noMatchText                 - Text to display if search / filter result is empty.

@@ -2,6 +2,17 @@
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
  */
 class DataTable {
+
+  static Events = {
+    ROW_CLICK: "dt.row.click",
+    ROWS_CHANGED: "dt.rows.changed",
+    COL_HIDE: "dt.col.hide",
+    COL_SHOW: "dt.col.show",
+    COL_SORT: "dt.col.sort",
+    COL_RESIZE: "dt.col.resize",
+    COL_REARRANGE: "dt.col.rearrange",
+  }
+
   /** @type {HTMLTableElement} */
   #table;
   /** @type {HTMLElement} */
@@ -167,7 +178,16 @@ class DataTable {
         const index = parseInt(tr.dataset.dtIndex);
         if (!isNaN(index)) {
           const row = this.#filteredRows[index];
-          const event = new DataTableRowClickEvent(row, field);
+
+          const event = new CustomEvent(DataTable.Events.ROW_CLICK, {
+            detail: {
+              row: row,
+              index: index,
+              field: field,
+            },
+            bubbles: true,
+            cancelable: true,
+          });
           tr.dispatchEvent(event);
         }
       }
@@ -437,7 +457,17 @@ class DataTable {
 
     this.#updateHeaders();
     this.#sortRows();
-    this.#table.dispatchEvent(new DataTableColEvent("sort", col));
+
+    const event = new CustomEvent(DataTable.Events.COL_SORT, {
+      detail: {
+        column: col,
+        order: col.sortOrder,
+      },
+      bubbles: true,
+      cancelable: true,
+    });
+
+    this.#table.dispatchEvent(event);
   }
 
   setColumnVisibility(colName, visisble) {
@@ -459,9 +489,17 @@ class DataTable {
 
     this.#sortRows();
 
-    this.#table.dispatchEvent(
-      new DataTableColEvent(visisble ? "show" : "hide", col)
-    );
+    const eventName = visisble ? DataTable.Events.COL_SHOW : DataTable.Events.COL_HIDE;
+      const event = new CustomEvent(eventName, {
+        detail: {
+          column: col,
+          visible: visisble,
+        },
+        bubbles: true,
+        cancelable: true,
+      });
+
+    this.#table.dispatchEvent(event);
   }
 
   showColumn(colName) {
@@ -658,7 +696,10 @@ class DataTable {
     this.#sortRows();
     this.#updateTable();
 
-    this.#table.dispatchEvent(new DataTableEvent("rows.changed"));
+    this.#table.dispatchEvent(new CustomEvent(DataTable.Events.ROWS_CHANGED, {
+      bubbles: true,
+      cancelable: true,
+    }));
   }
 
   /**
@@ -897,7 +938,14 @@ class DataTable {
   #resizeColumnEnd = (event) => {
     document.removeEventListener("mousemove", this.#resizeColumnMove);
     document.removeEventListener("mouseup", this.#resizeColumnEnd);
-    this.#table.dispatchEvent(new DataTableColEvent("resize", this.#resizingColumn));
+    this.#table.dispatchEvent(new CustomEvent(DataTable.Events.COL_RESIZE, {
+      detail: {
+        column: this.#resizingColumn,
+        width: this.#resizingColumn.element.offsetWidth,
+      },
+      bubbles: true,
+      cancelable: true,
+    }));
     this.#resizingColumn = null;
   }
 
@@ -947,7 +995,15 @@ class DataTable {
       this.#updateHeaders();
       this.#updateTable();
 
-      this.#table.dispatchEvent(new DataTableColEvent("rearrange", draggedColumn));
+      this.#table.dispatchEvent(new CustomEvent(DataTable.Events.COL_REARRANGE, {
+        detail: {
+          draggedColumn: draggedColumn,
+          dropColumn: this.#getColumn(dropField),
+          columns: columns,
+        },
+        bubbles: true,
+        cancelable: true,
+      }));
     }
   }
 
@@ -1127,33 +1183,6 @@ class VirtualScroll {
   }
 }
 
-class DataTableEvent extends Event {
-  constructor(type) {
-    super(`dt.${type}`, { bubbles: true });
-  }
-}
-
-class DataTableColEvent extends DataTableEvent {
-  constructor(type, col) {
-    super(`col.${type}`);
-    this.col = col;
-  }
-}
-
-class DataTableRowEvent extends DataTableEvent {
-  constructor(type, row) {
-    super(`row.${type}`);
-    this.row = row;
-  }
-}
-
-class DataTableRowClickEvent extends DataTableRowEvent {
-  constructor(row, field) {
-    super("click", row);
-    this.field = field;
-  }
-}
-
 class VirtualScrollError extends Error {
   constructor(message) {
     super(message);
@@ -1283,4 +1312,4 @@ const DEFAULT_CLASSES = {
  * @returns {boolean} True to keep value, false to filter it out.
  */
 
-export { DataTable, DataTableColEvent, DataTableEvent, DataTableRowClickEvent, DataTableRowEvent };
+export { DataTable };

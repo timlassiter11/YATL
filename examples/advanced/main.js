@@ -1,13 +1,13 @@
-import { DataTable, DataTableRowEvent } from "/src/datatable.js";
+import { DataTable } from "../../src/datatable.js";
 
 let dataTable;
 
 window.addEventListener("load", () => {
   const table = document.getElementById("table");
-  table.addEventListener("dt.row.click", (event) => {
-    if (event instanceof DataTableRowEvent) {
-      console.log(event.row);
-    }
+  table.addEventListener(DataTable.Events.ROW_CLICK, (event) => {
+    const row = event.detail.row;
+    const index = event.detail.index;
+    console.log("Row clicked:", row, index);
   });
 
   // Pull count from url param

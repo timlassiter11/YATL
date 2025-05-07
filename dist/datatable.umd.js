@@ -78,7 +78,6 @@
       data,
       virtualScroll = 1000,
       highlightSearch = true,
-      resizeable = true,
       rearrangeable = false,
       extraSearchFields,
       noDataText,
@@ -136,7 +135,7 @@
       }
 
       if (this.#table.querySelectorAll("tbody").length > 1) {
-        console.warn("Multiple tbodys found in table. Using last one.");
+        console.warn("Multiple tbodys found in table. Using first one.");
       }
 
       // Hopefully there isn't more than one header or body
@@ -252,7 +251,7 @@
         if (col.visible) {
           colVisible = true;
         } else {
-          th.style.display = "none";
+          th.hidden = true;
         }
 
         if (col.sortable) {
@@ -270,12 +269,16 @@
           });
         }
 
-        if (resizeable) {
+        if (col.resizable) {
           const resizer = document.createElement("div");
           resizer.classList.add("dt-resizer");
           resizer.addEventListener("mousedown", this.#resizeColumnStart);
           resizer.addEventListener("dblclick", this.#resizeColumnDoubleClick);
           th.append(resizer);
+        }
+
+        if (typeof col.width === "number") {
+          th.style.width = col.width + "px";
         }
 
         if (rearrangeable) {
@@ -491,19 +494,19 @@
         .querySelectorAll(
           `td[data-dt-field="${colName}"], th[data-dt-field="${colName}"]`
         )
-        .forEach((element) => (element.style.display = visisble ? "" : "none"));
+        .forEach((element) => (element.hidden = visisble ? false : true));
 
       this.#sortRows();
 
       const eventName = visisble ? DataTable.Events.COL_SHOW : DataTable.Events.COL_HIDE;
-        const event = new CustomEvent(eventName, {
-          detail: {
-            column: col,
-            visible: visisble,
-          },
-          bubbles: true,
-          cancelable: true,
-        });
+      const event = new CustomEvent(eventName, {
+        detail: {
+          column: col,
+          visible: visisble,
+        },
+        bubbles: true,
+        cancelable: true,
+      });
 
       this.#table.dispatchEvent(event);
     }
@@ -576,6 +579,23 @@
         const theadHeight = parseFloat(getComputedStyle(this.#thead).height);
         this.#scroller.scrollTop -= theadHeight;
       }
+    }
+
+    /**
+     * Sets the order of the columns in the table.
+     * @param {string[]} fields 
+     */
+    setColumnOrder(fields) {
+      if (!Array.isArray(fields)) {
+        throw new TypeError("fields must be an array of field names");
+      }
+
+      Object.values(this.#columns);
+      const newColumns = fields.map((field) => this.#getColumn(field))
+        .filter((col) => col !== null);
+
+      this.#columns = Object.fromEntries(newColumns.map((col) => [col.field, col]));
+      this.#updateHeaders();
     }
 
     /**
@@ -827,6 +847,16 @@
       } else {
         this.showMessage(this.#noMatchText, "dt-empty");
       }
+
+      // Set all of the columns widths to their current width except the last one.
+      // This makes resizing columns feel a bit more natural.
+      // The last column will be set to fill the rest of the space.
+      for (let i = 0; i < this.columns.length - 1; ++i) {
+        const col = this.columns[i];
+        if (col.element.style.width == "") {
+          col.element.style.width = col.element.offsetWidth + "px";
+        }
+      }
     }
 
     /**
@@ -858,7 +888,7 @@
         );
       }
 
-      td.style.display = col.visible ? "" : "none";
+      td.hidden = col.visible ? false : true;
     }
 
     /**
@@ -985,7 +1015,7 @@
       event.stopPropagation();
       const dragField = event.dataTransfer.getData("text/plain");
       const dropField = event.currentTarget.dataset.dtField;
-      
+
       const columns = Object.values(this.#columns);
       const dragIndex = columns.findIndex((col) => col.field === dragField);
       const dropIndex = columns.findIndex((col) => col.field === dropField);
@@ -1248,6 +1278,8 @@
    * @property {string} sortOrder                   - The current sort order of the column.
    * @property {number} sortPriority                - The sort priority of the column.
    * @property {boolean} visible                    - If true, the column is visible.
+   * @property {boolean} resizable                  - If true, the column can be resized.
+   * @property {Number} width                       - The initial width of the column in pixels.
    */
 
   /**

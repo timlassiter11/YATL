@@ -6,12 +6,11 @@ let dataTable;
 window.addEventListener("load", () => {
   dataTable = new DataTable("table", {
     columns: [
-      { field: "id", title: "ID", sortable: true },
-      { field: "name", title: "Name", sortable: true },
-      { field: "age", title: "Age", sortable: true },
-      { field: "city", title: "City" },
+      { field: "id", title: "ID", sortable: true, resizable: true },
+      { field: "name", title: "Name", sortable: true, resizable: true },
+      { field: "age", title: "Age", sortable: true, resizable: true },
+      { field: "city", title: "City", resizable: true },
     ],
-    resizeable: true,
     rearrangeable: true,
   });
 

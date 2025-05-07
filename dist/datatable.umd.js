@@ -54,6 +54,8 @@
     #noMatchText;
     /** @type {TableClasses} */
     #classes;
+    /** @type {ColumnOptions} */
+    #resizingColumn = null;
 
     /**
      * @param {string | HTMLTableElement} table - Selector or HTMLElement for the table.
@@ -212,7 +214,7 @@
       }
 
       let colVisible = false;
-      for (const field in this.#columns) {
+      for (const field of Object.keys(this.#columns)) {
         const col = this.#getColumn(field);
 
         if (!col.title) {
@@ -251,50 +253,19 @@
         if (resizeable) {
           const resizer = document.createElement("div");
           resizer.classList.add("dt-resizer");
+          resizer.addEventListener("mousedown", this.#resizeColumnStart);
+          resizer.addEventListener("dblclick", this.#resizeColumnDoubleClick);
           th.append(resizer);
-
-          let isResizing = false;
-          let startX, startWidth;
-
-          const onMouseMove = (event) => {
-            if (!isResizing) return;
-
-            event.preventDefault();
-            const newWidth = startWidth + (event.clientX - startX);
-            th.style.width = `${newWidth}px`;
-          };
-
-          const onMouseUp = () => {
-            isResizing = false;
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
-          };
-
-          resizer.addEventListener("mousedown", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            isResizing = true;
-            startX = event.clientX;
-            startWidth = th.offsetWidth;
-            
-            document.addEventListener("mousemove", onMouseMove);
-            document.addEventListener("mouseup", onMouseUp);
-          });
-
-          resizer.addEventListener("dblclick", (event) => {
-            th.style.width = "0px";
-          });
         }
 
         if (rearrangeable) {
           th.draggable = true;
-          th.addEventListener("dragstart", (event) => this.#dragColumnStart(event));
-          th.addEventListener("dragenter", (event) => this.#dragColumnEnter(event));
-          th.addEventListener("dragover", (event) => this.#dragColumnOver(event));
-          th.addEventListener("dragleave", (event) => this.#dragColumnLeave(event));
-          th.addEventListener("drop", (event) => this.#dragColumnDrop(event));
-          th.addEventListener("dragend", (event) => this.#dragColumnEnd(event));
+          th.addEventListener("dragstart", this.#dragColumnStart);
+          th.addEventListener("dragenter", this.#dragColumnEnter);
+          th.addEventListener("dragover", this.#dragColumnOver);
+          th.addEventListener("dragleave", this.#dragColumnLeave);
+          th.addEventListener("drop", this.#dragColumnDrop);
+          th.addEventListener("dragend", this.#dragColumnEnd);
         }
       }
 
@@ -618,7 +589,7 @@
     }
 
     #filterRow(row, index) {
-      for (const field in this.#filters) {
+      for (const field of Object.keys(this.#filters || {})) {
         const filter = this.#filters[field];
         const col = this.#getColumn(field);
         const filterCallback = col ? col.filter : null;
@@ -758,7 +729,7 @@
     }
 
     #updateHeaders() {
-      for (const field in this.#columns) {
+      for (const field of Object.keys(this.#columns)) {
         const col = this.#getColumn(field);
 
         col.element.parentElement.append(col.element);
@@ -860,7 +831,7 @@
       tr.classList.add(...classesToArray(this.#classes.tr));
       tr.dataset.dtIndex = index;
 
-      for (const field in this.#columns) {
+      for (const field of Object.keys(this.#columns)) {
         let value = this.#getNestedValue(row, field);
         const col = this.#getColumn(field);
         const td = document.createElement("td");
@@ -901,27 +872,67 @@
       return this.#columns[field];
     }
 
-    #dragColumnStart(event) {
+    #resizeColumnStart = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const header = event.target.closest("th");
+      if (!header) return;
+
+      const field = header.dataset.dtField;
+      const col = this.#getColumn(field);
+      if (!col) return;
+
+      this.#resizingColumn = col;
+
+      col.startX = event.clientX;
+      col.startWidth = header.offsetWidth;
+
+      document.addEventListener("mousemove", this.#resizeColumnMove);
+      document.addEventListener("mouseup", this.#resizeColumnEnd);
+    }
+
+    #resizeColumnMove = (event) => {
+      if (!this.#resizingColumn) return;
+
+      event.preventDefault();
+      const newWidth = this.#resizingColumn.startWidth + (event.clientX - this.#resizingColumn.startX);
+      this.#resizingColumn.element.style.width = `${newWidth}px`;
+    }
+
+    #resizeColumnEnd = (event) => {
+      document.removeEventListener("mousemove", this.#resizeColumnMove);
+      document.removeEventListener("mouseup", this.#resizeColumnEnd);
+      this.#table.dispatchEvent(new DataTableColEvent("resize", this.#resizingColumn));
+      this.#resizingColumn = null;
+    }
+
+    #resizeColumnDoubleClick = (event) => {
+      const header = event.target.closest("th");
+      header.style.width = "0px";
+    }
+
+    #dragColumnStart = (event) => {
       const field = event.target.dataset.dtField;
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", field);
     }
 
-    #dragColumnOver(event) {
+    #dragColumnOver = (event) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       return false;
     }
 
-    #dragColumnEnter(event) {
+    #dragColumnEnter = (event) => {
       event.target.classList.add("dt-drag-over");
     }
 
-    #dragColumnLeave(event) {
+    #dragColumnLeave = (event) => {
       event.target.classList.remove("dt-drag-over");
     }
 
-    #dragColumnDrop(event) {
+    #dragColumnDrop = (event) => {
       event.preventDefault();
       event.stopPropagation();
       const dragField = event.dataTransfer.getData("text/plain");
@@ -941,10 +952,12 @@
         // Re-render the table
         this.#updateHeaders();
         this.#updateTable();
+
+        this.#table.dispatchEvent(new DataTableColEvent("rearrange", draggedColumn));
       }
     }
 
-    #dragColumnEnd(event) {
+    #dragColumnEnd = (event) => {
       document.querySelectorAll(".dt-drag-over").forEach((el) => {
         el.classList.remove("dt-drag-over");
       });

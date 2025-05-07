@@ -72,6 +72,7 @@ class DataTable {
     data,
     virtualScroll = 1000,
     highlightSearch = true,
+    resizable = true,
     rearrangeable = false,
     extraSearchFields,
     noDataText,
@@ -263,7 +264,9 @@ class DataTable {
         });
       }
 
-      if (col.resizable) {
+      const enableResize = col.resizable === undefined ? resizable : col.resizable;
+
+      if (enableResize) {
         const resizer = document.createElement("div");
         resizer.classList.add("dt-resizer");
         resizer.addEventListener("mousedown", this.#resizeColumnStart);
@@ -1295,7 +1298,7 @@ const DEFAULT_CLASSES = {
  * @property {boolean | number} virtualScroll     - Automatically enables virtual scroll for the given number of rows.
  *                                                  If boolean, completely enables or disables it. Defaults to 1000.
  * @property {boolean} highlightSearch            - If true, search results will be wrapped in a mark tag.
- * @property {boolean} resizeable                 - If true, columns can be resized by dragging the header.
+ * @property {boolean} resizable                 - If true, columns can be resized by dragging the header.
  * @property {boolean} rearrangeable              - If true, columns can be rearranged by dragging the header.
  * @property {string[]} extraSearchFields         - Extra fields in the row to be searched. Used for data that doesn't have a column.
  * @property {string} noDataText                  - Text to display if the provided data is empty.

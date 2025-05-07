@@ -21,12 +21,10 @@ window.addEventListener("load", () => {
         field: "name",
         searchable: true,
         sortable: true,
-        resizable: true,
       },
       {
         field: "due_date",
         sortable: true,
-        resizable: true,
         sortValue: (value) => value.getTime(),
         filter: (value, filter) => {
           if (filter.startDate && filter.endDate) {
@@ -46,7 +44,6 @@ window.addEventListener("load", () => {
       {
         field: "quantity",
         sortable: true,
-        resizable: true,
         valueFormatter: (qty) => qty.toFixed(1),
       },
       {
@@ -58,7 +55,7 @@ window.addEventListener("load", () => {
     formatter: rowFormatter,
     data: createData(count),
     virtualScroll: 1000,
-    resizeable: true,
+    resizable: true,
     rearrangeable: true,
   });
 

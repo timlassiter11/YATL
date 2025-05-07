@@ -60,6 +60,7 @@ export class DataTable {
     virtualScroll = 1000,
     highlightSearch = true,
     resizeable = true,
+    rearrangeable = false,
     extraSearchFields,
     noDataText,
     noMatchText,
@@ -249,10 +250,11 @@ export class DataTable {
         let isResizing = false;
         let startX, startWidth;
 
-        const onMouseMove = (moveEvent) => {
+        const onMouseMove = (event) => {
           if (!isResizing) return;
 
-          const newWidth = startWidth + (moveEvent.clientX - startX);
+          event.preventDefault();
+          const newWidth = startWidth + (event.clientX - startX);
           th.style.width = `${newWidth}px`;
         };
 
@@ -263,10 +265,13 @@ export class DataTable {
         };
 
         resizer.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
           isResizing = true;
           startX = event.clientX;
           startWidth = th.offsetWidth;
-
+          
           document.addEventListener("mousemove", onMouseMove);
           document.addEventListener("mouseup", onMouseUp);
         });
@@ -274,6 +279,16 @@ export class DataTable {
         resizer.addEventListener("dblclick", (event) => {
           th.style.width = "0px";
         });
+      }
+
+      if (rearrangeable) {
+        th.draggable = true;
+        th.addEventListener("dragstart", (event) => this.#dragColumnStart(event));
+        th.addEventListener("dragenter", (event) => this.#dragColumnEnter(event));
+        th.addEventListener("dragover", (event) => this.#dragColumnOver(event));
+        th.addEventListener("dragleave", (event) => this.#dragColumnLeave(event));
+        th.addEventListener("drop", (event) => this.#dragColumnDrop(event));
+        th.addEventListener("dragend", (event) => this.#dragColumnEnd(event));
       }
     }
 
@@ -739,6 +754,9 @@ export class DataTable {
   #updateHeaders() {
     for (const field in this.#columns) {
       const col = this.#getColumn(field);
+
+      col.element.parentElement.append(col.element);
+
       if (col.sortOrder === "asc") {
         col.element.classList.add("dt-ascending");
         col.element.classList.remove("dt-descending");
@@ -877,39 +895,39 @@ export class DataTable {
     return this.#columns[field];
   }
 
-  #enableColumnRearranging() {
-    const headers = this.#thead.querySelectorAll("th[data-dt-field]");
-    headers.forEach((header) => {
-      header.draggable = true;
-
-      header.addEventListener("dragstart", (event) => {
-        event.dataTransfer.setData("text/plain", header.dataset.dtField);
-      });
-
-      header.addEventListener("dragover", (event) => {
-        event.preventDefault(); // Allow dropping
-      });
-
-      header.addEventListener("drop", (event) => {
-        event.preventDefault();
-        const draggedField = event.dataTransfer.getData("text/plain");
-        const targetField = header.dataset.dtField;
-
-        if (draggedField && targetField && draggedField !== targetField) {
-          this.#rearrangeColumns(draggedField, targetField);
-        }
-      });
-    });
+  #dragColumnStart(event) {
+    const field = event.target.dataset.dtField;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", field);
   }
 
-  #rearrangeColumns(draggedField, targetField) {
-    const columns = Object.values(this.#columns);
-    const draggedIndex = columns.findIndex((col) => col.field === draggedField);
-    const targetIndex = columns.findIndex((col) => col.field === targetField);
+  #dragColumnOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    return false;
+  }
 
-    if (draggedIndex > -1 && targetIndex > -1) {
-      const [draggedColumn] = columns.splice(draggedIndex, 1);
-      columns.splice(targetIndex, 0, draggedColumn);
+  #dragColumnEnter(event) {
+    event.target.classList.add("dt-drag-over");
+  }
+
+  #dragColumnLeave(event) {
+    event.target.classList.remove("dt-drag-over");
+  }
+
+  #dragColumnDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const dragField = event.dataTransfer.getData("text/plain");
+    const dropField = event.currentTarget.dataset.dtField;
+    
+    const columns = Object.values(this.#columns);
+    const dragIndex = columns.findIndex((col) => col.field === dragField);
+    const dropIndex = columns.findIndex((col) => col.field === dropField);
+
+    if (dragIndex > -1 && dropIndex > -1) {
+      const [draggedColumn] = columns.splice(dragIndex, 1);
+      columns.splice(dropIndex, 0, draggedColumn);
 
       // Update the #columns object
       this.#columns = Object.fromEntries(columns.map((col) => [col.field, col]));
@@ -918,6 +936,12 @@ export class DataTable {
       this.#updateHeaders();
       this.#updateTable();
     }
+  }
+
+  #dragColumnEnd(event) {
+    document.querySelectorAll(".dt-drag-over").forEach((el) => {
+      el.classList.remove("dt-drag-over");
+    });
   }
 }
 
@@ -1198,6 +1222,7 @@ const DEFAULT_CLASSES = {
  *                                                  If boolean, completely enables or disables it. Defaults to 1000.
  * @property {boolean} highlightSearch            - If true, search results will be wrapped in a mark tag.
  * @property {boolean} resizeable                 - If true, columns can be resized by dragging the header.
+ * @property {boolean} rearrangeable              - If true, columns can be rearranged by dragging the header.
  * @property {string[]} extraSearchFields         - Extra fields in the row to be searched. Used for data that doesn't have a column.
  * @property {string} noDataText                  - Text to display if the provided data is empty.
  * @property {string} noMatchText                 - Text to display if search / filter result is empty.

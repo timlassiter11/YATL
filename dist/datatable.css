@@ -82,3 +82,8 @@ table.data-table .dt-empty {
 .dt-resizer.resizing::after {
   opacity: 1;
 }
+
+table.data-table > thead.dt-headers > tr > th.dt-drag-over,
+table.data-table > thead.dt-headers > tr > th:has(.dt-drag-over) {
+  background-color: rgba(5, 21, 250, 0.1); /* Highlight color when dragging over */
+}

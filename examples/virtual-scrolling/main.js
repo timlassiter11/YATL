@@ -1,4 +1,4 @@
-import { DataTable } from "../../dist/datatable.esm.js";
+import { DataTable } from "/src/datatable.js";
 
 /** @type {DataTable} */
 let dataTable;
@@ -11,6 +11,8 @@ window.addEventListener("load", () => {
       { field: "age", title: "Age", sortable: true },
       { field: "city", title: "City" },
     ],
+    resizeable: true,
+    rearrangeable: true,
   });
 
   // Update the table data when the row count changes

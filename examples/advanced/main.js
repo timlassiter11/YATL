@@ -1,4 +1,4 @@
-import { DataTable, DataTableRowEvent } from "../../dist/datatable.esm.js";
+import { DataTable, DataTableRowEvent } from "/src/datatable.js";
 
 let dataTable;
 
@@ -55,6 +55,8 @@ window.addEventListener("load", () => {
     formatter: rowFormatter,
     data: createData(count),
     virtualScroll: 1000,
+    resizeable: true,
+    rearrangeable: true,
   });
 
   // Create visibility toggles for each column

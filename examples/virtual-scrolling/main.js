@@ -1,4 +1,4 @@
-import { DataTable } from "/src/datatable.js";
+import { DataTable } from "../../src/datatable.js";
 
 /** @type {DataTable} */
 let dataTable;

@@ -1030,6 +1030,12 @@
         // Update the #columns object
         this.#columns = Object.fromEntries(columns.map((col) => [col.field, col]));
 
+        // Clear width of the last column so it can fill the rest of the space.
+        const lastCol = columns[columns.length - 1];
+        if (lastCol) {
+          lastCol.element.style.width = "";
+        }
+
         // Re-render the table
         this.#updateHeaders();
         this.#updateTable();

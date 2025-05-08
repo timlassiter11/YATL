@@ -105,3 +105,4 @@ th:hover .dt-resizer::after,
 .dt-headers > tr > th:not([hidden]):has(~ th:not([hidden])) > .dt-resizer {
   display: unset;
 }
+/*# sourceMappingURL=datatable.css.map */

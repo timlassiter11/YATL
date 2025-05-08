@@ -1,4 +1,4 @@
-import { DataTable } from "../../src/datatable.js";
+import { DataTable, LocalStorageAdapter } from "../../dist/esm/datatable.bundle.js";
 
 let dataTable;
 
@@ -58,6 +58,8 @@ window.addEventListener("load", () => {
     resizable: true,
     rearrangeable: true,
   });
+
+  new LocalStorageAdapter(dataTable, "advancedExampleTableState");
 
   // Create visibility toggles for each column
   const colList = document.getElementById("colSelectDropdown");

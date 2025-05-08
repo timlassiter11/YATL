@@ -1,9 +1,7 @@
-import './datatable.css';
-
 /**
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
  */
-export class DataTable {
+class DataTable {
 
   static Events = {
     ROW_CLICK: "dt.row.click",
@@ -589,7 +587,7 @@ export class DataTable {
       throw new TypeError("fields must be an array of field names");
     }
 
-    const columns = Object.values(this.#columns);
+    Object.values(this.#columns);
     const newColumns = fields.map((field) => this.#getColumn(field))
       .filter((col) => col !== null);
 
@@ -742,11 +740,11 @@ export class DataTable {
   #compareRows(a, b, col) {
     let aValue, bValue;
     if (col.sortOrder === "asc") {
-      aValue = a[`_${col.field}_sort`]
-      bValue = b[`_${col.field}_sort`]
+      aValue = a[`_${col.field}_sort`];
+      bValue = b[`_${col.field}_sort`];
     } else if (col.sortOrder === "desc") {
-      aValue = b[`_${col.field}_sort`]
-      bValue = a[`_${col.field}_sort`]
+      aValue = b[`_${col.field}_sort`];
+      bValue = a[`_${col.field}_sort`];
     }
 
     if (typeof col.sorter === "function") {
@@ -1260,7 +1258,7 @@ const toHumanReadable = (str) => {
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     // Capitalize the first letter of each word
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
+};
 
 let warned = false;
 const WARN_ROW_COUNT = 10_000;
@@ -1360,3 +1358,6 @@ const DEFAULT_CLASSES = {
  * @param {any} filter - The filter to be tested against.
  * @returns {boolean} True to keep value, false to filter it out.
  */
+
+export { DataTable };
+//# sourceMappingURL=datatable.js.map

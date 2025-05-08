@@ -601,6 +601,11 @@
       this.#updateHeaders();
     }
 
+    refresh() {
+      this.#updateHeaders();
+      this.#filterRows();
+    }
+
     /**
      *
      * @param {any} value
@@ -795,7 +800,8 @@
     #updateHeaders() {
       for (const field of Object.keys(this.#columns)) {
         const col = this.#getColumn(field);
-
+        
+        // Update the order of headers
         col.element.parentElement.append(col.element);
 
         if (col.sortOrder === "asc") {
@@ -1362,3 +1368,4 @@
   exports.DataTable = DataTable;
 
 }));
+//# sourceMappingURL=datatable.js.map

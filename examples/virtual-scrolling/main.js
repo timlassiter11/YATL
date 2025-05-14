@@ -1,4 +1,4 @@
-import { DataTable } from "../../dist/esm/datatable.js";
+import { DataTable } from "../../dist/datatable.mjs";
 
 /** @type {DataTable} */
 let dataTable;

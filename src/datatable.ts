@@ -1,0 +1,1201 @@
+import './datatable.css';
+
+import { VirtualScroll, VirtualScrollError } from './virtualScroll';
+import { classesToArray, toHumanReadable, whitespaceTokenizer } from './utils';
+
+/**
+ * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
+ */
+export class DataTable {
+
+  static Events = {
+    ROW_CLICK: "dt.row.click",
+    ROWS_CHANGED: "dt.rows.changed",
+    COL_HIDE: "dt.col.hide",
+    COL_SHOW: "dt.col.show",
+    COL_SORT: "dt.col.sort",
+    COL_RESIZE: "dt.col.resize",
+    COL_REARRANGE: "dt.col.rearrange",
+  }
+
+  // Table elements
+  #table!: HTMLTableElement;
+  #thead!: HTMLElement;
+  #tbody!: HTMLElement;
+  #tfoot!: HTMLElement;
+  #scroller!: HTMLElement;
+
+  #columnData: { [key: string]: ColumnData } = {};
+
+  // Current data
+  #rows: RowData[] = [];
+  #filteredRows: RowData[] = [];
+
+  // Search and filter data
+  #query!: RegExp | string | null;
+  #filters!: any | FilterRowCallback;
+  #extraSearchFields: string[] = [];
+
+  #rowFormatter?: RowFormatter;
+  #virtualScroll!: VirtualScroll;
+  #virtualScrollCount: number = 1000;
+  #highlightSearch: boolean = true;
+  #tokenizer: TokenizerFunction = whitespaceTokenizer
+  // The current sort priority. Incremented when a column is sorted.
+  #sortPriority: number = 0;
+  #noDataText: string = "No records found";
+  #noMatchText: string = "No matching records found";
+  #classes: TableClasses = {
+    scroller: "dt-scroller",
+    thead: "dt-headers",
+  };
+  #resizingColumn: ColumnData | null = null;
+
+  /**
+   * @param  table - Selector or HTMLElement for the table.
+   * @param options - Options for the table.
+   */
+  constructor(table: string | HTMLTableElement, {
+    formatter,
+    columns = [],
+    data,
+    virtualScroll = 1000,
+    highlightSearch = true,
+    resizable = true,
+    rearrangeable = false,
+    extraSearchFields,
+    noDataText,
+    noMatchText,
+    classes,
+    tokenizer,
+  }: TableOptions = {}) {
+    if (typeof table === "string") {
+      const tableElement = document.querySelector(table);
+      if (!tableElement)
+        throw new SyntaxError(`Failed to find table using selector ${table}`);
+      this.#table = tableElement as HTMLTableElement;
+    } else {
+      this.#table = table;
+    }
+
+    if (!(this.#table instanceof HTMLTableElement)) {
+      throw new TypeError(`Invalid table element type. Must be HTMLTableElement`);
+    }
+
+    if (!Array.isArray(columns)) {
+      throw new TypeError("columns must be a list of columns");
+    }
+
+    this.#tokenizer = tokenizer || this.#tokenizer;
+
+    this.#highlightSearch = highlightSearch;
+    this.#extraSearchFields = extraSearchFields || [];
+    this.#noDataText = noDataText || "No records found";
+    this.#noMatchText = noMatchText || "No matching records found";
+    this.#classes = { ...this.#classes, ...classes };
+
+    this.#rowFormatter = formatter;
+
+    this.#table.classList.add("data-table");
+
+    // Inner element that handles the virtual scroll.
+    this.#scroller = document.createElement("div");
+    this.#scroller.classList.add(...classesToArray(this.#classes.scroller));
+    this.#scroller.style.overflow = "auto";
+    this.#scroller.style.height = "100%";
+
+    // If the user tries to provide a height, we will use that for the scroller.
+    if (this.#table.style.height !== "") {
+      this.#scroller.style.height = this.#table.style.height;
+      this.#table.style.height = "";
+    }
+
+    // Add the scroller before the table so when we move the
+    // table into the scroller it stays in the same place.
+    this.#table.parentElement?.insertBefore(this.#scroller, this.#table);
+    this.#scroller.append(this.#table);
+
+    if (this.#table.querySelectorAll("thead").length > 1) {
+      console.warn("Multiple theads found in table. Using last one.");
+    }
+
+    if (this.#table.querySelectorAll("tbody").length > 1) {
+      console.warn("Multiple tbodys found in table. Using first one.");
+    }
+
+    // Hopefully there isn't more than one header or body
+    // but if there is, use the last header and first body
+    // since that seems like it would make the most sense.
+    const thead = this.#table.querySelector("thead:last-of-type");
+    if (thead) {
+      this.#thead = thead as HTMLTableElement;
+    } else {
+      this.#thead = document.createElement("thead");
+      this.#table.insertBefore(this.#thead, this.#table.firstChild);
+    }
+
+    this.#thead.classList.add(...classesToArray(this.#classes.thead));
+
+    // Create the row for the thead if there isn't one
+    let headerRow = this.#thead.querySelector("tr:last-of-type");
+    if (!headerRow) {
+      headerRow = document.createElement("tr");
+      this.#thead.append(headerRow);
+    }
+
+    headerRow.classList.add(...classesToArray(this.#classes.tr));
+    // Remove any existing header cells
+    // TODO: Add ability to use HTML headers provided by the user.
+    headerRow.innerHTML = '';
+
+    const tbody = this.#table.querySelector("tbody:first-of-type");
+    // Create the tbody if it doesn't exists
+    if (tbody) {
+      this.#tbody = tbody as HTMLTableElement;
+    } else {
+      this.#tbody = document.createElement("tbody");
+      this.#table.append(this.#tbody);
+    }
+
+    this.#tbody.classList.add(...classesToArray(this.#classes.tbody));
+
+    this.#tbody.addEventListener("click", (event) => {
+      let tr, td, field;
+      if (event.target instanceof HTMLTableCellElement) {
+        td = event.target;
+        tr = td.parentElement;
+        field = td.dataset.dtField;
+      } else if (event.target instanceof HTMLTableRowElement) {
+        tr = event.target;
+      }
+
+      if (tr) {
+        const index = parseInt(tr.dataset.dtIndex || "");
+        if (!isNaN(index)) {
+          const row = this.#filteredRows[index];
+
+          const event = new CustomEvent(DataTable.Events.ROW_CLICK, {
+            detail: {
+              row: row,
+              index: index,
+              field: field,
+            },
+            bubbles: true,
+            cancelable: true,
+          });
+          tr.dispatchEvent(event);
+        }
+      }
+    });
+
+    Boolean
+
+    let colVisible = false;
+    // Initialize columns
+    for (const colOptions of columns) {
+      const colData: ColumnData = {
+        field: colOptions.field,
+        title: colOptions.title || toHumanReadable(colOptions.field),
+        element: document.createElement("th"),
+        visible: colOptions.visible ?? true,
+        sortable: colOptions.sortable ?? false,
+        searchable: colOptions.searchable ?? false,
+        tokenize: colOptions.tokenize ?? false,
+        sortOrder: colOptions.sortOrder || null,
+        sortPriority: colOptions.sortPriority,
+        resizeStartWidth: null,
+        resizeStartX: null,
+        valueFormatter: colOptions.valueFormatter,
+        elementFormatter: colOptions.elementFormatter,
+        filter: colOptions.filter,
+        comparator: colOptions.comparator,
+      };
+      this.#columnData[colOptions.field] = colData;
+
+      const th = colData.element;
+      th.classList.add(...classesToArray(this.#classes.th));
+      th.dataset.dtField = colOptions.field;
+
+      const nameElement = document.createElement("div");
+      nameElement.classList.add("dt-header-name");
+      nameElement.innerText = colOptions.title || toHumanReadable(colOptions.field);
+      th.innerHTML = '';
+      th.append(nameElement);
+      th.hidden = !colData.visible;
+
+      headerRow.append(th);
+
+      // We need at least one column visible
+      if (colData.visible) {
+        colVisible = true;
+      }
+
+      if (colOptions.sortable) {
+        th.classList.add("dt-sortable");
+        // Add the event listener to the name element
+        // to prevent clicking on the resizer from sorting.
+        nameElement.addEventListener("click", (event) => {
+          const target = event.target as HTMLElement;
+          const field = target.closest("th")?.dataset.dtField;
+          if (!field) return;
+          const col = this.#columnData[field];
+          if (!col.sortOrder) {
+            this.sort(col.field, "asc");
+          } else if (col.sortOrder === "asc") {
+            this.sort(col.field, "desc");
+          } else if (col.sortOrder) {
+            this.sort(col.field, null);
+          }
+        });
+      }
+
+      const enableResize = colOptions.resizable === undefined ? resizable : colOptions.resizable;
+
+      if (enableResize) {
+        const resizer = document.createElement("div");
+        resizer.classList.add("dt-resizer");
+        resizer.addEventListener("mousedown", this.#resizeColumnStart);
+        resizer.addEventListener("dblclick", this.#resizeColumnDoubleClick);
+        th.append(resizer);
+      }
+
+      if (typeof colOptions.width === "number") {
+        th.style.width = colOptions.width + "px";
+      } else if (typeof colOptions.width === "string") {
+        th.style.width = colOptions.width;
+      }
+
+      if (rearrangeable) {
+        th.draggable = true;
+        th.addEventListener("dragstart", this.#dragColumnStart);
+        th.addEventListener("dragenter", this.#dragColumnEnter);
+        th.addEventListener("dragover", this.#dragColumnOver);
+        th.addEventListener("dragleave", this.#dragColumnLeave);
+        th.addEventListener("drop", this.#dragColumnDrop);
+        th.addEventListener("dragend", this.#dragColumnEnd);
+      }
+    }
+
+    if (Object.keys(this.#columnData).length === 0) {
+      console.warn("No columns found. At least one column is required.");
+    } else if (!colVisible) {
+      console.warn("At least a single column must be visible. Showing the first column.");
+      this.showColumn(Object.keys(this.#columnData)[0]);
+    }
+
+    this.#virtualScroll = new VirtualScroll({
+      container: this.#scroller,
+      element: this.#tbody,
+      generator: (index) => this.#createRow(index),
+    });
+
+    this.virtualScroll = virtualScroll;
+    this.loadData(data || []);
+  }
+
+  /**
+   * Gets a list of all columns in the table.
+   */
+  get columns(): ColumnData[] {
+    return Object.values(this.#columnData);
+  }
+
+  /**
+   * Get the current data in the table.
+   */
+  get rows() {
+    return this.#filteredRows;
+  }
+
+  /**
+   * Get total row count of visible data.
+   */
+  get length(): number {
+    return this.#filteredRows ? this.#filteredRows.length : 0;
+  }
+
+  /**
+   * Get the current table element.
+   */
+  get table(): HTMLTableElement {
+    return this.#table;
+  }
+
+  /**
+   * Get the current virtual scroll setting.
+   * If the value is 0, virtual scroll is disabled.
+   * If the value is true, virtual scroll is enabled.
+   * If the value is a number, it will be used as the row count for virtual scroll.
+   */
+  get virtualScroll(): number | boolean {
+    if (this.#virtualScrollCount === Number.MAX_VALUE) {
+      return true;
+    } else if (this.#virtualScrollCount === 0) {
+      return false;
+    }
+    return this.#virtualScrollCount;
+  }
+
+  set virtualScroll(value) {
+    if (typeof value === "number") {
+      this.#virtualScrollCount = value;
+    } else if (value) {
+      this.#virtualScrollCount = 0;
+    } else {
+      this.#virtualScrollCount = Number.MAX_VALUE;
+    }
+    this.#updateTable();
+  }
+
+  /**
+   * Get the current virtual scroll status.
+   */
+  get virtualScrollStatus(): boolean {
+    return this.#virtualScroll.started;
+  }
+
+  /**
+   * Loads the given rows into the table.
+   * This will overwrite any already existing rows.
+   */
+  loadData(rows: any[]) {
+    if (Array.isArray(rows) && rows.length > 0) {
+      let index = 0;
+
+      for (const row of rows as RowData[]) {
+        // Add the index
+        const metadata: RowMeatadata = { index: index++ };
+        row._metadata = metadata;
+
+        for (const field of Object.keys(this.#columnData)) {
+          const col = this.#columnData[field];
+          const value = this.#getNestedValue(row, field);
+
+          // Cache precomputed values for sorting
+          if (typeof col.comparator === "function") {
+            metadata[`_${field}_sort`] = col.comparator(value, row);
+          } else if (typeof value === "string") {
+            metadata[`_${field}_sort`] = value.toLocaleLowerCase();
+          } else {
+            metadata[`_${field}_sort`] = value;
+          }
+
+          // Tokenize any searchable columns
+          if (col.searchable && col.tokenize && value) {
+            metadata[`_${field}_tokens`] = [value, ...this.#tokenizer(value)];
+          }
+        }
+      }
+      this.#rows = rows;
+      this.#filteredRows = rows;
+    } else {
+      this.#rows = [];
+      this.#filteredRows = [];
+    }
+
+    this.#updateHeaders();
+    this.#filterRows();
+  }
+
+  /**
+   * Shows a message overlay that will cover the table.
+   */
+  showMessage(text: string, classes: string | string[]) {
+    if (Array.isArray(classes)) {
+      classes = classes.join(" ");
+    } else if (typeof classes !== "string") {
+      classes = "";
+    }
+
+    const colSpan = Object.keys(this.#columnData).length;
+    this.#tbody.innerHTML = `<tr class="${classes}"><td colSpan=${colSpan}>${text}</td></tr>`;
+  }
+
+  /**
+   * Search the table using the given query.
+   * The query can be a string or a regular expression.
+   * If the query is an empty string, it will clear the search.
+   * @param query
+   */
+  search(query: string | RegExp) {
+    this.#query = query !== "" ? query : null;
+    this.#filterRows();
+  }
+
+  /**
+   * Apply the given filters to the table.
+   * Filters should be an object with keys for any columns
+   * to be filtered and values to match against the underlying data.
+   * E.g. {quantity: 1} will only show rows where the quantity column = 1
+   * Can also be a function that will be called for each row.
+   * @param filters
+   */
+  filter(filters: any | FilterRowCallback) {
+    if (typeof filters !== "object" && typeof filters !== "function") {
+      throw new TypeError("filters must be object or function");
+    }
+    this.#filters = filters;
+    this.#filterRows();
+  }
+
+  /**
+   * Sort the given column using the given order (asc or desc).
+   * If order is none, the columns will be "unsorted" and revert
+   * revert back to sorting the by the index ascending.
+   * @param colName
+   * @param order
+   */
+  sort(colName: string, order: SortOrder) {
+    const col = this.#columnData[colName];
+    if (!col) {
+      console.warn(`Attempting to sort non-existent column ${colName}`);
+      return;
+    }
+
+    if (order != col.sortOrder) {
+      if (order === "asc" || order === "desc") {
+        col.sortPriority = this.#sortPriority++;
+      } else {
+        col.sortPriority = undefined;
+        this.#sortPriority--;
+      }
+      col.sortOrder = order;
+    }
+
+    this.#updateHeaders();
+    this.#sortRows();
+
+    const event = new CustomEvent(DataTable.Events.COL_SORT, {
+      detail: {
+        column: col,
+        order: col.sortOrder,
+      },
+      bubbles: true,
+      cancelable: true,
+    });
+
+    this.#table.dispatchEvent(event);
+  }
+
+  /**
+   * Set the visibility of a column.
+   * @param colName
+   * @param visible
+   */
+  setColumnVisibility(colName: string, visisble: boolean) {
+    const col = this.#columnData[colName];
+    if (!col) {
+      console.warn(
+        `Attempting to ${visisble ? "show" : "hide"
+        } non-existent column ${colName}`
+      );
+      return;
+    }
+
+    col.visible = visisble;
+    this.#updateHeaders();
+    // If we hide a column that has sorting, we need to resort.
+    // This will also handle hiding all of the columns elements.
+    this.#sortRows();
+
+    const eventName = visisble ? DataTable.Events.COL_SHOW : DataTable.Events.COL_HIDE;
+    const event = new CustomEvent(eventName, {
+      detail: {
+        column: col,
+        visible: visisble,
+      },
+      bubbles: true,
+      cancelable: true,
+    });
+
+    this.#table.dispatchEvent(event);
+  }
+
+  /**
+   * Show a column.
+   * @param field
+   */
+  showColumn(field: string) {
+    this.setColumnVisibility(field, true);
+  }
+
+  /**
+   * Hide a column.
+   * @param field
+   */
+  hideColumn(field: string) {
+    this.setColumnVisibility(field, false);
+  }
+
+  /**
+   * Export the current visible table data to a CSV file.
+   * @param filename - The name of the file to save.
+   * @param all - If true, export all rows. If false, only export the filtered rows.
+   */
+  export(filename: string, all = false) {
+    const rows = all ? this.#rows : this.#filteredRows;
+    if (rows.length === 0) {
+      return;
+    }
+
+    const csvHeaders = Object.keys(rows[0]).filter((value) => {
+      if (!(value in this.#columnData)) {
+        return false;
+      }
+
+      return all ? true : this.#columnData[value].element.hidden === false;
+    });
+
+    const csvRows = rows
+      .map((row) => {
+        const list = [];
+        for (let [key, value] of Object.entries(row)) {
+          if (key in this.#columnData) {
+            const col = this.#columnData[key];
+            if (all || !col.element.hidden) {
+              if (typeof col.valueFormatter === "function") {
+                value = col.valueFormatter(value, row);
+              }
+
+              value = String(value).replace('"', '""');
+              list.push(`"${value}"`);
+            }
+          }
+        }
+        return list.join(",");
+      })
+      .join("\n");
+
+    const csvContent = csvHeaders + "\n" + csvRows;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8," });
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = URL.createObjectURL(blob);
+    a.download = `${filename}.csv`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+  }
+
+  /**
+   * Scrolls to the given row index in the table.
+   * @param index
+   */
+  scrollTo(index: number) {
+    if (this.#virtualScroll.started) {
+      this.#virtualScroll.scrollTo(index);
+    }
+
+    const row = this.#tbody.querySelector(`tr[data-dt-index="${index}"]`);
+    if (row) {
+      row.scrollIntoView(true);
+      const theadHeight = parseFloat(getComputedStyle(this.#thead).height);
+      this.#scroller.scrollTop -= theadHeight;
+    }
+  }
+
+  /**
+   * Sets the order of the columns in the table.
+   * @param fields 
+   */
+  setColumnOrder(fields: string[]) {
+    if (!Array.isArray(fields)) {
+      throw new TypeError("fields must be an array of field names");
+    }
+
+    const newColumns = fields.map((field) => this.#columnData[field])
+      .filter((col) => col !== null);
+
+    this.#columnData = Object.fromEntries(newColumns.map((col) => [col.field, col]));
+    this.#updateHeaders();
+  }
+
+  refresh() {
+    this.#updateHeaders();
+    this.#filterRows();
+  }
+
+  #searchField(value: any, query: RegExp | string): boolean {
+    if (Array.isArray(value)) {
+      return value.some((element) => this.#searchField(element, query));
+    }
+
+    if (query instanceof RegExp) {
+      return query.test(String(value));
+    }
+
+    return String(value).toLocaleLowerCase().includes(query);
+  }
+
+  #filterField(value: any, filter: any, filterFunction?: FilterValueCallback): boolean {
+    if (Array.isArray(filter)) {
+      // If it's an array, we will use an OR filter.
+      // If any filters in the array match, keep it.
+      for (const element of filter) {
+        if (this.#filterField(value, element)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (typeof filterFunction === "function") {
+      return filterFunction(value, filter);
+    }
+
+    if (filter instanceof RegExp) {
+      return filter.test(String(value));
+    }
+
+    return filter === value;
+  }
+
+  #filterRow(row: any, index: number): boolean {
+    if (typeof this.#filters === "function") {
+      return this.#filters(row, index);
+    }
+
+    for (const field of Object.keys(this.#filters || {})) {
+      const filter = this.#filters[field];
+      const col = this.#columnData[field];
+      const filterCallback = col ? col.filter : undefined;
+      const value = this.#getNestedValue(row, field);
+      if (!this.#filterField(value, filter, filterCallback)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  #filterRows() {
+    const filter =
+      typeof this.#filters === "function"
+        ? this.#filters
+        : (row: object, index: number) => this.#filterRow(row, index);
+
+    let query: RegExp | string | null = null;
+    let queryTokens: string[] | RegExp[] = [];
+    if (this.#query instanceof RegExp) {
+      query = this.#query;
+      queryTokens = [query];
+    } else if (typeof this.#query === "string") {
+      query = this.#query.toLocaleLowerCase();
+      queryTokens = this.#tokenizer(query);
+    }
+
+    this.#filteredRows = this.#rows.filter((row, index) => {
+      row._metadata.searchScore = 0;
+      // Filter takes precedence over search.
+      if (!filter(row, index)) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      const searchableFields = this.columns
+        .filter((col) => col.searchable)
+        .map((c) => c.field);
+
+      const fields = [...searchableFields, ...this.#extraSearchFields];
+
+      for (const field of fields) {
+        const col = this.#columnData[field];
+        if (col && col.tokenize) {
+          const fieldTokens = row._metadata[`_${field}_tokens`] || [];
+          for (const token of queryTokens) {
+            if (this.#searchField(fieldTokens, token)) {
+              if (typeof token === "string") {
+                row._metadata.searchScore += token.length;
+              } else {
+                row._metadata.searchScore++;
+              }
+            }
+          }
+        } else {
+          const value = this.#getNestedValue(row, field);
+          if (this.#searchField(value, query)) {
+            if (typeof query === "string") {
+              row._metadata.searchScore += query.length;
+            } else {
+              row._metadata.searchScore++;
+            }
+          }
+        }
+      }
+
+      return row._metadata.searchScore > 0;
+    });
+
+    this.#sortRows();
+    this.#updateTable();
+
+    this.#table.dispatchEvent(new CustomEvent(DataTable.Events.ROWS_CHANGED, {
+      bubbles: true,
+      cancelable: true,
+    }));
+  }
+
+  #compareRows(a: RowData, b: RowData, col: ColumnOptions): number {
+    let aValue, bValue;
+    if (col.sortOrder === "asc") {
+      aValue = a._metadata[`_${col.field}_sort`];
+      bValue = b._metadata[`_${col.field}_sort`];
+    } else if (col.sortOrder === "desc") {
+      aValue = b._metadata[`_${col.field}_sort`];
+      bValue = a._metadata[`_${col.field}_sort`];
+    }
+
+    if (typeof col.sorter === "function") {
+      const ret = col.sorter(aValue, bValue);
+      if (ret !== 0) return ret;
+    }
+
+    if (aValue < bValue) return -1;
+    if (aValue > bValue) return 1;
+    return 0;
+  }
+
+  #sortRows() {
+    const sortedColumns = this.columns
+      // Only sort by visible columns with valid sort priorities
+      .filter((col) => !col.element.hidden && typeof col.sortPriority === "number")
+      // Sort our columns by their sort priority.
+      // This is how sorting by multiple columns is handled.
+      .sort((a, b) => {
+        const aPriority =
+          typeof a.sortPriority === "number" ? a.sortPriority : 0;
+        const bPriority =
+          typeof b.sortPriority === "number" ? b.sortPriority : 0;
+        return aPriority - bPriority;
+      });
+
+    this.#filteredRows.sort((a, b) => {
+      // Try to sort by search score if there is a query.
+      let aValue = a._metadata.searchScore || 0;
+      let bValue = b._metadata.searchScore || 0;
+      if (aValue > bValue) return -1;
+      if (aValue < bValue) return 1;
+
+      for (const col of sortedColumns) {
+        const comp = this.#compareRows(a, b, col);
+        if (comp !== 0) {
+          return comp;
+        }
+      }
+
+      // Always fall back to the index column
+      return a._metadata.index - b._metadata.index;
+    });
+    this.#updateTable();
+  }
+
+  #updateHeaders() {
+    for (const field of Object.keys(this.#columnData)) {
+      const col = this.#columnData[field];
+
+      // Update the order of headers
+      col.element.parentElement?.append(col.element);
+      col.element.hidden = !col.visible;
+
+      if (col.element.style.width == "") {
+        col.element.style.width = col.element.offsetWidth + "px";
+      }
+
+      if (col.sortOrder === "asc") {
+        col.element?.classList.add("dt-ascending");
+        col.element?.classList.remove("dt-descending");
+      } else if (col.sortOrder === "desc") {
+        col.element?.classList.add("dt-descending");
+        col.element?.classList.remove("dt-ascending");
+      } else {
+        col.element?.classList.remove("dt-ascending");
+        col.element?.classList.remove("dt-descending");
+      }
+    }
+
+    // The last header should never have a width. This forces it to fill
+    // the remaining space in the table. Without this, resizing can feel "jumpy".
+    const lastCol = this.columns.filter((c) => c.visible).slice(-1)[0];
+    if (lastCol) {
+      lastCol.element.style.width = "";
+    }
+  }
+
+  #updateTable() {
+    this.#tbody.innerHTML = "";
+    if (this.#filteredRows.length) {
+      let virtualScroll = false;
+      if (this.#filteredRows.length >= this.#virtualScrollCount) {
+        try {
+          this.#virtualScroll.rowCount = this.#filteredRows.length;
+          this.#virtualScroll.start();
+          virtualScroll = true;
+        } catch (error) {
+          if (error instanceof VirtualScrollError) {
+            console.warn(
+              "Failed to start virtual scroll... falling back to standard rendering"
+            );
+            console.warn(error.stack);
+          }
+        }
+      }
+
+      if (!virtualScroll) {
+        if (this.#filteredRows.length > WARN_ROW_COUNT) {
+          const count = WARN_ROW_COUNT.toLocaleString();
+          console.warn(
+            `Virtual scroll disabled with more than ${count} rows... Good luck with that!`
+          );
+        }
+
+        if (this.#virtualScroll) {
+          this.#virtualScroll.stop();
+        }
+        const rowElements = this.#filteredRows.map((_, index) => this.#createRow(index));
+        this.#tbody.append(...rowElements);
+      }
+    } else if (this.#rows.length === 0) {
+      this.showMessage(this.#noDataText, "dt-empty");
+    } else {
+      this.showMessage(this.#noMatchText, "dt-empty");
+    }
+  }
+
+  #updateCell(td: HTMLTableCellElement, value: any, col: ColumnData, row: object) {
+    if (typeof col.valueFormatter === "function") {
+      value = col.valueFormatter(value, row);
+    }
+    td.innerText = value == null ? "-" : value;
+
+    if (typeof col.elementFormatter === "function") {
+      col.elementFormatter(value, row, td);
+    }
+
+    if (
+      this.#highlightSearch &&
+      this.#query &&
+      this.#query != "" &&
+      col.searchable
+    ) {
+      td.innerHTML = td.innerText.replace(
+        new RegExp(this.#query, "i"),
+        (match) => `<mark>${match}</mark>`
+      );
+    }
+
+    td.hidden = col.visible ? false : true;
+  }
+
+  #createRow(index: number): HTMLTableRowElement {
+    const row = this.#filteredRows[index];
+    const tr = document.createElement("tr");
+    tr.classList.add(...classesToArray(this.#classes.tr));
+    tr.dataset.dtIndex = String(index);
+
+    for (const field of Object.keys(this.#columnData)) {
+      let value = this.#getNestedValue(row, field);
+      const col = this.#columnData[field];
+      const td = document.createElement("td");
+      td.classList.add(...classesToArray(this.#classes.td));
+      td.dataset.dtField = field;
+      this.#updateCell(td, value, col, row);
+      tr.append(td);
+    }
+
+    if (typeof this.#rowFormatter === "function") {
+      this.#rowFormatter(row, tr);
+    }
+
+    return tr;
+  }
+
+  #getNestedValue(obj: any, path: string) {
+    const keys = path.split(".");
+    let current = obj;
+
+    for (const key of keys) {
+      if (current && typeof current === "object") {
+        current = current[key];
+      } else {
+        return undefined; // Or handle the error as needed
+      }
+    }
+
+    return current;
+  }
+
+  #resizeColumnStart = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const target: HTMLElement = event.target as HTMLElement;
+    const header = target.closest("th");
+    if (!header) return;
+
+    const field = header.dataset.dtField;
+    if (!field) return;
+
+    const col = this.#columnData[field];
+    if (!col) return;
+
+    this.#resizingColumn = col;
+
+    col.resizeStartX = event.clientX;
+    col.resizeStartWidth = header.offsetWidth;
+
+    document.addEventListener("mousemove", this.#resizeColumnMove);
+    document.addEventListener("mouseup", this.#resizeColumnEnd);
+  }
+
+  #resizeColumnMove = (event: MouseEvent) => {
+    if (!this.#resizingColumn) return;
+
+    event.preventDefault();
+    const newWidth = this.#resizingColumn.resizeStartWidth! + (event.clientX - this.#resizingColumn.resizeStartX!);
+    this.#resizingColumn.element.style.width = `${newWidth}px`;
+  }
+
+  #resizeColumnEnd = (event: MouseEvent) => {
+    if (!this.#resizingColumn) return;
+
+    document.removeEventListener("mousemove", this.#resizeColumnMove);
+    document.removeEventListener("mouseup", this.#resizeColumnEnd);
+    this.#table.dispatchEvent(new CustomEvent(DataTable.Events.COL_RESIZE, {
+      detail: {
+        column: this.#resizingColumn,
+        width: this.#resizingColumn.element.offsetWidth,
+      },
+      bubbles: true,
+      cancelable: true,
+    }));
+    this.#resizingColumn = null;
+  }
+
+  #resizeColumnDoubleClick = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    const header = target.closest("th");
+    if (header) {
+      header.style.width = "0px";
+    }
+  }
+
+  #dragColumnStart = (event: DragEvent) => {
+    const target = event.target as HTMLElement;
+    const field = target.dataset.dtField;
+
+    console.log("dragColumnStart", field);
+
+    if (event.dataTransfer && field) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", field);
+    }
+  }
+
+  #dragColumnOver = (event: DragEvent) => {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "move";
+    }
+    return false;
+  }
+
+  #dragColumnEnter = (event: DragEvent) => {
+    const target = event.target as HTMLElement;
+    target.classList.add("dt-drag-over");
+  }
+
+  #dragColumnLeave = (event: DragEvent) => {
+    const target = event.target as HTMLElement;
+    target.classList.remove("dt-drag-over");
+  }
+
+  #dragColumnDrop = (event: DragEvent) => {
+    const dragField = event.dataTransfer?.getData("text/plain");
+    const target = event.currentTarget as HTMLElement;
+    const dropField = target.dataset.dtField;
+
+    if (!dragField || !dropField) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const columns = this.columns;
+    const dragIndex = columns.findIndex((col) => col.field === dragField);
+    const dropIndex = columns.findIndex((col) => col.field === dropField);
+
+    if (dragIndex > -1 && dropIndex > -1) {
+      const [draggedColumn] = columns.splice(dragIndex, 1);
+      columns.splice(dropIndex, 0, draggedColumn);
+
+      // Update the #columns object
+      this.#columnData = Object.fromEntries(columns.map((col) => [col.field, col]));
+
+      // Clear width of the last column so it can fill the rest of the space.
+      const lastCol = columns[columns.length - 1];
+      if (lastCol && lastCol.element) {
+        lastCol.element.style.width = "";
+      }
+
+      // Re-render the table
+      this.#updateHeaders();
+      this.#updateTable();
+
+      this.#table.dispatchEvent(new CustomEvent(DataTable.Events.COL_REARRANGE, {
+        detail: {
+          draggedColumn: draggedColumn,
+          dropColumn: this.#columnData[dropField],
+          columns: columns,
+        },
+        bubbles: true,
+        cancelable: true,
+      }));
+    }
+  }
+
+  #dragColumnEnd = (event: DragEvent) => {
+    const elements = document.querySelectorAll(".dt-drag-over");
+    for (const element of elements){
+      element.classList.remove("dt-drag-over");
+    }
+  }
+}
+
+export type SortOrder = "asc" | "desc" | null;
+
+/**
+ * Internal column data structure.
+ */
+export interface ColumnData {
+  field: string;
+  title: string;
+  sortable: boolean;
+  searchable: boolean;
+  tokenize: boolean;
+  element: HTMLElement;
+  visible: boolean;
+  sortOrder: SortOrder;
+  sortPriority?: number;
+  resizeStartX: number | null;
+  resizeStartWidth: number | null;
+  valueFormatter?: ValueFormatter;
+  elementFormatter?: ElementFormatter;
+  filter?: FilterValueCallback;
+  comparator?: (a: any, b: any) => number;
+}
+
+/**
+ * Column options for the table.
+ */
+export interface ColumnOptions {
+  /**
+   * The field name in the data object.
+   */
+  field: string;
+  /**
+   * The title to display in the header.
+   */
+  title?: string;
+  /**
+   * Whether the column is sortable.
+   */
+  sortable?: boolean;
+  /**
+   * Whether the column is searchable.
+   */
+  searchable?: boolean;
+  /**
+   * Whether the column's data should be tokenized for searching.
+   */
+  tokenize?: boolean;
+  /**
+   * A function to format the value for display.
+   */
+  valueFormatter?: ValueFormatter;
+  /**
+   * A function to format the element for display.
+   */
+  elementFormatter?: ElementFormatter;
+  sorter?: (a: any, b: any) => number;
+  filter?: FilterValueCallback;
+  /**
+   * A function to compare two values for sorting.
+   * This is used to override the default sorting behavior.
+   */
+  comparator?: (a: any, b: any) => number;
+  /**
+   * The initial sort order of the column.
+   */
+  sortOrder?: SortOrder;
+  /**
+   * The inital sort priority of the column for sorting.
+   * Lower numbers are sorted first.
+   */
+  sortPriority?: number;
+  /**
+   * Whether the column should be visible by default.
+   */
+  visible?: boolean;
+  /**
+   * Whether the column should be resizable.
+   * Defaults to the table's resizable option.
+   */
+  resizable?: boolean;
+  /**
+   * The initial width of the column.
+   * Can be a number (in pixels) or a string (e.g. "100px", "50%").
+   */
+  width?: string | number;
+}
+
+export interface TableClasses {
+  scroller?: string | string[];
+  thead?: string | string[];
+  tbody?: string | string[];
+  tfoot?: string | string[];
+  tr?: string | string[];
+  th?: string | string[];
+  td?: string | string[];
+}
+
+export interface TableOptions {
+  formatter?: RowFormatter;
+  columns?: ColumnOptions[];
+  data?: any[];
+  virtualScroll?: boolean | number;
+  highlightSearch?: boolean;
+  resizable?: boolean;
+  rearrangeable?: boolean;
+  extraSearchFields?: string[];
+  noDataText?: string;
+  noMatchText?: string;
+  classes?: TableClasses;
+  tokenizer?: TokenizerFunction;
+}
+
+export type RowFormatter = (row: object, element: HTMLElement) => void;
+export type ValueFormatter = (value: any, row: object) => string;
+export type ElementFormatter = (
+  value: any,
+  row: object,
+  element: HTMLElement
+) => void;
+export type TokenizerFunction = (value: any) => string[];
+export type FilterRowCallback = (row: object, index: number) => boolean;
+export type FilterValueCallback = (value: any, filter: any) => boolean;
+
+interface RowData {
+  [key: string]: any;
+  _metadata: RowMeatadata;
+}
+
+interface RowMeatadata {
+  [key: string]: any;
+  index: number;
+  searchScore?: number;
+  tokens?: string[];
+  sortValue?: any;
+}
+
+const WARN_ROW_COUNT = 10_000;

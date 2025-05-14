@@ -1,4 +1,4 @@
-import { DataTable, LocalStorageAdapter } from "../../dist/esm/datatable.bundle.js";
+import { DataTable, LocalStorageAdapter } from "../../dist/datatable.mjs"
 
 let dataTable;
 

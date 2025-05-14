@@ -1,20 +1,24 @@
-import { DataTable } from '../datatable.js';
+import { ColumnData, DataTable, SortOrder } from "../datatable";
 
-/**
- * @typedef {object} Options
- * @property {string} saveColumnSorting - Whether to save sorting state. Default is true.
- * @property {string} saveColumnOrder - Whether to save column order. Default is true.
- * @property {string} saveColumnVisibility - Whether to save column visibility. Default is true.
- * @property {string} saveColumnWidth - Whether to save column width. Default is true.
- */
+interface Options {
+    saveColumnSorting: boolean;
+    saveColumnOrder: boolean;
+    saveColumnVisibility: boolean;
+    saveColumnWidth: boolean;
+}
 
-class LocalStorageAdapter {
-    /** @type {DataTable} */
-    #dataTable;
-    /** @type {string} */
-    #storageKey;
-    /** @type {Options} */
-    #options = {
+interface ColumnState {
+    field: string;
+    sortOrder: SortOrder;
+    sortPriority?: number;
+    visible: boolean;
+    width: string;
+}
+
+export class LocalStorageAdapter {
+    #dataTable: DataTable;
+    #storageKey: string;
+    #options: Options = {
         saveColumnSorting: true,
         saveColumnVisibility: true,        
         saveColumnWidth: true,
@@ -22,11 +26,11 @@ class LocalStorageAdapter {
     }
 
     /**
-     * @param {DataTable} dataTable - The DataTable instance to monitor.
-     * @param {string} storageKey - The key to use for saving the state in localStorage.
-     * @param {Options} options - The key to use for saving the state in localStorage.
+     * @param dataTable - The DataTable instance to monitor.
+     * @param storageKey - The key to use for saving the state in localStorage.
+     * @param options - The key to use for saving the state in localStorage.
      */
-    constructor(dataTable, storageKey, options = {}) {
+    constructor(dataTable: DataTable, storageKey: string, options?: Options) {
         this.#dataTable = dataTable;
         this.#storageKey = storageKey;
         this.#options = { ...this.#options, ...options };
@@ -58,11 +62,11 @@ class LocalStorageAdapter {
      * Saves the current column state to localStorage.
      */
     saveState() {
-        const columnStates = this.#dataTable.columns.map((col) => ({
+        const columnStates = this.#dataTable.columns.map((col): ColumnState => ({
             field: col.field,
             sortOrder: col.sortOrder,
             sortPriority: col.sortPriority,
-            visible: col.visible,
+            visible: !col.element.hidden,
             width: col.element.style.width,
         }));
 
@@ -80,7 +84,7 @@ class LocalStorageAdapter {
             const columnStates = JSON.parse(savedState);
             const columns = this.#dataTable.columns;
 
-            columnStates.forEach((savedCol) => {
+            columnStates.forEach((savedCol: ColumnState) => {
                 const col = columns.find((c) => c.field === savedCol.field);
                 if (col) {
                     
@@ -100,7 +104,7 @@ class LocalStorageAdapter {
             });
 
             if (this.#options.saveColumnOrder) {
-                this.#dataTable.setColumnOrder(columnStates.map((col) => col.field));
+                this.#dataTable.setColumnOrder(columnStates.map((col: ColumnState) => col.field));
             }
 
             this.#dataTable.refresh();
@@ -117,6 +121,3 @@ class LocalStorageAdapter {
         localStorage.removeItem(this.#storageKey);
     }
 }
-
-export { LocalStorageAdapter };
-//# sourceMappingURL=localStorageAdapter.js.map

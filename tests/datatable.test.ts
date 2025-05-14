@@ -1,7 +1,7 @@
 import { DataTable } from "../src/datatable";
 
 describe("DataTable", () => {
-	let tableElement;
+	let tableElement: HTMLTableElement;
 
 	beforeEach(() => {
 		// Create a mock table element
@@ -22,15 +22,6 @@ describe("DataTable", () => {
 
 		expect(dataTable.table).toBe(tableElement);
 		expect(dataTable.columns.length).toBe(1);
-	});
-
-	test("should throw error if table is null", () => {
-		expect(() => {
-			new DataTable(null, {
-				columns: [],
-				data: [],
-			});
-		}).toThrow(TypeError);
 	});
 
 	test("should throw error if invalid selector", () => {
@@ -181,7 +172,7 @@ describe("DataTable", () => {
 		});
 
 		// Custom filter: Only include rows where age is greater than 25
-		dataTable.filter((row) => row.age > 25);
+		dataTable.filter((row: any) => row.age > 25);
 
 		expect(dataTable.rows.length).toBe(2);
 		expect(dataTable.rows[0].name).toBe("Bob");

@@ -63,7 +63,7 @@ window.addEventListener("load", () => {
 
   // Create visibility toggles for each column
   const colList = document.getElementById("colSelectDropdown");
-  for (const col of dataTable.columns) {
+  for (const col of dataTable.columnStates) {
     const li = document.createElement("li");
     const wrapper = document.createElement("div");
     wrapper.className = "form-check dropdown-item";

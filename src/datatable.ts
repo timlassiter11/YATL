@@ -2,6 +2,20 @@ import './datatable.css';
 
 import { VirtualScroll, VirtualScrollError } from './virtualScroll';
 import { classesToArray, toHumanReadable, whitespaceTokenizer } from './utils';
+import {
+  CellFormatterCallback,
+  ColumnFilterCallback,
+  ColumnOptions,
+  ColumnState,
+  ComparatorCallback,
+  FilterCallback,
+  RowFormatterCallback,
+  SortOrder,
+  TableClasses,
+  TableOptions,
+  TokenizerCallback,
+  ValueFormatterCallback
+} from './types';
 
 /**
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
@@ -33,14 +47,15 @@ export class DataTable {
 
   // Search and filter data
   #query!: RegExp | string | null;
-  #filters!: any | FilterRowCallback;
+  #filters!: any | FilterCallback;
+  // Search fields that are not columns.
   #extraSearchFields: string[] = [];
 
-  #rowFormatter?: RowFormatter;
+  #rowFormatter?: RowFormatterCallback;
   #virtualScroll!: VirtualScroll;
   #virtualScrollCount: number = 1000;
   #highlightSearch: boolean = true;
-  #tokenizer: TokenizerFunction = whitespaceTokenizer
+  #tokenizer: TokenizerCallback = whitespaceTokenizer
   // The current sort priority. Incremented when a column is sorted.
   #sortPriority: number = 0;
   #noDataText: string = "No records found";
@@ -201,14 +216,14 @@ export class DataTable {
         sortable: colOptions.sortable ?? false,
         searchable: colOptions.searchable ?? false,
         tokenize: colOptions.tokenize ?? false,
-        sortOrder: colOptions.sortOrder || null,
-        sortPriority: colOptions.sortPriority,
+        sortOrder: colOptions.sortOrder ?? null,
+        sortPriority: colOptions.sortPriority ?? 0,
         resizeStartWidth: null,
         resizeStartX: null,
         valueFormatter: colOptions.valueFormatter,
         elementFormatter: colOptions.elementFormatter,
-        filter: colOptions.filter,
-        comparator: colOptions.comparator,
+        comparatorCallback: colOptions.sorter,
+        filterCallback: colOptions.filter,
       };
       this.#columnData[colOptions.field] = colData;
 
@@ -294,10 +309,36 @@ export class DataTable {
   }
 
   /**
-   * Gets a list of all columns in the table.
+   * Gets a list of the ColumnStates for all columns in the table
+   * Can be used to save / restore columns sates.
    */
-  get columns(): ColumnData[] {
-    return Object.values(this.#columnData);
+  get columnStates(): ColumnState[] {
+    return Object.values(this.#columnData).map((col) => {
+      return {
+        field: col.field,
+        title: col.title,
+        visible: col.visible,
+        sortOrder: col.sortOrder,
+        sortPriority: col.sortPriority,
+        width: col.element.style.width,
+      } as ColumnState;
+    });
+  }
+
+  set columnStates(states: ColumnState[]) {
+    for (const state of states) {
+      const column = this.#columnData[state.field];
+      if (!column) {
+        console.warn(`Attempting to restore state for non-existent column ${state.field}`);
+        continue;
+      }
+
+      column.visible = state.visible ?? column.visible;
+      column.sortOrder = state.sortOrder ?? column.sortOrder;
+      column.sortPriority = state.sortPriority ?? column.sortPriority;
+      column.element.style.width = state.width ?? column.element.style.width;
+    }
+    this.refresh();
   }
 
   /**
@@ -372,8 +413,8 @@ export class DataTable {
           const value = this.#getNestedValue(row, field);
 
           // Cache precomputed values for sorting
-          if (typeof col.comparator === "function") {
-            metadata[`_${field}_sort`] = col.comparator(value, row);
+          if (typeof col.comparatorCallback === "function") {
+            metadata[`_${field}_sort`] = col.comparatorCallback(value, row);
           } else if (typeof value === "string") {
             metadata[`_${field}_sort`] = value.toLocaleLowerCase();
           } else {
@@ -430,7 +471,7 @@ export class DataTable {
    * Can also be a function that will be called for each row.
    * @param filters
    */
-  filter(filters: any | FilterRowCallback) {
+  filter(filters: any | FilterCallback) {
     if (typeof filters !== "object" && typeof filters !== "function") {
       throw new TypeError("filters must be object or function");
     }
@@ -456,7 +497,7 @@ export class DataTable {
       if (order === "asc" || order === "desc") {
         col.sortPriority = this.#sortPriority++;
       } else {
-        col.sortPriority = undefined;
+        col.sortPriority = Number.MIN_VALUE;
         this.#sortPriority--;
       }
       col.sortOrder = order;
@@ -607,7 +648,7 @@ export class DataTable {
       .filter((col) => col !== null);
 
     this.#columnData = Object.fromEntries(newColumns.map((col) => [col.field, col]));
-    this.#updateHeaders();
+    this.refresh();
   }
 
   refresh() {
@@ -627,7 +668,7 @@ export class DataTable {
     return String(value).toLocaleLowerCase().includes(query);
   }
 
-  #filterField(value: any, filter: any, filterFunction?: FilterValueCallback): boolean {
+  #filterField(value: any, filter: any, filterFunction?: ColumnFilterCallback): boolean {
     if (Array.isArray(filter)) {
       // If it's an array, we will use an OR filter.
       // If any filters in the array match, keep it.
@@ -658,7 +699,7 @@ export class DataTable {
     for (const field of Object.keys(this.#filters || {})) {
       const filter = this.#filters[field];
       const col = this.#columnData[field];
-      const filterCallback = col ? col.filter : undefined;
+      const filterCallback = col ? col.filterCallback : undefined;
       const value = this.#getNestedValue(row, field);
       if (!this.#filterField(value, filter, filterCallback)) {
         return false;
@@ -694,7 +735,7 @@ export class DataTable {
         return true;
       }
 
-      const searchableFields = this.columns
+      const searchableFields = Object.values(this.#columnData)
         .filter((col) => col.searchable)
         .map((c) => c.field);
 
@@ -702,8 +743,9 @@ export class DataTable {
 
       for (const field of fields) {
         const col = this.#columnData[field];
-        if (col && col.tokenize) {
-          const fieldTokens = row._metadata[`_${field}_tokens`] || [];
+        const tokenKey = `_${field}_tokens`;
+        if (col && tokenKey in row._metadata) {
+          const fieldTokens = row._metadata[tokenKey];
           for (const token of queryTokens) {
             if (this.#searchField(fieldTokens, token)) {
               if (typeof token === "string") {
@@ -758,18 +800,12 @@ export class DataTable {
   }
 
   #sortRows() {
-    const sortedColumns = this.columns
+    const sortedColumns = Object.values(this.#columnData)
       // Only sort by visible columns with valid sort priorities
-      .filter((col) => !col.element.hidden && typeof col.sortPriority === "number")
+      .filter((col) => !col.element.hidden && col.sortOrder)
       // Sort our columns by their sort priority.
       // This is how sorting by multiple columns is handled.
-      .sort((a, b) => {
-        const aPriority =
-          typeof a.sortPriority === "number" ? a.sortPriority : 0;
-        const bPriority =
-          typeof b.sortPriority === "number" ? b.sortPriority : 0;
-        return aPriority - bPriority;
-      });
+      .sort((a, b) => a.sortPriority - b.sortPriority);
 
     this.#filteredRows.sort((a, b) => {
       // Try to sort by search score if there is a query.
@@ -817,7 +853,7 @@ export class DataTable {
 
     // The last header should never have a width. This forces it to fill
     // the remaining space in the table. Without this, resizing can feel "jumpy".
-    const lastCol = this.columns.filter((c) => c.visible).slice(-1)[0];
+    const lastCol = Object.values(this.#columnData).filter((c) => c.visible).slice(-1)[0];
     if (lastCol) {
       lastCol.element.style.width = "";
     }
@@ -1021,7 +1057,7 @@ export class DataTable {
     event.preventDefault();
     event.stopPropagation();
 
-    const columns = this.columns;
+    const columns = Object.values(this.#columnData);
     const dragIndex = columns.findIndex((col) => col.field === dragField);
     const dropIndex = columns.findIndex((col) => col.field === dropField);
 
@@ -1056,18 +1092,13 @@ export class DataTable {
 
   #dragColumnEnd = (event: DragEvent) => {
     const elements = document.querySelectorAll(".dt-drag-over");
-    for (const element of elements){
+    for (const element of elements) {
       element.classList.remove("dt-drag-over");
     }
   }
 }
 
-export type SortOrder = "asc" | "desc" | null;
-
-/**
- * Internal column data structure.
- */
-export interface ColumnData {
+interface ColumnData {
   field: string;
   title: string;
   sortable: boolean;
@@ -1076,114 +1107,14 @@ export interface ColumnData {
   element: HTMLElement;
   visible: boolean;
   sortOrder: SortOrder;
-  sortPriority?: number;
+  sortPriority: number;
   resizeStartX: number | null;
   resizeStartWidth: number | null;
-  valueFormatter?: ValueFormatter;
-  elementFormatter?: ElementFormatter;
-  filter?: FilterValueCallback;
-  comparator?: (a: any, b: any) => number;
+  valueFormatter?: ValueFormatterCallback;
+  elementFormatter?: CellFormatterCallback;
+  comparatorCallback?: ComparatorCallback;
+  filterCallback?: ColumnFilterCallback;
 }
-
-/**
- * Column options for the table.
- */
-export interface ColumnOptions {
-  /**
-   * The field name in the data object.
-   */
-  field: string;
-  /**
-   * The title to display in the header.
-   */
-  title?: string;
-  /**
-   * Whether the column is sortable.
-   */
-  sortable?: boolean;
-  /**
-   * Whether the column is searchable.
-   */
-  searchable?: boolean;
-  /**
-   * Whether the column's data should be tokenized for searching.
-   */
-  tokenize?: boolean;
-  /**
-   * A function to format the value for display.
-   */
-  valueFormatter?: ValueFormatter;
-  /**
-   * A function to format the element for display.
-   */
-  elementFormatter?: ElementFormatter;
-  sorter?: (a: any, b: any) => number;
-  filter?: FilterValueCallback;
-  /**
-   * A function to compare two values for sorting.
-   * This is used to override the default sorting behavior.
-   */
-  comparator?: (a: any, b: any) => number;
-  /**
-   * The initial sort order of the column.
-   */
-  sortOrder?: SortOrder;
-  /**
-   * The inital sort priority of the column for sorting.
-   * Lower numbers are sorted first.
-   */
-  sortPriority?: number;
-  /**
-   * Whether the column should be visible by default.
-   */
-  visible?: boolean;
-  /**
-   * Whether the column should be resizable.
-   * Defaults to the table's resizable option.
-   */
-  resizable?: boolean;
-  /**
-   * The initial width of the column.
-   * Can be a number (in pixels) or a string (e.g. "100px", "50%").
-   */
-  width?: string | number;
-}
-
-export interface TableClasses {
-  scroller?: string | string[];
-  thead?: string | string[];
-  tbody?: string | string[];
-  tfoot?: string | string[];
-  tr?: string | string[];
-  th?: string | string[];
-  td?: string | string[];
-}
-
-export interface TableOptions {
-  formatter?: RowFormatter;
-  columns?: ColumnOptions[];
-  data?: any[];
-  virtualScroll?: boolean | number;
-  highlightSearch?: boolean;
-  resizable?: boolean;
-  rearrangeable?: boolean;
-  extraSearchFields?: string[];
-  noDataText?: string;
-  noMatchText?: string;
-  classes?: TableClasses;
-  tokenizer?: TokenizerFunction;
-}
-
-export type RowFormatter = (row: object, element: HTMLElement) => void;
-export type ValueFormatter = (value: any, row: object) => string;
-export type ElementFormatter = (
-  value: any,
-  row: object,
-  element: HTMLElement
-) => void;
-export type TokenizerFunction = (value: any) => string[];
-export type FilterRowCallback = (row: object, index: number) => boolean;
-export type FilterValueCallback = (value: any, filter: any) => boolean;
 
 interface RowData {
   [key: string]: any;

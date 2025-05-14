@@ -21,7 +21,7 @@ describe("DataTable", () => {
 		});
 
 		expect(dataTable.table).toBe(tableElement);
-		expect(dataTable.columns.length).toBe(1);
+		expect(dataTable.columnStates.length).toBe(1);
 	});
 
 	test("should throw error if invalid selector", () => {

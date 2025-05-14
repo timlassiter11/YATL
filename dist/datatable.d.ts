@@ -1,3 +1,147 @@
+type SortOrder = "asc" | "desc" | null;
+/**
+ * Callback for formatting a row's  HTML element.
+ * @param row - The row data.
+ * @param element - The row element.
+ */
+type RowFormatterCallback = (row: any, element: HTMLElement) => void;
+/**
+ * Callback for formatting the value of a cell.
+ * Called when the cell is created and when exporting to CSV.
+ * @param value - The value of the cell.
+ * @param row - The row data.
+ */
+type ValueFormatterCallback = (value: any, row: object) => string;
+/**
+ * Callback for formatting a cell's HTML element.
+ * @param value - The value of the field.
+ * @param row - The row data.
+ * @param element - The cell element.
+ */
+type CellFormatterCallback = (value: any, row: object, element: HTMLElement) => void;
+/**
+ * Callback for comparing two values.
+ * @param a - The first value.
+ * @param b - The second value.
+ * @returns A negative number if a < b, a positive number if a > b, or 0 if they are equal.
+ */
+type ComparatorCallback = (a: any, b: any) => number;
+/**
+ * Callback for caching the sort value of a field
+ * @param value - The value of the field.
+ * @returns The numerical value of the field
+ */
+type SortValueCallback = (value: any) => number;
+/**
+ * Callback for tokenizing a value into a list of string tokens.
+ * @param value - The value to tokenize.
+ * @returns An array of tokens.
+ */
+type TokenizerCallback = (value: any) => string[];
+/**
+ * Callback for filtering a row.
+ * @param row - The row data.
+ * @param index - The index of the row.
+ * @returns True if the row matches the filter, false otherwise.
+ */
+type FilterCallback = (row: object, index: number) => boolean;
+/**
+ * Callback for filtering a field value against the filter data.
+ * @param value - The value to filter.
+ * @param filter - The filter to apply.
+ * @returns True if the value matches the filter, false otherwise.
+ */
+type ColumnFilterCallback = (value: any, filter: any) => boolean;
+/**
+ * Column options for the table.
+ */
+interface ColumnOptions {
+    /**
+     * The field name in the data object.
+     */
+    field: string;
+    /**
+     * The title to display in the header.
+     */
+    title?: string;
+    /**
+     * Whether the column is sortable.
+     */
+    sortable?: boolean;
+    /**
+     * Whether the column is searchable.
+     */
+    searchable?: boolean;
+    /**
+     * Whether the column's data should be tokenized for searching.
+     */
+    tokenize?: boolean;
+    /**
+     * The initial sort order of the column.
+     */
+    sortOrder?: SortOrder;
+    /**
+     * The inital sort priority of the column for sorting.
+     * Lower numbers are sorted first.
+     */
+    sortPriority?: number;
+    /**
+     * Whether the column should be visible by default.
+     */
+    visible?: boolean;
+    /**
+     * Whether the column should be resizable.
+     * Defaults to the table's resizable option.
+     */
+    resizable?: boolean;
+    /**
+     * The initial width of the column.
+     * Can be a number (in pixels) or a string (e.g. "100px", "50%").
+     */
+    width?: string | number;
+    /**
+     * A function to format the value for display.
+     */
+    valueFormatter?: ValueFormatterCallback;
+    /**
+     * A function to format the element for display.
+     */
+    elementFormatter?: CellFormatterCallback;
+    sorter?: (a: any, b: any) => number;
+    filter?: FilterCallback;
+}
+interface ColumnState {
+    readonly field: string;
+    readonly title: string;
+    visible?: boolean;
+    sortOrder?: SortOrder;
+    sortPriority?: number;
+    width?: string;
+}
+interface TableClasses {
+    scroller?: string | string[];
+    thead?: string | string[];
+    tbody?: string | string[];
+    tfoot?: string | string[];
+    tr?: string | string[];
+    th?: string | string[];
+    td?: string | string[];
+}
+interface TableOptions {
+    formatter?: RowFormatterCallback;
+    columns?: ColumnOptions[];
+    data?: any[];
+    virtualScroll?: boolean | number;
+    highlightSearch?: boolean;
+    resizable?: boolean;
+    rearrangeable?: boolean;
+    extraSearchFields?: string[];
+    noDataText?: string;
+    noMatchText?: string;
+    classes?: TableClasses;
+    tokenizer?: TokenizerCallback;
+}
+
 /**
  * Class for creating a DataTable that will add sort, search, filter, and virtual scroll to a table.
  */
@@ -18,9 +162,11 @@ declare class DataTable {
      */
     constructor(table: string | HTMLTableElement, { formatter, columns, data, virtualScroll, highlightSearch, resizable, rearrangeable, extraSearchFields, noDataText, noMatchText, classes, tokenizer, }?: TableOptions);
     /**
-     * Gets a list of all columns in the table.
+     * Gets a list of the ColumnStates for all columns in the table
+     * Can be used to save / restore columns sates.
      */
-    get columns(): ColumnData[];
+    get columnStates(): ColumnState[];
+    set columnStates(states: ColumnState[]);
     /**
      * Get the current data in the table.
      */
@@ -69,7 +215,7 @@ declare class DataTable {
      * Can also be a function that will be called for each row.
      * @param filters
      */
-    filter(filters: any | FilterRowCallback): void;
+    filter(filters: any | FilterCallback): void;
     /**
      * Sort the given column using the given order (asc or desc).
      * If order is none, the columns will be "unsorted" and revert
@@ -112,119 +258,6 @@ declare class DataTable {
     setColumnOrder(fields: string[]): void;
     refresh(): void;
 }
-type SortOrder = "asc" | "desc" | null;
-/**
- * Internal column data structure.
- */
-interface ColumnData {
-    field: string;
-    title: string;
-    sortable: boolean;
-    searchable: boolean;
-    tokenize: boolean;
-    element: HTMLElement;
-    visible: boolean;
-    sortOrder: SortOrder;
-    sortPriority?: number;
-    resizeStartX: number | null;
-    resizeStartWidth: number | null;
-    valueFormatter?: ValueFormatter;
-    elementFormatter?: ElementFormatter;
-    filter?: FilterValueCallback;
-    comparator?: (a: any, b: any) => number;
-}
-/**
- * Column options for the table.
- */
-interface ColumnOptions {
-    /**
-     * The field name in the data object.
-     */
-    field: string;
-    /**
-     * The title to display in the header.
-     */
-    title?: string;
-    /**
-     * Whether the column is sortable.
-     */
-    sortable?: boolean;
-    /**
-     * Whether the column is searchable.
-     */
-    searchable?: boolean;
-    /**
-     * Whether the column's data should be tokenized for searching.
-     */
-    tokenize?: boolean;
-    /**
-     * A function to format the value for display.
-     */
-    valueFormatter?: ValueFormatter;
-    /**
-     * A function to format the element for display.
-     */
-    elementFormatter?: ElementFormatter;
-    sorter?: (a: any, b: any) => number;
-    filter?: FilterValueCallback;
-    /**
-     * A function to compare two values for sorting.
-     * This is used to override the default sorting behavior.
-     */
-    comparator?: (a: any, b: any) => number;
-    /**
-     * The initial sort order of the column.
-     */
-    sortOrder?: SortOrder;
-    /**
-     * The inital sort priority of the column for sorting.
-     * Lower numbers are sorted first.
-     */
-    sortPriority?: number;
-    /**
-     * Whether the column should be visible by default.
-     */
-    visible?: boolean;
-    /**
-     * Whether the column should be resizable.
-     * Defaults to the table's resizable option.
-     */
-    resizable?: boolean;
-    /**
-     * The initial width of the column.
-     * Can be a number (in pixels) or a string (e.g. "100px", "50%").
-     */
-    width?: string | number;
-}
-interface TableClasses {
-    scroller?: string | string[];
-    thead?: string | string[];
-    tbody?: string | string[];
-    tfoot?: string | string[];
-    tr?: string | string[];
-    th?: string | string[];
-    td?: string | string[];
-}
-interface TableOptions {
-    formatter?: RowFormatter;
-    columns?: ColumnOptions[];
-    data?: any[];
-    virtualScroll?: boolean | number;
-    highlightSearch?: boolean;
-    resizable?: boolean;
-    rearrangeable?: boolean;
-    extraSearchFields?: string[];
-    noDataText?: string;
-    noMatchText?: string;
-    classes?: TableClasses;
-    tokenizer?: TokenizerFunction;
-}
-type RowFormatter = (row: object, element: HTMLElement) => void;
-type ValueFormatter = (value: any, row: object) => string;
-type ElementFormatter = (value: any, row: object, element: HTMLElement) => void;
-type TokenizerFunction = (value: any) => string[];
-type FilterRowCallback = (row: object, index: number) => boolean;
-type FilterValueCallback = (value: any, filter: any) => boolean;
 interface RowData {
     [key: string]: any;
     _metadata: RowMeatadata;
@@ -265,4 +298,4 @@ declare class LocalStorageAdapter {
     clearState(): void;
 }
 
-export { type ColumnData, type ColumnOptions, DataTable, type ElementFormatter, type FilterRowCallback, type FilterValueCallback, LocalStorageAdapter, type RowFormatter, type SortOrder, type TableClasses, type TableOptions, type TokenizerFunction, type ValueFormatter };
+export { type CellFormatterCallback, type ColumnFilterCallback, type ColumnOptions, type ColumnState, type ComparatorCallback, DataTable, type FilterCallback, LocalStorageAdapter, type RowFormatterCallback, type SortOrder, type SortValueCallback, type TableClasses, type TableOptions, type TokenizerCallback, type ValueFormatterCallback };

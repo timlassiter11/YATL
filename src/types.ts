@@ -1,3 +1,6 @@
+/**
+ * Defines the possible sorting orders for columns.
+ */
 export type SortOrder = "asc" | "desc" | null;
 
 /**
@@ -132,40 +135,159 @@ export interface ColumnOptions {
    * A function to format the element for display.
    */
   elementFormatter?: CellFormatterCallback;
+
+  /**
+   * A function to use for sorting the column.
+   * This overrides the default sorting behavior.
+   */
   sorter?: (a: any, b: any) => number;
+
+  /**
+   * A function to use for caching the sort value of the column.
+   */
+  sortValue?: SortValueCallback;
+
+  /**
+   * A function to use for filtering the column.
+   */
   filter?: FilterCallback;
 }
 
 export interface ColumnState {
+  /**
+   * The unique field name of the column.
+   */
   readonly field: string;
+
+  /**
+   * The user friendly title of the column.
+   */
   readonly title: string;
+
+  /**
+   * The current visibility of the column.
+   */
   visible?: boolean;
+
+  /**
+   * The current sort order of the column.
+   */
   sortOrder?: SortOrder;
+
+  /**
+   * The current sort priority of the column.
+   * Lower numbers are sorted first.
+   */
   sortPriority?: number;
+
+  /**
+   * The currently set width of the column.
+   */
   width?: string;
 }
 
+/**
+ * Defines CSS classes to be applied to different parts of the table.
+ */
 export interface TableClasses {
+  /**
+   * Classes for the scroller element.
+   */
   scroller?: string | string[];
+
+  /**
+   * Classes for the thead element.
+   */
   thead?: string | string[];
+
+  /**
+   * Classes for the tbody element.
+   */
   tbody?: string | string[];
+
+  /**
+   * Classes for the tfoot element.
+   */
   tfoot?: string | string[];
+
+  /**
+   * Classes for each table row element.
+   */
   tr?: string | string[];
+
+  /**
+   * Classes for each header element.
+   */
   th?: string | string[];
+
+  /**
+   * Classes for each cell element.
+   */
   td?: string | string[];
 }
 
+/**
+ * Options for configuring the table.
+ */
 export interface TableOptions {
-  formatter?: RowFormatterCallback;
+  /**
+   * The column options for the table.
+   */
   columns?: ColumnOptions[];
+
+  /**
+   * The initial data to load into the table.
+   */
   data?: any[];
+
+  /**
+   * Configures virtual scrolling.
+   * Can be a boolean (true to enable with default row count) or a number (to set the row count threshold).
+   */
   virtualScroll?: boolean | number;
+
+  /**
+   * Whether to highlight search results in the table cells.
+   */
   highlightSearch?: boolean;
+
+  /**
+   * Whether columns should be resizable by default.
+   */
   resizable?: boolean;
+
+  /**
+   * Whether columns should be rearrangeable by drag and drop.
+   */
   rearrangeable?: boolean;
+
+  /**
+   * Additional fields to include in the search, even if not explicitly marked as searchable in `ColumnOptions`.
+   */
   extraSearchFields?: string[];
+
+  /**
+   * The text to display when there is no data in the table.
+   */
   noDataText?: string;
+
+  /**
+   * The text to display when there are no matching records after filtering or searching.
+   */
   noMatchText?: string;
+
+  /**
+   * Custom CSS classes to apply to various table elements.
+   */
   classes?: TableClasses;
+
+  /**
+   * A function to format each row's HTML element.
+   */
+  formatter?: RowFormatterCallback;
+
+  /**
+   * A function to use for tokenizing values for searching.
+   */
   tokenizer?: TokenizerCallback;
 }

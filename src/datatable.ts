@@ -11,6 +11,7 @@ import {
   FilterCallback,
   RowFormatterCallback,
   SortOrder,
+  SortValueCallback,
   TableClasses,
   TableOptions,
   TokenizerCallback,
@@ -224,6 +225,7 @@ export class DataTable {
         elementFormatter: colOptions.elementFormatter,
         comparatorCallback: colOptions.sorter,
         filterCallback: colOptions.filter,
+        sortValueCallback: colOptions.sortValue
       };
       this.#columnData[colOptions.field] = colData;
 
@@ -413,8 +415,8 @@ export class DataTable {
           const value = this.#getNestedValue(row, field);
 
           // Cache precomputed values for sorting
-          if (typeof col.comparatorCallback === "function") {
-            metadata[`_${field}_sort`] = col.comparatorCallback(value, row);
+          if (typeof col.sortValueCallback === "function") {
+            metadata[`_${field}_sort`] = col.sortValueCallback(value);
           } else if (typeof value === "string") {
             metadata[`_${field}_sort`] = value.toLocaleLowerCase();
           } else {
@@ -495,9 +497,13 @@ export class DataTable {
 
     if (order != col.sortOrder) {
       if (order === "asc" || order === "desc") {
-        col.sortPriority = this.#sortPriority++;
+        // If we are changing the sort order of a column
+        // keep it's existing priority.
+        if (col.sortPriority === Number.MAX_VALUE) {
+          col.sortPriority = this.#sortPriority++;
+        }
       } else {
-        col.sortPriority = Number.MIN_VALUE;
+        col.sortPriority = Number.MAX_VALUE;
         this.#sortPriority--;
       }
       col.sortOrder = order;
@@ -1114,6 +1120,7 @@ interface ColumnData {
   elementFormatter?: CellFormatterCallback;
   comparatorCallback?: ComparatorCallback;
   filterCallback?: ColumnFilterCallback;
+  sortValueCallback?: SortValueCallback;
 }
 
 interface RowData {

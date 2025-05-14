@@ -407,7 +407,7 @@ export class DataTable {
 
       for (const row of rows as RowData[]) {
         // Add the index
-        const metadata: RowMeatadata = { index: index++ };
+        const metadata: RowMetadata = { index: index++ };
         row._metadata = metadata;
 
         for (const field of Object.keys(this.#columnData)) {
@@ -1125,10 +1125,10 @@ interface ColumnData {
 
 interface RowData {
   [key: string]: any;
-  _metadata: RowMeatadata;
+  _metadata: RowMetadata;
 }
 
-interface RowMeatadata {
+interface RowMetadata {
   [key: string]: any;
   index: number;
   searchScore?: number;

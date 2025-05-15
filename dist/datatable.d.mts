@@ -205,7 +205,7 @@ interface TableOptions {
     /**
      * The initial data to load into the table.
      */
-    data?: any[];
+    data?: Row[];
     /**
      * Configures virtual scrolling.
      */
@@ -279,6 +279,7 @@ declare class DataTable {
         COL_RESIZE: string;
         COL_REARRANGE: string;
     };
+    private static readonly DEFAULT_OPTIONS;
     /**
      * @param  table - Selector or HTMLElement for the table.
      * @param options - Options for the table.

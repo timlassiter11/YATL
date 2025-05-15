@@ -249,7 +249,7 @@ export interface TableOptions {
   /**
    * The initial data to load into the table.
    */
-  data?: any[];
+  data?: Row[];
 
   /**
    * Configures virtual scrolling.

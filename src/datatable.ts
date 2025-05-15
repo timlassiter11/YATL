@@ -34,6 +34,31 @@ export class DataTable {
     COL_REARRANGE: "dt.col.rearrange",
   }
 
+  // Centralized default options for the DataTable.
+  // These are the base values used if not overridden by user-provided options.
+  private static readonly DEFAULT_OPTIONS: Required<Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>> = {
+    virtualScroll: true,
+    highlightSearch: true,
+    sortable: true,
+    searchable: false,
+    tokenize: false,
+    resizable: true,
+    rearrangeable: true,
+    extraSearchFields: [],
+    noDataText: "No records found",
+    noMatchText: "No matching records found",
+    classes: {
+      scroller: "dt-scroller",
+      thead: "dt-headers",
+      tbody: "",
+      tfoot: "",
+      tr: "",
+      th: "",
+      td: "",
+    },
+    tokenizer: whitespaceTokenizer, // Default tokenizer function
+  };
+
   // Table elements
   #table!: HTMLTableElement;
   #thead!: HTMLElement;
@@ -51,20 +76,17 @@ export class DataTable {
   #query!: RegExp | string | null;
   #filters!: Record<string, any> | FilterCallback;
   // Search fields that are not columns.
-  #extraSearchFields: string[] = [];
+  #extraSearchFields: string[];
 
   #rowFormatter?: RowFormatterCallback;
   #virtualScroll?: VirtualScroll;
-  #highlightSearch: boolean = true;
-  #tokenizer: TokenizerCallback = whitespaceTokenizer
+  #highlightSearch: boolean;
+  #tokenizer: TokenizerCallback;
   // The current sort priority. Incremented when a column is sorted.
   #sortPriority: number = 0;
-  #noDataText: string = "No records found";
-  #noMatchText: string = "No matching records found";
-  #classes: TableClasses = {
-    scroller: "dt-scroller",
-    thead: "dt-headers",
-  };
+  #noDataText: string;
+  #noMatchText: string;
+  #classes: TableClasses;
   #resizingColumn: ColumnData | null = null;
 
   /**
@@ -73,23 +95,12 @@ export class DataTable {
    */
   constructor(table: string | HTMLTableElement, options: TableOptions = {}) {
 
-    const {
-      rowFormatter: formatter,
-      columns = [],
-      data = [],
-      virtualScroll = true,
-      highlightSearch = true,
-      sortable = true,
-      searchable = true,
-      tokenize = false,
-      resizable = true,
-      rearrangeable = false,
-      extraSearchFields,
-      noDataText,
-      noMatchText,
-      classes,
-      tokenizer,
-    } = options;
+    const finalOptions = {
+      columns: [],
+      data: [],
+      ...DataTable.DEFAULT_OPTIONS,
+      ...options
+    };
 
     if (typeof table === "string") {
       const tableElement = document.querySelector(table);
@@ -104,19 +115,19 @@ export class DataTable {
       throw new TypeError(`Invalid table element type. Must be HTMLTableElement`);
     }
 
-    if (!Array.isArray(columns)) {
+    if (!Array.isArray(finalOptions.columns)) {
       throw new TypeError("columns must be a list of columns");
     }
 
-    this.#tokenizer = tokenizer || this.#tokenizer;
+    this.#tokenizer = finalOptions.tokenizer;
 
-    this.#highlightSearch = highlightSearch;
-    this.#extraSearchFields = extraSearchFields || [];
-    this.#noDataText = noDataText || "No records found";
-    this.#noMatchText = noMatchText || "No matching records found";
-    this.#classes = { ...this.#classes, ...classes };
+    this.#highlightSearch = finalOptions.highlightSearch;
+    this.#extraSearchFields = finalOptions.extraSearchFields;
+    this.#noDataText = finalOptions.noDataText;
+    this.#noMatchText = finalOptions.noMatchText;
+    this.#classes = finalOptions.classes;
 
-    this.#rowFormatter = formatter;
+    this.#rowFormatter = finalOptions.rowFormatter;
 
     this.#table.classList.add("data-table");
 
@@ -212,15 +223,15 @@ export class DataTable {
 
     let colVisible = false;
     // Initialize columns
-    for (const colOptions of columns) {
+    for (const colOptions of finalOptions.columns) {
       const colData: ColumnData = {
         field: colOptions.field,
         title: colOptions.title || toHumanReadable(colOptions.field),
         element: document.createElement("th"),
         visible: colOptions.visible ?? true,
-        sortable: colOptions.sortable ?? sortable,
-        searchable: colOptions.searchable ?? searchable,
-        tokenize: colOptions.tokenize ?? tokenize,
+        sortable: colOptions.sortable ?? finalOptions.sortable,
+        searchable: colOptions.searchable ?? finalOptions.searchable,
+        tokenize: colOptions.tokenize ?? finalOptions.tokenize,
         sortOrder: colOptions.sortOrder ?? null,
         sortPriority: colOptions.sortPriority ?? 0,
         resizeStartWidth: null,
@@ -251,7 +262,7 @@ export class DataTable {
         colVisible = true;
       }
 
-      if (colOptions.sortable) {
+      if (colData.sortable) {
         th.classList.add("dt-sortable");
         // Add the event listener to the name element
         // to prevent clicking on the resizer from sorting.
@@ -270,9 +281,7 @@ export class DataTable {
         });
       }
 
-      const enableResize = colOptions.resizable === undefined ? resizable : colOptions.resizable;
-
-      if (enableResize) {
+      if (colOptions.resizable ?? finalOptions.resizable) {
         const resizer = document.createElement("div");
         resizer.classList.add("dt-resizer");
         resizer.addEventListener("mousedown", this.#resizeColumnStart);
@@ -286,7 +295,7 @@ export class DataTable {
         th.style.width = colOptions.width;
       }
 
-      if (rearrangeable) {
+      if (finalOptions.rearrangeable) {
         th.draggable = true;
         th.addEventListener("dragstart", this.#dragColumnStart);
         th.addEventListener("dragenter", this.#dragColumnEnter);
@@ -304,8 +313,8 @@ export class DataTable {
       this.showColumn(Object.keys(this.#columnData)[0]);
     }
 
-    this.virtualScroll = virtualScroll;
-    this.loadData(data);
+    this.virtualScroll = finalOptions.virtualScroll;
+    this.loadData(finalOptions.data);
   }
 
   /**

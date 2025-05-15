@@ -9,6 +9,7 @@ import {
   ColumnState,
   ComparatorCallback,
   FilterCallback,
+  Row,
   RowFormatterCallback,
   SortOrder,
   SortValueCallback,
@@ -48,13 +49,12 @@ export class DataTable {
 
   // Search and filter data
   #query!: RegExp | string | null;
-  #filters!: any | FilterCallback;
+  #filters!: Record<string, any> | FilterCallback;
   // Search fields that are not columns.
   #extraSearchFields: string[] = [];
 
   #rowFormatter?: RowFormatterCallback;
-  #virtualScroll!: VirtualScroll;
-  #virtualScrollCount: number = 1000;
+  #virtualScroll?: VirtualScroll;
   #highlightSearch: boolean = true;
   #tokenizer: TokenizerCallback = whitespaceTokenizer
   // The current sort priority. Incremented when a column is sorted.
@@ -71,20 +71,26 @@ export class DataTable {
    * @param  table - Selector or HTMLElement for the table.
    * @param options - Options for the table.
    */
-  constructor(table: string | HTMLTableElement, {
-    formatter,
-    columns = [],
-    data,
-    virtualScroll = 1000,
-    highlightSearch = true,
-    resizable = true,
-    rearrangeable = false,
-    extraSearchFields,
-    noDataText,
-    noMatchText,
-    classes,
-    tokenizer,
-  }: TableOptions = {}) {
+  constructor(table: string | HTMLTableElement, options: TableOptions = {}) {
+
+    const {
+      rowFormatter: formatter,
+      columns = [],
+      data = [],
+      virtualScroll = true,
+      highlightSearch = true,
+      sortable = true,
+      searchable = true,
+      tokenize = false,
+      resizable = true,
+      rearrangeable = false,
+      extraSearchFields,
+      noDataText,
+      noMatchText,
+      classes,
+      tokenizer,
+    } = options;
+
     if (typeof table === "string") {
       const tableElement = document.querySelector(table);
       if (!tableElement)
@@ -204,8 +210,6 @@ export class DataTable {
       }
     });
 
-    Boolean
-
     let colVisible = false;
     // Initialize columns
     for (const colOptions of columns) {
@@ -214,9 +218,9 @@ export class DataTable {
         title: colOptions.title || toHumanReadable(colOptions.field),
         element: document.createElement("th"),
         visible: colOptions.visible ?? true,
-        sortable: colOptions.sortable ?? false,
-        searchable: colOptions.searchable ?? false,
-        tokenize: colOptions.tokenize ?? false,
+        sortable: colOptions.sortable ?? sortable,
+        searchable: colOptions.searchable ?? searchable,
+        tokenize: colOptions.tokenize ?? tokenize,
         sortOrder: colOptions.sortOrder ?? null,
         sortPriority: colOptions.sortPriority ?? 0,
         resizeStartWidth: null,
@@ -300,14 +304,8 @@ export class DataTable {
       this.showColumn(Object.keys(this.#columnData)[0]);
     }
 
-    this.#virtualScroll = new VirtualScroll({
-      container: this.#scroller,
-      element: this.#tbody,
-      generator: (index) => this.#createRow(index),
-    });
-
     this.virtualScroll = virtualScroll;
-    this.loadData(data || []);
+    this.loadData(data);
   }
 
   /**
@@ -370,44 +368,46 @@ export class DataTable {
    * If the value is true, virtual scroll is enabled.
    * If the value is a number, it will be used as the row count for virtual scroll.
    */
-  get virtualScroll(): number | boolean {
-    if (this.#virtualScrollCount === Number.MAX_VALUE) {
-      return true;
-    } else if (this.#virtualScrollCount === 0) {
-      return false;
-    }
-    return this.#virtualScrollCount;
+  get virtualScroll(): boolean {
+    return !!this.#virtualScroll;
   }
 
   set virtualScroll(value) {
-    if (typeof value === "number") {
-      this.#virtualScrollCount = value;
-    } else if (value) {
-      this.#virtualScrollCount = 0;
-    } else {
-      this.#virtualScrollCount = Number.MAX_VALUE;
-    }
-    this.#updateTable();
-  }
+    if (value == this.virtualScroll) return;
 
-  /**
-   * Get the current virtual scroll status.
-   */
-  get virtualScrollStatus(): boolean {
-    return this.#virtualScroll.started;
+    if (value) {
+      this.#virtualScroll = new VirtualScroll({
+        container: this.#scroller,
+        element: this.#tbody,
+        generator: (index) => this.#createRow(index),
+      });
+      this.#virtualScroll.start();
+    } else {
+      this.#virtualScroll?.stop();
+      this.#virtualScroll = undefined;
+    }
+
+    this.#updateTable();
   }
 
   /**
    * Loads the given rows into the table.
    * This will overwrite any already existing rows.
    */
-  loadData(rows: any[]) {
+  loadData(rows: Row[]) {
     if (Array.isArray(rows) && rows.length > 0) {
       let index = 0;
 
-      for (const row of rows as RowData[]) {
+      this.#rows = rows as RowData[];
+      this.#filteredRows = this.#rows;
+
+      for (const row of this.#rows) {
         // Add the index
-        const metadata: RowMetadata = { index: index++ };
+        const metadata: RowMetadata = {
+          index: index++,
+          tokens: {},
+          sortValues: {}
+        };
         row._metadata = metadata;
 
         for (const field of Object.keys(this.#columnData)) {
@@ -416,21 +416,20 @@ export class DataTable {
 
           // Cache precomputed values for sorting
           if (typeof col.sortValueCallback === "function") {
-            metadata[`_${field}_sort`] = col.sortValueCallback(value);
+            metadata.sortValues[field] = col.sortValueCallback(value);
           } else if (typeof value === "string") {
-            metadata[`_${field}_sort`] = value.toLocaleLowerCase();
+            metadata.sortValues[field] = value.toLocaleLowerCase();
           } else {
-            metadata[`_${field}_sort`] = value;
+            metadata.sortValues[field] = value;
           }
 
           // Tokenize any searchable columns
           if (col.searchable && col.tokenize && value) {
-            metadata[`_${field}_tokens`] = [value, ...this.#tokenizer(value)];
+            metadata.tokens[field] = [value, ...this.#tokenizer(value)];
           }
         }
       }
-      this.#rows = rows;
-      this.#filteredRows = rows;
+
     } else {
       this.#rows = [];
       this.#filteredRows = [];
@@ -473,7 +472,7 @@ export class DataTable {
    * Can also be a function that will be called for each row.
    * @param filters
    */
-  filter(filters: any | FilterCallback) {
+  filter(filters: Record<string, any> | FilterCallback) {
     if (typeof filters !== "object" && typeof filters !== "function") {
       throw new TypeError("filters must be object or function");
     }
@@ -629,7 +628,7 @@ export class DataTable {
    * @param index
    */
   scrollTo(index: number) {
-    if (this.#virtualScroll.started) {
+    if (this.#virtualScroll) {
       this.#virtualScroll.scrollTo(index);
     }
 
@@ -749,9 +748,8 @@ export class DataTable {
 
       for (const field of fields) {
         const col = this.#columnData[field];
-        const tokenKey = `_${field}_tokens`;
-        if (col && tokenKey in row._metadata) {
-          const fieldTokens = row._metadata[tokenKey];
+        if (col && field in row._metadata.tokens) {
+          const fieldTokens = row._metadata.tokens[field];
           for (const token of queryTokens) {
             if (this.#searchField(fieldTokens, token)) {
               if (typeof token === "string") {
@@ -788,11 +786,11 @@ export class DataTable {
   #compareRows(a: RowData, b: RowData, col: ColumnOptions): number {
     let aValue, bValue;
     if (col.sortOrder === "asc") {
-      aValue = a._metadata[`_${col.field}_sort`];
-      bValue = b._metadata[`_${col.field}_sort`];
+      aValue = a._metadata.sortValues[col.field];
+      bValue = b._metadata.sortValues[col.field];
     } else if (col.sortOrder === "desc") {
-      aValue = b._metadata[`_${col.field}_sort`];
-      bValue = a._metadata[`_${col.field}_sort`];
+      aValue = b._metadata.sortValues[col.field];
+      bValue = a._metadata.sortValues[col.field];
     }
 
     if (typeof col.sorter === "function") {
@@ -841,7 +839,7 @@ export class DataTable {
       col.element.parentElement?.append(col.element);
       col.element.hidden = !col.visible;
 
-      if (col.element.style.width == "") {
+      if (col.element.style.width === "") {
         col.element.style.width = col.element.offsetWidth + "px";
       }
 
@@ -868,12 +866,9 @@ export class DataTable {
   #updateTable() {
     this.#tbody.innerHTML = "";
     if (this.#filteredRows.length) {
-      let virtualScroll = false;
-      if (this.#filteredRows.length >= this.#virtualScrollCount) {
+      if (this.#virtualScroll) {
         try {
           this.#virtualScroll.rowCount = this.#filteredRows.length;
-          this.#virtualScroll.start();
-          virtualScroll = true;
         } catch (error) {
           if (error instanceof VirtualScrollError) {
             console.warn(
@@ -882,9 +877,8 @@ export class DataTable {
             console.warn(error.stack);
           }
         }
-      }
+      } else {
 
-      if (!virtualScroll) {
         if (this.#filteredRows.length > WARN_ROW_COUNT) {
           const count = WARN_ROW_COUNT.toLocaleString();
           console.warn(
@@ -892,9 +886,6 @@ export class DataTable {
           );
         }
 
-        if (this.#virtualScroll) {
-          this.#virtualScroll.stop();
-        }
         const rowElements = this.#filteredRows.map((_, index) => this.#createRow(index));
         this.#tbody.append(...rowElements);
       }
@@ -1027,8 +1018,6 @@ export class DataTable {
     const target = event.target as HTMLElement;
     const field = target.dataset.dtField;
 
-    console.log("dragColumnStart", field);
-
     if (event.dataTransfer && field) {
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", field);
@@ -1069,17 +1058,20 @@ export class DataTable {
 
     if (dragIndex > -1 && dropIndex > -1) {
       const [draggedColumn] = columns.splice(dragIndex, 1);
+      const droppedColumn = this.#columnData[dropField];
+
+      // Force the current last column width to it's current width
+      // and remove the width from the new last column.
+      // This should force the columns to keep their current widths.
+      if (dropIndex === columns.length) {
+        droppedColumn.element.style.width = droppedColumn.element.offsetWidth + "px";
+        draggedColumn.element.style.width = "";
+      }
+
       columns.splice(dropIndex, 0, draggedColumn);
 
       // Update the #columns object
       this.#columnData = Object.fromEntries(columns.map((col) => [col.field, col]));
-
-      // Clear width of the last column so it can fill the rest of the space.
-      const lastCol = columns[columns.length - 1];
-      if (lastCol && lastCol.element) {
-        lastCol.element.style.width = "";
-      }
-
       // Re-render the table
       this.#updateHeaders();
       this.#updateTable();
@@ -1123,17 +1115,15 @@ interface ColumnData {
   sortValueCallback?: SortValueCallback;
 }
 
-interface RowData {
-  [key: string]: any;
+interface RowData extends Row {
   _metadata: RowMetadata;
 }
 
 interface RowMetadata {
-  [key: string]: any;
   index: number;
   searchScore?: number;
-  tokens?: string[];
-  sortValue?: any;
+  tokens: Record<string, string[]>;
+  sortValues: Record<string, any>;
 }
 
 const WARN_ROW_COUNT = 10_000;

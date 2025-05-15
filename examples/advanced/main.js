@@ -1,5 +1,8 @@
 import { DataTable, LocalStorageAdapter } from "../../dist/datatable.mjs"
 
+/**
+ * @type {DataTable}
+ */
 let dataTable;
 
 window.addEventListener("load", () => {
@@ -16,6 +19,9 @@ window.addEventListener("load", () => {
   count = isNaN(count) ? 100000 : count;
 
   dataTable = new DataTable(table, {
+    sortable: true,
+    resizable: true,
+
     columns: [
       {
         field: "name",
@@ -52,14 +58,15 @@ window.addEventListener("load", () => {
         valueFormatter: (cost) => moneyFormatter.format(cost),
       },
     ],
-    formatter: rowFormatter,
+    rowFormatter: rowFormatter,
     data: createData(count),
     virtualScroll: 1000,
-    resizable: true,
     rearrangeable: true,
   });
 
   new LocalStorageAdapter(dataTable, "advancedExampleTableState");
+
+  const columnToggles = {}
 
   // Create visibility toggles for each column
   const colList = document.getElementById("colSelectDropdown");
@@ -82,16 +89,16 @@ window.addEventListener("load", () => {
     li.append(wrapper);
     colList.append(li);
 
-    col.input = wrapper;
+    columnToggles[col.field] = wrapper;
 
     wrapper.onclick = () => {
       input.checked = !input.checked;
       dataTable.setColumnVisibility(col.field, input.checked);
 
       // Count all visiable columns
-      const visibleColumns = dataTable.columns.reduce((accumulator, col) => {
+      const visibleColumns = dataTable.columnStates.reduce((accumulator, col) => {
         if (col.visible) {
-          accumulator.push(col);
+          accumulator.push(col.field);
         }
         return accumulator;
       }, []);
@@ -99,12 +106,13 @@ window.addEventListener("load", () => {
       // If we only have one visible column left, disable it.
       // We have to have at least one column!
       if (visibleColumns.length === 1) {
-        visibleColumns[0].input.classList.add("disabled");
+
+        columnToggles[visibleColumns[0]].classList.add("disabled");
       } else {
         // Easier to just enable all columns
         // than it is to check which one is disabled.
         for (const col of visibleColumns) {
-          col.input.classList.remove("disabled");
+          columnToggles[col].classList.remove("disabled");
         }
       }
     };

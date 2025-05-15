@@ -4,11 +4,16 @@
 export type SortOrder = "asc" | "desc" | null;
 
 /**
+ * Represents a generic data row in the table, an object with string keys and any values.
+ */
+export type Row = Record<string, any>;
+
+/**
  * Callback for formatting a row's  HTML element.
  * @param row - The row data.
  * @param element - The row element.
  */
-export type RowFormatterCallback = (row: any, element: HTMLElement) => void;
+export type RowFormatterCallback = (row: Row, element: HTMLElement) => void;
 
 /**
  * Callback for formatting the value of a cell.
@@ -16,7 +21,7 @@ export type RowFormatterCallback = (row: any, element: HTMLElement) => void;
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback = (value: any, row: object) => string;
+export type ValueFormatterCallback = (value: any, row: Row) => string;
 
 /**
  * Callback for formatting a cell's HTML element.
@@ -26,7 +31,7 @@ export type ValueFormatterCallback = (value: any, row: object) => string;
  */
 export type CellFormatterCallback = (
   value: any,
-  row: object,
+  row: Row,
   element: HTMLElement
 ) => void;
 
@@ -40,10 +45,11 @@ export type ComparatorCallback = (a: any, b: any) => number;
 
 /**
  * Callback for caching the sort value of a field
+ * This function should derive a comparable value (often numerical or lowercase string) from the field's original value, to be used during sorting.
  * @param value - The value of the field.
- * @returns The numerical value of the field
+ * @returns The derived value for sorting (e.g., a number or a standardized string).
  */
-export type SortValueCallback = (value: any) => number;
+export type SortValueCallback = (value: any) => number | string;
 
 /**
  * Callback for tokenizing a value into a list of string tokens.
@@ -58,7 +64,7 @@ export type TokenizerCallback = (value: any) => string[];
  * @param index - The index of the row.
  * @returns True if the row matches the filter, false otherwise.
  */
-export type FilterCallback = (row: object, index: number) => boolean;
+export type FilterCallback = (row: Row, index: number) => boolean;
 
 /**
  * Callback for filtering a field value against the filter data.
@@ -104,7 +110,7 @@ export interface ColumnOptions {
   sortOrder?: SortOrder;
 
   /**
-   * The inital sort priority of the column for sorting.
+   * The initial sort priority of the column for sorting.
    * Lower numbers are sorted first.
    */
   sortPriority?: number;
@@ -140,19 +146,24 @@ export interface ColumnOptions {
    * A function to use for sorting the column.
    * This overrides the default sorting behavior.
    */
-  sorter?: (a: any, b: any) => number;
+  sorter?: ComparatorCallback;
 
   /**
-   * A function to use for caching the sort value of the column.
+   * A function to derive a comparable value from the cell's original value, specifically for sorting this column.
+   * This can be used to preprocess and cache values (e.g., convert to lowercase, extract numbers) before comparison.
    */
   sortValue?: SortValueCallback;
 
   /**
-   * A function to use for filtering the column.
+   * A custom function to determine if a cell's value in this column matches a given filter criterion.
+   * This is used when `DataTable.filter()` is called with an object-based filter that targets this column's field.
+   * @param value - The cell's value.
+   * @param filterCriterion - The criterion provided for this column in the main filter object.
    */
-  filter?: FilterCallback;
+  filter?: ColumnFilterCallback;
 }
 
+/** Represents the current state of a column, often used for saving and restoring column configurations. */
 export interface ColumnState {
   /**
    * The unique field name of the column.
@@ -242,9 +253,8 @@ export interface TableOptions {
 
   /**
    * Configures virtual scrolling.
-   * Can be a boolean (true to enable with default row count) or a number (to set the row count threshold).
    */
-  virtualScroll?: boolean | number;
+  virtualScroll?: boolean;
 
   /**
    * Whether to highlight search results in the table cells.
@@ -252,7 +262,26 @@ export interface TableOptions {
   highlightSearch?: boolean;
 
   /**
+   * Whether columns should be sortable by default.
+   * Can be overridden on individual columns.
+   */
+  sortable?: boolean;
+
+  /**
+   * Whether columns should be searchable by default.
+   * Can be overridden on individual columns.
+   */
+  searchable?: boolean;
+
+  /**
+   * Whether columns data should be tokenized for searching by default.
+   * Can be overridden on individual columns.
+   */
+  tokenize?: boolean;
+
+  /**
    * Whether columns should be resizable by default.
+   * Can be overridden on individual columns.
    */
   resizable?: boolean;
 
@@ -262,7 +291,8 @@ export interface TableOptions {
   rearrangeable?: boolean;
 
   /**
-   * Additional fields to include in the search, even if not explicitly marked as searchable in `ColumnOptions`.
+   * Additional fields to include in the search.
+   * Used for fields that are not displayed as columns.
    */
   extraSearchFields?: string[];
 
@@ -284,7 +314,7 @@ export interface TableOptions {
   /**
    * A function to format each row's HTML element.
    */
-  formatter?: RowFormatterCallback;
+  rowFormatter?: RowFormatterCallback;
 
   /**
    * A function to use for tokenizing values for searching.

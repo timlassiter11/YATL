@@ -3,25 +3,29 @@
  */
 type SortOrder = "asc" | "desc" | null;
 /**
+ * Represents a generic data row in the table, an object with string keys and any values.
+ */
+type Row = Record<string, any>;
+/**
  * Callback for formatting a row's  HTML element.
  * @param row - The row data.
  * @param element - The row element.
  */
-type RowFormatterCallback = (row: any, element: HTMLElement) => void;
+type RowFormatterCallback = (row: Row, element: HTMLElement) => void;
 /**
  * Callback for formatting the value of a cell.
  * Called when the cell is created and when exporting to CSV.
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-type ValueFormatterCallback = (value: any, row: object) => string;
+type ValueFormatterCallback = (value: any, row: Row) => string;
 /**
  * Callback for formatting a cell's HTML element.
  * @param value - The value of the field.
  * @param row - The row data.
  * @param element - The cell element.
  */
-type CellFormatterCallback = (value: any, row: object, element: HTMLElement) => void;
+type CellFormatterCallback = (value: any, row: Row, element: HTMLElement) => void;
 /**
  * Callback for comparing two values.
  * @param a - The first value.
@@ -31,10 +35,11 @@ type CellFormatterCallback = (value: any, row: object, element: HTMLElement) => 
 type ComparatorCallback = (a: any, b: any) => number;
 /**
  * Callback for caching the sort value of a field
+ * This function should derive a comparable value (often numerical or lowercase string) from the field's original value, to be used during sorting.
  * @param value - The value of the field.
- * @returns The numerical value of the field
+ * @returns The derived value for sorting (e.g., a number or a standardized string).
  */
-type SortValueCallback = (value: any) => number;
+type SortValueCallback = (value: any) => number | string;
 /**
  * Callback for tokenizing a value into a list of string tokens.
  * @param value - The value to tokenize.
@@ -47,7 +52,7 @@ type TokenizerCallback = (value: any) => string[];
  * @param index - The index of the row.
  * @returns True if the row matches the filter, false otherwise.
  */
-type FilterCallback = (row: object, index: number) => boolean;
+type FilterCallback = (row: Row, index: number) => boolean;
 /**
  * Callback for filtering a field value against the filter data.
  * @param value - The value to filter.
@@ -84,7 +89,7 @@ interface ColumnOptions {
      */
     sortOrder?: SortOrder;
     /**
-     * The inital sort priority of the column for sorting.
+     * The initial sort priority of the column for sorting.
      * Lower numbers are sorted first.
      */
     sortPriority?: number;
@@ -114,16 +119,21 @@ interface ColumnOptions {
      * A function to use for sorting the column.
      * This overrides the default sorting behavior.
      */
-    sorter?: (a: any, b: any) => number;
+    sorter?: ComparatorCallback;
     /**
-     * A function to use for caching the sort value of the column.
+     * A function to derive a comparable value from the cell's original value, specifically for sorting this column.
+     * This can be used to preprocess and cache values (e.g., convert to lowercase, extract numbers) before comparison.
      */
     sortValue?: SortValueCallback;
     /**
-     * A function to use for filtering the column.
+     * A custom function to determine if a cell's value in this column matches a given filter criterion.
+     * This is used when `DataTable.filter()` is called with an object-based filter that targets this column's field.
+     * @param value - The cell's value.
+     * @param filterCriterion - The criterion provided for this column in the main filter object.
      */
-    filter?: FilterCallback;
+    filter?: ColumnFilterCallback;
 }
+/** Represents the current state of a column, often used for saving and restoring column configurations. */
 interface ColumnState {
     /**
      * The unique field name of the column.
@@ -198,15 +208,30 @@ interface TableOptions {
     data?: any[];
     /**
      * Configures virtual scrolling.
-     * Can be a boolean (true to enable with default row count) or a number (to set the row count threshold).
      */
-    virtualScroll?: boolean | number;
+    virtualScroll?: boolean;
     /**
      * Whether to highlight search results in the table cells.
      */
     highlightSearch?: boolean;
     /**
+     * Whether columns should be sortable by default.
+     * Can be overridden on individual columns.
+     */
+    sortable?: boolean;
+    /**
+     * Whether columns should be searchable by default.
+     * Can be overridden on individual columns.
+     */
+    searchable?: boolean;
+    /**
+     * Whether columns data should be tokenized for searching by default.
+     * Can be overridden on individual columns.
+     */
+    tokenize?: boolean;
+    /**
      * Whether columns should be resizable by default.
+     * Can be overridden on individual columns.
      */
     resizable?: boolean;
     /**
@@ -214,7 +239,8 @@ interface TableOptions {
      */
     rearrangeable?: boolean;
     /**
-     * Additional fields to include in the search, even if not explicitly marked as searchable in `ColumnOptions`.
+     * Additional fields to include in the search.
+     * Used for fields that are not displayed as columns.
      */
     extraSearchFields?: string[];
     /**
@@ -232,7 +258,7 @@ interface TableOptions {
     /**
      * A function to format each row's HTML element.
      */
-    formatter?: RowFormatterCallback;
+    rowFormatter?: RowFormatterCallback;
     /**
      * A function to use for tokenizing values for searching.
      */
@@ -257,7 +283,7 @@ declare class DataTable {
      * @param  table - Selector or HTMLElement for the table.
      * @param options - Options for the table.
      */
-    constructor(table: string | HTMLTableElement, { formatter, columns, data, virtualScroll, highlightSearch, resizable, rearrangeable, extraSearchFields, noDataText, noMatchText, classes, tokenizer, }?: TableOptions);
+    constructor(table: string | HTMLTableElement, options?: TableOptions);
     /**
      * Gets a list of the ColumnStates for all columns in the table
      * Can be used to save / restore columns sates.
@@ -282,17 +308,13 @@ declare class DataTable {
      * If the value is true, virtual scroll is enabled.
      * If the value is a number, it will be used as the row count for virtual scroll.
      */
-    get virtualScroll(): number | boolean;
-    set virtualScroll(value: number | boolean);
-    /**
-     * Get the current virtual scroll status.
-     */
-    get virtualScrollStatus(): boolean;
+    get virtualScroll(): boolean;
+    set virtualScroll(value: boolean);
     /**
      * Loads the given rows into the table.
      * This will overwrite any already existing rows.
      */
-    loadData(rows: any[]): void;
+    loadData(rows: Row[]): void;
     /**
      * Shows a message overlay that will cover the table.
      */
@@ -312,7 +334,7 @@ declare class DataTable {
      * Can also be a function that will be called for each row.
      * @param filters
      */
-    filter(filters: any | FilterCallback): void;
+    filter(filters: Record<string, any> | FilterCallback): void;
     /**
      * Sort the given column using the given order (asc or desc).
      * If order is none, the columns will be "unsorted" and revert
@@ -355,16 +377,14 @@ declare class DataTable {
     setColumnOrder(fields: string[]): void;
     refresh(): void;
 }
-interface RowData {
-    [key: string]: any;
-    _metadata: RowMeatadata;
+interface RowData extends Row {
+    _metadata: RowMetadata;
 }
-interface RowMeatadata {
-    [key: string]: any;
+interface RowMetadata {
     index: number;
     searchScore?: number;
-    tokens?: string[];
-    sortValue?: any;
+    tokens: Record<string, string[]>;
+    sortValues: Record<string, any>;
 }
 
 interface Options {
@@ -395,4 +415,4 @@ declare class LocalStorageAdapter {
     clearState(): void;
 }
 
-export { type CellFormatterCallback, type ColumnFilterCallback, type ColumnOptions, type ColumnState, type ComparatorCallback, DataTable, type FilterCallback, LocalStorageAdapter, type RowFormatterCallback, type SortOrder, type SortValueCallback, type TableClasses, type TableOptions, type TokenizerCallback, type ValueFormatterCallback };
+export { type CellFormatterCallback, type ColumnFilterCallback, type ColumnOptions, type ColumnState, type ComparatorCallback, DataTable, type FilterCallback, LocalStorageAdapter, type Row, type RowFormatterCallback, type SortOrder, type SortValueCallback, type TableClasses, type TableOptions, type TokenizerCallback, type ValueFormatterCallback };

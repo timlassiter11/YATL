@@ -1,9 +1,9 @@
 export const classesToArray = (classes: string[] | string | undefined) => {
-  if (typeof classes === "string") {
+  if (typeof classes === "string" && classes !== "") {
     return classes.split(" ");
   } else if (Array.isArray(classes)) {
     return classes;
-  } else if (classes == null) {
+  } else if (!classes) {
     return [];
   }
   throw new TypeError("classes must be string or array of strings");

@@ -135,3 +135,5 @@ out
 .pnp.*
 
 package-lock.json
+
+dist/

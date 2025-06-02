@@ -1,27 +1,54 @@
 {
-  "type": "module",
   "name": "yatl",
   "version": "1.0.0",
+  "description": "Yet another table library with all of the standard bells and whistles.",
+  "module": "dist/datatable.mjs",
+  "browser": "dist/datatable.global.js",
+  "types": "dist/datatable.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/datatable.d.ts",
+      "import": "./dist/datatable.mjs"
+    }
+  },
+  "keywords": [
+    "table",
+    "datatable",
+    "typescript",
+    "javascript",
+    "library"
+  ],
+  "author": "Timothy Lassiter <timlassiter11@gmail.com> (https://github.com/timlassiter11/YATL)",
+  "license": "MIT",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "build": "tsup",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timlassiter11/YATL"
+  },
+  "bugs": {
+    "url": "https://github.com/timlassiter11/YATL/issues"
+  },
+  "homepage": "https://github.com/timlassiter11/YATL#readme",
+  "engines": {
+    "node": ">=18"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.17",
+    "esbuild": "^0.25.4",
+    "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.5.3",
-    "rollup": "^4.36.0",
-    "rollup-plugin-copy": "^3.5.0",
-    "rollup-plugin-postcss": "^4.0.2"
-  },
-  "jest": {
-    "transform": {},
-    "testEnvironment": "jsdom"
+    "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3"
   }
 }

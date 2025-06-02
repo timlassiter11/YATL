@@ -1,4 +1,4 @@
-import { DataTable } from "../../dist/esm/datatable.js";
+import { DataTable } from "../../dist/datatable.mjs";
 
 /** @type {DataTable} */
 let dataTable;
@@ -41,15 +41,16 @@ const updateData = () => {
   }));
   dataTable.loadData(data);
   document.getElementById("totalRows").textContent = data.length.toLocaleString();
-  updateVirtualScrollStatus();
+  updateRenderedRows();
 };
 
 const updateVirtualScroll = () => {
   const value = document.querySelector('input[name="virtualScrolling"]:checked').value;
-  dataTable.virtualScroll = value === "auto" ? 1000 : value === "on";
-  updateVirtualScrollStatus();
+  dataTable.virtualScroll = value === "on";
+  updateRenderedRows();
 }
 
-const updateVirtualScrollStatus = () => {
-  document.getElementById("virtualScrollStatus").textContent = dataTable.virtualScrollStatus ? "Active" : "Inactive";
+const updateRenderedRows = () => {
+  const renderedRows = dataTable.table.querySelectorAll("tbody tr").length;
+  document.getElementById("renderedRows").textContent = renderedRows.toLocaleString();
 }

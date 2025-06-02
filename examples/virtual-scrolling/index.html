@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>Virtual Scrolling Example</title>
-  <link rel="stylesheet" href="../../dist/esm/datatable.css">
+  <link rel="stylesheet" href="../../dist/datatable.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/digitallytailored/classless@latest/classless.min.css">
   <link rel="stylesheet" href="../site.css">
   <style>
@@ -36,7 +36,7 @@
   <div class="options-wrapper">
     <label>
       Data Rows
-      <input type="number" id="rowCount" value="100000">
+      <input type="number" id="rowCount" value="100000" lang="en-US">
     </label>
     <div id="virtualScrolling">
       <label>Virtual Scrolling</label>
@@ -45,19 +45,15 @@
         Off
       </label>
       <label>
-        <input type="radio" id="virtualScrollingOn" name="virtualScrolling" value="on">
+        <input type="radio" id="virtualScrollingOn" name="virtualScrolling" value="on" checked>
         On
-      </label>
-      <label>
-        <input type="radio" id="virtualScrollingAuto" name="virtualScrolling" value="auto" checked>
-        Auto
       </label>
     </div>
     <div>
       <label>Total Rows</label>
       <p id="totalRows">0</p>
-      <label>Virtual Scroll Status</label>
-      <p id="virtualScrollStatus">Active</p>
+      <label>Rendered Rows</label>
+      <p id="renderedRows">0</p>
     </div>
   </div>
   <div class="table-wrapper">

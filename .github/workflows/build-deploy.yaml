@@ -49,6 +49,7 @@ jobs:
         mkdir -p pages
         cp -r ./examples/* ./pages
         cp -r ./dist ./pages
+        cp ./index.html ./pages/index.html
         
     - name: Upload pages
       uses: actions/upload-pages-artifact@v3

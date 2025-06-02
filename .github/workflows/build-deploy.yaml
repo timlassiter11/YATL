@@ -47,7 +47,7 @@ jobs:
     - name: Create pages
       run: |
         mkdir -p pages
-        cp -r ./examples/* ./pages
+        cp -r ./examples ./pages
         cp -r ./dist ./pages
         cp ./index.html ./pages/index.html
         

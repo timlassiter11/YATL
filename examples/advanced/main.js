@@ -1,4 +1,4 @@
-import { DataTable, LocalStorageAdapter } from "../../dist/datatable.mjs"
+import { DataTable, LocalStorageAdapter } from "/dist/datatable.mjs"
 
 /**
  * @type {DataTable}

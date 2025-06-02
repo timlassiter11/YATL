@@ -1,16 +1,42 @@
 {
   "name": "yatl",
   "version": "1.0.0",
-  "main": "dist/index.cjs.js",
-  "module": "dist/index.esm.js",
-  "browser": "dist/index.umd.js",
-  "types": "dist/index.d.ts",
+  "description": "Yet another table library with all of the standard bells and whistles.",
+  "module": "dist/datatable.mjs",
+  "browser": "dist/datatable.global.js",
+  "types": "dist/datatable.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/datatable.d.ts",
+      "import": "./dist/datatable.mjs"
+    }
+  },
+  "keywords": [
+    "table",
+    "datatable",
+    "typescript",
+    "javascript",
+    "library"
+  ],
+  "author": "Timothy Lassiter <timlassiter11@gmail.com> (https://github.com/timlassiter11/YATL)",
+  "license": "MIT",
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsup",
     "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timlassiter11/YATL"
+  },
+  "bugs": {
+    "url": "https://github.com/timlassiter11/YATL/issues"
+  },
+  "homepage": "https://github.com/timlassiter11/YATL#readme",
+  "engines": {
+    "node": ">=18"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

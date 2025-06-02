@@ -18,6 +18,7 @@ describe("DataTable", () => {
     const dataTable = new DataTable(tableElement, {
       columns: [{ field: "name", title: "Name" }],
       data: [],
+      virtualScroll: false,
     });
 
 		expect(dataTable.table).toBe(tableElement);
@@ -29,6 +30,7 @@ describe("DataTable", () => {
       new DataTable("#table", {
         columns: [],
         data: [],
+        virtualScroll: false,
       });
     }).toThrow(SyntaxError);
   });
@@ -45,6 +47,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data: [],
+      virtualScroll: false,
     });
 
     dataTable.loadData(data);
@@ -66,6 +69,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTable.filter({ age: 25 });
@@ -86,6 +90,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTable.search("Bob");
@@ -106,6 +111,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age", sortable: true },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTable.sort("age", "asc");
@@ -128,6 +134,7 @@ describe("DataTable", () => {
         { field: "city", title: "City" },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTable.filter({ age: 25, city: "New York" });
@@ -149,6 +156,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTable.filter({ age: 40 });
@@ -169,6 +177,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data,
+      virtualScroll: false,
     });
 
     // Custom filter: Only include rows where age is greater than 25
@@ -183,6 +192,7 @@ describe("DataTable", () => {
     const dataTable = new DataTable(tableElement, {
       columns: [{ field: "name", title: "Name" }],
       data: [],
+      virtualScroll: false,
     });
 
     dataTable.loadData([]);
@@ -206,6 +216,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age", sortable: true },
       ],
       data,
+      virtualScroll: false,
     });
 
     // Sort by age ascending, then name ascending
@@ -242,6 +253,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTable.filter({ age: 25 });
@@ -265,6 +277,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data,
+      virtualScroll: false,
     });
 
     // Search for names starting with "Al"
@@ -295,6 +308,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age" },
       ],
       data,
+      virtualScroll: false,
       highlightSearch: true,
     });
 
@@ -318,6 +332,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age", visible: true },
       ],
       data,
+      virtualScroll: false,
     });
 
     const nameHeader = document.querySelector('th[data-dt-field="name"]') as HTMLElement;
@@ -355,6 +370,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age", resizable: true },
       ],
       data,
+      virtualScroll: false,
     });
 
     const nameColumnHeader = tableElement.querySelector('th[data-dt-field="name"]') as HTMLElement;
@@ -386,6 +402,7 @@ describe("DataTable", () => {
       ],
       data,
       rearrangeable: true, // Ensure rearrangeable is enabled for the table
+      virtualScroll: false,
     });
 
     const headersBeforeReorder = Array.from(tableElement.querySelectorAll('th')).map((th) => (th as HTMLElement).dataset.dtField);
@@ -412,6 +429,7 @@ describe("DataTable", () => {
         { field: "tags", title: "Tags", searchable: true, tokenize: true },
       ],
       data,
+      virtualScroll: false,
       tokenizer: commaTokenizer,
     });
 
@@ -426,9 +444,12 @@ describe("DataTable", () => {
         { field: "tags", title: "Tags", searchable: true, tokenize: true },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTableDefaultTokenizer.search("banana");
+    // TODO: Ensure rows are sorted by search score?
+    // or update search logic to be more exact.
     //expect(dataTableDefaultTokenizer.rows.length).toBe(0);
   });
 
@@ -445,6 +466,7 @@ describe("DataTable", () => {
         { field: "user.address.city", title: "City", searchable: true },
       ],
       data,
+      virtualScroll: false,
     });
 
     dataTable.search("Los Angeles");
@@ -465,6 +487,7 @@ describe("DataTable", () => {
         { field: "age", title: "Age", sortable: true },
       ],
       data,
+      virtualScroll: false,
     });
 
     // Apply a filter and sort

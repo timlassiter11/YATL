@@ -5,12 +5,11 @@ export default defineConfig({
   entry: {
     'datatable': 'src/index.ts',
   },
-  format: ['esm', 'iife'], // Output formats
-  outDir: 'dist', // Output directory
-  dts: true, // Generate declaration files (.d.ts)
+  format: ['cjs', 'esm', 'iife'],
+  outDir: 'dist',
+  dts: true,
   splitting: false,
   sourcemap: true,
   minify: true,
-  globalName: pkg.name, // For UMD build, the global variable name
-  // external: ['your-external-dependency'], // If you have external dependencies
+  globalName: pkg.name,
 });

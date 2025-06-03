@@ -9,6 +9,12 @@ export type SortOrder = "asc" | "desc" | null;
 export type Row = Record<string, any>;
 
 /**
+ * Represents filter data where the key should be a field in the Row data and the value
+ * should be comparable to the value of that field, or an array of values.
+ */
+export type Filters = Record<string, any>;
+
+/**
  * Callback for formatting a row's  HTML element.
  * @param row - The row data.
  * @param element - The row element.

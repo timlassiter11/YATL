@@ -8,6 +8,7 @@ import {
   ColumnOptions,
   ColumnState,
   ComparatorCallback,
+  Filters,
   FilterCallback,
   Row,
   RowFormatterCallback,
@@ -63,7 +64,6 @@ export class DataTable {
   #table!: HTMLTableElement;
   #thead!: HTMLElement;
   #tbody!: HTMLElement;
-  #tfoot!: HTMLElement;
   #scroller!: HTMLElement;
 
   #columnData: { [key: string]: ColumnData } = {};
@@ -74,7 +74,7 @@ export class DataTable {
 
   // Search and filter data
   #query!: RegExp | string | null;
-  #filters!: Record<string, any> | FilterCallback;
+  #filters!: Filters | FilterCallback;
   // Search fields that are not columns.
   #extraSearchFields: string[];
 
@@ -481,7 +481,7 @@ export class DataTable {
    * Can also be a function that will be called for each row.
    * @param filters
    */
-  filter(filters: Record<string, any> | FilterCallback) {
+  filter(filters: Filters | FilterCallback) {
     if (typeof filters !== "object" && typeof filters !== "function") {
       throw new TypeError("filters must be object or function");
     }
@@ -604,7 +604,8 @@ export class DataTable {
     const csvRows = rows
       .map((row) => {
         const list = [];
-        for (let [key, value] of Object.entries(row)) {
+        for (const key of Object.keys(row)) {
+          let value = row[key];
           if (key in this.#columnData) {
             const col = this.#columnData[key];
             if (all || !col.element.hidden) {
@@ -705,7 +706,7 @@ export class DataTable {
     return filter === value;
   }
 
-  #filterRow(row: any, index: number): boolean {
+  #filterRow(row: RowData, index: number): boolean {
     if (typeof this.#filters === "function") {
       return this.#filters(row, index);
     }
@@ -726,7 +727,7 @@ export class DataTable {
     const filter =
       typeof this.#filters === "function"
         ? this.#filters
-        : (row: object, index: number) => this.#filterRow(row, index);
+        : (row: RowData, index: number) => this.#filterRow(row, index);
 
     let query: RegExp | string | null = null;
     let queryTokens: string[] | RegExp[] = [];
@@ -822,8 +823,8 @@ export class DataTable {
 
     this.#filteredRows.sort((a, b) => {
       // Try to sort by search score if there is a query.
-      let aValue = a._metadata.searchScore || 0;
-      let bValue = b._metadata.searchScore || 0;
+      const aValue = a._metadata.searchScore || 0;
+      const bValue = b._metadata.searchScore || 0;
       if (aValue > bValue) return -1;
       if (aValue < bValue) return 1;
 
@@ -937,7 +938,7 @@ export class DataTable {
     tr.dataset.dtIndex = String(index);
 
     for (const field of Object.keys(this.#columnData)) {
-      let value = this.#getNestedValue(row, field);
+      const value = this.#getNestedValue(row, field);
       const col = this.#columnData[field];
       const td = document.createElement("td");
       td.classList.add(...classesToArray(this.#classes.td));
@@ -999,7 +1000,7 @@ export class DataTable {
     this.#resizingColumn.element.style.width = `${newWidth}px`;
   }
 
-  #resizeColumnEnd = (event: MouseEvent) => {
+  #resizeColumnEnd = () => {
     if (!this.#resizingColumn) return;
 
     document.removeEventListener("mousemove", this.#resizeColumnMove);
@@ -1097,7 +1098,7 @@ export class DataTable {
     }
   }
 
-  #dragColumnEnd = (event: DragEvent) => {
+  #dragColumnEnd = () => {
     const elements = document.querySelectorAll(".dt-drag-over");
     for (const element of elements) {
       element.classList.remove("dt-drag-over");

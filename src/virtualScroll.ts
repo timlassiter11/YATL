@@ -128,8 +128,8 @@ export class VirtualScroll {
         .map((_, index) => this.#generator(index + startNode));
       // We create two empty rows. One at the top and one at the bottom.
       // Resize the rows accordingly to move the rendered rows to where we want.
-      let topRow = document.createElement("tr");
-      let bottomRow = document.createElement("tr");
+      const topRow = document.createElement("tr");
+      const bottomRow = document.createElement("tr");
       topRow.style.height = offsetY + "px";
       bottomRow.style.height = remainingHeight + "px";
       this.#element.append(topRow);

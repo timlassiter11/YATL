@@ -2,7 +2,7 @@ const MAX_ELEMENT_HEIGHT = 33554400;
 
 export class VirtualScroll {
   static #warned = false;
-  
+
   #container;
   #element;
   #generator;
@@ -13,7 +13,12 @@ export class VirtualScroll {
   #started = false;
   #scrollTop = 0;
 
-  constructor({ container, element, generator, nodePadding = 2 }: VirtualScrollOptions) {
+  constructor({
+    container,
+    element,
+    generator,
+    nodePadding = 2,
+  }: VirtualScrollOptions) {
     this.#container = container;
     this.#element = element;
     this.#generator = generator;
@@ -41,13 +46,13 @@ export class VirtualScroll {
   }
 
   /*
-    * Scroll to a specific index in the virtual scroll.
-    * @param index The index to scroll to.
-    * @throws RangeError if the index is out of bounds.
-  */
+   * Scroll to a specific index in the virtual scroll.
+   * @param index The index to scroll to.
+   * @throws RangeError if the index is out of bounds.
+   */
   scrollTo(index: number) {
     if (index < 0 || index >= this.#rowCount) {
-      throw new RangeError("Index out of bounds.");
+      throw new RangeError('Index out of bounds.');
     }
     this.#container.scrollTop = this.rowHeight * index;
     this.#renderChunk();
@@ -73,8 +78,8 @@ export class VirtualScroll {
     if (this.#started) return;
     this.#started = true;
 
-    this.#container.addEventListener("scroll", this.#scrollCallback);
-    window.addEventListener("resize", this.#renderCallback);
+    this.#container.addEventListener('scroll', this.#scrollCallback);
+    window.addEventListener('resize', this.#renderCallback);
 
     this.#renderChunk();
   }
@@ -84,8 +89,8 @@ export class VirtualScroll {
       cancelAnimationFrame(this.#animationFrame);
     }
 
-    this.#container.removeEventListener("scroll", this.#scrollCallback);
-    window.removeEventListener("resize", this.#renderCallback);
+    this.#container.removeEventListener('scroll', this.#scrollCallback);
+    window.removeEventListener('resize', this.#renderCallback);
     this.#started = false;
   }
 
@@ -102,9 +107,14 @@ export class VirtualScroll {
     const actualHeight = this.#element.offsetHeight;
     const viewHeight = this.#container.offsetHeight;
 
-    if (!VirtualScroll.#warned && actualHeight < Math.round(totalContentHeight - 1)) {
+    if (
+      !VirtualScroll.#warned &&
+      actualHeight < Math.round(totalContentHeight - 1)
+    ) {
       VirtualScroll.#warned = true;
-      console.error("Max element height exceeded. Virtual scroll may not work.");
+      console.error(
+        'Max element height exceeded. Virtual scroll may not work.',
+      );
     }
 
     if (!rowCount || !rowHeight) {
@@ -122,16 +132,16 @@ export class VirtualScroll {
       totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
 
     try {
-      this.#element.innerHTML = "";
+      this.#element.innerHTML = '';
       const visibleChildren = new Array(visibleNodesCount)
         .fill(null)
         .map((_, index) => this.#generator(index + startNode));
       // We create two empty rows. One at the top and one at the bottom.
       // Resize the rows accordingly to move the rendered rows to where we want.
-      const topRow = document.createElement("tr");
-      const bottomRow = document.createElement("tr");
-      topRow.style.height = offsetY + "px";
-      bottomRow.style.height = remainingHeight + "px";
+      const topRow = document.createElement('tr');
+      const bottomRow = document.createElement('tr');
+      topRow.style.height = offsetY + 'px';
+      bottomRow.style.height = remainingHeight + 'px';
       this.#element.append(topRow);
       this.#element.append(...visibleChildren);
       this.#element.append(bottomRow);
@@ -154,18 +164,18 @@ export class VirtualScroll {
     for (let i = 0; i < renderSize; ++i) {
       elements.push(this.#generator(i));
     }
-    this.#element.innerHTML = "";
+    this.#element.innerHTML = '';
     this.#element.append(...elements);
     this.#rowHeight = this.#element.offsetHeight / renderSize;
 
     if (this.#rowHeight <= 0) {
       throw new VirtualScrollError(
-        "First 1000 rows had no rendered height. Virtual scroll can't be used."
+        "First 1000 rows had no rendered height. Virtual scroll can't be used.",
       );
     } else if (this.#rowHeight * this.#rowCount > MAX_ELEMENT_HEIGHT) {
       // This seems to be Chrome's max height of an element based on some random testing.
       console.warn(
-        "Virtual scroll height exceeded maximum known element height."
+        'Virtual scroll height exceeded maximum known element height.',
       );
     }
   }

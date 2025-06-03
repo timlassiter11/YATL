@@ -1,7 +1,7 @@
 /**
  * Defines the possible sorting orders for columns.
  */
-export type SortOrder = "asc" | "desc" | null;
+export type SortOrder = 'asc' | 'desc' | null;
 
 /**
  * Represents a generic data row in the table, an object with string keys and any values.
@@ -38,7 +38,7 @@ export type ValueFormatterCallback = (value: any, row: Row) => string;
 export type CellFormatterCallback = (
   value: any,
   row: Row,
-  element: HTMLElement
+  element: HTMLElement,
 ) => void;
 
 /**
@@ -84,7 +84,6 @@ export type ColumnFilterCallback = (value: any, filter: any) => boolean;
  * Column options for the table.
  */
 export interface ColumnOptions {
-
   /**
    * The field name in the data object.
    */

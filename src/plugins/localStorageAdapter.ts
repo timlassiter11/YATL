@@ -1,103 +1,111 @@
-import { DataTable } from "../datatable";
-import { ColumnState } from "../types";
+import { DataTable } from '../datatable';
+import { ColumnState } from '../types';
 
 interface Options {
-    saveColumnSorting: boolean;
-    saveColumnOrder: boolean;
-    saveColumnVisibility: boolean;
-    saveColumnWidth: boolean;
+  saveColumnSorting: boolean;
+  saveColumnOrder: boolean;
+  saveColumnVisibility: boolean;
+  saveColumnWidth: boolean;
 }
 
 export class LocalStorageAdapter {
-    #dataTable: DataTable;
-    #storageKey: string;
-    #options: Options = {
-        saveColumnSorting: true,
-        saveColumnVisibility: true,        
-        saveColumnWidth: true,
-        saveColumnOrder: true,
+  #dataTable: DataTable;
+  #storageKey: string;
+  #options: Options = {
+    saveColumnSorting: true,
+    saveColumnVisibility: true,
+    saveColumnWidth: true,
+    saveColumnOrder: true,
+  };
+
+  /**
+   * @param dataTable - The DataTable instance to monitor.
+   * @param storageKey - The key to use for saving the state in localStorage.
+   * @param options - The key to use for saving the state in localStorage.
+   */
+  constructor(dataTable: DataTable, storageKey: string, options?: Options) {
+    this.#dataTable = dataTable;
+    this.#storageKey = storageKey;
+    this.#options = { ...this.#options, ...options };
+
+    // Restore state before adding the listeners.
+    this.restoreState();
+
+    const table = dataTable.table;
+
+    if (this.#options.saveColumnSorting) {
+      table.addEventListener(DataTable.Events.COL_SORT, () => this.saveState());
     }
 
-    /**
-     * @param dataTable - The DataTable instance to monitor.
-     * @param storageKey - The key to use for saving the state in localStorage.
-     * @param options - The key to use for saving the state in localStorage.
-     */
-    constructor(dataTable: DataTable, storageKey: string, options?: Options) {
-        this.#dataTable = dataTable;
-        this.#storageKey = storageKey;
-        this.#options = { ...this.#options, ...options };
-
-        // Restore state before adding the listeners.
-        this.restoreState();
-
-        const table = dataTable.table;
-
-        if (this.#options.saveColumnSorting) {
-            table.addEventListener(DataTable.Events.COL_SORT, () => this.saveState());
-        }
-
-        if (this.#options.saveColumnVisibility) {
-            table.addEventListener(DataTable.Events.COL_HIDE, () => this.saveState());
-            table.addEventListener(DataTable.Events.COL_SHOW, () => this.saveState());
-        }
-
-        if (this.#options.saveColumnWidth) {
-            table.addEventListener(DataTable.Events.COL_RESIZE, () => this.saveState());
-        }
-
-        if (this.#options.saveColumnOrder) {
-            table.addEventListener(DataTable.Events.COL_REARRANGE, () => this.saveState());
-        }
+    if (this.#options.saveColumnVisibility) {
+      table.addEventListener(DataTable.Events.COL_HIDE, () => this.saveState());
+      table.addEventListener(DataTable.Events.COL_SHOW, () => this.saveState());
     }
 
-    /**
-     * Saves the current column state to localStorage.
-     */
-    saveState() {
-        const states = this.#dataTable.columnStates;
-        for (const state of states) {
-            if (!this.#options.saveColumnSorting) {
-                state.sortOrder = undefined;
-                state.sortPriority = undefined;
-            }
-
-            if (!this.#options.saveColumnVisibility) {
-                state.visible = undefined;
-            }
-
-            if (!this.#options.saveColumnWidth) {
-                state.width = undefined;
-            }
-        }
-
-        localStorage.setItem(this.#storageKey, JSON.stringify(this.#dataTable.columnStates));
+    if (this.#options.saveColumnWidth) {
+      table.addEventListener(DataTable.Events.COL_RESIZE, () =>
+        this.saveState(),
+      );
     }
 
-    /**
-     * Restores the column state from localStorage.
-     */
-    restoreState() {
-        const savedState = localStorage.getItem(this.#storageKey);
-        if (!savedState) return;
+    if (this.#options.saveColumnOrder) {
+      table.addEventListener(DataTable.Events.COL_REARRANGE, () =>
+        this.saveState(),
+      );
+    }
+  }
 
-        try {
-            const columnStates = JSON.parse(savedState) as ColumnState[];
-            this.#dataTable.columnStates = columnStates;
+  /**
+   * Saves the current column state to localStorage.
+   */
+  saveState() {
+    const states = this.#dataTable.columnStates;
+    for (const state of states) {
+      if (!this.#options.saveColumnSorting) {
+        state.sortOrder = undefined;
+        state.sortPriority = undefined;
+      }
 
-            if (this.#options.saveColumnOrder) {
-                this.#dataTable.setColumnOrder(columnStates.map((col: ColumnState) => col.field));
-            }
+      if (!this.#options.saveColumnVisibility) {
+        state.visible = undefined;
+      }
 
-        } catch (error) {
-            console.error("Failed to restore DataTable state:", error);
-        }
+      if (!this.#options.saveColumnWidth) {
+        state.width = undefined;
+      }
     }
 
-    /**
-     * Clears the saved state from localStorage.
-     */
-    clearState() {
-        localStorage.removeItem(this.#storageKey);
+    localStorage.setItem(
+      this.#storageKey,
+      JSON.stringify(this.#dataTable.columnStates),
+    );
+  }
+
+  /**
+   * Restores the column state from localStorage.
+   */
+  restoreState() {
+    const savedState = localStorage.getItem(this.#storageKey);
+    if (!savedState) return;
+
+    try {
+      const columnStates = JSON.parse(savedState) as ColumnState[];
+      this.#dataTable.columnStates = columnStates;
+
+      if (this.#options.saveColumnOrder) {
+        this.#dataTable.setColumnOrder(
+          columnStates.map((col: ColumnState) => col.field),
+        );
+      }
+    } catch (error) {
+      console.error('Failed to restore DataTable state:', error);
     }
+  }
+
+  /**
+   * Clears the saved state from localStorage.
+   */
+  clearState() {
+    localStorage.removeItem(this.#storageKey);
+  }
 }

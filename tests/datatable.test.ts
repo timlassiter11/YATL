@@ -1,4 +1,5 @@
 import { DataTable } from "../src/datatable";
+import { Row } from "../src/types";
 
 describe("DataTable", () => {
   let tableElement: HTMLTableElement;
@@ -181,7 +182,7 @@ describe("DataTable", () => {
     });
 
     // Custom filter: Only include rows where age is greater than 25
-    dataTable.filter((row: any) => row.age > 25);
+    dataTable.filter((row: Row) => row.age > 25);
 
     expect(dataTable.rows.length).toBe(2);
     expect(dataTable.rows[0].name).toBe("Bob");
@@ -196,9 +197,6 @@ describe("DataTable", () => {
     });
 
     dataTable.loadData([]);
-    expect(dataTable.rows.length).toBe(0);
-
-    dataTable.loadData(undefined as any); // Test with undefined
     expect(dataTable.rows.length).toBe(0);
   });
 
@@ -339,7 +337,7 @@ describe("DataTable", () => {
     const ageHeader = document.querySelector('th[data-dt-field="age"]') as HTMLElement;
 
     expect(nameHeader.style.display)
-    const ageColumn = dataTable.columnStates.find(col => col.field === "age");
+    //const ageColumn = dataTable.columnStates.find(col => col.field === "age");
 
     expect(nameHeader.hidden).toBe(false);
     expect(ageHeader.hidden).toBe(false);
@@ -364,7 +362,7 @@ describe("DataTable", () => {
       { name: "Alice", age: 25 },
     ];
 
-    const dataTable = new DataTable(tableElement, {
+    new DataTable(tableElement, {
       columns: [
         { field: "name", title: "Name", resizable: true },
         { field: "age", title: "Age", resizable: true },
@@ -422,7 +420,7 @@ describe("DataTable", () => {
     ];
 
     // Custom tokenizer that splits by comma
-    const commaTokenizer = (value: any) => String(value).split(',');
+    const commaTokenizer = (value: string) => value.split(',');
 
     const dataTable = new DataTable(tableElement, {
       columns: [

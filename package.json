@@ -1,6 +1,6 @@
 {
   "name": "yatl",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Yet another table library with all of the standard bells and whistles.",
   "module": "dist/datatable.mjs",
   "browser": "dist/datatable.global.js",

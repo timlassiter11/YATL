@@ -31,7 +31,7 @@ jobs:
         run: npm run build
 
       - name: Archive dist folder
-        run: zip -r yatl-${{ github.ref_name }}.zip dist/
+        run: zip -r -j yatl-${{ github.ref_name }}.zip dist/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

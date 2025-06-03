@@ -15,6 +15,9 @@ window.addEventListener("load", () => {
     rearrangeable: true,
   });
 
+  window.addEventListener("resize", () => updateRenderedRows());
+  dataTable.table.addEventListener("resize", () => updateRenderedRows());
+
   // Update the table data when the row count changes
   const rowCountInput = document.getElementById("rowCount");
   rowCountInput.addEventListener("input", () => {

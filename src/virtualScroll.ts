@@ -28,7 +28,7 @@ export class VirtualScroll {
     // This allows us to avoid rendering when the element isn't
     // shown since it can't do the calculations and then start
     // rendering once the element comes into view.
-    const observer = new IntersectionObserver((entries, _) => {
+    const observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
         if (entry.intersectionRatio === 1) {
           this.#renderChunk();
@@ -120,7 +120,7 @@ export class VirtualScroll {
     // Max out the element height so we can get a real height of the container.
     // This fixes an issue when the parent isn't set to grow causing only a
     // small number of rows to render until you scroll.
-    this.#element.innerHTML = `<tr style="height: ${totalContentHeight}px;"></tr>`;
+    this.#element.innerHTML = `<div style="height: ${totalContentHeight}px;"></div>`;
     const actualHeight = this.#element.offsetHeight;
     const viewHeight = this.#container.offsetHeight;
 
@@ -155,8 +155,8 @@ export class VirtualScroll {
         .map((_, index) => this.#generator(index + startNode));
       // We create two empty rows. One at the top and one at the bottom.
       // Resize the rows accordingly to move the rendered rows to where we want.
-      const topRow = document.createElement('tr');
-      const bottomRow = document.createElement('tr');
+      const topRow = document.createElement('div');
+      const bottomRow = document.createElement('div');
       topRow.style.height = offsetY + 'px';
       bottomRow.style.height = remainingHeight + 'px';
       this.#element.append(topRow);
@@ -175,7 +175,8 @@ export class VirtualScroll {
       return;
     }
 
-    const renderSize = Math.min(1000, this.#rowCount);
+    const AVERAGE_RENDER_COUNT = 1000;
+    const renderSize = Math.min(AVERAGE_RENDER_COUNT, this.#rowCount);
     // Create an average row height by rendering the first N rows.
     const elements = [];
     for (let i = 0; i < renderSize; ++i) {
@@ -187,7 +188,7 @@ export class VirtualScroll {
 
     if (this.#rowHeight <= 0) {
       throw new VirtualScrollError(
-        "First 1000 rows had no rendered height. Virtual scroll can't be used.",
+        `First ${renderSize} rows had no rendered height. Virtual scroll can't be used.`,
       );
     } else if (this.#rowHeight * this.#rowCount > MAX_ELEMENT_HEIGHT) {
       // This seems to be Chrome's max height of an element based on some random testing.

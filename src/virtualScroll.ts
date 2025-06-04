@@ -23,6 +23,19 @@ export class VirtualScroll {
     this.#element = element;
     this.#generator = generator;
     this.#padding = nodePadding;
+
+    // Watch for visual changes on our virtual scroll element.
+    // This allows us to avoid rendering when the element isn't
+    // shown since it can't do the calculations and then start
+    // rendering once the element comes into view.
+    const observer = new IntersectionObserver((entries, _) => {
+      for (const entry of entries) {
+        if (entry.intersectionRatio === 1) {
+          this.#renderChunk();
+        }
+      }
+    });
+    observer.observe(this.#element);
   }
 
   get rowCount() {
@@ -95,6 +108,10 @@ export class VirtualScroll {
   }
 
   #renderChunk() {
+    if (!this.started || !this.#element.checkVisibility()) {
+      return;
+    }
+
     const scrollTop = this.#container.scrollTop;
     const rowCount = this.rowCount;
     const rowHeight = this.rowHeight;
@@ -153,7 +170,7 @@ export class VirtualScroll {
   }
 
   #updateRowHeight() {
-    if (this.#rowCount === 0) {
+    if (this.#rowCount === 0 || !this.#element.checkVisibility()) {
       this.#rowHeight = 0;
       return;
     }

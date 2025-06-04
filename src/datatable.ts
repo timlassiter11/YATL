@@ -871,10 +871,6 @@ export class DataTable {
       col.element.parentElement?.append(col.element);
       col.element.hidden = !col.visible;
 
-      if (col.element.style.width === '') {
-        col.element.style.width = col.element.offsetWidth + 'px';
-      }
-
       if (col.sortOrder === 'asc') {
         col.element?.classList.add('dt-ascending');
         col.element?.classList.remove('dt-descending');
@@ -973,6 +969,13 @@ export class DataTable {
       const td = document.createElement('td');
       td.classList.add(...classesToArray(this.#classes.td));
       td.dataset.dtField = field;
+      const colWidth = col.element.style.width;
+      // If the column has been resized, force the cells to that width.
+      if (colWidth && colWidth !== '0px') {
+        // We have to set the cells max width to allow text-overflow: ellipsis to work.
+        td.style.maxWidth = colWidth;
+      }
+
       this.#updateCell(td, value, col, row);
       tr.append(td);
     }
@@ -997,6 +1000,19 @@ export class DataTable {
     }
 
     return current;
+  }
+
+  #resizeCells(field: string, width?: number) {
+    const cells = this.#tbody.querySelectorAll<HTMLTableCellElement>(
+      `td[data-dt-field="${field}"]`,
+    );
+    for (const cell of cells) {
+      if (width) {
+        cell.style.maxWidth = `${width}px`;
+      } else {
+        cell.style.maxWidth = '';
+      }
+    }
   }
 
   #resizeColumnStart = (event: MouseEvent) => {
@@ -1030,6 +1046,7 @@ export class DataTable {
       this.#resizingColumn.resizeStartWidth! +
       (event.clientX - this.#resizingColumn.resizeStartX!);
     this.#resizingColumn.element.style.width = `${newWidth}px`;
+    this.#resizeCells(this.#resizingColumn.field, newWidth);
   };
 
   #resizeColumnEnd = () => {
@@ -1055,6 +1072,10 @@ export class DataTable {
     const header = target.closest('th');
     if (header) {
       header.style.width = '0px';
+      const field = header.dataset.dtField;
+      if (field) {
+        this.#resizeCells(header.dataset.dtField!);
+      }
     }
   };
 

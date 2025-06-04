@@ -4,7 +4,8 @@
   --dt-header-drop-color: rgba(255, 255, 255, 0.1);
 
   position: relative;
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   white-space: nowrap;
   overflow: auto;
 }
@@ -31,6 +32,12 @@
 
 .dt-headers > tr > th.dt-sortable:has(.dt-resizer)::after {
   right: var(--dt-header-resizer-width);
+}
+
+.data-table > tbody > tr > td {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .dt-sortable {

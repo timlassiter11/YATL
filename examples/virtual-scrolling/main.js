@@ -15,8 +15,15 @@ window.addEventListener("load", () => {
     rearrangeable: true,
   });
 
-  window.addEventListener("resize", () => updateRenderedRows());
-  dataTable.table.addEventListener("resize", () => updateRenderedRows());
+  // Watch for changes in the table to update the number of rendered rows.
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === "childList") {
+        updateRenderedRows();
+      }
+    }
+  });
+  observer.observe(dataTable.table, { childList: true, subtree: true });
 
   // Update the table data when the row count changes
   const rowCountInput = document.getElementById("rowCount");

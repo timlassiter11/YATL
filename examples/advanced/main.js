@@ -1,4 +1,4 @@
-import { DataTable, LocalStorageAdapter } from "../../dist/datatable.mjs"
+import { DataTable, LocalStorageAdapter } from "../../dist/datatable.mjs";
 
 /**
  * @type {DataTable}
@@ -24,14 +24,28 @@ window.addEventListener("load", () => {
 
     columns: [
       {
-        field: "name",
-        searchable: true,
+        field: "id",
+        title: "ID",
         sortable: true,
+        searchable: false,
       },
       {
-        field: "due_date",
+        field: "name",
+        title: "Item Name",
         sortable: true,
-        sortValue: (value) => value.getTime(),
+        searchable: true,
+        tokenize: true,
+      },
+      {
+        field: "status",
+        title: "Status",
+        sortable: true,
+        searchable: false,
+      },
+      {
+        field: "lastModified",
+        sortable: true,
+        sortValue: (value) => value?.getTime(),
         filter: (value, filter) => {
           if (filter.startDate && filter.endDate) {
             return (
@@ -48,21 +62,49 @@ window.addEventListener("load", () => {
         valueFormatter: (date) => dateFormatter.format(date),
       },
       {
-        field: "quantity",
+        field: "issueCount",
+        title: "Issues",
         sortable: true,
-        valueFormatter: (qty) => qty.toFixed(1),
       },
       {
-        field: "cost",
+        field: "tags",
         sortable: true,
-        valueFormatter: (cost) => moneyFormatter.format(cost),
+        searchable: true,
+        tokenize: true,
+        elementFormatter: (tags, row, element) => {
+          tags = tags.split(',');
+          element.innerHTML = '';
+          for (const tag of tags) {
+            const span = document.createElement("span");
+            span.innerText = tag;
+            span.classList.add("rounded-pill", "p-1", "m-1");
+
+            switch (tag) {
+              case 'urgent':
+              case 'critical':
+                span.classList.add("bg-danger");
+                break;
+              case 'bugfix':
+                span.classList.add("bg-warning");
+                break;
+              default:
+                span.classList.add("bg-secondary");
+                break;
+            }
+
+            element.append(span);
+          }
+
+        }
       },
     ],
     rowFormatter: rowFormatter,
-    data: createData(count),
-    virtualScroll: 1000,
+    data: generateMockData(count),
+    virtualScroll: true,
     rearrangeable: true,
   });
+
+  window.dataTable = dataTable;
 
   new LocalStorageAdapter(dataTable, "advancedExampleTableState");
 
@@ -207,13 +249,62 @@ function createData(count) {
   }));
 }
 
+/**
+ * Generates an array of mock data objects for populating a table.
+ *
+ * @param {number} count - The number of data rows to generate.
+ * @returns {Array<Object>} An array of generated data objects.
+ */
+function generateMockData(count) {
+  // --- Data sources for randomization ---
+  const itemNouns = ['System', 'Module', 'Component', 'API', 'Database', 'Report', 'Dashboard', 'Feature'];
+  const itemModifiers = ['Alpha', 'Bravo', 'Phoenix', 'Orion', 'Pegasus', 'Andromeda', 'Cygnus', 'Vega'];
+  const statuses = ['Completed', 'In Progress', 'Pending', 'Failed', 'On Hold', 'Needs Review'];
+  const possibleTags = ['urgent', 'bugfix', 'feature', 'ui', 'backend', 'database', 'critical', 'needs-review', 'mobile', 'web', 'refactor'];
+
+  const generatedData = [];
+
+  // --- Helper function to get a random element from an array ---
+  const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  for (let i = 1; i <= count; i++) {
+    // --- 1. Generate a random date (+- 1 year from now) ---
+    const today = new Date();
+    const oneYearInMillis = 365 * 24 * 60 * 60 * 1000;
+    const randomTimeOffset = (Math.random() * 2 * oneYearInMillis) - oneYearInMillis;
+    const randomDate = new Date(today.getTime() + randomTimeOffset);
+
+    // --- 2. Generate a tokenizable string of tags ---
+    // Shuffle tags and pick a random number of them (2 to 5)
+    const shuffledTags = [...possibleTags].sort(() => 0.5 - Math.random());
+    const tagCount = Math.floor(Math.random() * 4) + 2; // Get 2, 3, 4, or 5 tags
+    const selectedTags = shuffledTags.slice(0, tagCount);
+    const issueCount = Math.floor(Math.random() * 100); // Random number of issues
+    const tagsString = selectedTags.join(','); // Join with a comma for easy tokenizing
+
+    // --- 3. Assemble the final data object for the row ---
+    const dataRow = {
+      id: i,
+      name: `${getRandom(itemModifiers)} ${getRandom(itemNouns)}`,
+      status: getRandom(statuses),
+      lastModified: randomDate,
+      issueCount: issueCount,
+      tags: tagsString,
+    };
+
+    generatedData.push(dataRow);
+  }
+  return generatedData;
+}
+
+
 function updateRowCount() {
   document.getElementById("rowCount").innerText =
     dataTable.length.toLocaleString();
 }
 
 function rowFormatter(row, element) {
-  if (row.due_date.getTime() < today.getTime()) {
+  if (row.lastModified.getTime() < today.getTime()) {
     element.classList.add("past-due");
   }
 }

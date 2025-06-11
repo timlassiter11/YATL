@@ -31,20 +31,11 @@ export class VirtualScroll {
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
         if (entry.intersectionRatio === 1) {
-          this.#renderChunk();
+          this.renderChunk();
         }
       }
     });
     observer.observe(this.#element);
-  }
-
-  get rowCount() {
-    return this.#rowCount;
-  }
-
-  set rowCount(count) {
-    this.#rowCount = count;
-    this.#renderChunk();
   }
 
   get rowHeight() {
@@ -63,12 +54,19 @@ export class VirtualScroll {
    * @param index The index to scroll to.
    * @throws RangeError if the index is out of bounds.
    */
-  scrollTo(index: number) {
+  scrollToIndex(index: number) {
     if (index < 0 || index >= this.#rowCount) {
       throw new RangeError('Index out of bounds.');
     }
-    this.#container.scrollTop = this.rowHeight * index;
-    this.#renderChunk();
+    this.scrollToPx(this.rowHeight * index);
+  }
+
+  /**
+   * @param px
+   */
+  scrollToPx(px: number) {
+    this.#container.scrollTop = px;
+    this.renderChunk();
   }
 
   #scrollCallback = () => {
@@ -79,22 +77,22 @@ export class VirtualScroll {
       if (this.#animationFrame) {
         cancelAnimationFrame(this.#animationFrame);
       }
-      this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
+      this.#animationFrame = requestAnimationFrame(() => this.renderChunk());
     }
   };
 
   #renderCallback = () => {
-    this.#renderChunk();
+    this.renderChunk();
   };
 
-  start() {
-    if (this.#started) return;
-    this.#started = true;
-
-    this.#container.addEventListener('scroll', this.#scrollCallback);
-    window.addEventListener('resize', this.#renderCallback);
-
-    this.#renderChunk();
+  start(rowCount: number) {
+    if (!this.#started) {
+      this.#container.addEventListener('scroll', this.#scrollCallback);
+      window.addEventListener('resize', this.#renderCallback);
+      this.#started = true;
+    }
+    this.#rowCount = rowCount;
+    this.renderChunk();
   }
 
   stop() {
@@ -107,15 +105,21 @@ export class VirtualScroll {
     this.#started = false;
   }
 
-  #renderChunk() {
-    if (!this.started || !this.#element.checkVisibility()) {
+  renderChunk() {
+    const scrollTop = this.#container.scrollTop;
+    const rowCount = this.#rowCount;
+    const rowHeight = this.rowHeight;
+    const padding = this.#padding;
+
+    if (
+      !this.started ||
+      !this.#element.checkVisibility() ||
+      !rowCount ||
+      !rowHeight
+    ) {
       return;
     }
 
-    const scrollTop = this.#container.scrollTop;
-    const rowCount = this.rowCount;
-    const rowHeight = this.rowHeight;
-    const padding = this.#padding;
     const totalContentHeight = rowHeight * rowCount;
     // Max out the element height so we can get a real height of the container.
     // This fixes an issue when the parent isn't set to grow causing only a
@@ -132,10 +136,6 @@ export class VirtualScroll {
       console.error(
         'Max element height exceeded. Virtual scroll may not work.',
       );
-    }
-
-    if (!rowCount || !rowHeight) {
-      return;
     }
 
     let startNode = Math.floor(scrollTop / rowHeight) - padding;

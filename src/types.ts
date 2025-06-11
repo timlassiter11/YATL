@@ -326,3 +326,10 @@ export interface TableOptions {
    */
   tokenizer?: TokenizerCallback;
 }
+
+export interface LoadOptions {
+  /** If the data should replace or be added to the end of the current data */
+  append?: boolean;
+  /** If the current scroll position should be kepts */
+  keepScroll?: boolean;
+}

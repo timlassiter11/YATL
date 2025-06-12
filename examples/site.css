@@ -1,3 +1,29 @@
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--secondary-light);
+  background: var(--secondary-light);
+}
+
+body {
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
+}
+
+.options-wrapper {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.table-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
+  flex-grow: 1;
+  /* This forces the dt-scroller to scroll horizontally instead of the body*/
+  min-width: 0;
+  min-height: 0;
 }

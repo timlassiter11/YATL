@@ -1,5 +1,28 @@
 import { DataTable, LocalStorageAdapter } from "../../dist/datatable.mjs";
 
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+/** @type {Date?} */
+let startDate
+/** @type {Date?} */
+let endDate;
+
+Date.prototype.addDays = function (days) {
+  const date = new Date(this.valueOf());
+  date.setDate(date.getDate() + days);
+  return date;
+};
+
+Date.fromIsoString = function (date) {
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format:~:text=date%2Donly%20forms%20are%20interpreted%20as%20a%20UTC%20time%20and%20date%2Dtime%20forms%20are%20interpreted%20as%20local%20time
+  // Date only strings are parsed as UTC timezone but datetime strings are parsed as local time.
+  // Make sure this is parsed as local time to match our generated dates.
+  return date !== "" ? new Date(date + "T00:00:00") : null;
+};
+
+const dateFormatter = new Intl.DateTimeFormat("en-US");
+
 /**
  * @type {DataTable}
  */
@@ -184,7 +207,7 @@ window.addEventListener("load", () => {
   const startDateInput = document.getElementById("startDateInput");
   const endDateInput = document.getElementById("endDateInput");
   function updateFilters() {
-    dataTable.filter({ due_date: { startDate, endDate } });
+    dataTable.filter({ lastModified: { startDate, endDate } });
     updateRowCount();
   }
 
@@ -196,6 +219,7 @@ window.addEventListener("load", () => {
   };
   endDateInput.onchange = (event) => {
     endDate = Date.fromIsoString(endDateInput.value);
+    endDate.setHours(23, 59, 59, 999);
     startDateInput.max = endDateInput.value;
     updateFilters();
   };
@@ -204,50 +228,6 @@ window.addEventListener("load", () => {
 
   updateRowCount();
 });
-
-Date.prototype.addDays = function (days) {
-  const date = new Date(this.valueOf());
-  date.setDate(date.getDate() + days);
-  return date;
-};
-
-Date.fromIsoString = function (date) {
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format:~:text=date%2Donly%20forms%20are%20interpreted%20as%20a%20UTC%20time%20and%20date%2Dtime%20forms%20are%20interpreted%20as%20local%20time
-  // Date only strings are parsed as UTC timezone but datetime strings are parsed as local time.
-  // Make sure this is parsed as local time to match our generated dates.
-  return date !== "" ? new Date(date + "T00:00:00") : null;
-};
-
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-let startDate, endDate;
-
-const dateFormatter = new Intl.DateTimeFormat("en-US");
-const moneyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
-
-// Generate random rows of data
-function createData(count) {
-  const randomDate = (from, delta) => {
-    const min = -delta,
-      max = delta;
-    const deltaDays = Math.floor(Math.random() * (max - min + 1) + min);
-    return from.addDays(deltaDays);
-  };
-
-  today.setHours(0, 0, 0, 0);
-  return new Array(count).fill(null).map((v, i) => ({
-    // Uncomment below to provide your own random indexes.
-    //index: Math.floor(Math.random() * count),
-    name: `Row ${i}`,
-    // Random date within a year
-    due_date: randomDate(today, 365),
-    quantity: Math.floor(Math.random() * 10),
-    cost: Math.random() * 1000,
-  }));
-}
 
 /**
  * Generates an array of mock data objects for populating a table.
@@ -299,12 +279,30 @@ function generateMockData(count) {
 
 
 function updateRowCount() {
-  document.getElementById("rowCount").innerText =
-    dataTable.length.toLocaleString();
+  const rowCountElement = document.getElementById("rowCount");
+  if (rowCountElement) {
+    const filteredRowCount = dataTable.rows.length;
+    const totalRowCount = dataTable.data.length;
+    let text = "Rows: ";
+    if (filteredRowCount === totalRowCount) {
+      text += filteredRowCount.toLocaleString();
+    } else {
+      text += filteredRowCount.toLocaleString() + " of " + totalRowCount.toLocaleString();
+    }
+
+    rowCountElement.innerText = text;
+  }
 }
 
 function rowFormatter(row, element) {
-  if (row.lastModified.getTime() < today.getTime()) {
-    element.classList.add("past-due");
+  const tags = row.tags;
+  if (typeof tags === "string") {
+    if (tags.includes("critical")) {
+      element.classList.add("critical");
+    } else if (tags.includes("urgent")) {
+      element.classList.add("urgent");
+    } else if (tags.includes("bugfix")) {
+      element.classList.add("bugfix");
+    }
   }
 }

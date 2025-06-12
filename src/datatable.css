@@ -34,7 +34,10 @@
   right: var(--dt-header-resizer-width);
 }
 
-.data-table > tbody > tr > td {
+
+.data-table > tbody > tr > td,
+.data-table > thead > tr > th,
+.data-table > thead > tr > th > .dt-header-name {
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
@@ -78,7 +81,6 @@
 }
 
 .dt-resizer {
-  display: none; /* Only show if not the last visible header */
   position: absolute;
   top: 0;
   right: 0; /* Position it slightly to the right of the cell content, adjust as needed */
@@ -108,8 +110,4 @@ th:hover .dt-resizer::after,
 .dt-headers > tr > th.dt-drag-over,
 .dt-headers > tr > th:has(.dt-drag-over) {
   background-color: var(--dt-header-drop-color);
-}
-
-.dt-headers > tr > th:not([hidden]):has(~ th:not([hidden])) > .dt-resizer {
-  display: unset;
 }

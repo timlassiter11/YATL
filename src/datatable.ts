@@ -71,27 +71,27 @@ export class DataTable {
   private static readonly DEFAULT_OPTIONS: Required<
     Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>
   > = {
-    virtualScroll: true,
-    highlightSearch: true,
-    sortable: true,
-    searchable: false,
-    tokenize: false,
-    resizable: true,
-    rearrangeable: true,
-    extraSearchFields: [],
-    noDataText: 'No records found',
-    noMatchText: 'No matching records found',
-    classes: {
-      scroller: 'dt-scroller',
-      thead: 'dt-headers',
-      tbody: '',
-      tfoot: '',
-      tr: '',
-      th: '',
-      td: '',
-    },
-    tokenizer: whitespaceTokenizer, // Default tokenizer function
-  };
+      virtualScroll: true,
+      highlightSearch: true,
+      sortable: true,
+      searchable: false,
+      tokenize: false,
+      resizable: true,
+      rearrangeable: true,
+      extraSearchFields: [],
+      noDataText: 'No records found',
+      noMatchText: 'No matching records found',
+      classes: {
+        scroller: 'dt-scroller',
+        thead: 'dt-headers',
+        tbody: '',
+        tfoot: '',
+        tr: '',
+        th: '',
+        td: '',
+      },
+      tokenizer: whitespaceTokenizer, // Default tokenizer function
+    };
 
   // Table elements
   #table!: HTMLTableElement;
@@ -121,7 +121,7 @@ export class DataTable {
   #noDataText: string;
   #noMatchText: string;
   #classes: TableClasses;
-  #resizingColumn: ColumnData | null = null;
+  #resizingColumn?: ColumnData;
 
   #blockUpdates = false;
 
@@ -293,8 +293,7 @@ export class DataTable {
 
       const nameElement = document.createElement('div');
       nameElement.classList.add('dt-header-name');
-      nameElement.innerText =
-        colOptions.title || toHumanReadable(colOptions.field);
+      nameElement.innerText = colData.title;
       th.innerHTML = '';
       th.append(nameElement);
       th.hidden = !colData.visible;
@@ -477,8 +476,6 @@ export class DataTable {
       index++;
     }
 
-    //this.#filteredRows = [...this.#rows.values()];
-
     this.#updateHeaders();
     this.#filterRows();
 
@@ -601,8 +598,7 @@ export class DataTable {
     const col = this.#columnData.get(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${
-          visisble ? 'show' : 'hide'
+        `Attempting to ${visisble ? 'show' : 'hide'
         } non-existent column ${colName}`,
       );
       return;
@@ -944,16 +940,11 @@ export class DataTable {
   #filterRows() {
     if (this.#blockUpdates) return;
 
-    const filter =
-      typeof this.#filters === 'function'
-        ? this.#filters
-        : (row: InternalRowData, index: number) => this.#filterRow(row, index);
-
     const rows = [...this.#rows.values()];
     this.#filteredRows = rows.filter((row, index) => {
       row._metadata.searchScore = 0;
       // Filter takes precedence over search.
-      if (!filter(row, index)) {
+      if (!this.#filterRow(row, index)) {
         return false;
       }
 
@@ -1078,15 +1069,6 @@ export class DataTable {
         col.element?.classList.remove('dt-descending');
       }
     }
-
-    // The last header should never have a width. This forces it to fill
-    // the remaining space in the table. Without this, resizing can feel "jumpy".
-    const lastCol = [...this.#columnData.values()]
-      .filter(c => c.visible)
-      .slice(-1)[0];
-    if (lastCol) {
-      this.#resizeColumn(lastCol.field);
-    }
   }
 
   #updateTable() {
@@ -1189,9 +1171,9 @@ export class DataTable {
     if (typeof this.#rowFormatter === 'function') {
       try {
         this.#rowFormatter(row, tr);
-      } catch {
-        //TODO: How should this be handled?
-        //empty
+      } catch (error) {
+        console.error("Row formatter callback failed with the following error");
+        console.error(error);
       }
     }
 
@@ -1233,6 +1215,8 @@ export class DataTable {
     }
 
     column.element.style.width = headerWidth;
+    column.element.style.maxWidth = headerWidth;
+
     const cells = this.#tbody.querySelectorAll<HTMLTableCellElement>(
       `td[data-dt-field="${column.field}"]`,
     );
@@ -1271,10 +1255,9 @@ export class DataTable {
     if (!this.#resizingColumn) return;
 
     event.preventDefault();
-    const newWidth =
-      this.#resizingColumn.resizeStartWidth! +
-      (event.clientX - this.#resizingColumn.resizeStartX!);
-    this.#resizeColumn(this.#resizingColumn.field, newWidth);
+    const dx = event.clientX - this.#resizingColumn.resizeStartX!;
+    const newWidth = this.#resizingColumn.resizeStartWidth! + dx;
+    this.#resizeColumn(this.#resizingColumn, newWidth);
   };
 
   #resizeColumnEnd = () => {
@@ -1292,18 +1275,16 @@ export class DataTable {
         cancelable: true,
       }),
     );
-    this.#resizingColumn = null;
+    this.#resizingColumn = undefined;
   };
 
   #resizeColumnDoubleClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
     const header = target.closest('th');
-    if (header) {
-      const field = header.dataset.dtField;
-      if (field) {
-        this.#resizeColumn(field, 0);
-      }
-    }
+    if (!header) return;
+    const field = header.dataset.dtField;
+    if (!field) return;
+    this.#resizeColumn(field);
   };
 
   #dragColumnStart = (event: DragEvent) => {

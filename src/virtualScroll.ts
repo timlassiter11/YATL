@@ -17,7 +17,7 @@ export class VirtualScroll {
     container,
     element,
     generator,
-    nodePadding = 2,
+    nodePadding = 10,
   }: VirtualScrollOptions) {
     this.#container = container;
     this.#element = element;

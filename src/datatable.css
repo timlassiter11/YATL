@@ -18,6 +18,11 @@
 
 .dt-headers > tr > th {
   position: relative;
+  min-width: 40px;
+}
+
+.dt-headers.dt-resizing > tr > th {
+  pointer-events: none;
 }
 
 .dt-headers > tr > th.dt-sortable {
@@ -87,6 +92,7 @@
   width: var(--dt-header-resizer-width);
   height: 100%;
   cursor: col-resize;
+  pointer-events: all;
 }
 
 .dt-resizer::after {

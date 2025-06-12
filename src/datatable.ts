@@ -14,7 +14,6 @@ import {
   RowFormatterCallback,
   SortOrder,
   SortValueCallback,
-  TableClasses,
   TableOptions,
   TokenizerCallback,
   ValueFormatterCallback,
@@ -71,27 +70,27 @@ export class DataTable {
   private static readonly DEFAULT_OPTIONS: Required<
     Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>
   > = {
-      virtualScroll: true,
-      highlightSearch: true,
-      sortable: true,
-      searchable: false,
-      tokenize: false,
-      resizable: true,
-      rearrangeable: true,
-      extraSearchFields: [],
-      noDataText: 'No records found',
-      noMatchText: 'No matching records found',
-      classes: {
-        scroller: 'dt-scroller',
-        thead: 'dt-headers',
-        tbody: '',
-        tfoot: '',
-        tr: '',
-        th: '',
-        td: '',
-      },
-      tokenizer: whitespaceTokenizer, // Default tokenizer function
-    };
+    virtualScroll: true,
+    highlightSearch: true,
+    sortable: true,
+    searchable: false,
+    tokenize: false,
+    resizable: true,
+    rearrangeable: true,
+    extraSearchFields: [],
+    noDataText: 'No records found',
+    noMatchText: 'No matching records found',
+    classes: {
+      scroller: 'dt-scroller',
+      thead: 'dt-headers',
+      tbody: '',
+      tfoot: '',
+      tr: '',
+      th: '',
+      td: '',
+    },
+    tokenizer: whitespaceTokenizer, // Default tokenizer function
+  };
 
   // Table elements
   #table!: HTMLTableElement;
@@ -120,7 +119,7 @@ export class DataTable {
   #sortPriority: number = 0;
   #noDataText: string;
   #noMatchText: string;
-  #classes: TableClasses;
+  #classes: Classes;
   #resizingColumn?: ColumnData;
 
   #blockUpdates = false;
@@ -165,7 +164,36 @@ export class DataTable {
     this.#extraSearchFields = finalOptions.extraSearchFields;
     this.#noDataText = finalOptions.noDataText;
     this.#noMatchText = finalOptions.noMatchText;
-    this.#classes = finalOptions.classes;
+    this.#classes = {
+      scroller: [
+        ...classesToArray(finalOptions.classes.scroller),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.scroller),
+      ],
+      thead: [
+        ...classesToArray(finalOptions.classes.thead),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.thead),
+      ],
+      tbody: [
+        ...classesToArray(finalOptions.classes.tbody),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tbody),
+      ],
+      tfoot: [
+        ...classesToArray(finalOptions.classes.tfoot),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tfoot),
+      ],
+      tr: [
+        ...classesToArray(finalOptions.classes.tr),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tr),
+      ],
+      th: [
+        ...classesToArray(finalOptions.classes.th),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.th),
+      ],
+      td: [
+        ...classesToArray(finalOptions.classes.td),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.td),
+      ],
+    };
 
     this.#rowFormatter = finalOptions.rowFormatter;
 
@@ -173,7 +201,7 @@ export class DataTable {
 
     // Inner element that handles the virtual scroll.
     this.#scroller = document.createElement('div');
-    this.#scroller.classList.add(...classesToArray(this.#classes.scroller));
+    this.#scroller.classList.add(...this.#classes.scroller);
     this.#scroller.style.overflow = 'auto';
     this.#scroller.style.height = '100%';
 
@@ -207,7 +235,7 @@ export class DataTable {
       this.#table.insertBefore(this.#thead, this.#table.firstChild);
     }
 
-    this.#thead.classList.add(...classesToArray(this.#classes.thead));
+    this.#thead.classList.add(...this.#classes.thead);
 
     // Create the row for the thead if there isn't one
     let headerRow = this.#thead.querySelector('tr:last-of-type');
@@ -216,7 +244,7 @@ export class DataTable {
       this.#thead.append(headerRow);
     }
 
-    headerRow.classList.add(...classesToArray(this.#classes.tr));
+    headerRow.classList.add(...this.#classes.tr);
     // Remove any existing header cells
     // TODO: Add ability to use HTML headers provided by the user.
     headerRow.innerHTML = '';
@@ -230,7 +258,7 @@ export class DataTable {
       this.#table.append(this.#tbody);
     }
 
-    this.#tbody.classList.add(...classesToArray(this.#classes.tbody));
+    this.#tbody.classList.add(...this.#classes.tbody);
 
     this.#tbody.addEventListener('click', event => {
       let tr, td, field;
@@ -288,14 +316,10 @@ export class DataTable {
       this.#columnData.set(colOptions.field, colData);
 
       const th = colData.element;
-      th.classList.add(...classesToArray(this.#classes.th));
+      th.classList.add(...this.#classes.th);
       th.dataset.dtField = colOptions.field;
 
-      const nameElement = document.createElement('div');
-      nameElement.classList.add('dt-header-name');
-      nameElement.innerText = colData.title;
-      th.innerHTML = '';
-      th.append(nameElement);
+      th.innerHTML = colData.title;
       th.hidden = !colData.visible;
 
       headerRow.append(th);
@@ -306,10 +330,10 @@ export class DataTable {
       }
 
       if (colData.sortable) {
-        th.classList.add('dt-sortable');
-        // Add the event listener to the name element
-        // to prevent clicking on the resizer from sorting.
-        nameElement.addEventListener('click', () => {
+        th.classList.add("dt-sortable");
+        th.addEventListener('click', event => {
+          if (event.target != th) return;
+
           if (!colData.sortOrder) {
             this.sort(colData.field, 'asc');
           } else if (colData.sortOrder === 'asc') {
@@ -598,7 +622,8 @@ export class DataTable {
     const col = this.#columnData.get(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${visisble ? 'show' : 'hide'
+        `Attempting to ${
+          visisble ? 'show' : 'hide'
         } non-existent column ${colName}`,
       );
       return;
@@ -699,19 +724,47 @@ export class DataTable {
     a.remove();
   }
 
+  scrollToRow(row: RowData) {
+    const rowData = row as InternalRowData;
+    const index = rowData._metadata?.index;
+    if (typeof index === 'number') {
+      this.scrollToOriginalIndex(index);
+    } else {
+      throw new TypeError('Invalid row');
+    }
+  }
+
   /**
    * Scrolls the table to bring the row at the specified original index into view.
    * @param index - The original index of the row (from the initial dataset).
    */
-  scrollTo(index: number) {
-    if (this.#virtualScroll) {
-      const row = this.#rows.get(index);
-      if (row) {
-        const filteredIndex = this.#filteredRows.indexOf(row);
-        this.#virtualScroll.scrollToIndex(filteredIndex);
+  scrollToOriginalIndex(index: number) {
+    const rowData = this.#rows.get(index);
+    if (rowData) {
+      const filteredIndex = this.#filteredRows.indexOf(rowData);
+      if (filteredIndex >= 0) {
+        this.scrollToFilteredIndex(filteredIndex);
+        return;
+      } else {
+        throw new Error('Cannot scroll to filtered out row');
       }
     } else {
-      const row = this.#tbody.querySelector(`tr[data-dt-index="${index}"]`);
+      throw new RangeError(`Row index ${index} out of range`);
+    }
+  }
+
+  scrollToFilteredIndex(index: number) {
+    const rowData = this.#filteredRows.at(index);
+    if (!rowData) {
+      throw new RangeError(`Row index ${index} out of range`);
+    }
+
+    if (this.#virtualScroll) {
+      this.#virtualScroll.scrollToIndex(index);
+    } else {
+      const row = this.#tbody.querySelector(
+        `tr[data-dt-index="${rowData._metadata.index}"]`,
+      );
       if (row) {
         row.scrollIntoView(true);
         const theadHeight = parseFloat(getComputedStyle(this.#thead).height);
@@ -1149,13 +1202,13 @@ export class DataTable {
   #createRow(index: number): HTMLTableRowElement {
     const row = this.#filteredRows[index];
     const tr = document.createElement('tr');
-    tr.classList.add(...classesToArray(this.#classes.tr));
+    tr.classList.add(...this.#classes.tr);
     tr.dataset.dtIndex = String(row._metadata.index);
 
     for (const [field, col] of this.#columnData) {
       const value = this.#getNestedValue(row, field);
       const td = document.createElement('td');
-      td.classList.add(...classesToArray(this.#classes.td));
+      td.classList.add(...this.#classes.td);
       td.dataset.dtField = field;
       const colWidth = col.element.style.width;
       // If the column has been resized, force the cells to that width.
@@ -1172,7 +1225,7 @@ export class DataTable {
       try {
         this.#rowFormatter(row, tr);
       } catch (error) {
-        console.error("Row formatter callback failed with the following error");
+        console.error('Row formatter callback failed with the following error');
         console.error(error);
       }
     }
@@ -1243,6 +1296,7 @@ export class DataTable {
     if (!col) return;
 
     this.#resizingColumn = col;
+    this.#thead.classList.add('dt-resizing');
 
     col.resizeStartX = event.clientX;
     col.resizeStartWidth = header.offsetWidth;
@@ -1260,8 +1314,9 @@ export class DataTable {
     this.#resizeColumn(this.#resizingColumn, newWidth);
   };
 
-  #resizeColumnEnd = () => {
+  #resizeColumnEnd = (event: MouseEvent) => {
     if (!this.#resizingColumn) return;
+    event.preventDefault();
 
     document.removeEventListener('mousemove', this.#resizeColumnMove);
     document.removeEventListener('mouseup', this.#resizeColumnEnd);
@@ -1275,6 +1330,8 @@ export class DataTable {
         cancelable: true,
       }),
     );
+
+    this.#thead.classList.remove('dt-resizing');
     this.#resizingColumn = undefined;
   };
 
@@ -1396,6 +1453,16 @@ interface RowMetadata {
   searchScore?: number;
   tokens: Record<string, string[]>;
   sortValues: Record<string, any>;
+}
+
+interface Classes {
+  scroller: string[];
+  thead: string[];
+  tbody: string[];
+  tfoot: string[];
+  tr: string[];
+  th: string[];
+  td: string[];
 }
 
 const WARN_ROW_COUNT = 10_000;

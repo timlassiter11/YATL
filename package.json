@@ -9,7 +9,8 @@
     ".": {
       "types": "./dist/datatable.d.ts",
       "import": "./dist/datatable.mjs"
-    }
+    },
+    "./datatable.css": "./dist/datatable.css"
   },
   "keywords": [
     "table",

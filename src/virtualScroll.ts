@@ -54,20 +54,43 @@ export class VirtualScroll {
       throw new RangeError('Index out of bounds in _getRowMetadata.');
     }
 
+    // If metadata is already cached, return it.
     if (this._rowMetas[index]) {
       return this._rowMetas[index]!;
     }
 
-    const height = this.#estimateRowHeight(index);
-    let offset = 0;
-    if (index > 0) {
-      const prevMeta = this._getRowMetadata(index - 1); // Recursive call
-      offset = prevMeta.offset + prevMeta.height;
+    // Determine the starting point for iteration.
+    // Loop backwards from index - 1 to find the last non-null entry.
+    let startIndex = 0;
+    for (let k = index - 1; k >= 0; k--) {
+      if (this._rowMetas[k]) {
+        startIndex = k + 1;
+        break;
+      }
     }
 
-    const meta = {height, offset};
-    this._rowMetas[index] = meta;
-    return meta;
+    // Iterate from startIndex up to the requested index.
+    for (let i = startIndex; i <= index; i++) {
+      // Safeguard: if this entry somehow got populated by another process (unlikely with current flow), skip.
+      if (this._rowMetas[i]) {
+        continue;
+      }
+
+      let currentOffset = 0;
+      if (i > 0) {
+        // This assertion is safe because:
+        // 1. If i = startIndex and startIndex > 0, then _rowMetas[i-1] was the non-null entry found by the backward loop.
+        // 2. If i > startIndex, then _rowMetas[i-1] was populated in the previous iteration of this loop.
+        const prevMeta = this._rowMetas[i - 1]!;
+        currentOffset = prevMeta.offset + prevMeta.height;
+      }
+
+      const currentHeight = this.#estimateRowHeight(i);
+      this._rowMetas[i] = {height: currentHeight, offset: currentOffset};
+    }
+
+    // The requested index should now be populated.
+    return this._rowMetas[index]!;
   }
 
   _measureAndCacheRowHeight(index: number, generatedElement?: HTMLElement): number {

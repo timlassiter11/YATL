@@ -34,22 +34,22 @@ export class LocalStorageAdapter {
     const table = dataTable.table;
 
     if (this.#options.saveColumnSorting) {
-      table.addEventListener(DataTable.Events.COL_SORT, () => this.saveState());
+      dataTable.addEventListener("dt.col.sort", () => this.saveState());
     }
 
     if (this.#options.saveColumnVisibility) {
-      table.addEventListener(DataTable.Events.COL_HIDE, () => this.saveState());
-      table.addEventListener(DataTable.Events.COL_SHOW, () => this.saveState());
+      dataTable.addEventListener("dt.col.visibility", () => this.saveState());
+      dataTable.addEventListener("dt.col.visibility", () => this.saveState());
     }
 
     if (this.#options.saveColumnWidth) {
-      table.addEventListener(DataTable.Events.COL_RESIZE, () =>
+      dataTable.addEventListener("dt.col.resize", () =>
         this.saveState(),
       );
     }
 
     if (this.#options.saveColumnOrder) {
-      table.addEventListener(DataTable.Events.COL_REARRANGE, () =>
+      dataTable.addEventListener("dt.col.reorder", () =>
         this.saveState(),
       );
     }

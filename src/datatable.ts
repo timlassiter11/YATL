@@ -44,53 +44,33 @@ import {
  * const dataTable = new DataTable(tableElement, options);
  * ```
  */
-export class DataTable {
-  /**
-   * Defines the event names dispatched by the DataTable.
-   */
-  static Events = {
-    /** Dispatched when a row is clicked. Detail: { row: RowData, index: number, field?: string } */
-    ROW_CLICK: 'dt.row.click',
-    /** Dispatched when rows are filtered, sorted, or loaded. */
-    ROWS_CHANGED: 'dt.rows.changed',
-    /** Dispatched when a column is hidden. Detail: { column: ColumnData, visible: false } */
-    COL_HIDE: 'dt.col.hide',
-    /** Dispatched when a column is shown. Detail: { column: ColumnData, visible: true } */
-    COL_SHOW: 'dt.col.show',
-    /** Dispatched when a column is sorted. Detail: { column: ColumnData, order: SortOrder } */
-    COL_SORT: 'dt.col.sort',
-    /** Dispatched when a column is resized. Detail: { column: ColumnData, width: number } */
-    COL_RESIZE: 'dt.col.resize',
-    /** Dispatched when columns are rearranged. Detail: { draggedColumn: ColumnData, dropColumn: ColumnData, columns: ColumnData[] } */
-    COL_REARRANGE: 'dt.col.rearrange',
-  };
-
+export class DataTable extends EventTarget {
   // Centralized default options for the DataTable.
   // These are the base values used if not overridden by user-provided options.
   private static readonly DEFAULT_OPTIONS: Required<
     Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>
   > = {
-    virtualScroll: true,
-    highlightSearch: true,
-    sortable: true,
-    searchable: false,
-    tokenize: false,
-    resizable: true,
-    rearrangeable: true,
-    extraSearchFields: [],
-    noDataText: 'No records found',
-    noMatchText: 'No matching records found',
-    classes: {
-      scroller: 'dt-scroller',
-      thead: 'dt-headers',
-      tbody: '',
-      tfoot: '',
-      tr: '',
-      th: '',
-      td: '',
-    },
-    tokenizer: whitespaceTokenizer, // Default tokenizer function
-  };
+      virtualScroll: true,
+      highlightSearch: true,
+      sortable: true,
+      searchable: false,
+      tokenize: false,
+      resizable: true,
+      rearrangeable: true,
+      extraSearchFields: [],
+      noDataText: 'No records found',
+      noMatchText: 'No matching records found',
+      classes: {
+        scroller: 'dt-scroller',
+        thead: 'dt-headers',
+        tbody: '',
+        tfoot: '',
+        tr: '',
+        th: '',
+        td: '',
+      },
+      tokenizer: whitespaceTokenizer, // Default tokenizer function
+    };
 
   // Table elements
   #table!: HTMLTableElement;
@@ -132,6 +112,8 @@ export class DataTable {
    * @throws {TypeError} If the provided table element is not an HTMLTableElement or if columns option is not an array.
    */
   constructor(table: string | HTMLTableElement, options: TableOptions = {}) {
+    super();
+
     const finalOptions = {
       columns: [],
       data: [],
@@ -277,16 +259,16 @@ export class DataTable {
             value => value._metadata.index === index,
           );
           if (row) {
-            const event = new CustomEvent(DataTable.Events.ROW_CLICK, {
+            const rowEvent = new CustomEvent<DataTableEventMap["dt.row.clicked"]>("dt.row.clicked", {
+              cancelable: false,
               detail: {
                 row: row,
                 index: index,
-                field: field,
+                column: field,
+                originalEvent: event
               },
-              bubbles: true,
-              cancelable: true,
             });
-            tr.dispatchEvent(event);
+            this.dispatchEvent(rowEvent);
           }
         }
       }
@@ -591,6 +573,18 @@ export class DataTable {
       col.sortOrder = order;
     }
 
+    const sortEvent = new CustomEvent<DataTableEventMap["dt.col.sort"]>("dt.col.sort", {
+      cancelable: true,
+      detail: {
+        column: col.field,
+        order: col.sortOrder,
+      }
+    });
+
+    if (!this.dispatchEvent(sortEvent)) {
+      return;
+    }
+
     const scrollTop = this.#scroller.scrollTop;
     const scrollLeft = this.#scroller.scrollLeft;
 
@@ -600,17 +594,6 @@ export class DataTable {
     this.#scroller.scrollTop = scrollTop;
     this.#scroller.scrollLeft = scrollLeft;
     this.#virtualScroll?.renderChunk();
-
-    const event = new CustomEvent(DataTable.Events.COL_SORT, {
-      detail: {
-        column: col,
-        order: col.sortOrder,
-      },
-      bubbles: true,
-      cancelable: true,
-    });
-
-    this.#table.dispatchEvent(event);
   }
 
   /**
@@ -622,10 +605,21 @@ export class DataTable {
     const col = this.#columnData.get(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${
-          visisble ? 'show' : 'hide'
+        `Attempting to ${visisble ? 'show' : 'hide'
         } non-existent column ${colName}`,
       );
+      return;
+    }
+
+    const visibilityEvent = new CustomEvent<DataTableEventMap['dt.col.visibility']>('dt.col.visibility', {
+      cancelable: true,
+      detail: {
+        column: col.field,
+        visible: visisble,
+      }
+    });
+
+    if (!this.dispatchEvent(visibilityEvent)) {
       return;
     }
 
@@ -635,19 +629,7 @@ export class DataTable {
     // This will also handle hiding all of the columns elements.
     this.#sortRows();
 
-    const eventName = visisble
-      ? DataTable.Events.COL_SHOW
-      : DataTable.Events.COL_HIDE;
-    const event = new CustomEvent(eventName, {
-      detail: {
-        column: col,
-        visible: visisble,
-      },
-      bubbles: true,
-      cancelable: true,
-    });
 
-    this.#table.dispatchEvent(event);
   }
 
   /**
@@ -1041,12 +1023,14 @@ export class DataTable {
 
     this.#sortRows();
 
-    this.#table.dispatchEvent(
-      new CustomEvent(DataTable.Events.ROWS_CHANGED, {
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    const changeEvent = new CustomEvent<DataTableEventMap["dt.rows.changed"]>("dt.rows.changed", {
+      cancelable: false,
+      detail: {
+        dataTable: this,
+      }
+    });
+
+    this.dispatchEvent(changeEvent);
   }
 
   #compareRows(
@@ -1320,16 +1304,16 @@ export class DataTable {
 
     document.removeEventListener('mousemove', this.#resizeColumnMove);
     document.removeEventListener('mouseup', this.#resizeColumnEnd);
-    this.#table.dispatchEvent(
-      new CustomEvent(DataTable.Events.COL_RESIZE, {
-        detail: {
-          column: this.#resizingColumn,
-          width: this.#resizingColumn.element.offsetWidth,
-        },
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+
+    const resizeEvent = new CustomEvent<DataTableEventMap["dt.col.resize"]>("dt.col.resize", {
+      cancelable: false,
+      detail: {
+        column: this.#resizingColumn.field,
+        width: this.#resizingColumn.element.offsetWidth,
+      }
+    });
+
+    this.dispatchEvent(resizeEvent);
 
     this.#thead.classList.remove('dt-resizing');
     this.#resizingColumn = undefined;
@@ -1391,29 +1375,19 @@ export class DataTable {
       const droppedColumn = this.#columnData.get(dropField);
       if (!droppedColumn) return;
 
-      // Force the current last column width to it's current width
-      // and remove the width from the new last column.
-      // This should force the columns to keep their current widths.
-      if (dropIndex === columns.length) {
-        droppedColumn.element.style.width =
-          droppedColumn.element.offsetWidth + 'px';
-        draggedColumn.element.style.width = '';
+      const reorderEvent = new CustomEvent<DataTableEventMap["dt.col.reorder"]>("dt.col.reorder", {
+        cancelable: true,
+        detail: {
+          draggedColumn: draggedColumn.field,
+          dropColumn: droppedColumn.field,
+        }
+      })
+      if (!this.dispatchEvent(reorderEvent)) {
+        return;
       }
 
       columns.splice(dropIndex, 0, draggedColumn);
       this.setColumnOrder(columns.map(col => col.field));
-
-      this.#table.dispatchEvent(
-        new CustomEvent(DataTable.Events.COL_REARRANGE, {
-          detail: {
-            draggedColumn: draggedColumn,
-            dropColumn: droppedColumn,
-            columns: columns,
-          },
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
     }
   };
 
@@ -1423,6 +1397,24 @@ export class DataTable {
       element.classList.remove('dt-drag-over');
     }
   };
+
+  addEventListener<K extends keyof DataTableEventMap>(
+    type: K,
+    listener: (this: DataTable, ev: CustomEvent<DataTableEventMap[K]>) => any,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+
+  // This is the generic fallback for any other string event type (e.g., standard DOM events).
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+
+  // The single implementation for both overloads.
+  addEventListener(type: any, listener: any, options?: any) {
+    super.addEventListener(type, listener, options);
+  }
 }
 
 interface ColumnData {
@@ -1466,3 +1458,38 @@ interface Classes {
 }
 
 const WARN_ROW_COUNT = 10_000;
+
+/**
+ * Defines the mapping between event names and their detail object types.
+ */
+export interface DataTableEventMap {
+  "dt.row.clicked": {
+    row: RowData;
+    index: number;
+    column: string | undefined;
+    originalEvent: MouseEvent;
+  };
+
+  "dt.rows.changed": {
+  };
+
+  "dt.col.sort": {
+    column: string;
+    order: SortOrder;
+  };
+
+  "dt.col.visibility": {
+    column: string;
+    visible: boolean;
+  };
+
+  "dt.col.resize": {
+    column: string;
+    width: number;
+  };
+
+  "dt.col.reorder": {
+    draggedColumn: string;
+    dropColumn: string;
+  };
+}

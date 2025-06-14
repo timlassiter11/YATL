@@ -30,11 +30,6 @@ let dataTable;
 
 window.addEventListener("load", () => {
   const table = document.getElementById("table");
-  table.addEventListener(DataTable.Events.ROW_CLICK, (event) => {
-    const row = event.detail.row;
-    const index = event.detail.index;
-    console.log("Row clicked:", row, index);
-  });
 
   // Pull count from url param
   const url = new URL(location);
@@ -126,6 +121,10 @@ window.addEventListener("load", () => {
     virtualScroll: true,
     rearrangeable: true,
   });
+
+  dataTable.addEventListener('dt.row.clicked', (event) => {
+    console.log("Row clicked:", event.detail.row, event.detail.index);
+  })
 
   window.dataTable = dataTable;
 

@@ -50,27 +50,27 @@ export class DataTable extends EventTarget {
   private static readonly DEFAULT_OPTIONS: Required<
     Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>
   > = {
-      virtualScroll: true,
-      highlightSearch: true,
-      sortable: true,
-      searchable: false,
-      tokenize: false,
-      resizable: true,
-      rearrangeable: true,
-      extraSearchFields: [],
-      noDataText: 'No records found',
-      noMatchText: 'No matching records found',
-      classes: {
-        scroller: 'dt-scroller',
-        thead: 'dt-headers',
-        tbody: '',
-        tfoot: '',
-        tr: '',
-        th: '',
-        td: '',
-      },
-      tokenizer: whitespaceTokenizer, // Default tokenizer function
-    };
+    virtualScroll: true,
+    highlightSearch: true,
+    sortable: true,
+    searchable: false,
+    tokenize: false,
+    resizable: true,
+    rearrangeable: true,
+    extraSearchFields: [],
+    noDataText: 'No records found',
+    noMatchText: 'No matching records found',
+    classes: {
+      scroller: 'dt-scroller',
+      thead: 'dt-headers',
+      tbody: '',
+      tfoot: '',
+      tr: '',
+      th: '',
+      td: '',
+    },
+    tokenizer: whitespaceTokenizer, // Default tokenizer function
+  };
 
   // Table elements
   #table!: HTMLTableElement;
@@ -259,13 +259,15 @@ export class DataTable extends EventTarget {
             value => value._metadata.index === index,
           );
           if (row) {
-            const rowEvent = new CustomEvent<DataTableEventMap["dt.row.clicked"]>("dt.row.clicked", {
+            const rowEvent = new CustomEvent<
+              DataTableEventMap['dt.row.clicked']
+            >('dt.row.clicked', {
               cancelable: false,
               detail: {
                 row: row,
                 index: index,
                 column: field,
-                originalEvent: event
+                originalEvent: event,
               },
             });
             this.dispatchEvent(rowEvent);
@@ -280,7 +282,8 @@ export class DataTable extends EventTarget {
       const colData: ColumnData = {
         field: colOptions.field,
         title: colOptions.title || toHumanReadable(colOptions.field),
-        element: document.createElement('th'),
+        header: document.createElement('th'),
+        headerContent: document.createElement('div'),
         visible: colOptions.visible ?? true,
         sortable: colOptions.sortable ?? finalOptions.sortable,
         searchable: colOptions.searchable ?? finalOptions.searchable,
@@ -297,12 +300,31 @@ export class DataTable extends EventTarget {
       };
       this.#columnData.set(colOptions.field, colData);
 
-      const th = colData.element;
+      const th = colData.header;
       th.classList.add(...this.#classes.th);
       th.dataset.dtField = colOptions.field;
-
-      th.innerHTML = colData.title;
       th.hidden = !colData.visible;
+
+      const headerContent = colData.headerContent;
+      headerContent.classList.add('dt-header-content');
+      th.append(headerContent);
+
+      const titleWrapper = document.createElement('div');
+      titleWrapper.classList.add('dt-header-title-wrapper');
+      headerContent.append(titleWrapper);
+
+      const titleElement = document.createElement('span');
+      titleElement.classList.add('dt-header-title');
+      titleElement.innerHTML = colData.title;
+      titleWrapper.append(titleElement);
+
+      const sorter = document.createElement('div');
+      sorter.classList.add('dt-sort-icon');
+      titleWrapper.append(sorter);
+
+      const resizer = document.createElement('div');
+      resizer.classList.add('dt-resizer');
+      headerContent.append(resizer);
 
       headerRow.append(th);
 
@@ -312,42 +334,43 @@ export class DataTable extends EventTarget {
       }
 
       if (colData.sortable) {
-        th.classList.add("dt-sortable");
-        th.addEventListener('click', event => {
-          if (event.target != th) return;
+        th.classList.add('dt-sortable');
+      }
 
-          if (!colData.sortOrder) {
-            this.sort(colData.field, 'asc');
-          } else if (colData.sortOrder === 'asc') {
-            this.sort(colData.field, 'desc');
-          } else if (colData.sortOrder) {
-            this.sort(colData.field, null);
-          }
-        });
+      if (finalOptions.rearrangeable) {
+        th.draggable = true;
       }
 
       if (colOptions.resizable ?? finalOptions.resizable) {
-        const resizer = document.createElement('div');
-        resizer.classList.add('dt-resizer');
-        resizer.addEventListener('mousedown', this.#resizeColumnStart);
-        resizer.addEventListener('dblclick', this.#resizeColumnDoubleClick);
-        th.append(resizer);
+        th.classList.add('dt-resizable');
       }
+
+      // Sort event listener
+      titleWrapper.addEventListener('click', () => {
+        if (!colData.sortOrder) {
+          this.sort(colData.field, 'asc');
+        } else if (colData.sortOrder === 'asc') {
+          this.sort(colData.field, 'desc');
+        } else if (colData.sortOrder) {
+          this.sort(colData.field, null);
+        }
+      });
+
+      // Drag and drop event listeners
+      th.addEventListener('dragstart', this.#dragColumnStart);
+      th.addEventListener('dragenter', this.#dragColumnEnter);
+      th.addEventListener('dragover', this.#dragColumnOver);
+      th.addEventListener('dragleave', this.#dragColumnLeave);
+      th.addEventListener('drop', this.#dragColumnDrop);
+      th.addEventListener('dragend', this.#dragColumnEnd);
+      // Resize event listeners
+      th.addEventListener('mousedown', this.#resizeColumnStart);
+      th.addEventListener('dblclick', this.#resizeColumnDoubleClick);
 
       if (typeof colOptions.width === 'number') {
         th.style.width = colOptions.width + 'px';
       } else if (typeof colOptions.width === 'string') {
         th.style.width = colOptions.width;
-      }
-
-      if (finalOptions.rearrangeable) {
-        th.draggable = true;
-        th.addEventListener('dragstart', this.#dragColumnStart);
-        th.addEventListener('dragenter', this.#dragColumnEnter);
-        th.addEventListener('dragover', this.#dragColumnOver);
-        th.addEventListener('dragleave', this.#dragColumnLeave);
-        th.addEventListener('drop', this.#dragColumnDrop);
-        th.addEventListener('dragend', this.#dragColumnEnd);
       }
     }
 
@@ -378,7 +401,7 @@ export class DataTable extends EventTarget {
         visible: col.visible,
         sortOrder: col.sortOrder,
         sortPriority: col.sortPriority,
-        width: col.element.style.width,
+        width: col.header.style.width,
       } as ColumnState;
     });
   }
@@ -396,7 +419,7 @@ export class DataTable extends EventTarget {
       column.visible = state.visible ?? column.visible;
       column.sortOrder = state.sortOrder ?? column.sortOrder;
       column.sortPriority = state.sortPriority ?? column.sortPriority;
-      column.element.style.width = state.width ?? column.element.style.width;
+      column.header.style.width = state.width ?? column.header.style.width;
     }
     this.refresh();
   }
@@ -573,13 +596,16 @@ export class DataTable extends EventTarget {
       col.sortOrder = order;
     }
 
-    const sortEvent = new CustomEvent<DataTableEventMap["dt.col.sort"]>("dt.col.sort", {
-      cancelable: true,
-      detail: {
-        column: col.field,
-        order: col.sortOrder,
-      }
-    });
+    const sortEvent = new CustomEvent<DataTableEventMap['dt.col.sort']>(
+      'dt.col.sort',
+      {
+        cancelable: true,
+        detail: {
+          column: col.field,
+          order: col.sortOrder,
+        },
+      },
+    );
 
     if (!this.dispatchEvent(sortEvent)) {
       return;
@@ -605,18 +631,21 @@ export class DataTable extends EventTarget {
     const col = this.#columnData.get(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${visisble ? 'show' : 'hide'
+        `Attempting to ${
+          visisble ? 'show' : 'hide'
         } non-existent column ${colName}`,
       );
       return;
     }
 
-    const visibilityEvent = new CustomEvent<DataTableEventMap['dt.col.visibility']>('dt.col.visibility', {
+    const visibilityEvent = new CustomEvent<
+      DataTableEventMap['dt.col.visibility']
+    >('dt.col.visibility', {
       cancelable: true,
       detail: {
         column: col.field,
         visible: visisble,
-      }
+      },
     });
 
     if (!this.dispatchEvent(visibilityEvent)) {
@@ -628,8 +657,6 @@ export class DataTable extends EventTarget {
     // If we hide a column that has sorting, we need to resort.
     // This will also handle hiding all of the columns elements.
     this.#sortRows();
-
-
   }
 
   /**
@@ -667,7 +694,7 @@ export class DataTable extends EventTarget {
         return false;
       }
 
-      return all ? true : col.element.hidden === false;
+      return all ? true : col.header.hidden === false;
     });
 
     const csvRows = rows
@@ -681,7 +708,7 @@ export class DataTable extends EventTarget {
 
           let value = row[key];
           if (key in this.#columnData) {
-            if (all || !col.element.hidden) {
+            if (all || !col.header.hidden) {
               if (typeof col.valueFormatter === 'function') {
                 value = col.valueFormatter(value, row);
               }
@@ -1023,12 +1050,15 @@ export class DataTable extends EventTarget {
 
     this.#sortRows();
 
-    const changeEvent = new CustomEvent<DataTableEventMap["dt.rows.changed"]>("dt.rows.changed", {
-      cancelable: false,
-      detail: {
-        dataTable: this,
-      }
-    });
+    const changeEvent = new CustomEvent<DataTableEventMap['dt.rows.changed']>(
+      'dt.rows.changed',
+      {
+        cancelable: false,
+        detail: {
+          dataTable: this,
+        },
+      },
+    );
 
     this.dispatchEvent(changeEvent);
   }
@@ -1062,7 +1092,7 @@ export class DataTable extends EventTarget {
 
     const sortedColumns = [...this.#columnData.values()]
       // Only sort by visible columns with valid sort priorities
-      .filter(col => !col.element.hidden && col.sortOrder)
+      .filter(col => !col.header.hidden && col.sortOrder)
       // Sort our columns by their sort priority.
       // This is how sorting by multiple columns is handled.
       .sort((a, b) => a.sortPriority - b.sortPriority);
@@ -1092,18 +1122,18 @@ export class DataTable extends EventTarget {
 
     for (const col of this.#columnData.values()) {
       // Update the order of headers
-      col.element.parentElement?.append(col.element);
-      col.element.hidden = !col.visible;
+      col.header.parentElement?.append(col.header);
+      col.header.hidden = !col.visible;
 
       if (col.sortOrder === 'asc') {
-        col.element?.classList.add('dt-ascending');
-        col.element?.classList.remove('dt-descending');
+        col.header?.classList.add('dt-ascending');
+        col.header?.classList.remove('dt-descending');
       } else if (col.sortOrder === 'desc') {
-        col.element?.classList.add('dt-descending');
-        col.element?.classList.remove('dt-ascending');
+        col.header?.classList.add('dt-descending');
+        col.header?.classList.remove('dt-ascending');
       } else {
-        col.element?.classList.remove('dt-ascending');
-        col.element?.classList.remove('dt-descending');
+        col.header?.classList.remove('dt-ascending');
+        col.header?.classList.remove('dt-descending');
       }
     }
   }
@@ -1194,7 +1224,7 @@ export class DataTable extends EventTarget {
       const td = document.createElement('td');
       td.classList.add(...this.#classes.td);
       td.dataset.dtField = field;
-      const colWidth = col.element.style.width;
+      const colWidth = col.header.style.width;
       // If the column has been resized, force the cells to that width.
       if (colWidth && colWidth !== '0px') {
         // We have to set the cells max width to allow text-overflow: ellipsis to work.
@@ -1239,6 +1269,12 @@ export class DataTable extends EventTarget {
       column = columnData;
     }
 
+    if (width != null) {
+      const delta = width - column.header.offsetWidth;
+      const tableWidth = this.#table.offsetWidth + delta;
+      this.#table.style.width = `${tableWidth}px`;
+    }
+
     let headerWidth, cellWidth;
     if (width == null) {
       headerWidth = '';
@@ -1251,8 +1287,8 @@ export class DataTable extends EventTarget {
       cellWidth = `${width}px`;
     }
 
-    column.element.style.width = headerWidth;
-    column.element.style.maxWidth = headerWidth;
+    column.header.style.width = headerWidth;
+    column.header.style.maxWidth = headerWidth;
 
     const cells = this.#tbody.querySelectorAll<HTMLTableCellElement>(
       `td[data-dt-field="${column.field}"]`,
@@ -1266,24 +1302,23 @@ export class DataTable extends EventTarget {
   }
 
   #resizeColumnStart = (event: MouseEvent) => {
+    // If target is not the resizer, we don't care.
+    if (!(event.target instanceof HTMLElement)) return;
+    if (!event.target.classList.contains('dt-resizer')) return;
+    // If the current target isn't the header, we don't care.
+    if (!(event.currentTarget instanceof HTMLElement)) return;
+    if (!event.currentTarget.dataset.dtField) return;
+
+    event.stopImmediatePropagation();
     event.preventDefault();
-    event.stopPropagation();
 
-    const target: HTMLElement = event.target as HTMLElement;
-    const header = target.closest('th');
-    if (!header) return;
-
-    const field = header.dataset.dtField;
-    if (!field) return;
-
+    const field = event.currentTarget.dataset.dtField;
     const col = this.#columnData.get(field);
     if (!col) return;
-
     this.#resizingColumn = col;
-    this.#thead.classList.add('dt-resizing');
 
     col.resizeStartX = event.clientX;
-    col.resizeStartWidth = header.offsetWidth;
+    col.resizeStartWidth = col.header.offsetWidth;
 
     document.addEventListener('mousemove', this.#resizeColumnMove);
     document.addEventListener('mouseup', this.#resizeColumnEnd);
@@ -1291,8 +1326,9 @@ export class DataTable extends EventTarget {
 
   #resizeColumnMove = (event: MouseEvent) => {
     if (!this.#resizingColumn) return;
-
+    event.stopImmediatePropagation();
     event.preventDefault();
+
     const dx = event.clientX - this.#resizingColumn.resizeStartX!;
     const newWidth = this.#resizingColumn.resizeStartWidth! + dx;
     this.#resizeColumn(this.#resizingColumn, newWidth);
@@ -1300,32 +1336,39 @@ export class DataTable extends EventTarget {
 
   #resizeColumnEnd = (event: MouseEvent) => {
     if (!this.#resizingColumn) return;
+    event.stopImmediatePropagation();
     event.preventDefault();
 
     document.removeEventListener('mousemove', this.#resizeColumnMove);
     document.removeEventListener('mouseup', this.#resizeColumnEnd);
 
-    const resizeEvent = new CustomEvent<DataTableEventMap["dt.col.resize"]>("dt.col.resize", {
-      cancelable: false,
-      detail: {
-        column: this.#resizingColumn.field,
-        width: this.#resizingColumn.element.offsetWidth,
-      }
-    });
+    const resizeEvent = new CustomEvent<DataTableEventMap['dt.col.resize']>(
+      'dt.col.resize',
+      {
+        cancelable: false,
+        detail: {
+          column: this.#resizingColumn.field,
+          width: this.#resizingColumn.header.offsetWidth,
+        },
+      },
+    );
 
     this.dispatchEvent(resizeEvent);
 
-    this.#thead.classList.remove('dt-resizing');
     this.#resizingColumn = undefined;
   };
 
   #resizeColumnDoubleClick = (event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    const header = target.closest('th');
-    if (!header) return;
-    const field = header.dataset.dtField;
+    // If target is not the resizer, we don't care.
+    if (!(event.target instanceof HTMLElement)) return;
+    if (!event.target.classList.contains('dt-resizer')) return;
+    // If the current target isn't the header, we don't care.
+    if (!(event.currentTarget instanceof HTMLElement)) return;
+    if (!event.currentTarget.dataset.dtField) return;
+
+    const field = event.currentTarget.dataset.dtField;
     if (!field) return;
-    this.#resizeColumn(field);
+    this.#resizeColumn(field, 0);
   };
 
   #dragColumnStart = (event: DragEvent) => {
@@ -1375,13 +1418,16 @@ export class DataTable extends EventTarget {
       const droppedColumn = this.#columnData.get(dropField);
       if (!droppedColumn) return;
 
-      const reorderEvent = new CustomEvent<DataTableEventMap["dt.col.reorder"]>("dt.col.reorder", {
-        cancelable: true,
-        detail: {
-          draggedColumn: draggedColumn.field,
-          dropColumn: droppedColumn.field,
-        }
-      })
+      const reorderEvent = new CustomEvent<DataTableEventMap['dt.col.reorder']>(
+        'dt.col.reorder',
+        {
+          cancelable: true,
+          detail: {
+            draggedColumn: draggedColumn.field,
+            dropColumn: droppedColumn.field,
+          },
+        },
+      );
       if (!this.dispatchEvent(reorderEvent)) {
         return;
       }
@@ -1401,14 +1447,14 @@ export class DataTable extends EventTarget {
   addEventListener<K extends keyof DataTableEventMap>(
     type: K,
     listener: (this: DataTable, ev: CustomEvent<DataTableEventMap[K]>) => any,
-    options?: boolean | AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions,
   ): void;
 
   // This is the generic fallback for any other string event type (e.g., standard DOM events).
   addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions,
   ): void;
 
   // The single implementation for both overloads.
@@ -1423,7 +1469,8 @@ interface ColumnData {
   sortable: boolean;
   searchable: boolean;
   tokenize: boolean;
-  element: HTMLElement;
+  header: HTMLElement;
+  headerContent: HTMLElement;
   visible: boolean;
   sortOrder: SortOrder;
   sortPriority: number;
@@ -1463,32 +1510,31 @@ const WARN_ROW_COUNT = 10_000;
  * Defines the mapping between event names and their detail object types.
  */
 export interface DataTableEventMap {
-  "dt.row.clicked": {
+  'dt.row.clicked': {
     row: RowData;
     index: number;
     column: string | undefined;
     originalEvent: MouseEvent;
   };
 
-  "dt.rows.changed": {
-  };
+  'dt.rows.changed': object;
 
-  "dt.col.sort": {
+  'dt.col.sort': {
     column: string;
     order: SortOrder;
   };
 
-  "dt.col.visibility": {
+  'dt.col.visibility': {
     column: string;
     visible: boolean;
   };
 
-  "dt.col.resize": {
+  'dt.col.resize': {
     column: string;
     width: number;
   };
 
-  "dt.col.reorder": {
+  'dt.col.reorder': {
     draggedColumn: string;
     dropColumn: string;
   };

@@ -31,27 +31,21 @@ export class LocalStorageAdapter {
     // Restore state before adding the listeners.
     this.restoreState();
 
-    const table = dataTable.table;
-
     if (this.#options.saveColumnSorting) {
-      dataTable.addEventListener("dt.col.sort", () => this.saveState());
+      dataTable.addEventListener('dt.col.sort', () => this.saveState());
     }
 
     if (this.#options.saveColumnVisibility) {
-      dataTable.addEventListener("dt.col.visibility", () => this.saveState());
-      dataTable.addEventListener("dt.col.visibility", () => this.saveState());
+      dataTable.addEventListener('dt.col.visibility', () => this.saveState());
+      dataTable.addEventListener('dt.col.visibility', () => this.saveState());
     }
 
     if (this.#options.saveColumnWidth) {
-      dataTable.addEventListener("dt.col.resize", () =>
-        this.saveState(),
-      );
+      dataTable.addEventListener('dt.col.resize', () => this.saveState());
     }
 
     if (this.#options.saveColumnOrder) {
-      dataTable.addEventListener("dt.col.reorder", () =>
-        this.saveState(),
-      );
+      dataTable.addEventListener('dt.col.reorder', () => this.saveState());
     }
   }
 

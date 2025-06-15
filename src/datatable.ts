@@ -1269,12 +1269,6 @@ export class DataTable extends EventTarget {
       column = columnData;
     }
 
-    if (width != null) {
-      const delta = width - column.header.offsetWidth;
-      const tableWidth = this.#table.offsetWidth + delta;
-      this.#table.style.width = `${tableWidth}px`;
-    }
-
     let headerWidth, cellWidth;
     if (width == null) {
       headerWidth = '';
@@ -1286,7 +1280,8 @@ export class DataTable extends EventTarget {
       headerWidth = `${width}px`;
       cellWidth = `${width}px`;
     }
-
+''
+    const prevWidth = column.header.offsetWidth;
     column.header.style.width = headerWidth;
     column.header.style.maxWidth = headerWidth;
 
@@ -1299,6 +1294,11 @@ export class DataTable extends EventTarget {
       // and clear the max width on all of the cells.
       cell.style.maxWidth = cellWidth;
     }
+
+    // Resize the table based on how much the column changed
+    const delta = column.header.offsetWidth - prevWidth;
+    const tableWidth = this.#table.offsetWidth + delta;
+    this.#table.style.width = `${tableWidth}px`;
   }
 
   #resizeColumnStart = (event: MouseEvent) => {
@@ -1368,7 +1368,7 @@ export class DataTable extends EventTarget {
 
     const field = event.currentTarget.dataset.dtField;
     if (!field) return;
-    this.#resizeColumn(field, 0);
+    this.#resizeColumn(field);
   };
 
   #dragColumnStart = (event: DragEvent) => {

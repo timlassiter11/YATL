@@ -1,5 +1,5 @@
 .data-table {
-  --dt-header-sorter-width: 2ch;
+  --dt-header-sorter-width: 1ch;
   --dt-header-resizer-width: 10px;
   --dt-header-drop-color: rgba(255, 255, 255, 0.1);
 
@@ -17,6 +17,8 @@
 
 .dt-headers th {
   overflow: hidden;
+  box-sizing: border-box;
+
 }
 
 .dt-headers .dt-header-content {

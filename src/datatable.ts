@@ -354,6 +354,8 @@ export class DataTable extends EventTarget {
 
       // Sort event listener
       titleWrapper.addEventListener('click', () => {
+        if (!th.classList.contains('dt-sortable')) return;
+
         if (!colData.sortOrder) {
           this.sort(colData.field, 'asc');
         } else if (colData.sortOrder === 'asc') {

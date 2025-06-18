@@ -175,6 +175,10 @@ export class DataTable extends EventTarget {
         ...classesToArray(finalOptions.classes.td),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.td),
       ],
+      mark: [
+        ...classesToArray(finalOptions.classes.mark),
+        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.mark),
+      ]
     };
 
     this.#rowFormatter = finalOptions.rowFormatter;
@@ -1179,7 +1183,7 @@ export class DataTable extends EventTarget {
       let text = element.innerText;
       for (const token of this.#queryTokens) {
         const regex = new RegExp(token, 'i');
-        text = text.replace(regex, match => `<mark>${match}</mark>`);
+        text = text.replace(regex, match => `<mark class="${this.#classes.mark.join(" ")}">${match}</mark>`);
       }
       element.innerHTML = text;
     } else {

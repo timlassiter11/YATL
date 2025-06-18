@@ -35,7 +35,7 @@
   flex-direction: row;
   align-items: center;
   flex-wrap: nowrap;
-  padding: 0 10px;
+  overflow: hidden;;
 }
 
 .dt-sort-icon {

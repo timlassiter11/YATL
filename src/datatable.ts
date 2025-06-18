@@ -647,6 +647,10 @@ export class DataTable extends EventTarget {
       return;
     }
 
+    if (col.visible === visisble) {
+      return;
+    }
+
     const visibilityEvent = new CustomEvent<
       DataTableEventMap['dt.col.visibility']
     >('dt.col.visibility', {
@@ -1511,6 +1515,7 @@ interface Classes {
   tr: string[];
   th: string[];
   td: string[];
+  mark: string[];
 }
 
 const WARN_ROW_COUNT = 10_000;

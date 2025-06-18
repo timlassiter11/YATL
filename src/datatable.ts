@@ -247,6 +247,9 @@ export class DataTable extends EventTarget {
     this.#tbody.classList.add(...this.#classes.tbody);
 
     this.#tbody.addEventListener('click', event => {
+      // Ignore events if the user is highlighting text
+      if (window.getSelection()?.toString()) return;
+
       let tr, td, field;
       if (event.target instanceof HTMLTableCellElement) {
         td = event.target;

@@ -240,6 +240,11 @@ export interface TableClasses {
    * Classes for each cell element.
    */
   td?: string | string[];
+
+  /**
+   * Classes for the mark elements used to highligh search results.
+   */
+  mark?: string | string[];
 }
 
 /**

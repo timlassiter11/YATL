@@ -32,19 +32,19 @@ export class LocalStorageAdapter {
     this.restoreState();
 
     if (this.#options.saveColumnSorting) {
-      dataTable.addEventListener('dt.col.sort', () => this.saveState());
+      dataTable.addEventListener('dt.col.sort', this.#saveStateAfterEvent);
     }
 
     if (this.#options.saveColumnVisibility) {
-      dataTable.addEventListener('dt.col.visibility', () => this.saveState());
+      dataTable.addEventListener('dt.col.visibility', this.#saveStateAfterEvent);
     }
 
     if (this.#options.saveColumnWidth) {
-      dataTable.addEventListener('dt.col.resize', () => this.saveState());
+      dataTable.addEventListener('dt.col.resize', this.#saveStateAfterEvent);
     }
 
     if (this.#options.saveColumnOrder) {
-      dataTable.addEventListener('dt.col.reorder', () => this.saveState());
+      dataTable.addEventListener('dt.col.reorder', this.#saveStateAfterEvent);
     }
   }
 
@@ -101,4 +101,6 @@ export class LocalStorageAdapter {
   clearState() {
     localStorage.removeItem(this.#storageKey);
   }
+
+  #saveStateAfterEvent = () => setTimeout(() => this.saveState(), 0);
 }

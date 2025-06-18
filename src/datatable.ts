@@ -1431,6 +1431,8 @@ export class DataTable extends EventTarget {
       const droppedColumn = this.#columnData.get(dropField);
       if (!droppedColumn) return;
 
+      columns.splice(dropIndex, 0, draggedColumn);
+      const newColumnOrder = columns.map(col => col.field);
       const reorderEvent = new CustomEvent<DataTableEventMap['dt.col.reorder']>(
         'dt.col.reorder',
         {
@@ -1438,6 +1440,7 @@ export class DataTable extends EventTarget {
           detail: {
             draggedColumn: draggedColumn.field,
             dropColumn: droppedColumn.field,
+            order: newColumnOrder,
           },
         },
       );
@@ -1445,8 +1448,7 @@ export class DataTable extends EventTarget {
         return;
       }
 
-      columns.splice(dropIndex, 0, draggedColumn);
-      this.setColumnOrder(columns.map(col => col.field));
+      this.setColumnOrder(newColumnOrder);
     }
   };
 
@@ -1551,5 +1553,6 @@ export interface DataTableEventMap {
   'dt.col.reorder': {
     draggedColumn: string;
     dropColumn: string;
+    order: string[];
   };
 }

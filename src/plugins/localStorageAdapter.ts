@@ -37,7 +37,6 @@ export class LocalStorageAdapter {
 
     if (this.#options.saveColumnVisibility) {
       dataTable.addEventListener('dt.col.visibility', () => this.saveState());
-      dataTable.addEventListener('dt.col.visibility', () => this.saveState());
     }
 
     if (this.#options.saveColumnWidth) {
@@ -53,7 +52,7 @@ export class LocalStorageAdapter {
    * Saves the current column state to localStorage.
    */
   saveState() {
-    const states = this.#dataTable.columnStates;
+    const states: Partial<ColumnState>[] = this.#dataTable.columnStates;
     for (const state of states) {
       if (!this.#options.saveColumnSorting) {
         state.sortOrder = undefined;

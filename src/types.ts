@@ -183,23 +183,23 @@ export interface ColumnState {
   /**
    * The current visibility of the column.
    */
-  visible?: boolean;
+  visible: boolean;
 
   /**
    * The current sort order of the column.
    */
-  sortOrder?: SortOrder;
+  sortOrder: SortOrder;
 
   /**
    * The current sort priority of the column.
    * Lower numbers are sorted first.
    */
-  sortPriority?: number;
+  sortPriority: number;
 
   /**
    * The currently set width of the column.
    */
-  width?: string;
+  width: string;
 }
 
 /**

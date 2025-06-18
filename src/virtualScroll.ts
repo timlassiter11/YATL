@@ -140,9 +140,17 @@ export class VirtualScroll {
 
     let startNode = Math.floor(scrollTop / rowHeight) - padding;
     startNode = Math.max(0, startNode);
-
+  
     let visibleNodesCount = Math.ceil(viewHeight / rowHeight) + 2 * padding;
     visibleNodesCount = Math.min(rowCount - startNode, visibleNodesCount);
+
+    // Always start with an even row.
+    // This helps striped tables.
+    if (startNode % 2 === 1) {
+      startNode--;
+    }
+
+    
 
     const offsetY = startNode * rowHeight;
     const remainingHeight =
@@ -157,7 +165,9 @@ export class VirtualScroll {
       // Resize the rows accordingly to move the rendered rows to where we want.
       const topRow = document.createElement('div');
       const bottomRow = document.createElement('div');
+      topRow.style.visibility = 'hidden';
       topRow.style.height = offsetY + 'px';
+      bottomRow.style.visibility = 'hidden';
       bottomRow.style.height = remainingHeight + 'px';
       this.#element.append(topRow);
       this.#element.append(...visibleChildren);

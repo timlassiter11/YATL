@@ -56,11 +56,11 @@
 }
 
 .dt-sortable.dt-descending .dt-sort-icon::after {
-  content: '\2191';
+  content: '\2193';
 }
 
 .dt-sortable.dt-ascending .dt-sort-icon::after {
-  content: '\2193';
+  content: '\2191';
 }
 
 .dt-resizer {

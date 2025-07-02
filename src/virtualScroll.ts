@@ -91,6 +91,7 @@ export class VirtualScroll {
       window.addEventListener('resize', this.#renderCallback);
       this.#started = true;
     }
+    this.#container.classList.add("dt-virtual-scroll");
     this.#rowCount = rowCount;
     this.renderChunk();
   }
@@ -100,6 +101,7 @@ export class VirtualScroll {
       cancelAnimationFrame(this.#animationFrame);
     }
 
+    this.#container.classList.remove("dt-virtual-scroll");
     this.#container.removeEventListener('scroll', this.#scrollCallback);
     window.removeEventListener('resize', this.#renderCallback);
     this.#started = false;

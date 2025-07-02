@@ -50,27 +50,27 @@ export class DataTable extends EventTarget {
   private static readonly DEFAULT_OPTIONS: Required<
     Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>
   > = {
-    virtualScroll: true,
-    highlightSearch: true,
-    sortable: true,
-    searchable: false,
-    tokenize: false,
-    resizable: true,
-    rearrangeable: true,
-    extraSearchFields: [],
-    noDataText: 'No records found',
-    noMatchText: 'No matching records found',
-    classes: {
-      scroller: 'dt-scroller',
-      thead: 'dt-headers',
-      tbody: '',
-      tfoot: '',
-      tr: '',
-      th: '',
-      td: '',
-    },
-    tokenizer: whitespaceTokenizer, // Default tokenizer function
-  };
+      virtualScroll: true,
+      highlightSearch: true,
+      sortable: true,
+      searchable: false,
+      tokenize: false,
+      resizable: true,
+      rearrangeable: true,
+      extraSearchFields: [],
+      noDataText: 'No records found',
+      noMatchText: 'No matching records found',
+      classes: {
+        scroller: 'dt-scroller',
+        thead: 'dt-headers',
+        tbody: '',
+        tfoot: '',
+        tr: '',
+        th: '',
+        td: '',
+      },
+      tokenizer: whitespaceTokenizer, // Default tokenizer function
+    };
 
   // Table elements
   #table!: HTMLTableElement;
@@ -570,7 +570,9 @@ export class DataTable extends EventTarget {
    * @param filters - An object defining field-based filters or a custom filter callback function.
    * @throws {TypeError} If `filters` is not an object or a function.
    */
-  filter(filters: Filters | FilterCallback) {
+  filter(filters?: Filters | FilterCallback) {
+    filters ??= {};
+
     if (typeof filters !== 'object' && typeof filters !== 'function') {
       throw new TypeError('filters must be object or function');
     }
@@ -640,8 +642,7 @@ export class DataTable extends EventTarget {
     const col = this.#columnData.get(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${
-          visisble ? 'show' : 'hide'
+        `Attempting to ${visisble ? 'show' : 'hide'
         } non-existent column ${colName}`,
       );
       return;
@@ -993,11 +994,21 @@ export class DataTable extends EventTarget {
 
     for (const field of Object.keys(this.#filters || {})) {
       const filter = this.#filters[field];
-      const col = this.#columnData.get(field);
-      const filterCallback = col ? col.filterCallback : undefined;
+      if (filter == null) {
+        continue;
+      }
+
       const value = this.#getNestedValue(row, field);
-      if (!this.#filterField(value, filter, filterCallback)) {
-        return false;
+      if (typeof filter === 'function') {
+        if (!filter(value)) {
+          return false;
+        }
+      } else {
+        const col = this.#columnData.get(field);
+        const filterCallback = col ? col.filterCallback : undefined;
+        if (!this.#filterField(value, filter, filterCallback)) {
+          return false;
+        }
       }
     }
     return true;
@@ -1293,7 +1304,7 @@ export class DataTable extends EventTarget {
       headerWidth = `${width}px`;
       cellWidth = `${width}px`;
     }
-''
+    ''
     const prevWidth = column.header.offsetWidth;
     column.header.style.width = headerWidth;
     column.header.style.maxWidth = headerWidth;

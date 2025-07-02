@@ -105,3 +105,9 @@
   height: 100%;
   overflow: auto;
 }
+
+/* This is a catch all to ensure*/
+*:has( .data-table:has( .dt-virtual-scroll)) {
+  height: 100%;
+  min-height: 0;
+}

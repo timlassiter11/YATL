@@ -1,14 +1,16 @@
 {
-  "name": "yatl",
-  "version": "0.1.4",
+  "name": "@timlassiter11/yatl",
+  "version": "0.1.6",
   "description": "Yet another table library with all of the standard bells and whistles.",
+  "main": "dist/datatable.js",
   "module": "dist/datatable.mjs",
   "browser": "dist/datatable.global.js",
   "types": "dist/datatable.d.ts",
   "exports": {
     ".": {
       "types": "./dist/datatable.d.ts",
-      "import": "./dist/datatable.mjs"
+      "import": "./dist/datatable.mjs",
+      "require": "./dist/datatable.js"
     },
     "./datatable.css": "./dist/datatable.css"
   },

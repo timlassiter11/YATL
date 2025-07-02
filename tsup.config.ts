@@ -1,5 +1,4 @@
 import { defineConfig } from 'tsup';
-import pkg from './package.json';
 
 export default defineConfig({
   entry: {
@@ -11,5 +10,5 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   minify: true,
-  globalName: pkg.name,
+  globalName: 'yatl',
 });

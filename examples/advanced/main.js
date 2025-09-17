@@ -190,17 +190,37 @@ window.addEventListener("load", () => {
     ? "Regex Search"
     : "Search");
 
-  // Search table on input
+  const scoringToggle = document.getElementById("scoringToggle");
+  
+  if (dataTable.scoring) {
+    scoringToggle.classList.add("active");
+  } else {
+    scoringToggle.classList.remove("active");
+  }
+
+  scoringToggle.onclick = () => {
+    dataTable.scoring = scoringToggle.classList.contains("active");
+  }
+
+  // Search table on input but add debouncing
+  let debounceTimer;
   searchInput.addEventListener("input", (event) => {
-    try {
-      const query = searchInput.value === "" ? null : searchInput.value;
-      if (regexToggle.classList.contains("active") && query) {
-        dataTable.search(new RegExp(query, "i"));
-      } else {
-        dataTable.search(query);
-      }
-      updateRowCount();
-    } catch { }
+    clearTimeout(debounceTimer);
+
+    // Set a new timeout
+    debounceTimer = setTimeout(() => {
+      try {
+        const query = searchInput.value === "" ? null : searchInput.value;
+        if (regexToggle.classList.contains("active") && query) {
+          dataTable.search(new RegExp(query, "i"));
+        } else {
+          dataTable.search(query);
+        }
+        updateRowCount();
+      } catch { }
+    }, 300);
+
+
   });
 
   const startDateInput = document.getElementById("startDateInput");
@@ -237,7 +257,7 @@ window.addEventListener("load", () => {
 function generateMockData(count) {
   // --- Data sources for randomization ---
   const itemNouns = ['System', 'Module', 'Component', 'API', 'Database', 'Report', 'Dashboard', 'Feature'];
-  const itemModifiers = ['Alpha', 'Bravo', 'Phoenix', 'Orion', 'Pegasus', 'Andromeda', 'Cygnus', 'Vega'];
+  const itemModifiers = ['Alpha', 'Bravo', 'Phoenix', 'Orion', 'Pegasus', 'Andromeda', 'Cygnus', 'Vega', 'OIC-CPC001'];
   const statuses = ['Completed', 'In Progress', 'Pending', 'Failed', 'On Hold', 'Needs Review'];
   const possibleTags = ['urgent', 'bugfix', 'feature', 'ui', 'backend', 'database', 'critical', 'needs-review', 'mobile', 'web', 'refactor'];
 

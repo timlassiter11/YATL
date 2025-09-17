@@ -290,6 +290,12 @@ export interface TableOptions {
   tokenize?: boolean;
 
   /**
+   * Whether search results should be scored or not.
+   * Scoring is very computationally expensive...
+   */
+  scoring?: boolean;
+
+  /**
    * Whether columns should be resizable by default.
    * Can be overridden on individual columns.
    */

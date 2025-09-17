@@ -15,10 +15,12 @@ import {
   SortOrder,
   SortValueCallback,
   TableOptions,
-  TokenizerCallback,
   ValueFormatterCallback,
   LoadOptions,
 } from './types';
+
+type RequiredOptions = Required<Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>> & Pick<TableOptions, 'rowFormatter' | 'data'>;
+type FinalOptions = RequiredOptions & Pick<TableOptions, 'columns'>;
 
 /**
  * Represents a dynamic and interactive table with features like sorting, searching, filtering,
@@ -47,14 +49,13 @@ import {
 export class DataTable extends EventTarget {
   // Centralized default options for the DataTable.
   // These are the base values used if not overridden by user-provided options.
-  private static readonly DEFAULT_OPTIONS: Required<
-    Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>
-  > = {
+  private static readonly DEFAULT_OPTIONS: RequiredOptions = {
       virtualScroll: true,
       highlightSearch: true,
       sortable: true,
       searchable: false,
       tokenize: false,
+      scoring: true,
       resizable: true,
       rearrangeable: true,
       extraSearchFields: [],
@@ -85,22 +86,18 @@ export class DataTable extends EventTarget {
   #filteredRows: InternalRowData[] = [];
 
   // Search and filter data
-  #query?: RegExp | string;
-  #queryTokens: RegExp[] | string[] = [];
+  #query?: RegExp;
   #filters!: Filters | FilterCallback;
-  // Search fields that are not columns.
-  #extraSearchFields: string[];
-
-  #rowFormatter?: RowFormatterCallback;
+  
   #virtualScroll?: VirtualScroll;
-  #highlightSearch: boolean;
-  #tokenizer: TokenizerCallback;
+  
   // The current sort priority. Incremented when a column is sorted.
   #sortPriority: number = 0;
-  #noDataText: string;
-  #noMatchText: string;
+
   #classes: Classes;
   #resizingColumn?: ColumnData;
+
+  #options: FinalOptions;
 
   #blockUpdates = false;
 
@@ -114,7 +111,7 @@ export class DataTable extends EventTarget {
   constructor(table: string | HTMLTableElement, options: TableOptions = {}) {
     super();
 
-    const finalOptions = {
+    this.#options = {
       columns: [],
       data: [],
       ...DataTable.DEFAULT_OPTIONS,
@@ -136,52 +133,45 @@ export class DataTable extends EventTarget {
       );
     }
 
-    if (!Array.isArray(finalOptions.columns)) {
+    if (!Array.isArray(this.#options.columns)) {
       throw new TypeError('columns must be a list of columns');
     }
 
-    this.#tokenizer = finalOptions.tokenizer;
-
-    this.#highlightSearch = finalOptions.highlightSearch;
-    this.#extraSearchFields = finalOptions.extraSearchFields;
-    this.#noDataText = finalOptions.noDataText;
-    this.#noMatchText = finalOptions.noMatchText;
+    
     this.#classes = {
       scroller: [
-        ...classesToArray(finalOptions.classes.scroller),
+        ...classesToArray(this.#options.classes.scroller),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.scroller),
       ],
       thead: [
-        ...classesToArray(finalOptions.classes.thead),
+        ...classesToArray(this.#options.classes.thead),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.thead),
       ],
       tbody: [
-        ...classesToArray(finalOptions.classes.tbody),
+        ...classesToArray(this.#options.classes.tbody),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tbody),
       ],
       tfoot: [
-        ...classesToArray(finalOptions.classes.tfoot),
+        ...classesToArray(this.#options.classes.tfoot),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tfoot),
       ],
       tr: [
-        ...classesToArray(finalOptions.classes.tr),
+        ...classesToArray(this.#options.classes.tr),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tr),
       ],
       th: [
-        ...classesToArray(finalOptions.classes.th),
+        ...classesToArray(this.#options.classes.th),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.th),
       ],
       td: [
-        ...classesToArray(finalOptions.classes.td),
+        ...classesToArray(this.#options.classes.td),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.td),
       ],
       mark: [
-        ...classesToArray(finalOptions.classes.mark),
+        ...classesToArray(this.#options.classes.mark),
         ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.mark),
       ]
     };
-
-    this.#rowFormatter = finalOptions.rowFormatter;
 
     this.#table.classList.add('data-table');
 
@@ -285,16 +275,16 @@ export class DataTable extends EventTarget {
 
     let colVisible = false;
     // Initialize columns
-    for (const colOptions of finalOptions.columns) {
+    for (const colOptions of this.#options.columns) {
       const colData: ColumnData = {
         field: colOptions.field,
         title: colOptions.title || toHumanReadable(colOptions.field),
         header: document.createElement('th'),
         headerContent: document.createElement('div'),
         visible: colOptions.visible ?? true,
-        sortable: colOptions.sortable ?? finalOptions.sortable,
-        searchable: colOptions.searchable ?? finalOptions.searchable,
-        tokenize: colOptions.tokenize ?? finalOptions.tokenize,
+        sortable: colOptions.sortable ?? this.#options.sortable,
+        searchable: colOptions.searchable ?? this.#options.searchable,
+        tokenize: colOptions.tokenize ?? this.#options.tokenize,
         sortOrder: colOptions.sortOrder ?? null,
         sortPriority: colOptions.sortPriority ?? 0,
         resizeStartWidth: null,
@@ -344,11 +334,11 @@ export class DataTable extends EventTarget {
         th.classList.add('dt-sortable');
       }
 
-      if (finalOptions.rearrangeable) {
+      if (this.#options.rearrangeable) {
         th.draggable = true;
       }
 
-      if (colOptions.resizable ?? finalOptions.resizable) {
+      if (colOptions.resizable ?? this.#options.resizable) {
         th.classList.add('dt-resizable');
       }
 
@@ -393,8 +383,8 @@ export class DataTable extends EventTarget {
       this.showColumn(col);
     }
 
-    this.virtualScroll = finalOptions.virtualScroll;
-    this.loadData(finalOptions.data);
+    this.virtualScroll = this.#options.virtualScroll;
+    this.loadData(this.#options.data ?? []);
   }
 
   /**
@@ -488,6 +478,20 @@ export class DataTable extends EventTarget {
     this.#updateTable();
   }
 
+  get scoring(): boolean {
+    return this.#options.scoring;
+  }
+
+  set scoring(value) {
+    if (value !== this.#options.scoring) {
+      this.#options.scoring = value;
+
+      if (this.#query) {
+        this.#filterRows();
+      }
+    }
+  }
+
   /**
    * Loads data into the table.
    * @param rows - An array of row data objects to load.
@@ -555,11 +559,12 @@ export class DataTable extends EventTarget {
    */
   search(query?: string | RegExp) {
     if (typeof query === 'string') {
-      query = query.trim().toLocaleLowerCase();
+      const tokens = this.#options.tokenizer(query.trim()).join("|");
+      this.#query = new RegExp(`${tokens}`, 'gi');
+    } else {
+      this.#query = query;
     }
 
-    this.#query = query !== '' ? query : undefined;
-    this.#queryTokens = this.#getTokensFromQuery(this.#query);
     this.#filterRows();
   }
 
@@ -713,13 +718,13 @@ export class DataTable extends EventTarget {
           }
 
           let value = row[key];
-            if (all || !col.header.hidden) {
-              if (typeof col.valueFormatter === 'function') {
-                value = col.valueFormatter(value, row);
-              }
+          if (all || !col.header.hidden) {
+            if (typeof col.valueFormatter === 'function') {
+              value = col.valueFormatter(value, row);
+            }
 
-              value = String(value).replace('"', '""');
-              list.push(`"${value}"`);
+            value = String(value).replace('"', '""');
+            list.push(`"${value}"`);
           }
         }
         return list.join(',');
@@ -767,7 +772,7 @@ export class DataTable extends EventTarget {
   }
 
   scrollToFilteredIndex(index: number) {
-    const rowData = this.#filteredRows.at(index);
+    const rowData = this.#filteredRows[index];
     if (!rowData) {
       throw new RangeError(`Row index ${index} out of range`);
     }
@@ -931,23 +936,33 @@ export class DataTable extends EventTarget {
 
       // Tokenize any searchable columns
       if (col.searchable && col.tokenize && value) {
-        metadata.tokens[field] = [String(value), ...this.#tokenizer(value)];
+        metadata.tokens[field] = [String(value), ...this.#options.tokenizer(value)];
       }
     }
 
     return internal_row;
   }
 
-  #searchField(value: string | string[], query: RegExp | string): boolean {
+  #searchField(value: string | string[], query: RegExp): number {
     if (Array.isArray(value)) {
-      return value.some(element => this.#searchField(element, query));
+      if (this.#options.scoring) {
+        return value.map(element => this.#searchField(element, query)).reduce((accumulator, currentValue) => accumulator + currentValue, 0);
+      } else {
+        return value.some(element => this.#searchField(element, query)) ? 1 : 0;
+      }
     }
 
-    if (query instanceof RegExp) {
-      return query.test(value);
+    if (this.#options.scoring) {
+      const matches = value.match(query);
+      if (matches) {
+        return matches.reduce((accumulator, value) => accumulator + value.length, 0);
+      }
+    } else {
+      return query.test(value) ? 1 : 0
     }
 
-    return value.toLocaleLowerCase().includes(query);
+
+    return 0;
   }
 
   #filterField(
@@ -1004,15 +1019,6 @@ export class DataTable extends EventTarget {
     return true;
   }
 
-  #getTokensFromQuery(query?: string | RegExp) {
-    if (query instanceof RegExp) {
-      return [query];
-    } else if (typeof query === 'string') {
-      return this.#tokenizer(query.toLocaleLowerCase());
-    }
-    return [];
-  }
-
   #filterRows() {
     if (this.#blockUpdates) return;
 
@@ -1032,31 +1038,21 @@ export class DataTable extends EventTarget {
         .filter(col => col.searchable)
         .map(c => c.field);
 
-      const fields = [...searchableFields, ...this.#extraSearchFields];
+      const fields = [...searchableFields, ...this.#options.extraSearchFields];
 
       for (const field of fields) {
         const col = this.#columnData.get(field);
+
+        let tokens;
         if (col && field in row._metadata.tokens) {
-          const fieldTokens = row._metadata.tokens[field];
-          for (const token of this.#queryTokens) {
-            if (this.#searchField(fieldTokens, token)) {
-              if (typeof token === 'string') {
-                row._metadata.searchScore += token.length;
-              } else {
-                row._metadata.searchScore++;
-              }
-            }
-          }
+          tokens = row._metadata.tokens[field];
         } else {
-          const value = this.#getNestedValue(row, field);
-          if (this.#searchField(String(value), this.#query)) {
-            if (typeof this.#query === 'string') {
-              row._metadata.searchScore += this.#query.length;
-            } else {
-              row._metadata.searchScore++;
-            }
-          }
+          tokens = String(this.#getNestedValue(row, field));
+
         }
+
+        const score = this.#searchField(tokens, this.#query);
+        row._metadata.searchScore += score
       }
 
       return row._metadata.searchScore > 0;
@@ -1112,11 +1108,14 @@ export class DataTable extends EventTarget {
       .sort((a, b) => a.sortPriority - b.sortPriority);
 
     this.#filteredRows.sort((a, b) => {
-      // Try to sort by search score if there is a query.
-      const aValue = a._metadata.searchScore || 0;
-      const bValue = b._metadata.searchScore || 0;
-      if (aValue > bValue) return -1;
-      if (aValue < bValue) return 1;
+
+      // Try to sort by search score if we're using scoring and there is a query.
+      if (this.scoring && this.#query) {
+        const aValue = a._metadata.searchScore || 0;
+        const bValue = b._metadata.searchScore || 0;
+        if (aValue > bValue) return -1;
+        if (aValue < bValue) return 1;
+      }
 
       for (const col of sortedColumns) {
         const comp = this.#compareRows(a, b, col);
@@ -1182,24 +1181,21 @@ export class DataTable extends EventTarget {
     }
 
     if (this.#rows.size === 0) {
-      this.showMessage(this.#noDataText, 'dt-empty');
+      this.showMessage(this.#options.noDataText, 'dt-empty');
     } else if (this.#filteredRows.length === 0) {
-      this.showMessage(this.#noMatchText, 'dt-empty');
+      this.showMessage(this.#options.noMatchText, 'dt-empty');
     }
   }
 
-  #markText(element: HTMLElement) {
+  #markText(element: HTMLElement, query: RegExp) {
     if (element.children.length === 0) {
       let text = element.innerText;
-      for (const token of this.#queryTokens) {
-        const regex = new RegExp(token, 'i');
-        text = text.replace(regex, match => `<mark class="${this.#classes.mark.join(" ")}">${match}</mark>`);
-      }
+      text = text.replace(query, match => `<mark class="${this.#classes.mark.join(" ")}">${match}</mark>`);
       element.innerHTML = text;
     } else {
       for (const child of element.children) {
         if (child instanceof HTMLElement) {
-          this.#markText(child);
+          this.#markText(child, query);
         }
       }
     }
@@ -1220,8 +1216,8 @@ export class DataTable extends EventTarget {
       col.elementFormatter(value, row, td);
     }
 
-    if (this.#highlightSearch && this.#queryTokens.length && col.searchable) {
-      this.#markText(td);
+    if (this.#options.highlightSearch && this.#query && col.searchable) {
+      this.#markText(td, this.#query);
     }
 
     td.hidden = col.visible ? false : true;
@@ -1249,9 +1245,9 @@ export class DataTable extends EventTarget {
       tr.append(td);
     }
 
-    if (typeof this.#rowFormatter === 'function') {
+    if (typeof this.#options.rowFormatter === 'function') {
       try {
-        this.#rowFormatter(row, tr);
+        this.#options.rowFormatter(row, tr);
       } catch (error) {
         console.error('Row formatter callback failed with the following error');
         console.error(error);

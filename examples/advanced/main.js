@@ -257,7 +257,7 @@ window.addEventListener("load", () => {
 function generateMockData(count) {
   // --- Data sources for randomization ---
   const itemNouns = ['System', 'Module', 'Component', 'API', 'Database', 'Report', 'Dashboard', 'Feature'];
-  const itemModifiers = ['Alpha', 'Bravo', 'Phoenix', 'Orion', 'Pegasus', 'Andromeda', 'Cygnus', 'Vega', 'OIC-CPC001'];
+  const itemModifiers = ['Alpha', 'Bravo', 'Phoenix', 'Orion', 'Pegasus', 'Andromeda', 'Cygnus', 'Vega'];
   const statuses = ['Completed', 'In Progress', 'Pending', 'Failed', 'On Hold', 'Needs Review'];
   const possibleTags = ['urgent', 'bugfix', 'feature', 'ui', 'backend', 'database', 'critical', 'needs-review', 'mobile', 'web', 'refactor'];
 

@@ -556,7 +556,9 @@ export class DataTable extends EventTarget {
     }
 
     if (typeof query === 'string') {
-      const tokens = this.#options.tokenizer(query.trim()).join("|");
+      // Escape any special RegEx characters
+      query = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').trim();
+      const tokens = this.#options.tokenizer(query).join("|");
       this.#query = new RegExp(`${tokens}`, 'gi');
     } else {
       this.#query = query;

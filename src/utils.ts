@@ -33,9 +33,17 @@ export const toHumanReadable = (str: string) => {
 /**
  * Tokenizes a string into an array of lowercase words separated by whitespace.
  */
-export const whitespaceTokenizer = (value: string) =>
-  String(value)
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .trim()
-    .split(/\s+/);
+export const whitespaceTokenizer = (value: string) => {
+  const regex = /"[^"]*"|\S+/g;
+  
+  // Find all matches, which will include the quotes
+  const matches = value.match(regex) || [];
+  
+  // Clean up the results by removing the surrounding quotes
+  return matches.map(token => {
+    if (token.startsWith('"') && token.endsWith('"')) {
+      return token.slice(1, -1);
+    }
+    return token;
+  });
+}

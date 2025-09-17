@@ -1,5 +1,4 @@
 import { DataTable } from "../src/datatable";
-import { Row } from "../src/types";
 
 describe("DataTable", () => {
   let tableElement: HTMLTableElement;
@@ -182,7 +181,7 @@ describe("DataTable", () => {
     });
 
     // Custom filter: Only include rows where age is greater than 25
-    dataTable.filter((row: Row) => row.age > 25);
+    dataTable.filter((row: any) => row.age > 25);
 
     expect(dataTable.rows.length).toBe(2);
     expect(dataTable.rows[0].name).toBe("Bob");

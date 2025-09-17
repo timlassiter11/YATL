@@ -1,23 +1,20 @@
 import './datatable.css';
 
-import { VirtualScroll, VirtualScrollError } from './virtualScroll';
-import { classesToArray, toHumanReadable, whitespaceTokenizer } from './utils';
 import {
   CellFormatterCallback,
   ColumnFilterCallback,
   ColumnOptions,
   ColumnState,
   ComparatorCallback,
-  Filters,
   FilterCallback,
-  Row as RowData,
-  RowFormatterCallback,
+  LoadOptions,
   SortOrder,
   SortValueCallback,
   TableOptions,
   ValueFormatterCallback,
-  LoadOptions,
 } from './types';
+import { classesToArray, toHumanReadable, whitespaceTokenizer } from './utils';
+import { VirtualScroll, VirtualScrollError } from './virtualScroll';
 
 type RequiredOptions = Required<Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>> & Pick<TableOptions, 'rowFormatter' | 'data'>;
 type FinalOptions = RequiredOptions & Pick<TableOptions, 'columns'>;
@@ -50,28 +47,28 @@ export class DataTable extends EventTarget {
   // Centralized default options for the DataTable.
   // These are the base values used if not overridden by user-provided options.
   private static readonly DEFAULT_OPTIONS: RequiredOptions = {
-      virtualScroll: true,
-      highlightSearch: true,
-      sortable: true,
-      searchable: false,
-      tokenize: false,
-      scoring: true,
-      resizable: true,
-      rearrangeable: true,
-      extraSearchFields: [],
-      noDataText: 'No records found',
-      noMatchText: 'No matching records found',
-      classes: {
-        scroller: 'dt-scroller',
-        thead: 'dt-headers',
-        tbody: '',
-        tfoot: '',
-        tr: '',
-        th: '',
-        td: '',
-      },
-      tokenizer: whitespaceTokenizer, // Default tokenizer function
-    };
+    virtualScroll: true,
+    highlightSearch: true,
+    sortable: true,
+    searchable: false,
+    tokenize: false,
+    scoring: true,
+    resizable: true,
+    rearrangeable: true,
+    extraSearchFields: [],
+    noDataText: 'No records found',
+    noMatchText: 'No matching records found',
+    classes: {
+      scroller: 'dt-scroller',
+      thead: 'dt-headers',
+      tbody: '',
+      tfoot: '',
+      tr: '',
+      th: '',
+      td: '',
+    },
+    tokenizer: whitespaceTokenizer, // Default tokenizer function
+  };
 
   // Table elements
   #table!: HTMLTableElement;
@@ -87,10 +84,10 @@ export class DataTable extends EventTarget {
 
   // Search and filter data
   #query?: RegExp;
-  #filters!: Filters | FilterCallback;
-  
+  #filters!: any | FilterCallback;
+
   #virtualScroll?: VirtualScroll;
-  
+
   // The current sort priority. Incremented when a column is sorted.
   #sortPriority: number = 0;
 
@@ -137,7 +134,7 @@ export class DataTable extends EventTarget {
       throw new TypeError('columns must be a list of columns');
     }
 
-    
+
     this.#classes = {
       scroller: [
         ...classesToArray(this.#options.classes.scroller),
@@ -426,14 +423,14 @@ export class DataTable extends EventTarget {
   /**
    * Gets the currently filtered and sorted rows displayed in the table.
    */
-  get rows(): RowData[] {
+  get rows(): any[] {
     return [...this.#filteredRows];
   }
 
   /**
    * Gets the underlying data
    */
-  get data(): RowData[] {
+  get data(): any[] {
     return [...this.#rows.values()];
   }
 
@@ -493,16 +490,11 @@ export class DataTable extends EventTarget {
   }
 
   /**
-   * Loads data into the table.
-   * @param rows - An array of row data objects to load.
-   * @param append - If true, appends the new rows to existing data. If false (default), overwrites existing data.
-   * @throws {TypeError} If `rows` is not an array.
+   * Loads data into the table
+   * @param rows - An array of data to be loaded
+   * @param options - Configuration for the load operation
    */
-  loadData(rows: RowData[], options: LoadOptions = {}) {
-    if (!Array.isArray(rows)) {
-      throw new TypeError('rows must be an array of rows');
-    }
-
+  loadData(rows: any[], options: LoadOptions = {}) {
     const scrollTop = this.#scroller.scrollTop;
     const scrollLeft = this.#scroller.scrollLeft;
 
@@ -575,7 +567,7 @@ export class DataTable extends EventTarget {
    * @param filters - An object defining field-based filters or a custom filter callback function.
    * @throws {TypeError} If `filters` is not an object or a function.
    */
-  filter(filters?: Filters | FilterCallback) {
+  filter(filters?: any | FilterCallback) {
     filters ??= {};
 
     if (typeof filters !== 'object' && typeof filters !== 'function') {
@@ -742,7 +734,7 @@ export class DataTable extends EventTarget {
     a.remove();
   }
 
-  scrollToRow(row: RowData) {
+  scrollToRow(row: any) {
     const rowData = row as InternalRowData;
     const index = rowData._metadata?.index;
     if (typeof index === 'number') {
@@ -867,18 +859,18 @@ export class DataTable extends EventTarget {
 
   /**
    * Updates the data of a row at a specific original index.
-   * @param data - An object containing the new data to assign to the row. Existing fields will be updated, and new fields will be added.
    * @param index - The original index of the row to update.
+   * @param data - An object containing the new data to assign to the row. Existing fields will be updated, and new fields will be added.
    *
    * @example
    * ```ts
    * const index = dataTable.indexOf('id', 12345);
    * if (index >= 0) {
-   *  dataTable.updateRow({description: "Updated description"}, index);
+   *  dataTable.updateRow(index, {description: "Updated description"});
    * }
    * ```
    */
-  updateRow(data: RowData, index: number) {
+  updateRow(index: number, data: any) {
     const current_row = this.#rows.get(index);
     if (current_row) {
       Object.assign(current_row, data);
@@ -911,19 +903,17 @@ export class DataTable extends EventTarget {
     }
   }
 
-  #loadRow(row: RowData, index: number) {
-    const internal_row = row as InternalRowData;
-
+  #loadRow(row: InternalRowData, index: number) {
     // Add the index
     const metadata: RowMetadata = {
       index: index++,
       tokens: {},
       sortValues: {},
     };
-    internal_row._metadata = metadata;
+    row._metadata = metadata;
 
     for (const [field, col] of this.#columnData) {
-      const value = this.#getNestedValue(internal_row, field);
+      const value = this.#getNestedValue(row, field);
 
       // Cache precomputed values for sorting
       if (typeof col.sortValueCallback === 'function') {
@@ -940,7 +930,7 @@ export class DataTable extends EventTarget {
       }
     }
 
-    return internal_row;
+    return row;
   }
 
   #searchField(value: string | string[], query: RegExp): number {
@@ -1495,7 +1485,7 @@ interface ColumnData {
   sortValueCallback?: SortValueCallback;
 }
 
-interface InternalRowData extends RowData {
+interface InternalRowData extends Record<string, any> {
   _metadata: RowMetadata;
 }
 
@@ -1524,7 +1514,7 @@ const WARN_ROW_COUNT = 10_000;
  */
 export interface DataTableEventMap {
   'dt.row.clicked': {
-    row: RowData;
+    row: any;
     index: number;
     column: string | undefined;
     originalEvent: MouseEvent;
@@ -1553,3 +1543,5 @@ export interface DataTableEventMap {
     order: string[];
   };
 }
+
+export type * from './types';

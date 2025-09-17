@@ -36,7 +36,10 @@ export class LocalStorageAdapter {
     }
 
     if (this.#options.saveColumnVisibility) {
-      dataTable.addEventListener('dt.col.visibility', this.#saveStateAfterEvent);
+      dataTable.addEventListener(
+        'dt.col.visibility',
+        this.#saveStateAfterEvent,
+      );
     }
 
     if (this.#options.saveColumnWidth) {

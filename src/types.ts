@@ -4,22 +4,11 @@
 export type SortOrder = 'asc' | 'desc' | null;
 
 /**
- * Represents a generic data row in the table, an object with string keys and any values.
- */
-export type Row = Record<string, any>;
-
-/**
- * Represents filter data where the key should be a field in the Row data and the value
- * should be comparable to the value of that field, or an array of values.
- */
-export type Filters = Record<string, any>;
-
-/**
  * Callback for formatting a row's  HTML element.
  * @param row - The row data.
  * @param element - The row element.
  */
-export type RowFormatterCallback = (row: Row, element: HTMLElement) => void;
+export type RowFormatterCallback = (row: any, element: HTMLElement) => void;
 
 /**
  * Callback for formatting the value of a cell.
@@ -27,7 +16,7 @@ export type RowFormatterCallback = (row: Row, element: HTMLElement) => void;
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback = (value: any, row: Row) => string;
+export type ValueFormatterCallback = (value: any, row: any) => string;
 
 /**
  * Callback for formatting a cell's HTML element.
@@ -37,7 +26,7 @@ export type ValueFormatterCallback = (value: any, row: Row) => string;
  */
 export type CellFormatterCallback = (
   value: any,
-  row: Row,
+  row: any,
   element: HTMLElement,
 ) => void;
 
@@ -70,7 +59,7 @@ export type TokenizerCallback = (value: any) => string[];
  * @param index - The index of the row.
  * @returns True if the row matches the filter, false otherwise.
  */
-export type FilterCallback = (row: Row, index: number) => boolean;
+export type FilterCallback = (row: any, index: number) => boolean;
 
 /**
  * Callback for filtering a field value against the filter data.
@@ -259,7 +248,7 @@ export interface TableOptions {
   /**
    * The initial data to load into the table.
    */
-  data?: Row[];
+  data?: any[];
 
   /**
    * Configures virtual scrolling.

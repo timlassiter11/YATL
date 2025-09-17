@@ -697,19 +697,11 @@ export class DataTable extends EventTarget {
   export(filename: string, all = false) {
     const data = all ? this.#rows : this.#filteredRows;
     const rows = [...data.values()];
-    const first_row = rows[0];
-    if (!first_row) {
-      return;
-    }
 
-    const csvHeaders = Object.keys(first_row).filter(value => {
-      const col = this.#columnData.get(value);
-      if (!col) {
-        return false;
-      }
-
-      return all ? true : col.header.hidden === false;
-    });
+    const csvHeaders = [...this.#columnData.values()]
+      .filter(col => all || col.visible)
+      .map(col => `"${col.title}"`)
+      .join(',');
 
     const csvRows = rows
       .map(row => {
@@ -721,7 +713,6 @@ export class DataTable extends EventTarget {
           }
 
           let value = row[key];
-          if (key in this.#columnData) {
             if (all || !col.header.hidden) {
               if (typeof col.valueFormatter === 'function') {
                 value = col.valueFormatter(value, row);
@@ -729,7 +720,6 @@ export class DataTable extends EventTarget {
 
               value = String(value).replace('"', '""');
               list.push(`"${value}"`);
-            }
           }
         }
         return list.join(',');

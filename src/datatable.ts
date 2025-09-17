@@ -1040,16 +1040,14 @@ export class DataTable extends EventTarget {
       for (const field of fields) {
         const col = this.#columnData.get(field);
 
-        let tokens;
+        // Always include the full value as a token
+        let tokens = [String(this.#getNestedValue(row, field))];
         if (col && field in row._metadata.tokens) {
-          tokens = row._metadata.tokens[field];
-        } else {
-          tokens = String(this.#getNestedValue(row, field));
-
+          tokens.push(...row._metadata.tokens[field]);
         }
 
         const score = this.#searchField(tokens, this.#query);
-        row._metadata.searchScore += score
+        row._metadata.searchScore += score;
       }
 
       return row._metadata.searchScore > 0;

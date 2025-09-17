@@ -550,6 +550,11 @@ export class DataTable extends EventTarget {
    * @param query - The search term (string) or a regular expression. An empty string clears the search.
    */
   search(query?: string | RegExp) {
+    // Clear search on empty string
+    if (query === "") {
+      query = undefined;
+    }
+
     if (typeof query === 'string') {
       const tokens = this.#options.tokenizer(query.trim()).join("|");
       this.#query = new RegExp(`${tokens}`, 'gi');
@@ -1180,7 +1185,8 @@ export class DataTable extends EventTarget {
   #markText(element: HTMLElement, query: RegExp) {
     if (element.children.length === 0) {
       let text = element.innerText;
-      text = text.replace(query, match => `<mark class="${this.#classes.mark.join(" ")}">${match}</mark>`);
+      const classes = this.#classes.mark.join(" ");
+      text = text.replace(query, match => `<mark class="${classes}">${match}</mark>`);
       element.innerHTML = text;
     } else {
       for (const child of element.children) {

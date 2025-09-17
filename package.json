@@ -1,6 +1,6 @@
 {
   "name": "@timlassiter11/yatl",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Yet another table library with all of the standard bells and whistles.",
   "main": "dist/datatable.js",
   "module": "dist/datatable.mjs",

@@ -3,6 +3,9 @@
 
 YATL is a lightweight and customizable JavaScript library for creating dynamic, interactive tables. It provides features like sorting, filtering, searching, and virtual scrolling, making it easy to work with large datasets in a performant way.
 
+## Why?!?
+I needed a free and simple table library for vanilla JS that was easy to customize and could handle large datasets... so I created YATL. It is designed with performance and simplicity in mind. It has zero dependencies, is incredibly lightweight, and uses a highly efficient virtual scrolling engine to handle massive datasets with ease. If you need a powerful table without the bloat of larger frameworks, YATL is for you.
+
 ## Features
 - **Sorting**: Sort table rows by multiple columns (ascending or descending).
 - **Filtering**: Filter rows based on multiple criteria or custom filter functions.
@@ -12,9 +15,34 @@ YATL is a lightweight and customizable JavaScript library for creating dynamic, 
 - **Export to CSV**: Export table data to a CSV file.
 
 ## Installation
-Include the library in your project by downloading the source files from the [dist](./dist/) folder.
 
-### Using standard script tag
+The recommend method is to use npm.
+```bash
+npm install @timlassiter11/yatl
+```
+
+Alternatively you can manually download the source files from the [releases](https://github.com/timlassiter11/YATL/releases) section.
+
+### npm
+```ts
+import { DataTable } from "@timlassiter11/yatl";
+
+const datatble = DataTable("#myTable", {
+   ...
+});
+
+```
+
+### source (ES6)
+```javascript
+import { DataTable } from "path/to/datatable.esm.js";
+
+const datatable = new DataTable("#myTable", {
+   ...
+});
+```
+
+### source (UMD)
 ```html
 <script src="path/to/datatable.umd.js"></script>
 <script>
@@ -24,18 +52,15 @@ Include the library in your project by downloading the source files from the [di
 </script>
 ```
 
-### Using ES6 module
-```javascript
-import { DataTable } from "path/to/datatable.esm.js";
-
-const datatable = new DataTable("#myTable", {
-   ...
-});
-```
-
 ## Styling
 Some optional styling is included which adds sorting indicators and sticky headers. To use them simply include the stylesheet.
 
+### npm
+```ts
+import "@timlassiter11/yatl/datatable.css";
+```
+
+### source
 ```html
 <link rel="stylesheet" href="path/to/datatable.css">
 ```
@@ -71,26 +96,6 @@ dataTable.search("bob");
 
 // Export table data to CSV
 dataTable.export("my-table-data");
-
-// Example with large dataset and virtual scrolling
-const largeData = Array.from({ length: 10000 }, (_, i) => ({
-  id: i + 1,
-  name: `User ${i + 1}`,
-  age: Math.floor(Math.random() * 100),
-  city: ["New York", "Los Angeles", "Chicago", "Houston"][i % 4],
-}));
-
-const dataTable = new DataTable({
-  table: document.querySelector("#myTable"),
-  columns: [
-    { field: "id", title: "ID", sortable: true },
-    { field: "name", title: "Name", sortable: true },
-    { field: "age", title: "Age", sortable: true },
-    { field: "city", title: "City" },
-  ],
-  data: largeData,
-  virtualScroll: 1000, // Enable virtual scrolling if more than 1000 rows
-});
 ```
 
 ### Virtual Scroll
@@ -133,4 +138,4 @@ Since the `dt-scroller` wrapper listens to scroll and resize events, this allows
 There are some limitations to virtual scrolling. For one, rows need to be a uniform height to accurately calculate the table height. Also, there seems to be a maximum element size that once exceeded, the contents are no longer rendered. I've found this to occur with datasets approaching 1 million rows in Chrome and unfortunately I have no workaround for it. If you have that many rows you definitely need some server side pagination and this is probably not the library for you.
 
 # Examples
-Examples can be found in the [examples](./examples/) directoy and are also hosted [here](https://timlassiter11.github.io/YATL/index.html) to view live.
+Examples can be found in the examples directoy and are also hosted [here](https://timlassiter11.github.io/YATL/index.html) to view live.

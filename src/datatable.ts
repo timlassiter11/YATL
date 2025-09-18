@@ -8,12 +8,13 @@ import {
   ComparatorCallback,
   FilterCallback,
   LoadOptions,
+  QueryToken,
   SortOrder,
   SortValueCallback,
   TableOptions,
   ValueFormatterCallback,
 } from './types';
-import { classesToArray, toHumanReadable, whitespaceTokenizer } from './utils';
+import { classesToArray, toHumanReadable, createRegexTokenizer } from './utils';
 import { VirtualScroll, VirtualScrollError } from './virtualScroll';
 
 type RequiredOptions = Required<Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>> & Pick<TableOptions, 'rowFormatter' | 'data'>;
@@ -44,15 +45,21 @@ type FinalOptions = RequiredOptions & Pick<TableOptions, 'columns'>;
  * ```
  */
 export class DataTable extends EventTarget {
+  // Define the weights once for the entire class
+  private static readonly MatchWeights = {
+    EXACT: 100,
+    PREFIX: 50,
+    SUBSTRING: 10,
+  };
+
   // Centralized default options for the DataTable.
   // These are the base values used if not overridden by user-provided options.
   private static readonly DEFAULT_OPTIONS: RequiredOptions = {
     virtualScroll: true,
     highlightSearch: true,
+    tokenizeSearch: false,
+    enableSearchScoring: false,
     sortable: true,
-    searchable: false,
-    tokenize: false,
-    scoring: true,
     resizable: true,
     rearrangeable: true,
     extraSearchFields: [],
@@ -67,7 +74,7 @@ export class DataTable extends EventTarget {
       th: '',
       td: '',
     },
-    tokenizer: whitespaceTokenizer, // Default tokenizer function
+    tokenizer: createRegexTokenizer(), // Default tokenizer function
   };
 
   // Table elements
@@ -83,7 +90,7 @@ export class DataTable extends EventTarget {
   #filteredRows: InternalRowData[] = [];
 
   // Search and filter data
-  #query?: RegExp;
+  #query?: QueryToken[] | RegExp;
   #filters!: any | FilterCallback;
 
   #virtualScroll?: VirtualScroll;
@@ -111,6 +118,12 @@ export class DataTable extends EventTarget {
       ...DataTable.DEFAULT_OPTIONS,
       ...options,
     };
+
+    // Search scoring is only useful with tokenization.
+    if (this.#options.enableSearchScoring && !this.#options.tokenizeSearch) {
+      this.#options.enableSearchScoring = false;
+      console.warn("Search scoring enabled with tokenization disabled... Ignoring");
+    }
 
     if (typeof table === 'string') {
       const tableElement = document.querySelector(table);
@@ -277,8 +290,9 @@ export class DataTable extends EventTarget {
         headerContent: document.createElement('div'),
         visible: colOptions.visible ?? true,
         sortable: colOptions.sortable ?? this.#options.sortable,
-        searchable: colOptions.searchable ?? this.#options.searchable,
-        tokenize: colOptions.tokenize ?? this.#options.tokenize,
+        searchable: colOptions.searchable ?? false,
+        // If tokenization is disabled globally, disable it on the columns.
+        tokenize: this.#options.tokenizeSearch ? colOptions.tokenize ?? false : false,
         sortOrder: colOptions.sortOrder ?? null,
         sortPriority: colOptions.sortPriority ?? 0,
         resizeStartWidth: null,
@@ -473,12 +487,18 @@ export class DataTable extends EventTarget {
   }
 
   get scoring(): boolean {
-    return this.#options.scoring;
+    return this.#options.enableSearchScoring;
   }
 
   set scoring(value) {
-    if (value !== this.#options.scoring) {
-      this.#options.scoring = value;
+    // Don't allow scoring to be enabled if tokenization is disabled.
+    if (value && !this.#options.tokenizeSearch) {
+      console.warn("Cannot enable scoring when tokenization is disabled... Ignoring");
+      return;
+    }
+
+    if (value !== this.#options.enableSearchScoring) {
+      this.#options.enableSearchScoring = value;
 
       if (this.#query) {
         this.#filterRows();
@@ -553,10 +573,12 @@ export class DataTable extends EventTarget {
     }
 
     if (typeof query === 'string') {
-      // Escape any special RegEx characters
-      query = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').trim();
-      const tokens = this.#options.tokenizer(query).join("|");
-      this.#query = new RegExp(`${tokens}`, 'gi');
+      if (this.#options.tokenizeSearch) {
+        this.#query = this.#options.tokenizer(query);
+      } else {
+        this.#query = [{ value: query.toLocaleLowerCase(), quoted: true }];
+      }
+
     } else {
       this.#query = query;
     }
@@ -601,9 +623,9 @@ export class DataTable extends EventTarget {
     if (order && !col.sortOrder) {
       const priorities = this.columnStates.map(col => col.sortOrder ? col.sortPriority : 0);
       col.sortPriority = Math.max(...priorities) + 1;
-      }
+    }
 
-      col.sortOrder = order;
+    col.sortOrder = order;
 
     const sortEvent = new CustomEvent<DataTableEventMap['dt.col.sort']>(
       'dt.col.sort',
@@ -909,6 +931,7 @@ export class DataTable extends EventTarget {
     const metadata: RowMetadata = {
       index: index++,
       tokens: {},
+      compareValues: {},
       sortValues: {},
     };
     row._metadata = metadata;
@@ -925,35 +948,90 @@ export class DataTable extends EventTarget {
         metadata.sortValues[field] = value;
       }
 
+      // Cache precomputed lower-case values for comparison
+      metadata.compareValues[field] = String(value).toLocaleLowerCase();
+
       // Tokenize any searchable columns
       if (col.searchable && col.tokenize && value) {
-        metadata.tokens[field] = [String(value), ...this.#options.tokenizer(value)];
+        metadata.tokens[field] = this.#options.tokenizer(value).map(token => token.value);
       }
     }
 
     return row;
   }
 
-  #searchField(value: string | string[], query: RegExp): number {
-    if (Array.isArray(value)) {
-      if (this.#options.scoring) {
-        return value.map(element => this.#searchField(element, query)).reduce((accumulator, currentValue) => accumulator + currentValue, 0);
-      } else {
-        return value.some(element => this.#searchField(element, query)) ? 1 : 0;
-      }
+
+
+  /**
+   * Calculates a relevance score for a given query against a target string.
+   *
+   * This function implements a tiered matching strategy:
+   * 1.  **Exact Match**: The query exactly matches the target. This yields the highest score.
+   * 2.  **Prefix Match**: The target starts with the query. This is the next most relevant.
+   * 3.  **Substring Match**: The target contains the query somewhere. This is the least relevant.
+   *
+   * The final score is weighted and adjusted by the length difference between the query and the target
+   * to ensure that more specific matches (e.g., "apple" vs "application" for the query "apple") rank higher.
+   *
+   * @param query The search term (e.g., "app").
+   * @param target The string to be searched (e.g., "Apple" or "Application").
+   * @returns A numerical score representing the relevance of the match. Higher is better. Returns 0 if no match is found.
+   */
+  #calculateSearchScore(query: string, target: string): number {
+    if (query.length === 0 || target.length === 0) {
+      return 0;
     }
 
-    if (this.#options.scoring) {
-      const matches = value.match(query);
-      if (matches) {
-        return matches.reduce((accumulator, value) => accumulator + value.length, 0);
-      }
+    let baseScore = 0;
+    let matchTypeWeight = 0;
+
+    if (target === query) {
+      matchTypeWeight = DataTable.MatchWeights.EXACT;
+      baseScore = query.length;
+    } else if (target.startsWith(query)) {
+      matchTypeWeight = DataTable.MatchWeights.PREFIX;
+      baseScore = query.length;
+    } else if (target.includes(query)) {
+      matchTypeWeight = DataTable.MatchWeights.SUBSTRING;
+      baseScore = query.length;
     } else {
-      return query.test(value) ? 1 : 0
+      return 0;
     }
 
+    // Reward matches where the query length is close to the target length.
+    const lengthDifference = target.length - query.length;
+    const specificityBonus = 1 / (1 + lengthDifference);
 
-    return 0;
+    // The final score is a combination of the match type's importance,
+    // the base score from the query length, and the specificity bonus.
+    return (baseScore * matchTypeWeight) * specificityBonus;
+  }
+
+  #searchField(query: QueryToken | RegExp, value: string, tokens?: string[]): number {
+    // RegExp bypasses tokenization and scoring
+    if (query instanceof RegExp) {
+      return query.test(value) ? 1 : 0;
+    }
+
+    // Simple search, no scoring
+    if (!this.#options.enableSearchScoring) {
+      // Quoted tokens bypass tokenization and no tokens means column wasn't tokenized.
+      if (query.quoted || !tokens) {
+        return value.includes(query.value) ? 1 : 0;
+      }
+
+      return tokens.some(token => token == query.value) ? 1 : 0;
+    }
+
+    // Complex scored search
+    // Quoted tokens bypass tokenization and no tokens means column wasn't tokenized.
+    if (query.quoted || !tokens) {
+      return this.#calculateSearchScore(query.value, value)
+    }
+
+    return tokens
+      .map(token => this.#calculateSearchScore(query.value, token))
+      .reduce((accumulator, score) => accumulator += score, 0);
   }
 
   #filterField(
@@ -1033,14 +1111,20 @@ export class DataTable extends EventTarget {
 
       for (const field of fields) {
         const col = this.#columnData.get(field);
+        let originalValue = String(this.#getNestedValue(row, field))
+        let compareValue = row._metadata.compareValues[field];
+        const columnTokens = row._metadata.tokens[field];
 
-        // Always include the full value as a token
-        let tokens = [String(this.#getNestedValue(row, field))];
-        if (col && field in row._metadata.tokens) {
-          tokens.push(...row._metadata.tokens[field]);
+        let score: number = 0;
+        if (this.#query instanceof RegExp) {
+          score = this.#searchField(this.#query, originalValue, columnTokens);
+        } else {
+          for (const token of this.#query) {
+            score += this.#searchField(token, compareValue, columnTokens);
+          }
         }
 
-        const score = this.#searchField(tokens, this.#query);
+        //const score = this.#searchField([...tokens], this.#query);
         row._metadata.searchScore += score;
       }
 
@@ -1207,7 +1291,16 @@ export class DataTable extends EventTarget {
     }
 
     if (this.#options.highlightSearch && this.#query && col.searchable) {
-      this.#markText(td, this.#query);
+
+      let regex: RegExp;
+      if (this.#query instanceof RegExp) {
+        regex = this.#query;
+      } else {
+        const tokens = this.#query.map(token => token.value).join("|");
+        regex = new RegExp(tokens, 'gi');
+      }
+
+      this.#markText(td, regex);
     }
 
     td.hidden = col.visible ? false : true;
@@ -1247,7 +1340,7 @@ export class DataTable extends EventTarget {
     return tr;
   }
 
-  #getNestedValue(obj: Record<string, any>, path: string) {
+  #getNestedValue(obj: any, path: string): any {
     const keys = path.split('.');
     let current = obj;
 
@@ -1493,6 +1586,7 @@ interface RowMetadata {
   index: number;
   searchScore?: number;
   tokens: Record<string, string[]>;
+  compareValues: Record<string, string>;
   sortValues: Record<string, any>;
 }
 
@@ -1544,4 +1638,5 @@ export interface DataTableEventMap {
   };
 }
 
+export { createRegexTokenizer };
 export type * from './types';

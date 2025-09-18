@@ -37,9 +37,9 @@ window.addEventListener("load", () => {
   count = isNaN(count) ? 100000 : count;
 
   dataTable = new DataTable(table, {
+    tokenizeSearch: true,
     sortable: true,
     resizable: true,
-
     columns: [
       {
         field: "id",
@@ -52,7 +52,6 @@ window.addEventListener("load", () => {
         title: "Item Name",
         sortable: true,
         searchable: true,
-        tokenize: true,
       },
       {
         field: "status",

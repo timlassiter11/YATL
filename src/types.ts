@@ -46,12 +46,17 @@ export type ComparatorCallback = (a: any, b: any) => number;
  */
 export type SortValueCallback = (value: any) => number | string;
 
+export interface QueryToken {
+  value: string;
+  quoted: boolean;
+};
+
 /**
  * Callback for tokenizing a value into a list of string tokens.
  * @param value - The value to tokenize.
  * @returns An array of tokens.
  */
-export type TokenizerCallback = (value: any) => string[];
+export type TokenizerCallback = (value: any) => QueryToken[];
 
 /**
  * Callback for filtering a row.
@@ -261,28 +266,21 @@ export interface TableOptions {
   highlightSearch?: boolean;
 
   /**
-   * Whether columns should be sortable by default.
-   * Can be overridden on individual columns.
+   * Whether the search query should be tokenized.
    */
-  sortable?: boolean;
-
-  /**
-   * Whether columns should be searchable by default.
-   * Can be overridden on individual columns.
-   */
-  searchable?: boolean;
-
-  /**
-   * Whether columns data should be tokenized for searching by default.
-   * Can be overridden on individual columns.
-   */
-  tokenize?: boolean;
+  tokenizeSearch?: boolean;
 
   /**
    * Whether search results should be scored or not.
    * Scoring is very computationally expensive...
    */
-  scoring?: boolean;
+  enableSearchScoring?: boolean;
+
+  /**
+   * Whether columns should be sortable by default.
+   * Can be overridden on individual columns.
+   */
+  sortable?: boolean;
 
   /**
    * Whether columns should be resizable by default.

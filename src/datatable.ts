@@ -942,15 +942,17 @@ export class DataTable extends EventTarget {
       // Cache precomputed values for sorting
       if (typeof col.sortValueCallback === 'function') {
         metadata.sortValues[field] = col.sortValueCallback(value);
-      } else if (value instanceof String) {
+      } else if (typeof value === 'string') {
         metadata.sortValues[field] = value.toLocaleLowerCase();
       } else {
         metadata.sortValues[field] = value;
       }
 
-      // Cache precomputed lower-case values for comparison
-      metadata.compareValues[field] = String(value).toLocaleLowerCase();
-
+      // Cache precomputed lower-case values for search
+      if (typeof value === 'string') {
+        metadata.compareValues[field] = value.toLocaleLowerCase();
+      }
+      
       // Tokenize any searchable columns
       if (col.searchable && col.tokenize && value) {
         metadata.tokens[field] = this.#options.tokenizer(value).map(token => token.value);
@@ -978,7 +980,7 @@ export class DataTable extends EventTarget {
    * @returns A numerical score representing the relevance of the match. Higher is better. Returns 0 if no match is found.
    */
   #calculateSearchScore(query: string, target: string): number {
-    if (query.length === 0 || target.length === 0) {
+    if (!query || !target) {
       return 0;
     }
 
@@ -1068,10 +1070,6 @@ export class DataTable extends EventTarget {
 
     for (const field of Object.keys(this.#filters || {})) {
       const filter = this.#filters[field];
-      if (filter == null) {
-        continue;
-      }
-
       const value = this.#getNestedValue(row, field);
       if (typeof filter === 'function') {
         if (!filter(value)) {
@@ -1110,10 +1108,13 @@ export class DataTable extends EventTarget {
       const fields = [...searchableFields, ...this.#options.extraSearchFields];
 
       for (const field of fields) {
-        const col = this.#columnData.get(field);
-        let originalValue = String(this.#getNestedValue(row, field))
+        let originalValue = this.#getNestedValue(row, field);
         let compareValue = row._metadata.compareValues[field];
         const columnTokens = row._metadata.tokens[field];
+
+        if (typeof originalValue !== 'string' || typeof compareValue !== 'string') {
+          continue;
+        }
 
         let score: number = 0;
         if (this.#query instanceof RegExp) {

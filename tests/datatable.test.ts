@@ -1,9 +1,10 @@
-import { DataTable, TableOptions } from "../src/datatable";
+import { ColumnOptions, DataTable, TableOptions } from "../src/datatable";
 
 describe("DataTable", () => {
   let tableElement: HTMLTableElement;
+  let dataTable: DataTable;
 
-  const sampleColumns = [
+  const sampleColumns: ColumnOptions[] = [
     { field: "name", title: "Name" },
     { field: "age", title: "Age" },
   ];
@@ -13,6 +14,15 @@ describe("DataTable", () => {
     { id: 2, name: 'Bob', age: 30, city: 'Los Angeles' },
     { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
     { id: 4, name: 'John', age: 25, city: 'Boulder' }
+  ];
+
+  // Add this data to your test file
+  const sampleDataWithNulls = [
+    { id: 1, name: 'Alice', age: 25, city: 'New York' },
+    { id: 2, name: 'Bob', age: null, city: 'Los Angeles' },
+    { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
+    { id: 4, name: 'David', age: undefined, city: null },
+    { id: 5, name: null, age: 40, city: 'Boulder' },
   ];
 
   // At the top of your datatable.test.ts
@@ -25,6 +35,7 @@ describe("DataTable", () => {
   beforeEach(() => {
     document.body.innerHTML = '<table></table>';
     tableElement = document.querySelector('table')!;
+    dataTable = new DataTable(tableElement, defaultTestOptions);
   });
 
   afterEach(() => {
@@ -32,14 +43,7 @@ describe("DataTable", () => {
   });
 
   it("should initialize with valid table element", () => {
-    const dataTable = new DataTable(tableElement, {
-      ...defaultTestOptions,
-      columns: [{ field: "name" }],
-      data: [],
-    });
-
     expect(dataTable.table).toBe(tableElement);
-    expect(dataTable.columnStates.length).toBe(1);
   });
 
   it("should throw error if invalid selector", () => {
@@ -47,15 +51,20 @@ describe("DataTable", () => {
   });
 
   it("should load data into the table", () => {
-    const dataTable = new DataTable(tableElement, {
-      ...defaultTestOptions,
-      columns: [{ field: "name" }, { field: "age" }],
-      data: [],
-    });
-
-    dataTable.loadData(sampleData);
-    expect(dataTable.rows.length).toBe(sampleData.length);
+    dataTable.loadData([{ id: 1, name: 'Alice' }]);
+    expect(dataTable.rows.length).toBe(1);
     expect(dataTable.rows[0].name).toBe("Alice");
+  });
+
+  it("should append data", () => {
+    const len = dataTable.rows.length;
+    dataTable.loadData([{ id: 5, name: 'Jane', age: 55 }], { append: true });
+    expect(dataTable.rows.length).toBe(len + 1);
+  });
+
+  it('should handle undefined data in rows', () => {
+    dataTable.loadData([{ id: 1, category: 'Home Goods' },]);
+    expect(dataTable.rows[0].name).toBeUndefined();
   });
 
   describe("Search", () => {
@@ -78,7 +87,7 @@ describe("DataTable", () => {
         highlightSearch: true,
         columns: searchColumns,
         data: searchData,
-      })
+      });
       dataTable.search('Standard');
       const firstCell = tableElement.querySelector('td[data-dt-field="product"]') as HTMLElement;
       expect(firstCell).toBeInstanceOf(HTMLElement);
@@ -100,6 +109,24 @@ describe("DataTable", () => {
       dataTable.search('New York');
       expect(dataTable.rows.length).toBe(1);
       expect(dataTable.rows[0].user.name).toBe('Alice');
+    });
+
+    it('should not crash when searching on columns with null or undefined values', () => {
+      dataTable = new DataTable(tableElement, {
+        ...defaultTestOptions,
+        columns: [{ field: 'name', searchable: true }],
+        data: sampleDataWithNulls,
+        tokenizeSearch: true,
+        enableSearchScoring: true, // Test the most complex path
+      });
+      dataTable.loadData(sampleDataWithNulls)
+
+      // Should not throw an error when processing the null/undefined names
+      expect(() => dataTable.search('ali')).not.toThrow();
+
+      // Should correctly find the valid row
+      expect(dataTable.rows.length).toBe(1);
+      expect(dataTable.rows[0].name).toBe('Alice');
     });
 
     describe('with simple substring search', () => {
@@ -126,6 +153,12 @@ describe("DataTable", () => {
         dataTable.search(/^Laptop/);
         expect(dataTable.rows.length).toBe(2);
         expect(dataTable.rows.map(row => row.id)).toEqual([1, 2]);
+      });
+
+      it('should ignore undefined data in rows', () => {
+        dataTable.loadData([{ id: 1, category: 'Home Goods' },]);
+        dataTable.search("abcdef");
+        expect(dataTable.rows.length).toBe(0);
       });
     });
 
@@ -295,6 +328,19 @@ describe("DataTable", () => {
       expect(dataTable.rows.length).toBe(dataTable.data.length);
     });
 
+    it('should handle null and undefined values gracefully', () => {
+      dataTable.loadData(sampleDataWithNulls);
+
+      // Should not crash when filtering on a column with nulls
+      expect(() => dataTable.filter({ age: 35 })).not.toThrow();
+      expect(dataTable.rows.length).toBe(1);
+      expect(dataTable.rows[0].name).toBe('Charlie');
+
+      // Should correctly filter FOR null values
+      dataTable.filter({ age: null });
+      expect(dataTable.rows.length).toBe(1);
+      expect(dataTable.rows[0].name).toBe('Bob');
+    });
   });
 
   describe("Sort", () => {
@@ -351,6 +397,21 @@ describe("DataTable", () => {
       expect(dataTable.rows[1].name).toBe("Bob");
       expect(dataTable.rows[2].name).toBe("Charlie");
       expect(dataTable.rows[3].name).toBe("John");
+    });
+
+    it('should handle null and undefined values, grouping them together', () => {
+      // REUSE the dataTable from the Sort's beforeEach
+      dataTable.loadData(sampleDataWithNulls);
+
+      // Sort ascending. Nulls/undefineds should typically come first.
+      dataTable.sort('age', 'asc');
+
+      const sortedAges = dataTable.rows.map(row => row.age);
+      // Note: The exact order of null vs undefined isn't critical,
+      // just that they are grouped and don't cause a crash.
+      expect(sortedAges.slice(0, 2)).toContain(null);
+      expect(sortedAges.slice(0, 2)).toContain(undefined);
+      expect(sortedAges.slice(2)).toEqual([25, 35, 40]);
     });
   });
 

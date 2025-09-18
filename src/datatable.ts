@@ -1165,6 +1165,12 @@ export class DataTable extends EventTarget {
       if (ret !== 0) return ret;
     }
 
+    const aIsNull = aValue == null;
+    const bIsNull = bValue == null;
+
+    if (aIsNull && !bIsNull) return -1;
+    if (bIsNull && !aIsNull) return 1;
+
     if (aValue < bValue) return -1;
     if (aValue > bValue) return 1;
     return 0;

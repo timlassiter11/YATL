@@ -88,9 +88,6 @@ export class DataTable extends EventTarget {
 
   #virtualScroll?: VirtualScroll;
 
-  // The current sort priority. Incremented when a column is sorted.
-  #sortPriority: number = 0;
-
   #classes: Classes;
   #resizingColumn?: ColumnData;
 
@@ -597,19 +594,16 @@ export class DataTable extends EventTarget {
       return;
     }
 
-    if (order != col.sortOrder) {
-      if (order === 'asc' || order === 'desc') {
-        // If we are changing the sort order of a column
-        // keep it's existing priority.
-        if (col.sortPriority === Number.MAX_VALUE) {
-          col.sortPriority = this.#sortPriority++;
-        }
-      } else {
-        col.sortPriority = Number.MAX_VALUE;
-        this.#sortPriority--;
-      }
-      col.sortOrder = order;
+    if (order === col.sortOrder) {
+      return;
     }
+
+    if (order && !col.sortOrder) {
+      const priorities = this.columnStates.map(col => col.sortOrder ? col.sortPriority : 0);
+      col.sortPriority = Math.max(...priorities) + 1;
+      }
+
+      col.sortOrder = order;
 
     const sortEvent = new CustomEvent<DataTableEventMap['dt.col.sort']>(
       'dt.col.sort',

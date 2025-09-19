@@ -14,7 +14,7 @@ import {
   TableOptions,
   ValueFormatterCallback,
 } from './types';
-import { classesToArray, toHumanReadable, createRegexTokenizer } from './utils';
+import { classesToArray, createRegexTokenizer, toHumanReadable } from './utils';
 import { VirtualScroll, VirtualScrollError } from './virtualScroll';
 
 type RequiredOptions = Required<Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>> & Pick<TableOptions, 'rowFormatter' | 'data'>;
@@ -952,7 +952,7 @@ export class DataTable extends EventTarget {
       if (typeof value === 'string') {
         metadata.compareValues[field] = value.toLocaleLowerCase();
       }
-      
+
       // Tokenize any searchable columns
       if (col.searchable && col.tokenize && value) {
         metadata.tokens[field] = this.#options.tokenizer(value).map(token => token.value);
@@ -1288,6 +1288,10 @@ export class DataTable extends EventTarget {
     col: ColumnData,
     row: object,
   ) {
+
+    // Full text on hover
+    td.title = String(value);
+
     if (typeof col.valueFormatter === 'function') {
       value = col.valueFormatter(value, row);
     }
@@ -1645,5 +1649,6 @@ export interface DataTableEventMap {
   };
 }
 
-export { createRegexTokenizer };
 export type * from './types';
+export { createRegexTokenizer };
+

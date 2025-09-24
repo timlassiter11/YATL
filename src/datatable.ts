@@ -1069,6 +1069,10 @@ export class DataTable extends EventTarget {
     }
 
     for (const field of Object.keys(this.#filters || {})) {
+      if (!(field in this.#filters)) {
+        continue;
+      }
+
       const filter = this.#filters[field];
       const value = this.#getNestedValue(row, field);
       if (typeof filter === 'function') {

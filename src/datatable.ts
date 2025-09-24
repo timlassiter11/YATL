@@ -1042,14 +1042,12 @@ export class DataTable extends EventTarget {
     filterFunction?: ColumnFilterCallback,
   ): boolean {
     if (Array.isArray(filter)) {
+      if (filter.length === 0) {
+        return true;
+      }
       // If it's an array, we will use an OR filter.
       // If any filters in the array match, keep it.
-      for (const element of filter) {
-        if (this.#filterField(value, element)) {
-          return true;
-        }
-      }
-      return false;
+      return filter.some(element => this.#filterField(value, element));
     }
 
     if (typeof filterFunction === 'function') {

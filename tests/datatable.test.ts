@@ -336,10 +336,24 @@ describe("DataTable", () => {
       expect(dataTable.rows.length).toBe(1);
       expect(dataTable.rows[0].name).toBe('Charlie');
 
-      // Should correctly filter FOR null values
+      // Should correctly filter for null values
       dataTable.filter({ age: null });
       expect(dataTable.rows.length).toBe(1);
       expect(dataTable.rows[0].name).toBe('Bob');
+
+      // Should correctly filter for undefined values
+      dataTable.filter({age: undefined});
+      expect(dataTable.rows.length).toBe(1);
+    });
+
+    it('should treat arrays as OR filter', () => {
+      dataTable.filter({name: ["Charlie", "John"]});
+      expect(dataTable.rows.length).toBe(2);
+    });
+
+    it('should ignore empty arrays', () => {
+      dataTable.filter({name: []});
+      expect(dataTable.rows.length).toBe(sampleData.length);
     });
   });
 

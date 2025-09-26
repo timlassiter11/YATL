@@ -1110,8 +1110,8 @@ export class DataTable extends EventTarget {
       const fields = [...searchableFields, ...this.#options.extraSearchFields];
 
       for (const field of fields) {
-        let originalValue = this.#getNestedValue(row, field);
-        let compareValue = row._metadata.compareValues[field];
+        const originalValue = this.#getNestedValue(row, field);
+        const compareValue = row._metadata.compareValues[field];
         const columnTokens = row._metadata.tokens[field];
 
         if (typeof originalValue !== 'string' || typeof compareValue !== 'string') {
@@ -1386,7 +1386,6 @@ export class DataTable extends EventTarget {
       headerWidth = `${width}px`;
       cellWidth = `${width}px`;
     }
-    ''
     const prevWidth = column.header.offsetWidth;
     column.header.style.width = headerWidth;
     column.header.style.maxWidth = headerWidth;

@@ -91,7 +91,7 @@ export class VirtualScroll {
       window.addEventListener('resize', this.#renderCallback);
       this.#started = true;
     }
-    this.#container.classList.add("dt-virtual-scroll");
+    this.#container.classList.add('dt-virtual-scroll');
     this.#rowCount = rowCount;
     this.renderChunk();
   }
@@ -101,7 +101,7 @@ export class VirtualScroll {
       cancelAnimationFrame(this.#animationFrame);
     }
 
-    this.#container.classList.remove("dt-virtual-scroll");
+    this.#container.classList.remove('dt-virtual-scroll');
     this.#container.removeEventListener('scroll', this.#scrollCallback);
     window.removeEventListener('resize', this.#renderCallback);
     this.#started = false;
@@ -142,7 +142,7 @@ export class VirtualScroll {
 
     let startNode = Math.floor(scrollTop / rowHeight) - padding;
     startNode = Math.max(0, startNode);
-  
+
     let visibleNodesCount = Math.ceil(viewHeight / rowHeight) + 2 * padding;
     visibleNodesCount = Math.min(rowCount - startNode, visibleNodesCount);
 
@@ -151,8 +151,6 @@ export class VirtualScroll {
     if (startNode % 2 === 1) {
       startNode--;
     }
-
-    
 
     const offsetY = startNode * rowHeight;
     const remainingHeight =

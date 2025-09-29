@@ -19,7 +19,6 @@
 .dt-headers th {
   overflow: hidden;
   box-sizing: border-box;
-
 }
 
 .dt-headers .dt-header-content {
@@ -35,7 +34,7 @@
   flex-direction: row;
   align-items: center;
   flex-wrap: nowrap;
-  overflow: hidden;;
+  overflow: hidden;
 }
 
 .dt-sort-icon {

@@ -4,13 +4,12 @@ import { DataTable } from "../../dist/datatable.mjs";
 let dataTable;
 
 window.addEventListener("load", () => {
-  dataTable = new DataTable("table", {
-    columns: [
+  dataTable = new DataTable("table", [
       { field: "id", title: "ID", sortable: true},
       { field: "name", title: "Name", sortable: true},
       { field: "age", title: "Age", sortable: true},
       { field: "city", title: "City"},
-    ],
+    ], {
     resizable: true,
     rearrangeable: true,
   });
@@ -56,7 +55,7 @@ const updateData = () => {
 
 const updateVirtualScroll = () => {
   const value = document.querySelector('input[name="virtualScrolling"]:checked').value;
-  dataTable.virtualScroll = value === "on";
+  dataTable.updateOptions({virtualScroll: value === "on"});
   updateRenderedRows();
 }
 

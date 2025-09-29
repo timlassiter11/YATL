@@ -22,19 +22,19 @@
     }
 
     window.addEventListener("load", () => {
-      const dt = new yatl.DataTable("table", {
+      const columns = [
+        {
+          field: "name",
+          title: "Name",
+        },
+        {
+          field: "value",
+          title: "Value",
+        },
+      ]
+      const dt = new yatl.DataTable("table", columns, {
         // Create lots of data
         data: createData(100),
-        columns: [
-          {
-            field: "name",
-            title: "Name",
-          },
-          {
-            field: "value",
-            title: "Value",
-          },
-        ],
       });
     });
   </script>

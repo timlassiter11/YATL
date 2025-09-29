@@ -1,4 +1,4 @@
-import { NestedKeyOf } from "./utils";
+import { NestedKeyOf } from './utils';
 
 /**
  * Defines the possible sorting orders for columns.
@@ -51,7 +51,7 @@ export type SortValueCallback = (value: any) => number | string;
 export interface QueryToken {
   value: string;
   quoted: boolean;
-};
+}
 
 /**
  * Callback for tokenizing a value into a list of string tokens.
@@ -75,8 +75,6 @@ export type FilterCallback = (row: any, index: number) => boolean;
  * @returns True if the value matches the filter, false otherwise.
  */
 export type ColumnFilterCallback = (value: any, filter: any) => boolean;
-
-
 
 /**
  * Column options for the table.
@@ -220,11 +218,6 @@ export interface TableClasses {
   tbody?: string | string[];
 
   /**
-   * Classes for the tfoot element.
-   */
-  tfoot?: string | string[];
-
-  /**
    * Classes for each table row element.
    */
   tr?: string | string[];
@@ -250,11 +243,6 @@ export interface TableClasses {
  */
 export interface TableOptions<T> {
   /**
-   * The column options for the table.
-   */
-  columns: ColumnOptions<T>[];
-
-  /**
    * The initial data to load into the table.
    */
   data?: T[];
@@ -262,7 +250,7 @@ export interface TableOptions<T> {
   /**
    * Configures virtual scrolling.
    */
-  virtualScroll?: boolean;
+  virtualScroll?: boolean | number;
 
   /**
    * Whether to highlight search results in the table cells.

@@ -1,16 +1,17 @@
-import { TableClasses } from "./types";
+import { TableClasses } from './types';
 
 export type NestedKeyOf<T> = T extends object
   ? {
-    [K in keyof T]: K extends string
-    ? T[K] extends object
-    ? `${K}` | `${K}.${NestedKeyOf<T[K]>}`
-    : `${K}`
-    : never;
-  }[keyof T]
+      [K in keyof T]: K extends string
+        ? T[K] extends object
+          ? `${K}` | `${K}.${NestedKeyOf<T[K]>}`
+          : `${K}`
+        : never;
+    }[keyof T]
   : never;
 
-export type WithRequiredProp<Type, Key extends keyof Type> = Type & Required<Pick<Type, Key>>;
+export type WithRequiredProp<Type, Key extends keyof Type> = Type &
+  Required<Pick<Type, Key>>;
 
 export const classesToArray = (classes: string[] | string | undefined) => {
   if (typeof classes === 'string' && classes !== '') {
@@ -44,7 +45,7 @@ export const toHumanReadable = (str: string) => {
   );
 };
 
-export const createRegexTokenizer = (exp: string = "\\S+") => {
+export const createRegexTokenizer = (exp: string = '\\S+') => {
   const regex = new RegExp(`"[^"]*"|${exp}`, 'g');
 
   return (value: string) => {
@@ -59,10 +60,20 @@ export const createRegexTokenizer = (exp: string = "\\S+") => {
       }
       return { value: token, quoted: false };
     });
+  };
+};
+
+export function virtualScrollToNumber(virtualScroll: boolean | number) {
+  if (typeof virtualScroll === 'boolean') {
+    return virtualScroll ? 1 : Number.MAX_SAFE_INTEGER;
   }
+  return virtualScroll;
 }
 
-export function convertClasses(defaultClasses: TableClasses, userClasses: TableClasses = {}) {
+export function convertClasses(
+  defaultClasses: TableClasses,
+  userClasses: TableClasses = {},
+) {
   return {
     scroller: [
       ...classesToArray(userClasses.scroller),
@@ -75,10 +86,6 @@ export function convertClasses(defaultClasses: TableClasses, userClasses: TableC
     tbody: [
       ...classesToArray(userClasses.tbody),
       ...classesToArray(defaultClasses.tbody),
-    ],
-    tfoot: [
-      ...classesToArray(userClasses.tfoot),
-      ...classesToArray(defaultClasses.tfoot),
     ],
     tr: [
       ...classesToArray(userClasses.tr),
@@ -95,6 +102,6 @@ export function convertClasses(defaultClasses: TableClasses, userClasses: TableC
     mark: [
       ...classesToArray(userClasses.mark),
       ...classesToArray(defaultClasses.mark),
-    ]
+    ],
   };
 }

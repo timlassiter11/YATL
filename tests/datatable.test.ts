@@ -1,27 +1,29 @@
 import { ColumnOptions, DataTable } from '../src/datatable';
 
-type SampleDataType = {
+global.structuredClone = (val: any) => ({ ...val });
+
+type SampleData = {
   id?: number;
   name: string | null;
   city?: string | null;
   age?: number | null;
 };
 
-const sampleColumns: ColumnOptions<SampleDataType>[] = [
+const sampleColumns: ColumnOptions<SampleData>[] = [
   { field: 'id', title: 'ID' },
   { field: 'name', title: 'Name' },
   { field: 'age', title: 'Age' },
   { field: 'city', title: 'City' },
 ];
 
-const sampleData: SampleDataType[] = [
+const sampleData: SampleData[] = [
   { id: 1, name: 'Alice', age: 25, city: 'New York' },
   { id: 2, name: 'Bob', age: 30, city: 'Los Angeles' },
   { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
   { id: 4, name: 'John', age: 25, city: 'Boulder' },
 ];
 
-const sampleDataWithNulls = [
+const sampleDataWithNulls: SampleData[] = [
   { id: 1, name: 'Alice', age: 25, city: 'New York' },
   { id: 2, name: 'Bob', age: null, city: 'Los Angeles' },
   { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
@@ -30,6 +32,7 @@ const sampleDataWithNulls = [
 ];
 
 const defaultTestOptions = {
+  highlightSearch: false,
   virtualScroll: false,
 };
 
@@ -46,12 +49,11 @@ describe('DataTable', () => {
   });
 
   describe('Core', () => {
-    let dataTable: DataTable<SampleDataType>;
+    let dataTable: DataTable<SampleData>;
 
     beforeEach(() => {
-      dataTable = new DataTable<SampleDataType>(tableElement, {
+      dataTable = new DataTable<SampleData>(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        columns: sampleColumns,
       });
     });
 
@@ -60,9 +62,9 @@ describe('DataTable', () => {
     });
 
     it('should throw error if invalid selector', () => {
-      expect(
-        () => new DataTable('#table', { columns: [{ field: 'name' }] }),
-      ).toThrow(SyntaxError);
+      expect(() => new DataTable('#table', [{ field: 'name' }])).toThrow(
+        SyntaxError,
+      );
     });
 
     it('should load data into the table', () => {
@@ -84,6 +86,113 @@ describe('DataTable', () => {
     });
   });
 
+  describe('Options', () => {
+    let dataTable: DataTable<{ name: string }>;
+
+    beforeEach(() => {
+      dataTable = new DataTable(
+        tableElement,
+        [{ field: 'name', searchable: true }],
+        { ...defaultTestOptions },
+      );
+    });
+
+    it('should apply user defined classes to HTML elements', () => {
+      const data = [{ name: 'Alice' }];
+      const classes = {
+        scroller: 'test-scroller',
+        thead: 'test-thead',
+        tbody: 'test-tbody',
+        tr: 'test-tr',
+        th: 'test-th',
+        td: 'test-td',
+        mark: 'test-mark',
+      };
+      // We need highlight search for mark to work
+      dataTable.updateOptions({ highlightSearch: true });
+      dataTable.loadData(data);
+
+      dataTable.search(data[0].name);
+      dataTable.updateOptions({ classes });
+
+      expect(
+        document
+          .querySelector('.dt-scroller')
+          ?.classList.contains(classes.scroller),
+      ).toBeTruthy();
+      expect(
+        document.querySelector('thead')?.classList.contains(classes.thead),
+      ).toBeTruthy();
+      expect(
+        document.querySelector('thead th')?.classList.contains(classes.th),
+      ).toBeTruthy();
+
+      expect(
+        document.querySelector('tbody')?.classList.contains(classes.tbody),
+      ).toBeTruthy();
+      expect(
+        document.querySelector('tbody tr')?.classList.contains(classes.tr),
+      ).toBeTruthy();
+      expect(
+        document.querySelector('tbody tr td')?.classList.contains(classes.td),
+      ).toBeTruthy();
+
+      expect(
+        document.querySelector('mark')?.classList.contains(classes.mark),
+      ).toBeTruthy();
+    });
+
+    it('should mark search text', () => {
+      const row = { name: 'Alice' };
+      dataTable.loadData([row]);
+      dataTable.search(row.name);
+
+      dataTable.updateOptions({ highlightSearch: true });
+      expect(dataTable.options.highlightSearch).toBe(true);
+      expect(document.querySelector('mark')?.innerHTML).toBe(row.name);
+      dataTable.updateOptions({ highlightSearch: false });
+      expect(dataTable.options.highlightSearch).toBe(false);
+      expect(document.querySelector('mark')).toBeNull();
+    });
+
+    it('should update no data text', () => {
+      const dataTable = new DataTable(
+        tableElement,
+        [{ field: 'name', searchable: true }],
+        {
+          ...defaultTestOptions,
+        },
+      );
+
+      expect(document.querySelector('td')?.innerHTML).toBe(
+        dataTable.options.noDataText,
+      );
+      dataTable.updateOptions({ noDataText: 'testing123' });
+      expect(document.querySelector('td')?.innerHTML).toBe('testing123');
+    });
+
+    it('should update no match text', () => {
+      dataTable.loadData([{ name: 'Alice' }]);
+
+      dataTable.search('fjdkajfal');
+      expect(document.querySelector('td')?.innerHTML).toBe(
+        dataTable.options.noMatchText,
+      );
+      dataTable.updateOptions({ noMatchText: 'testing123' });
+      expect(document.querySelector('td')?.innerHTML).toBe('testing123');
+    });
+
+    it('should update the column title', () => {
+      expect(document.querySelector('.dt-header-title')?.innerHTML).toBe(
+        'Name',
+      );
+      dataTable.updateColumnOptions('name', { title: 'test' });
+      expect(document.querySelector('.dt-header-title')?.innerHTML).toBe(
+        'test',
+      );
+    });
+  });
+
   describe('Search', () => {
     type SearchData = { id: number; product?: string; category?: string };
 
@@ -100,10 +209,9 @@ describe('DataTable', () => {
     ];
 
     it('should highlight search results', () => {
-      const dataTable = new DataTable(tableElement, {
+      const dataTable = new DataTable(tableElement, searchColumns, {
         ...defaultTestOptions,
         highlightSearch: true,
-        columns: searchColumns,
         data: searchData,
       });
       dataTable.search('Standard');
@@ -125,9 +233,8 @@ describe('DataTable', () => {
         { field: 'user.address.city', searchable: true },
       ];
 
-      const dataTable = new DataTable(tableElement, {
+      const dataTable = new DataTable(tableElement, columns, {
         ...defaultTestOptions,
-        columns: columns,
         data,
       });
 
@@ -137,9 +244,11 @@ describe('DataTable', () => {
     });
 
     it('should handle searching columns with null or undefined values', () => {
-      const dataTable = new DataTable(tableElement, {
+      const columns: ColumnOptions<SampleData>[] = [
+        { field: 'name', searchable: true },
+      ];
+      const dataTable = new DataTable(tableElement, columns, {
         ...defaultTestOptions,
-        columns: [{ field: 'name', searchable: true }],
         data: sampleDataWithNulls,
         tokenizeSearch: true,
         enableSearchScoring: true, // Test the most complex path
@@ -158,11 +267,10 @@ describe('DataTable', () => {
       let dataTable: DataTable<SearchData>;
 
       beforeEach(() => {
-        dataTable = new DataTable(tableElement, {
+        dataTable = new DataTable(tableElement, searchColumns, {
           ...defaultTestOptions,
           tokenizeSearch: false,
           enableSearchScoring: false,
-          columns: searchColumns,
           data: searchData,
         });
       });
@@ -193,11 +301,10 @@ describe('DataTable', () => {
       let dataTable: DataTable<SearchData>;
 
       beforeEach(() => {
-        dataTable = new DataTable(tableElement, {
+        dataTable = new DataTable(tableElement, searchColumns, {
           ...defaultTestOptions,
           tokenizeSearch: true,
           enableSearchScoring: false,
-          columns: searchColumns,
           data: searchData,
         });
       });
@@ -209,12 +316,14 @@ describe('DataTable', () => {
 
       it('should use different tokenizer functions', () => {
         const tokenData = [{ tags: 'apple,banana,cherry' }];
+        const columns: ColumnOptions<(typeof tokenData)[number]>[] = [
+          { field: 'tags', searchable: true, tokenize: true },
+        ];
         const commaTokenizer = (value: string) =>
           value.split(',').map(token => ({ value: token, quoted: false }));
 
-        const dataTable = new DataTable(tableElement, {
+        const dataTable = new DataTable(tableElement, columns, {
           ...defaultTestOptions,
-          columns: [{ field: 'tags', searchable: true, tokenize: true }],
           data: tokenData,
           tokenizeSearch: true,
           tokenizer: commaTokenizer,
@@ -238,16 +347,16 @@ describe('DataTable', () => {
         { id: 2, title: 'Apple' },
         { id: 3, title: 'Snapple' },
       ];
+      const scoredSearchColumns: ColumnOptions<ScoredSearchData>[] = [
+        //{ field: 'id', searchable: false, tokenize: false},
+        { field: 'title', searchable: true, tokenize: true },
+      ];
 
       let dataTable: DataTable<ScoredSearchData>;
 
       beforeEach(() => {
-        dataTable = new DataTable(tableElement, {
+        dataTable = new DataTable(tableElement, scoredSearchColumns, {
           ...defaultTestOptions,
-          columns: [
-            //{ field: 'id', searchable: false, tokenize: false},
-            { field: 'title', searchable: true, tokenize: true },
-          ],
           data: scoredSearchData,
           tokenizeSearch: true,
           enableSearchScoring: true,
@@ -274,10 +383,13 @@ describe('DataTable', () => {
       });
 
       it('should bypass tokenization when a RegExp object is passed', () => {
-        const dataTable = new DataTable(tableElement, {
+        const data = [{ product: 'Laptop Pro X1' }];
+        const columns: ColumnOptions<(typeof data)[number]>[] = [
+          { field: 'product', searchable: true, tokenize: true },
+        ];
+        const dataTable = new DataTable(tableElement, columns, {
           ...defaultTestOptions,
-          columns: [{ field: 'product', searchable: true, tokenize: true }],
-          data: [{ product: 'Laptop Pro X1' }],
+          data,
           tokenizeSearch: true, // Tokenization is ON
         });
 
@@ -298,15 +410,19 @@ describe('DataTable', () => {
       let dataTable: DataTable<TokenizedSearchData>;
 
       beforeEach(() => {
-        dataTable = new DataTable(tableElement, {
-          ...defaultTestOptions,
-          columns: [
+        dataTable = new DataTable(
+          tableElement,
+          [
             { field: 'partNumber', searchable: true, tokenize: false }, // Substring search
             { field: 'description', searchable: true, tokenize: true }, // Token search
           ],
-          data: tokenizedSearchData,
-          tokenizeSearch: true,
-        });
+          {
+            ...defaultTestOptions,
+
+            data: tokenizedSearchData,
+            tokenizeSearch: true,
+          },
+        );
       });
 
       it('should only match on tokens for columns where tokenization is enabled', () => {
@@ -319,12 +435,11 @@ describe('DataTable', () => {
   });
 
   describe('Filter', () => {
-    let dataTable: DataTable<SampleDataType>;
+    let dataTable: DataTable<SampleData>;
 
     beforeEach(() => {
-      dataTable = new DataTable(tableElement, {
+      dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        columns: sampleColumns,
         data: sampleData,
       });
     });
@@ -392,12 +507,11 @@ describe('DataTable', () => {
   });
 
   describe('Sort', () => {
-    let dataTable: DataTable<SampleDataType>;
+    let dataTable: DataTable<SampleData>;
 
     beforeEach(() => {
-      dataTable = new DataTable(tableElement, {
+      dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        columns: sampleColumns,
         data: sampleData,
       });
     });
@@ -466,12 +580,11 @@ describe('DataTable', () => {
   });
 
   describe('UI', () => {
-    let dataTable: DataTable<SampleDataType>;
+    let dataTable: DataTable<SampleData>;
 
     beforeEach(() => {
-      dataTable = new DataTable(tableElement, {
+      dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        columns: sampleColumns,
         data: sampleData,
       });
     });
@@ -532,15 +645,18 @@ describe('DataTable', () => {
     it('should reorder columns by simulating drag and drop events', () => {
       const data = [{ id: 1, name: 'Alice' }];
 
-      const dataTable = new DataTable(tableElement, {
-        columns: [
+      const dataTable = new DataTable(
+        tableElement,
+        [
           { field: 'id', title: 'ID' },
           { field: 'name', title: 'Name' },
         ],
-        data,
-        rearrangeable: true, // Ensure rearrangeable is enabled for the table
-        virtualScroll: false,
-      });
+        {
+          data,
+          rearrangeable: true, // Ensure rearrangeable is enabled for the table
+          virtualScroll: false,
+        },
+      );
 
       const headersBeforeReorder = Array.from(
         tableElement.querySelectorAll('th'),
@@ -563,14 +679,17 @@ describe('DataTable', () => {
         { name: 'Bob', age: 30 },
       ];
 
-      const dataTable = new DataTable(tableElement, {
-        columns: [
+      const dataTable = new DataTable(
+        tableElement,
+        [
           { field: 'name', title: 'Name', sortable: true },
           { field: 'age', title: 'Age', sortable: true },
         ],
-        data,
-        virtualScroll: false,
-      });
+        {
+          data,
+          virtualScroll: false,
+        },
+      );
 
       // Apply a filter and sort
       dataTable.filter({ age: 30 });

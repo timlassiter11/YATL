@@ -28,6 +28,82 @@ const dateFormatter = new Intl.DateTimeFormat("en-US");
  */
 let dataTable;
 
+const columns = [
+  {
+    field: "id",
+    title: "ID",
+    sortable: true,
+    searchable: false,
+  },
+  {
+    field: "name",
+    title: "Item Name",
+    sortable: true,
+    searchable: true,
+  },
+  {
+    field: "status",
+    title: "Status",
+    sortable: true,
+    searchable: false,
+  },
+  {
+    field: "lastModified",
+    sortable: true,
+    sortValue: (value) => value?.getTime(),
+    filter: (value, filter) => {
+      if (filter.startDate && filter.endDate) {
+        return (
+          filter.startDate.getTime() <= value.getTime() &&
+          filter.endDate.getTime() >= value.getTime()
+        );
+      } else if (filter.startDate) {
+        return filter.startDate.getTime() <= value.getTime();
+      } else if (filter.endDate) {
+        return filter.endDate.getTime() >= value.getTime();
+      }
+      return true;
+    },
+    valueFormatter: (date) => dateFormatter.format(date),
+  },
+  {
+    field: "issueCount",
+    title: "Issues",
+    sortable: true,
+  },
+  {
+    field: "tags",
+    sortable: true,
+    searchable: true,
+    tokenize: true,
+    elementFormatter: (tags, row, element) => {
+      tags = tags.split(',');
+      element.innerHTML = '';
+      for (const tag of tags) {
+        const span = document.createElement("span");
+        span.innerText = tag;
+        span.classList.add("rounded-pill", "p-1", "m-1");
+
+        switch (tag) {
+          case 'urgent':
+          case 'critical':
+            span.classList.add("bg-danger");
+            break;
+          case 'bugfix':
+            span.classList.add("bg-warning");
+            break;
+          default:
+            span.classList.add("bg-secondary");
+            break;
+        }
+
+        element.append(span);
+      }
+
+    }
+  },
+]
+
 window.addEventListener("load", () => {
   const table = document.getElementById("table");
 
@@ -36,88 +112,13 @@ window.addEventListener("load", () => {
   let count = parseInt(url.searchParams.get("count"));
   count = isNaN(count) ? 100000 : count;
 
-  dataTable = new DataTable(table, {
+  dataTable = new DataTable(table, columns, {
     tokenizeSearch: true,
     sortable: true,
     resizable: true,
-    columns: [
-      {
-        field: "id",
-        title: "ID",
-        sortable: true,
-        searchable: false,
-      },
-      {
-        field: "name",
-        title: "Item Name",
-        sortable: true,
-        searchable: true,
-      },
-      {
-        field: "status",
-        title: "Status",
-        sortable: true,
-        searchable: false,
-      },
-      {
-        field: "lastModified",
-        sortable: true,
-        sortValue: (value) => value?.getTime(),
-        filter: (value, filter) => {
-          if (filter.startDate && filter.endDate) {
-            return (
-              filter.startDate.getTime() <= value.getTime() &&
-              filter.endDate.getTime() >= value.getTime()
-            );
-          } else if (filter.startDate) {
-            return filter.startDate.getTime() <= value.getTime();
-          } else if (filter.endDate) {
-            return filter.endDate.getTime() >= value.getTime();
-          }
-          return true;
-        },
-        valueFormatter: (date) => dateFormatter.format(date),
-      },
-      {
-        field: "issueCount",
-        title: "Issues",
-        sortable: true,
-      },
-      {
-        field: "tags",
-        sortable: true,
-        searchable: true,
-        tokenize: true,
-        elementFormatter: (tags, row, element) => {
-          tags = tags.split(',');
-          element.innerHTML = '';
-          for (const tag of tags) {
-            const span = document.createElement("span");
-            span.innerText = tag;
-            span.classList.add("rounded-pill", "p-1", "m-1");
-
-            switch (tag) {
-              case 'urgent':
-              case 'critical':
-                span.classList.add("bg-danger");
-                break;
-              case 'bugfix':
-                span.classList.add("bg-warning");
-                break;
-              default:
-                span.classList.add("bg-secondary");
-                break;
-            }
-
-            element.append(span);
-          }
-
-        }
-      },
-    ],
     rowFormatter: rowFormatter,
     data: generateMockData(count),
-    virtualScroll: true,
+    virtualScroll: 1000,
     rearrangeable: true,
   });
 
@@ -190,7 +191,7 @@ window.addEventListener("load", () => {
     : "Search");
 
   const scoringToggle = document.getElementById("scoringToggle");
-  
+
   if (dataTable.scoring) {
     scoringToggle.classList.add("active");
   } else {
@@ -198,7 +199,7 @@ window.addEventListener("load", () => {
   }
 
   scoringToggle.onclick = () => {
-    dataTable.scoring = scoringToggle.classList.contains("active");
+    dataTable.updateOptions({enableSearchScoring: scoringToggle.classList.contains("active")});
   }
 
   // Search table on input but add debouncing

@@ -28,8 +28,7 @@
   ],
   "scripts": {
     "lint": "eslint",
-    "format": "prettier src/**/* tests/**/* --write",
-    "format:check": "prettier src/**/* --check",
+    "format": "prettier src/* tests/* --write",
     "build": "tsup",
     "test": "jest"
   },

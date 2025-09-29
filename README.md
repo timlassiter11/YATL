@@ -134,6 +134,9 @@ Most of the time this isn't ideal though and instead we'd like to let the layout
 
 Since the `dt-scroller` wrapper listens to scroll and resize events, this allows the table to be responsive and update what is rendered as the layout changes. 
 
+### Docs
+Full API docs can be found [here](https://timlassiter11.github.io/YATL/docs/index.html).
+
 # Known Issues
 There are some limitations to virtual scrolling. For one, rows need to be a uniform height to accurately calculate the table height. Also, there seems to be a maximum element size that once exceeded, the contents are no longer rendered. I've found this to occur with datasets approaching 1 million rows in Chrome and unfortunately I have no workaround for it. If you have that many rows you definitely need some server side pagination and this is probably not the library for you.
 

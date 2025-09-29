@@ -1,3 +1,17 @@
+import { TableClasses } from "./types";
+
+export type NestedKeyOf<T> = T extends object
+  ? {
+    [K in keyof T]: K extends string
+    ? T[K] extends object
+    ? `${K}` | `${K}.${NestedKeyOf<T[K]>}`
+    : `${K}`
+    : never;
+  }[keyof T]
+  : never;
+
+export type WithRequiredProp<Type, Key extends keyof Type> = Type & Required<Pick<Type, Key>>;
+
 export const classesToArray = (classes: string[] | string | undefined) => {
   if (typeof classes === 'string' && classes !== '') {
     return classes.split(' ');
@@ -41,9 +55,46 @@ export const createRegexTokenizer = (exp: string = "\\S+") => {
     return matches.map(token => {
       token = token.toLocaleLowerCase().trim();
       if (token.startsWith('"') && token.endsWith('"')) {
-        return {value: token.slice(1, -1), quoted: true};
+        return { value: token.slice(1, -1), quoted: true };
       }
-      return {value: token, quoted: false};
+      return { value: token, quoted: false };
     });
   }
+}
+
+export function convertClasses(defaultClasses: TableClasses, userClasses: TableClasses = {}) {
+  return {
+    scroller: [
+      ...classesToArray(userClasses.scroller),
+      ...classesToArray(defaultClasses.scroller),
+    ],
+    thead: [
+      ...classesToArray(userClasses.thead),
+      ...classesToArray(defaultClasses.thead),
+    ],
+    tbody: [
+      ...classesToArray(userClasses.tbody),
+      ...classesToArray(defaultClasses.tbody),
+    ],
+    tfoot: [
+      ...classesToArray(userClasses.tfoot),
+      ...classesToArray(defaultClasses.tfoot),
+    ],
+    tr: [
+      ...classesToArray(userClasses.tr),
+      ...classesToArray(defaultClasses.tr),
+    ],
+    th: [
+      ...classesToArray(userClasses.th),
+      ...classesToArray(defaultClasses.th),
+    ],
+    td: [
+      ...classesToArray(userClasses.td),
+      ...classesToArray(defaultClasses.td),
+    ],
+    mark: [
+      ...classesToArray(userClasses.mark),
+      ...classesToArray(defaultClasses.mark),
+    ]
+  };
 }

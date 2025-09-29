@@ -56,11 +56,11 @@
 }
 
 .dt-sortable.dt-descending .dt-sort-icon::after {
-  content: '\2193';
+  content: '\2191';
 }
 
 .dt-sortable.dt-ascending .dt-sort-icon::after {
-  content: '\2191';
+  content: '\2193';
 }
 
 .dt-resizer {
@@ -99,15 +99,4 @@
 .dt-empty {
   text-align: center;
   pointer-events: none;
-}
-
-.dt-scroller {
-  height: 100%;
-  overflow: auto;
-}
-
-/* This is a catch all to ensure*/
-*:has( .data-table:has( .dt-virtual-scroll)) {
-  height: 100%;
-  min-height: 0;
 }

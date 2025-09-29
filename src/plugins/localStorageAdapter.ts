@@ -8,8 +8,11 @@ interface Options {
   saveColumnWidth: boolean;
 }
 
-export class LocalStorageAdapter {
-  #dataTable: DataTable;
+/**
+ * Monitors a {@link DataTable} instance for changes and saves the state to local storage.
+ */
+export class LocalStorageAdapter<T> {
+  #dataTable: DataTable<T>;
   #storageKey: string;
   #options: Options = {
     saveColumnSorting: true,
@@ -21,9 +24,9 @@ export class LocalStorageAdapter {
   /**
    * @param dataTable - The DataTable instance to monitor.
    * @param storageKey - The key to use for saving the state in localStorage.
-   * @param options - The key to use for saving the state in localStorage.
+   * @param options - The options for configuring what is stored.
    */
-  constructor(dataTable: DataTable, storageKey: string, options?: Options) {
+  constructor(dataTable: DataTable<T>, storageKey: string, options?: Options) {
     this.#dataTable = dataTable;
     this.#storageKey = storageKey;
     this.#options = { ...this.#options, ...options };

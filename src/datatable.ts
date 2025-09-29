@@ -7,6 +7,7 @@ import {
   ColumnState,
   ComparatorCallback,
   FilterCallback,
+  Filters,
   LoadOptions,
   QueryToken,
   SortOrder,
@@ -14,11 +15,9 @@ import {
   TableOptions,
   ValueFormatterCallback,
 } from './types';
-import { classesToArray, createRegexTokenizer, toHumanReadable } from './utils';
-import { VirtualScroll, VirtualScrollError } from './virtualScroll';
 
-type RequiredOptions = Required<Omit<TableOptions, 'columns' | 'data' | 'rowFormatter'>> & Pick<TableOptions, 'rowFormatter' | 'data'>;
-type FinalOptions = RequiredOptions & Pick<TableOptions, 'columns'>;
+import { convertClasses, createRegexTokenizer, NestedKeyOf, toHumanReadable } from './utils';
+import { VirtualScroll, VirtualScrollError } from './virtualScroll';
 
 /**
  * Represents a dynamic and interactive table with features like sorting, searching, filtering,
@@ -26,8 +25,9 @@ type FinalOptions = RequiredOptions & Pick<TableOptions, 'columns'>;
  *
  * @example
  * ```ts
- * const tableElement = document.getElementById('myTable');
- * const options = {
+ * type DataType = {id: number, name: string, age: number};
+ * 
+ * const dataTable = new DataTable<DataType>('#myTable', {
  *   columns: [
  *     { field: 'id', title: 'ID', sortable: true },
  *     { field: 'name', title: 'Name', searchable: true },
@@ -40,12 +40,10 @@ type FinalOptions = RequiredOptions & Pick<TableOptions, 'columns'>;
  *   virtualScroll: true,
  *   resizable: true,
  *   rearrangeable: true,
- * };
- * const dataTable = new DataTable(tableElement, options);
+ * });
  * ```
  */
-export class DataTable extends EventTarget {
-  // Define the weights once for the entire class
+export class DataTable<T> extends EventTarget {
   private static readonly MatchWeights = {
     EXACT: 100,
     PREFIX: 50,
@@ -54,7 +52,7 @@ export class DataTable extends EventTarget {
 
   // Centralized default options for the DataTable.
   // These are the base values used if not overridden by user-provided options.
-  private static readonly DEFAULT_OPTIONS: RequiredOptions = {
+  private readonly DEFAULT_OPTIONS: RequiredOptions<T> = {
     virtualScroll: true,
     highlightSearch: true,
     tokenizeSearch: false,
@@ -66,39 +64,39 @@ export class DataTable extends EventTarget {
     noDataText: 'No records found',
     noMatchText: 'No matching records found',
     classes: {
-      scroller: 'dt-scroller',
-      thead: 'dt-headers',
-      tbody: '',
-      tfoot: '',
-      tr: '',
-      th: '',
-      td: '',
+      scroller: ['dt-scroller'],
+      thead: ['dt-headers'],
+      tbody: [],
+      tfoot: [],
+      tr: [],
+      th: [],
+      td: [],
+      mark: [],
     },
-    tokenizer: createRegexTokenizer(), // Default tokenizer function
+    tokenizer: createRegexTokenizer(),
   };
 
   // Table elements
-  #table!: HTMLTableElement;
-  #thead!: HTMLElement;
-  #tbody!: HTMLElement;
-  #scroller!: HTMLElement;
+  #table: HTMLTableElement;
+  #thead: HTMLElement;
+  #tbody: HTMLElement;
+  #scroller: HTMLElement;
 
-  #columnData: Map<string, ColumnData> = new Map();
+  #columnData: Map<string, ColumnData<T>> = new Map();
 
   // Current data stored by the initial index
-  #rows: Map<number, InternalRowData> = new Map();
-  #filteredRows: InternalRowData[] = [];
+  #rows: Map<number, InternalRowData<T>> = new Map();
+  #filteredRows: InternalRowData<T>[] = [];
 
   // Search and filter data
   #query?: QueryToken[] | RegExp;
-  #filters!: any | FilterCallback;
+  #filters!: Filters<T> | FilterCallback;
 
   #virtualScroll?: VirtualScroll;
 
-  #classes: Classes;
-  #resizingColumn?: ColumnData;
+  #resizingColumn?: ColumnData<T>;
 
-  #options: FinalOptions;
+  #options: RequiredOptions<T>;
 
   #blockUpdates = false;
 
@@ -109,14 +107,15 @@ export class DataTable extends EventTarget {
    * @throws {SyntaxError} If the table selector does not find an element.
    * @throws {TypeError} If the provided table element is not an HTMLTableElement or if columns option is not an array.
    */
-  constructor(table: string | HTMLTableElement, options: TableOptions = {}) {
+  constructor(table: string | HTMLTableElement, options: TableOptions<T>) {
     super();
 
+    const userClasses = convertClasses(this.DEFAULT_OPTIONS.classes, options.classes);
     this.#options = {
-      columns: [],
       data: [],
-      ...DataTable.DEFAULT_OPTIONS,
+      ...this.DEFAULT_OPTIONS,
       ...options,
+      classes: userClasses,
     };
 
     // Search scoring is only useful with tokenization.
@@ -140,259 +139,20 @@ export class DataTable extends EventTarget {
       );
     }
 
-    if (!Array.isArray(this.#options.columns)) {
+    if (!Array.isArray(options.columns)) {
       throw new TypeError('columns must be a list of columns');
     }
 
+    const { scroller, thead, headerRow, tbody } = this.#initTableElements();
 
-    this.#classes = {
-      scroller: [
-        ...classesToArray(this.#options.classes.scroller),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.scroller),
-      ],
-      thead: [
-        ...classesToArray(this.#options.classes.thead),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.thead),
-      ],
-      tbody: [
-        ...classesToArray(this.#options.classes.tbody),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tbody),
-      ],
-      tfoot: [
-        ...classesToArray(this.#options.classes.tfoot),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tfoot),
-      ],
-      tr: [
-        ...classesToArray(this.#options.classes.tr),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.tr),
-      ],
-      th: [
-        ...classesToArray(this.#options.classes.th),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.th),
-      ],
-      td: [
-        ...classesToArray(this.#options.classes.td),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.td),
-      ],
-      mark: [
-        ...classesToArray(this.#options.classes.mark),
-        ...classesToArray(DataTable.DEFAULT_OPTIONS.classes.mark),
-      ]
-    };
+    this.#scroller = scroller;
+    this.#thead = thead;
+    this.#tbody = tbody;
 
-    this.#table.classList.add('data-table');
-
-    // Inner element that handles the virtual scroll.
-    this.#scroller = document.createElement('div');
-    this.#scroller.classList.add(...this.#classes.scroller);
-    this.#scroller.style.overflow = 'auto';
-    this.#scroller.style.height = '100%';
-
-    // If the user tries to provide a height, we will use that for the scroller.
-    if (this.#table.style.height !== '') {
-      this.#scroller.style.height = this.#table.style.height;
-      this.#table.style.height = '';
-    }
-
-    // Add the scroller before the table so when we move the
-    // table into the scroller it stays in the same place.
-    this.#table.parentElement?.insertBefore(this.#scroller, this.#table);
-    this.#scroller.append(this.#table);
-
-    if (this.#table.querySelectorAll('thead').length > 1) {
-      console.warn('Multiple theads found in table. Using last one.');
-    }
-
-    if (this.#table.querySelectorAll('tbody').length > 1) {
-      console.warn('Multiple tbodys found in table. Using first one.');
-    }
-
-    // Hopefully there isn't more than one header or body
-    // but if there is, use the last header and first body
-    // since that seems like it would make the most sense.
-    const thead = this.#table.querySelector('thead:last-of-type');
-    if (thead) {
-      this.#thead = thead as HTMLTableElement;
-    } else {
-      this.#thead = document.createElement('thead');
-      this.#table.insertBefore(this.#thead, this.#table.firstChild);
-    }
-
-    this.#thead.classList.add(...this.#classes.thead);
-
-    // Create the row for the thead if there isn't one
-    let headerRow = this.#thead.querySelector('tr:last-of-type');
-    if (!headerRow) {
-      headerRow = document.createElement('tr');
-      this.#thead.append(headerRow);
-    }
-
-    headerRow.classList.add(...this.#classes.tr);
-    // Remove any existing header cells
-    // TODO: Add ability to use HTML headers provided by the user.
-    headerRow.innerHTML = '';
-
-    const tbody = this.#table.querySelector('tbody:first-of-type');
-    // Create the tbody if it doesn't exists
-    if (tbody) {
-      this.#tbody = tbody as HTMLTableElement;
-    } else {
-      this.#tbody = document.createElement('tbody');
-      this.#table.append(this.#tbody);
-    }
-
-    this.#tbody.classList.add(...this.#classes.tbody);
-
-    this.#tbody.addEventListener('click', event => {
-      // Ignore events if the user is highlighting text
-      if (window.getSelection()?.toString()) return;
-
-      let tr, td, field;
-      if (event.target instanceof HTMLTableCellElement) {
-        td = event.target;
-        tr = td.parentElement;
-        field = td.dataset.dtField;
-      } else if (event.target instanceof HTMLTableRowElement) {
-        tr = event.target;
-      }
-
-      if (tr) {
-        const index = parseInt(tr.dataset.dtIndex || '');
-        if (!isNaN(index)) {
-          const row = this.#filteredRows.find(
-            value => value._metadata.index === index,
-          );
-          if (row) {
-            const rowEvent = new CustomEvent<
-              DataTableEventMap['dt.row.clicked']
-            >('dt.row.clicked', {
-              cancelable: false,
-              detail: {
-                row: row,
-                index: index,
-                column: field,
-                originalEvent: event,
-              },
-            });
-            this.dispatchEvent(rowEvent);
-          }
-        }
-      }
-    });
-
-    let colVisible = false;
-    // Initialize columns
-    for (const colOptions of this.#options.columns) {
-      const colData: ColumnData = {
-        field: colOptions.field,
-        title: colOptions.title || toHumanReadable(colOptions.field),
-        header: document.createElement('th'),
-        headerContent: document.createElement('div'),
-        visible: colOptions.visible ?? true,
-        sortable: colOptions.sortable ?? this.#options.sortable,
-        searchable: colOptions.searchable ?? false,
-        // If tokenization is disabled globally, disable it on the columns.
-        tokenize: this.#options.tokenizeSearch ? colOptions.tokenize ?? false : false,
-        sortOrder: colOptions.sortOrder ?? null,
-        sortPriority: colOptions.sortPriority ?? 0,
-        resizeStartWidth: null,
-        resizeStartX: null,
-        valueFormatter: colOptions.valueFormatter,
-        elementFormatter: colOptions.elementFormatter,
-        comparatorCallback: colOptions.sorter,
-        filterCallback: colOptions.filter,
-        sortValueCallback: colOptions.sortValue,
-      };
-      this.#columnData.set(colOptions.field, colData);
-
-      const th = colData.header;
-      th.classList.add(...this.#classes.th);
-      th.dataset.dtField = colOptions.field;
-      th.hidden = !colData.visible;
-
-      const headerContent = colData.headerContent;
-      headerContent.classList.add('dt-header-content');
-      th.append(headerContent);
-
-      const titleWrapper = document.createElement('div');
-      titleWrapper.classList.add('dt-header-title-wrapper');
-      headerContent.append(titleWrapper);
-
-      const titleElement = document.createElement('span');
-      titleElement.classList.add('dt-header-title');
-      titleElement.innerHTML = colData.title;
-      titleWrapper.append(titleElement);
-
-      const sorter = document.createElement('div');
-      sorter.classList.add('dt-sort-icon');
-      titleWrapper.append(sorter);
-
-      const resizer = document.createElement('div');
-      resizer.classList.add('dt-resizer');
-      headerContent.append(resizer);
-
-      headerRow.append(th);
-
-      // We need at least one column visible
-      if (colData.visible) {
-        colVisible = true;
-      }
-
-      if (colData.sortable) {
-        th.classList.add('dt-sortable');
-      }
-
-      if (this.#options.rearrangeable) {
-        th.draggable = true;
-      }
-
-      if (colOptions.resizable ?? this.#options.resizable) {
-        th.classList.add('dt-resizable');
-      }
-
-      // Sort event listener
-      titleWrapper.addEventListener('click', () => {
-        if (!th.classList.contains('dt-sortable')) return;
-
-        if (!colData.sortOrder) {
-          this.sort(colData.field, 'asc');
-        } else if (colData.sortOrder === 'asc') {
-          this.sort(colData.field, 'desc');
-        } else if (colData.sortOrder) {
-          this.sort(colData.field, null);
-        }
-      });
-
-      // Drag and drop event listeners
-      th.addEventListener('dragstart', this.#dragColumnStart);
-      th.addEventListener('dragenter', this.#dragColumnEnter);
-      th.addEventListener('dragover', this.#dragColumnOver);
-      th.addEventListener('dragleave', this.#dragColumnLeave);
-      th.addEventListener('drop', this.#dragColumnDrop);
-      th.addEventListener('dragend', this.#dragColumnEnd);
-      // Resize event listeners
-      th.addEventListener('mousedown', this.#resizeColumnStart);
-      th.addEventListener('dblclick', this.#resizeColumnDoubleClick);
-
-      if (typeof colOptions.width === 'number') {
-        th.style.width = colOptions.width + 'px';
-      } else if (typeof colOptions.width === 'string') {
-        th.style.width = colOptions.width;
-      }
-    }
-
-    if (this.#columnData.size === 0) {
-      console.warn('No columns found. At least one column is required.');
-    } else if (!colVisible) {
-      console.warn(
-        'At least a single column must be visible. Showing the first column.',
-      );
-      const col = this.#columnData.keys().next().value!;
-      this.showColumn(col);
-    }
+    this.#initColumns(options.columns, headerRow);
 
     this.virtualScroll = this.#options.virtualScroll;
-    this.loadData(this.#options.data ?? []);
+    this.loadData(options.data ?? []);
   }
 
   /**
@@ -434,14 +194,14 @@ export class DataTable extends EventTarget {
   /**
    * Gets the currently filtered and sorted rows displayed in the table.
    */
-  get rows(): any[] {
+  get rows(): T[] {
     return [...this.#filteredRows];
   }
 
   /**
    * Gets the underlying data
    */
-  get data(): any[] {
+  get data(): T[] {
     return [...this.#rows.values()];
   }
 
@@ -511,7 +271,7 @@ export class DataTable extends EventTarget {
    * @param rows - An array of data to be loaded
    * @param options - Configuration for the load operation
    */
-  loadData(rows: any[], options: LoadOptions = {}) {
+  loadData(rows: T[], options: LoadOptions = {}) {
     const scrollTop = this.#scroller.scrollTop;
     const scrollLeft = this.#scroller.scrollLeft;
 
@@ -521,7 +281,7 @@ export class DataTable extends EventTarget {
     }
 
     let index = this.#rows.size;
-    for (const row of rows) {
+    for (const row of rows as InternalRowData<T>[]) {
       const internal_row = this.#loadRow(row, index);
       this.#rows.set(index, internal_row);
       index++;
@@ -593,13 +353,8 @@ export class DataTable extends EventTarget {
    * @param filters - An object defining field-based filters or a custom filter callback function.
    * @throws {TypeError} If `filters` is not an object or a function.
    */
-  filter(filters?: any | FilterCallback) {
-    filters ??= {};
-
-    if (typeof filters !== 'object' && typeof filters !== 'function') {
-      throw new TypeError('filters must be object or function');
-    }
-    this.#filters = filters;
+  filter(filters?: Filters<T> | FilterCallback) {
+    this.#filters = filters || {};
     this.#filterRows();
   }
 
@@ -627,7 +382,7 @@ export class DataTable extends EventTarget {
 
     col.sortOrder = order;
 
-    const sortEvent = new CustomEvent<DataTableEventMap['dt.col.sort']>(
+    const sortEvent = new CustomEvent<DataTableEventMap<T>['dt.col.sort']>(
       'dt.col.sort',
       {
         cancelable: true,
@@ -673,7 +428,7 @@ export class DataTable extends EventTarget {
     }
 
     const visibilityEvent = new CustomEvent<
-      DataTableEventMap['dt.col.visibility']
+      DataTableEventMap<T>['dt.col.visibility']
     >('dt.col.visibility', {
       cancelable: true,
       detail: {
@@ -725,14 +480,14 @@ export class DataTable extends EventTarget {
 
     const csvRows = rows
       .map(row => {
-        const list = [];
+        const list: string[] = [];
         for (const key of Object.keys(row)) {
           const col = this.#columnData.get(key);
           if (!col) {
             continue;
           }
 
-          let value = row[key];
+          let value = (row as any)[key];
           if (all || !col.header.hidden) {
             if (typeof col.valueFormatter === 'function') {
               value = col.valueFormatter(value, row);
@@ -757,8 +512,8 @@ export class DataTable extends EventTarget {
     a.remove();
   }
 
-  scrollToRow(row: any) {
-    const rowData = row as InternalRowData;
+  scrollToRow(row: T) {
+    const rowData = row as InternalRowData<T>;
     const index = rowData._metadata?.index;
     if (typeof index === 'number') {
       this.scrollToOriginalIndex(index);
@@ -826,7 +581,7 @@ export class DataTable extends EventTarget {
       throw new TypeError('fields must be an array of field names');
     }
 
-    const newColumns = new Map<string, ColumnData>();
+    const newColumns = new Map<string, ColumnData<T>>();
     for (const field of fields) {
       const col = this.#columnData.get(field);
       if (col) {
@@ -870,7 +625,7 @@ export class DataTable extends EventTarget {
     const rows = [...this.#rows.values()];
     const found_row = rows.find(row => {
       if (field in row) {
-        return row[field] === value;
+        return (row as any)[field] === value;
       }
     });
 
@@ -893,7 +648,7 @@ export class DataTable extends EventTarget {
    * }
    * ```
    */
-  updateRow(index: number, data: any) {
+  updateRow(index: number, data: T) {
     const current_row = this.#rows.get(index);
     if (current_row) {
       Object.assign(current_row, data);
@@ -916,7 +671,7 @@ export class DataTable extends EventTarget {
    * @param callback - A function to execute. It receives the DataTable instance as its argument.
    * @example dataTable.withoutUpdates(dt => { dt.sort('name', 'asc'); dt.filter({ age: '>30' }); });
    */
-  withoutUpdates(callback: (datatable: DataTable) => void) {
+  withoutUpdates(callback: (datatable: DataTable<T>) => void) {
     this.#blockUpdates = true;
     try {
       callback(this);
@@ -926,7 +681,168 @@ export class DataTable extends EventTarget {
     }
   }
 
-  #loadRow(row: InternalRowData, index: number) {
+  #initTableElements() {
+    this.#table.classList.add('data-table');
+
+    // Inner element that handles the virtual scroll.
+    const scroller = document.createElement('div');
+    scroller.classList.add(...this.#options.classes.scroller);
+    scroller.style.overflow = 'auto';
+    scroller.style.height = '100%';
+
+    // If the user tries to provide a height, we will use that for the scroller.
+    if (this.#table.style.height !== '') {
+      scroller.style.height = this.#table.style.height;
+      this.#table.style.height = '';
+    }
+
+    const thead = document.createElement('thead');
+    thead.classList.add(...this.#options.classes.thead);
+
+    const headerRow = document.createElement('tr');
+    headerRow.classList.add(...this.#options.classes.tr);
+
+    const tbody = document.createElement('tbody');
+    tbody.classList.add(...this.#options.classes.tbody);
+
+    tbody.addEventListener('click', this.#onTableClicked);
+
+    // We currently don't support HTML based columns.
+    // Clear the table and start fresh.
+    // TODO: Add ability to use HTML headers provided by the user.
+    this.#table.innerHTML = '';
+
+    thead.append(headerRow);
+    this.#table.append(thead);
+    this.#table.append(tbody);
+
+    // Add the scroller before the table so when we move the
+    // table into the scroller it stays in the same place.
+    this.#table.parentElement?.insertBefore(scroller, this.#table);
+    scroller.append(this.#table);
+
+    return {
+      scroller,
+      thead,
+      headerRow,
+      tbody,
+    }
+  }
+
+  #initColumns(columns: ColumnOptions<T>[], headerRow: HTMLElement) {
+    let colVisible = false;
+    // Initialize columns
+    for (const colOptions of columns) {
+      const colData: ColumnData<T> = {
+        field: colOptions.field,
+        title: colOptions.title || toHumanReadable(colOptions.field),
+        header: document.createElement('th'),
+        headerContent: document.createElement('div'),
+        visible: colOptions.visible ?? true,
+        sortable: colOptions.sortable ?? this.#options.sortable,
+        searchable: colOptions.searchable ?? false,
+        // If tokenization is disabled globally, disable it on the columns.
+        tokenize: this.#options.tokenizeSearch ? colOptions.tokenize ?? false : false,
+        sortOrder: colOptions.sortOrder ?? null,
+        sortPriority: colOptions.sortPriority ?? 0,
+        resizeStartWidth: null,
+        resizeStartX: null,
+        valueFormatter: colOptions.valueFormatter,
+        elementFormatter: colOptions.elementFormatter,
+        sorterCallback: colOptions.sorter,
+        filterCallback: colOptions.filter,
+        sortValueCallback: colOptions.sortValue,
+      };
+      this.#columnData.set(colOptions.field, colData);
+
+      const th = colData.header;
+      th.classList.add(...this.#options.classes.th);
+      th.dataset.dtField = colOptions.field;
+      th.hidden = !colData.visible;
+
+      const headerContent = colData.headerContent;
+      headerContent.classList.add('dt-header-content');
+      th.append(headerContent);
+
+      const titleWrapper = document.createElement('div');
+      titleWrapper.classList.add('dt-header-title-wrapper');
+      headerContent.append(titleWrapper);
+
+      const titleElement = document.createElement('span');
+      titleElement.classList.add('dt-header-title');
+      titleElement.innerHTML = colData.title;
+      titleWrapper.append(titleElement);
+
+      const sorter = document.createElement('div');
+      sorter.classList.add('dt-sort-icon');
+      titleWrapper.append(sorter);
+
+      const resizer = document.createElement('div');
+      resizer.classList.add('dt-resizer');
+      headerContent.append(resizer);
+
+      headerRow.append(th);
+
+      // We need at least one column visible
+      if (colData.visible) {
+        colVisible = true;
+      }
+
+      if (colData.sortable) {
+        th.classList.add('dt-sortable');
+      }
+
+      if (this.#options.rearrangeable) {
+        th.draggable = true;
+      }
+
+      if (colOptions.resizable ?? this.#options.resizable) {
+        th.classList.add('dt-resizable');
+      }
+
+      // Sort event listener
+      titleWrapper.addEventListener('click', () => {
+        if (!th.classList.contains('dt-sortable')) return;
+
+        if (!colData.sortOrder) {
+          this.sort(colData.field, 'asc');
+        } else if (colData.sortOrder === 'asc') {
+          this.sort(colData.field, 'desc');
+        } else if (colData.sortOrder) {
+          this.sort(colData.field, null);
+        }
+      });
+
+      // Drag and drop event listeners
+      th.addEventListener('dragstart', this.#onDragColumnStart);
+      th.addEventListener('dragenter', this.#onDragColumnEnter);
+      th.addEventListener('dragover', this.#onDragColumnOver);
+      th.addEventListener('dragleave', this.#onDragColumnLeave);
+      th.addEventListener('drop', this.#onDragColumnDrop);
+      th.addEventListener('dragend', this.#onDragColumnEnd);
+      // Resize event listeners
+      th.addEventListener('mousedown', this.#onResizeColumnStart);
+      th.addEventListener('dblclick', this.#onResizeColumnDoubleClick);
+
+      if (typeof colOptions.width === 'number') {
+        th.style.width = colOptions.width + 'px';
+      } else if (typeof colOptions.width === 'string') {
+        th.style.width = colOptions.width;
+      }
+    }
+
+    if (this.#columnData.size === 0) {
+      console.warn('No columns found. At least one column is required.');
+    } else if (!colVisible) {
+      console.warn(
+        'At least a single column must be visible. Showing the first column.',
+      );
+      const col = columns[0].field;
+      this.showColumn(col);
+    }
+  }
+
+  #loadRow(row: InternalRowData<T>, index: number) {
     // Add the index
     const metadata: RowMetadata = {
       index: index++,
@@ -1061,7 +977,7 @@ export class DataTable extends EventTarget {
     return filter === value;
   }
 
-  #filterRow(row: InternalRowData, index: number): boolean {
+  #filterRow(row: InternalRowData<T>, index: number): boolean {
     if (typeof this.#filters === 'function') {
       return this.#filters(row, index);
     }
@@ -1071,7 +987,7 @@ export class DataTable extends EventTarget {
         continue;
       }
 
-      const filter = this.#filters[field];
+      const filter = (this.#filters as any)[field];
       const value = this.#getNestedValue(row, field);
       if (typeof filter === 'function') {
         if (!filter(value)) {
@@ -1136,7 +1052,7 @@ export class DataTable extends EventTarget {
 
     this.#sortRows();
 
-    const changeEvent = new CustomEvent<DataTableEventMap['dt.rows.changed']>(
+    const changeEvent = new CustomEvent<DataTableEventMap<T>['dt.rows.changed']>(
       'dt.rows.changed',
       {
         cancelable: false,
@@ -1150,9 +1066,9 @@ export class DataTable extends EventTarget {
   }
 
   #compareRows(
-    a: InternalRowData,
-    b: InternalRowData,
-    col: ColumnOptions,
+    a: InternalRowData<T>,
+    b: InternalRowData<T>,
+    col: ColumnOptions<T>,
   ): number {
     let aValue, bValue;
     if (col.sortOrder === 'asc') {
@@ -1272,7 +1188,7 @@ export class DataTable extends EventTarget {
   #markText(element: HTMLElement, query: RegExp) {
     if (element.children.length === 0) {
       let text = element.innerText;
-      const classes = this.#classes.mark.join(" ");
+      const classes = this.#options.classes.mark.join(" ");
       text = text.replace(query, match => `<mark class="${classes}">${match}</mark>`);
       element.innerHTML = text;
     } else {
@@ -1287,8 +1203,8 @@ export class DataTable extends EventTarget {
   #updateCell(
     td: HTMLTableCellElement,
     value: any,
-    col: ColumnData,
-    row: object,
+    col: ColumnData<T>,
+    row: T,
   ) {
 
     // Full text on hover
@@ -1322,13 +1238,13 @@ export class DataTable extends EventTarget {
   #createRow(index: number): HTMLTableRowElement {
     const row = this.#filteredRows[index];
     const tr = document.createElement('tr');
-    tr.classList.add(...this.#classes.tr);
+    tr.classList.add(...this.#options.classes.tr);
     tr.dataset.dtIndex = String(row._metadata.index);
 
     for (const [field, col] of this.#columnData) {
       const value = this.#getNestedValue(row, field);
       const td = document.createElement('td');
-      td.classList.add(...this.#classes.td);
+      td.classList.add(...this.#options.classes.td);
       td.dataset.dtField = field;
       const colWidth = col.header.style.width;
       // If the column has been resized, force the cells to that width.
@@ -1368,7 +1284,7 @@ export class DataTable extends EventTarget {
     return current;
   }
 
-  #resizeColumn(column: string | ColumnData, width?: number) {
+  #resizeColumn(column: string | ColumnData<T>, width?: number) {
     if (typeof column === 'string') {
       const columnData = this.#columnData.get(column);
       if (!columnData) throw new Error('Column not found');
@@ -1406,7 +1322,46 @@ export class DataTable extends EventTarget {
     this.#table.style.width = `${tableWidth}px`;
   }
 
-  #resizeColumnStart = (event: MouseEvent) => {
+  /* Event handlers */
+
+  #onTableClicked = (event: MouseEvent) => {
+    // Ignore events if the user is highlighting text
+    if (window.getSelection()?.toString()) return;
+
+    let tr, td, field;
+    if (event.target instanceof HTMLTableCellElement) {
+      td = event.target;
+      tr = td.parentElement;
+      field = td.dataset.dtField;
+    } else if (event.target instanceof HTMLTableRowElement) {
+      tr = event.target;
+    }
+
+    if (tr) {
+      const index = parseInt(tr.dataset.dtIndex || '');
+      if (!isNaN(index)) {
+        const row = this.#filteredRows.find(
+          value => value._metadata.index === index,
+        );
+        if (row) {
+          const rowEvent = new CustomEvent<
+            DataTableEventMap<T>['dt.row.clicked']
+          >('dt.row.clicked', {
+            cancelable: false,
+            detail: {
+              row: row,
+              index: index,
+              column: field,
+              originalEvent: event,
+            },
+          });
+          this.dispatchEvent(rowEvent);
+        }
+      }
+    }
+  };
+
+  #onResizeColumnStart = (event: MouseEvent) => {
     // If target is not the resizer, we don't care.
     if (!(event.target instanceof HTMLElement)) return;
     if (!event.target.classList.contains('dt-resizer')) return;
@@ -1425,11 +1380,11 @@ export class DataTable extends EventTarget {
     col.resizeStartX = event.clientX;
     col.resizeStartWidth = col.header.offsetWidth;
 
-    document.addEventListener('mousemove', this.#resizeColumnMove);
-    document.addEventListener('mouseup', this.#resizeColumnEnd);
+    document.addEventListener('mousemove', this.#onResizeColumnMove);
+    document.addEventListener('mouseup', this.#onResizeColumnEnd);
   };
 
-  #resizeColumnMove = (event: MouseEvent) => {
+  #onResizeColumnMove = (event: MouseEvent) => {
     if (!this.#resizingColumn) return;
     event.stopImmediatePropagation();
     event.preventDefault();
@@ -1439,15 +1394,15 @@ export class DataTable extends EventTarget {
     this.#resizeColumn(this.#resizingColumn, newWidth);
   };
 
-  #resizeColumnEnd = (event: MouseEvent) => {
+  #onResizeColumnEnd = (event: MouseEvent) => {
     if (!this.#resizingColumn) return;
     event.stopImmediatePropagation();
     event.preventDefault();
 
-    document.removeEventListener('mousemove', this.#resizeColumnMove);
-    document.removeEventListener('mouseup', this.#resizeColumnEnd);
+    document.removeEventListener('mousemove', this.#onResizeColumnMove);
+    document.removeEventListener('mouseup', this.#onResizeColumnEnd);
 
-    const resizeEvent = new CustomEvent<DataTableEventMap['dt.col.resize']>(
+    const resizeEvent = new CustomEvent<DataTableEventMap<T>['dt.col.resize']>(
       'dt.col.resize',
       {
         cancelable: false,
@@ -1463,7 +1418,7 @@ export class DataTable extends EventTarget {
     this.#resizingColumn = undefined;
   };
 
-  #resizeColumnDoubleClick = (event: MouseEvent) => {
+  #onResizeColumnDoubleClick = (event: MouseEvent) => {
     // If target is not the resizer, we don't care.
     if (!(event.target instanceof HTMLElement)) return;
     if (!event.target.classList.contains('dt-resizer')) return;
@@ -1476,7 +1431,7 @@ export class DataTable extends EventTarget {
     this.#resizeColumn(field);
   };
 
-  #dragColumnStart = (event: DragEvent) => {
+  #onDragColumnStart = (event: DragEvent) => {
     const target = event.target as HTMLElement;
     const field = target.dataset.dtField;
 
@@ -1486,7 +1441,7 @@ export class DataTable extends EventTarget {
     }
   };
 
-  #dragColumnOver = (event: DragEvent) => {
+  #onDragColumnOver = (event: DragEvent) => {
     event.preventDefault();
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = 'move';
@@ -1494,17 +1449,17 @@ export class DataTable extends EventTarget {
     return false;
   };
 
-  #dragColumnEnter = (event: DragEvent) => {
+  #onDragColumnEnter = (event: DragEvent) => {
     const target = event.target as HTMLElement;
     target.classList.add('dt-drag-over');
   };
 
-  #dragColumnLeave = (event: DragEvent) => {
+  #onDragColumnLeave = (event: DragEvent) => {
     const target = event.target as HTMLElement;
     target.classList.remove('dt-drag-over');
   };
 
-  #dragColumnDrop = (event: DragEvent) => {
+  #onDragColumnDrop = (event: DragEvent) => {
     const dragField = event.dataTransfer?.getData('text/plain');
     const target = event.currentTarget as HTMLElement;
     const dropField = target.dataset.dtField;
@@ -1525,7 +1480,7 @@ export class DataTable extends EventTarget {
 
       columns.splice(dropIndex, 0, draggedColumn);
       const newColumnOrder = columns.map(col => col.field);
-      const reorderEvent = new CustomEvent<DataTableEventMap['dt.col.reorder']>(
+      const reorderEvent = new CustomEvent<DataTableEventMap<T>['dt.col.reorder']>(
         'dt.col.reorder',
         {
           cancelable: true,
@@ -1544,16 +1499,16 @@ export class DataTable extends EventTarget {
     }
   };
 
-  #dragColumnEnd = () => {
+  #onDragColumnEnd = () => {
     const elements = document.querySelectorAll('.dt-drag-over');
     for (const element of elements) {
       element.classList.remove('dt-drag-over');
     }
   };
 
-  addEventListener<K extends keyof DataTableEventMap>(
+  addEventListener<K extends keyof DataTableEventMap<T>>(
     type: K,
-    listener: (this: DataTable, ev: CustomEvent<DataTableEventMap[K]>) => any,
+    listener: (this: DataTable<T>, ev: CustomEvent<DataTableEventMap<T>[K]>) => any,
     options?: boolean | AddEventListenerOptions,
   ): void;
 
@@ -1570,29 +1525,29 @@ export class DataTable extends EventTarget {
   }
 }
 
-interface ColumnData {
-  field: string;
+interface ColumnData<T> {
+  field: NestedKeyOf<T>;
   title: string;
   sortable: boolean;
   searchable: boolean;
   tokenize: boolean;
-  header: HTMLElement;
-  headerContent: HTMLElement;
-  visible: boolean;
   sortOrder: SortOrder;
   sortPriority: number;
+  visible: boolean;
+  valueFormatter?: ValueFormatterCallback<T>;
+  elementFormatter?: CellFormatterCallback<T>;
+  sorterCallback?: ComparatorCallback;
+  sortValueCallback?: SortValueCallback;
+  filterCallback?: ColumnFilterCallback;
+
+  header: HTMLElement;
+  headerContent: HTMLElement;
   resizeStartX: number | null;
   resizeStartWidth: number | null;
-  valueFormatter?: ValueFormatterCallback;
-  elementFormatter?: CellFormatterCallback;
-  comparatorCallback?: ComparatorCallback;
-  filterCallback?: ColumnFilterCallback;
-  sortValueCallback?: SortValueCallback;
 }
 
-interface InternalRowData extends Record<string, any> {
-  _metadata: RowMetadata;
-}
+type InternalRowData<T> = T & { _metadata: RowMetadata };
+
 
 interface RowMetadata {
   index: number;
@@ -1618,9 +1573,9 @@ const WARN_ROW_COUNT = 10_000;
 /**
  * Defines the mapping between event names and their detail object types.
  */
-export interface DataTableEventMap {
+export interface DataTableEventMap<T> {
   'dt.row.clicked': {
-    row: any;
+    row: T;
     index: number;
     column: string | undefined;
     originalEvent: MouseEvent;
@@ -1649,6 +1604,9 @@ export interface DataTableEventMap {
     order: string[];
   };
 }
+
+// Table options without data and columns. Omit rowFormatter from required and add it back.
+type RequiredOptions<T> = Required<Omit<TableOptions<T>, 'columns' | 'data' | 'rowFormatter' | 'classes'>> & Pick<TableOptions<T>, 'rowFormatter'> & { classes: Classes };
 
 export type * from './types';
 export { createRegexTokenizer };

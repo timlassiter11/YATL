@@ -1,83 +1,102 @@
-import { ColumnOptions, DataTable, TableOptions } from '../src/datatable';
+import { ColumnOptions, DataTable } from '../src/datatable';
+
+type SampleDataType = {
+  id?: number;
+  name: string | null;
+  city?: string | null;
+  age?: number | null;
+};
+
+const sampleColumns: ColumnOptions<SampleDataType>[] = [
+  { field: 'id', title: 'ID' },
+  { field: 'name', title: 'Name' },
+  { field: 'age', title: 'Age' },
+  { field: 'city', title: 'City' },
+];
+
+const sampleData: SampleDataType[] = [
+  { id: 1, name: 'Alice', age: 25, city: 'New York' },
+  { id: 2, name: 'Bob', age: 30, city: 'Los Angeles' },
+  { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
+  { id: 4, name: 'John', age: 25, city: 'Boulder' },
+];
+
+const sampleDataWithNulls = [
+  { id: 1, name: 'Alice', age: 25, city: 'New York' },
+  { id: 2, name: 'Bob', age: null, city: 'Los Angeles' },
+  { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
+  { id: 4, name: 'David', age: undefined, city: null },
+  { id: 5, name: null, age: 40, city: 'Boulder' },
+];
+
+const defaultTestOptions = {
+  virtualScroll: false,
+};
 
 describe('DataTable', () => {
   let tableElement: HTMLTableElement;
-  let dataTable: DataTable;
-
-  const sampleColumns: ColumnOptions[] = [
-    { field: 'name', title: 'Name' },
-    { field: 'age', title: 'Age' },
-  ];
-
-  const sampleData = [
-    { id: 1, name: 'Alice', age: 25, city: 'New York' },
-    { id: 2, name: 'Bob', age: 30, city: 'Los Angeles' },
-    { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
-    { id: 4, name: 'John', age: 25, city: 'Boulder' },
-  ];
-
-  // Add this data to your test file
-  const sampleDataWithNulls = [
-    { id: 1, name: 'Alice', age: 25, city: 'New York' },
-    { id: 2, name: 'Bob', age: null, city: 'Los Angeles' },
-    { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
-    { id: 4, name: 'David', age: undefined, city: null },
-    { id: 5, name: null, age: 40, city: 'Boulder' },
-  ];
-
-  // At the top of your datatable.test.ts
-  const defaultTestOptions: Partial<TableOptions> = {
-    columns: sampleColumns,
-    data: sampleData,
-    virtualScroll: false,
-  };
 
   beforeEach(() => {
     document.body.innerHTML = '<table></table>';
     tableElement = document.querySelector('table')!;
-    dataTable = new DataTable(tableElement, defaultTestOptions);
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
   });
 
-  it('should initialize with valid table element', () => {
-    expect(dataTable.table).toBe(tableElement);
-  });
+  describe('Core', () => {
+    let dataTable: DataTable<SampleDataType>;
 
-  it('should throw error if invalid selector', () => {
-    expect(() => new DataTable('#table')).toThrow(SyntaxError);
-  });
+    beforeEach(() => {
+      dataTable = new DataTable<SampleDataType>(tableElement, {
+        ...defaultTestOptions,
+        columns: sampleColumns,
+      });
+    });
 
-  it('should load data into the table', () => {
-    dataTable.loadData([{ id: 1, name: 'Alice' }]);
-    expect(dataTable.rows.length).toBe(1);
-    expect(dataTable.rows[0].name).toBe('Alice');
-  });
+    it('should initialize with valid table element', () => {
+      expect(dataTable.table).toBe(tableElement);
+    });
 
-  it('should append data', () => {
-    const len = dataTable.rows.length;
-    dataTable.loadData([{ id: 5, name: 'Jane', age: 55 }], { append: true });
-    expect(dataTable.rows.length).toBe(len + 1);
-  });
+    it('should throw error if invalid selector', () => {
+      expect(
+        () => new DataTable('#table', { columns: [{ field: 'name' }] }),
+      ).toThrow(SyntaxError);
+    });
 
-  it('should handle undefined data in rows', () => {
-    dataTable.loadData([{ id: 1, category: 'Home Goods' }]);
-    expect(dataTable.rows[0].name).toBeUndefined();
+    it('should load data into the table', () => {
+      dataTable.loadData([{ id: 1, name: 'Alice' }]);
+      expect(dataTable.rows.length).toBe(1);
+      expect(dataTable.rows[0].name).toBe('Alice');
+    });
+
+    it('should append data', () => {
+      dataTable.loadData(sampleData);
+      expect(dataTable.rows.length).toBe(sampleData.length);
+      dataTable.loadData([{ id: 5, name: 'Jane', age: 55 }], { append: true });
+      expect(dataTable.rows.length).toBe(sampleData.length + 1);
+    });
+
+    it('should handle undefined data in rows', () => {
+      dataTable.loadData([{ id: 1, name: 'Jim' }]);
+      expect(dataTable.rows[0].age).toBeUndefined();
+    });
   });
 
   describe('Search', () => {
-    const searchColumns = [
-      { field: 'product', searchable: true },
-      { field: 'category', searchable: true },
-    ];
+    type SearchData = { id: number; product?: string; category?: string };
 
-    const searchData = [
+    const searchData: SearchData[] = [
       { id: 1, product: 'Laptop Pro X1', category: 'Electronics' },
       { id: 2, product: 'Laptop Standard', category: 'Electronics' },
       { id: 3, product: 'Pro Coffee Grinder', category: 'Home Goods' },
       { id: 4, product: 'Standard Coffee Filters', category: 'Home Goods' },
+    ];
+
+    const searchColumns: ColumnOptions<SearchData>[] = [
+      { field: 'product', searchable: true },
+      { field: 'category', searchable: true },
     ];
 
     it('should highlight search results', () => {
@@ -97,13 +116,18 @@ describe('DataTable', () => {
     });
 
     it('should handle nested data in columns and search', () => {
-      const data = [{ user: { name: 'Alice', address: { city: 'New York' } } }];
+      type NestedData = { user: { name: string; address: { city: string } } };
+      const data: NestedData[] = [
+        { user: { name: 'Alice', address: { city: 'New York' } } },
+      ];
+      const columns: ColumnOptions<NestedData>[] = [
+        { field: 'user.name', searchable: true },
+        { field: 'user.address.city', searchable: true },
+      ];
+
       const dataTable = new DataTable(tableElement, {
         ...defaultTestOptions,
-        columns: [
-          { field: 'user.name', searchable: true },
-          { field: 'user.address.city', searchable: true },
-        ],
+        columns: columns,
         data,
       });
 
@@ -112,8 +136,8 @@ describe('DataTable', () => {
       expect(dataTable.rows[0].user.name).toBe('Alice');
     });
 
-    it('should not crash when searching on columns with null or undefined values', () => {
-      dataTable = new DataTable(tableElement, {
+    it('should handle searching columns with null or undefined values', () => {
+      const dataTable = new DataTable(tableElement, {
         ...defaultTestOptions,
         columns: [{ field: 'name', searchable: true }],
         data: sampleDataWithNulls,
@@ -131,7 +155,7 @@ describe('DataTable', () => {
     });
 
     describe('with simple substring search', () => {
-      let dataTable: DataTable;
+      let dataTable: DataTable<SearchData>;
 
       beforeEach(() => {
         dataTable = new DataTable(tableElement, {
@@ -166,7 +190,7 @@ describe('DataTable', () => {
     });
 
     describe('with tokenized search', () => {
-      let dataTable: DataTable;
+      let dataTable: DataTable<SearchData>;
 
       beforeEach(() => {
         dataTable = new DataTable(tableElement, {
@@ -208,7 +232,14 @@ describe('DataTable', () => {
     });
 
     describe('with scored and tokenized search', () => {
-      let dataTable: DataTable;
+      type ScoredSearchData = { id: number; title?: string };
+      const scoredSearchData: ScoredSearchData[] = [
+        { id: 1, title: 'Application' },
+        { id: 2, title: 'Apple' },
+        { id: 3, title: 'Snapple' },
+      ];
+
+      let dataTable: DataTable<ScoredSearchData>;
 
       beforeEach(() => {
         dataTable = new DataTable(tableElement, {
@@ -217,11 +248,7 @@ describe('DataTable', () => {
             //{ field: 'id', searchable: false, tokenize: false},
             { field: 'title', searchable: true, tokenize: true },
           ],
-          data: [
-            { id: 1, title: 'Application' },
-            { id: 2, title: 'Apple' },
-            { id: 3, title: 'Snapple' },
-          ],
+          data: scoredSearchData,
           tokenizeSearch: true,
           enableSearchScoring: true,
         });
@@ -263,7 +290,12 @@ describe('DataTable', () => {
     });
 
     describe('with per-column tokenization', () => {
-      let dataTable: DataTable;
+      type TokenizedSearchData = { partNumber: string; description: string };
+      const tokenizedSearchData: TokenizedSearchData[] = [
+        { partNumber: 'XYZ-100', description: 'A valuable XYZ part' },
+      ];
+
+      let dataTable: DataTable<TokenizedSearchData>;
 
       beforeEach(() => {
         dataTable = new DataTable(tableElement, {
@@ -272,7 +304,7 @@ describe('DataTable', () => {
             { field: 'partNumber', searchable: true, tokenize: false }, // Substring search
             { field: 'description', searchable: true, tokenize: true }, // Token search
           ],
-          data: [{ partNumber: 'XYZ-100', description: 'A valuable XYZ part' }],
+          data: tokenizedSearchData,
           tokenizeSearch: true,
         });
       });
@@ -287,11 +319,13 @@ describe('DataTable', () => {
   });
 
   describe('Filter', () => {
-    let dataTable: DataTable;
+    let dataTable: DataTable<SampleDataType>;
 
     beforeEach(() => {
       dataTable = new DataTable(tableElement, {
         ...defaultTestOptions,
+        columns: sampleColumns,
+        data: sampleData,
       });
     });
 
@@ -358,11 +392,13 @@ describe('DataTable', () => {
   });
 
   describe('Sort', () => {
-    let dataTable: DataTable;
+    let dataTable: DataTable<SampleDataType>;
 
     beforeEach(() => {
       dataTable = new DataTable(tableElement, {
         ...defaultTestOptions,
+        columns: sampleColumns,
+        data: sampleData,
       });
     });
 
@@ -430,10 +466,14 @@ describe('DataTable', () => {
   });
 
   describe('UI', () => {
-    let dataTable: DataTable;
+    let dataTable: DataTable<SampleDataType>;
 
     beforeEach(() => {
-      dataTable = new DataTable(tableElement, defaultTestOptions);
+      dataTable = new DataTable(tableElement, {
+        ...defaultTestOptions,
+        columns: sampleColumns,
+        data: sampleData,
+      });
     });
 
     it('should show and hide columns', () => {

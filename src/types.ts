@@ -1,3 +1,5 @@
+import { NestedKeyOf } from "./utils";
+
 /**
  * Defines the possible sorting orders for columns.
  */
@@ -8,7 +10,7 @@ export type SortOrder = 'asc' | 'desc' | null;
  * @param row - The row data.
  * @param element - The row element.
  */
-export type RowFormatterCallback = (row: any, element: HTMLElement) => void;
+export type RowFormatterCallback<T> = (row: T, element: HTMLElement) => void;
 
 /**
  * Callback for formatting the value of a cell.
@@ -16,7 +18,7 @@ export type RowFormatterCallback = (row: any, element: HTMLElement) => void;
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback = (value: any, row: any) => string;
+export type ValueFormatterCallback<T> = (value: any, row: T) => string;
 
 /**
  * Callback for formatting a cell's HTML element.
@@ -24,9 +26,9 @@ export type ValueFormatterCallback = (value: any, row: any) => string;
  * @param row - The row data.
  * @param element - The cell element.
  */
-export type CellFormatterCallback = (
+export type CellFormatterCallback<T> = (
   value: any,
-  row: any,
+  row: T,
   element: HTMLElement,
 ) => void;
 
@@ -74,14 +76,16 @@ export type FilterCallback = (row: any, index: number) => boolean;
  */
 export type ColumnFilterCallback = (value: any, filter: any) => boolean;
 
+
+
 /**
  * Column options for the table.
  */
-export interface ColumnOptions {
+export interface ColumnOptions<T> {
   /**
    * The field name in the data object.
    */
-  field: string;
+  field: NestedKeyOf<T>;
 
   /**
    * The title to display in the header.
@@ -134,12 +138,12 @@ export interface ColumnOptions {
   /**
    * A function to format the value for display.
    */
-  valueFormatter?: ValueFormatterCallback;
+  valueFormatter?: ValueFormatterCallback<T>;
 
   /**
    * A function to format the element for display.
    */
-  elementFormatter?: CellFormatterCallback;
+  elementFormatter?: CellFormatterCallback<T>;
 
   /**
    * A function to use for sorting the column.
@@ -244,16 +248,16 @@ export interface TableClasses {
 /**
  * Options for configuring the table.
  */
-export interface TableOptions {
+export interface TableOptions<T> {
   /**
    * The column options for the table.
    */
-  columns?: ColumnOptions[];
+  columns: ColumnOptions<T>[];
 
   /**
    * The initial data to load into the table.
    */
-  data?: any[];
+  data?: T[];
 
   /**
    * Configures virtual scrolling.
@@ -317,7 +321,7 @@ export interface TableOptions {
   /**
    * A function to format each row's HTML element.
    */
-  rowFormatter?: RowFormatterCallback;
+  rowFormatter?: RowFormatterCallback<T>;
 
   /**
    * A function to use for tokenizing values for searching.
@@ -331,3 +335,5 @@ export interface LoadOptions {
   /** If the current scroll position should be kepts */
   keepScroll?: boolean;
 }
+
+export type Filters<T> = Partial<{ [K in keyof T]: any }>;

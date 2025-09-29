@@ -129,6 +129,7 @@ export class DataTable<T> extends EventTarget {
       options.virtualScroll ?? this.DEFAULT_OPTIONS.virtualScroll,
     );
 
+    // Setup the options initially to allow for the initialization logic to work
     this.#options = {
       ...this.DEFAULT_OPTIONS,
       ...options,
@@ -310,6 +311,7 @@ export class DataTable<T> extends EventTarget {
       this.#tbody.className = this.#options.classes.tbody.join(' ');
       for (const col of this.#columnData.values()) {
         col.headerElement.className = this.#options.classes.th.join(' ');
+        this.updateColumnOptions(col.field, { sortable: col.sortable });
       }
       reRenderTable = true;
     }
@@ -880,19 +882,23 @@ export class DataTable<T> extends EventTarget {
       const titleElement = document.createElement('span');
 
       colOptions.title ??= toHumanReadable(colOptions.field);
+      colOptions.visible ??= true;
+      colOptions.sortable ??= this.#options.sortable;
+      colOptions.searchable ??= false;
+      colOptions.tokenize = this.#options.tokenizeSearch
+        ? (colOptions.tokenize ?? false)
+        : false;
 
       const colData: ColumnData<T> = {
         field: colOptions.field,
         title: colOptions.title,
         headerElement: header,
         titleElement: titleElement,
-        visible: colOptions.visible ?? true,
-        sortable: colOptions.sortable ?? this.#options.sortable,
-        searchable: colOptions.searchable ?? false,
+        visible: colOptions.visible,
+        sortable: colOptions.sortable,
+        searchable: colOptions.searchable,
         // If tokenization is disabled globally, disable it on the columns.
-        tokenize: this.#options.tokenizeSearch
-          ? (colOptions.tokenize ?? false)
-          : false,
+        tokenize: colOptions.tokenize,
         sortOrder: colOptions.sortOrder ?? null,
         sortPriority: colOptions.sortPriority ?? 0,
         resizeStartWidth: null,

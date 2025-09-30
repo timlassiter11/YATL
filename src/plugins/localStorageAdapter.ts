@@ -58,7 +58,7 @@ export class LocalStorageAdapter<T> {
    * Saves the current column state to localStorage.
    */
   saveState() {
-    const states: Partial<ColumnState>[] = this.#dataTable.columnStates;
+    const states: Partial<ColumnState<T>>[] = this.#dataTable.columnStates;
     for (const state of states) {
       if (!this.#options.saveColumnSorting) {
         state.sortOrder = undefined;
@@ -88,12 +88,12 @@ export class LocalStorageAdapter<T> {
     if (!savedState) return;
 
     try {
-      const columnStates = JSON.parse(savedState) as ColumnState[];
+      const columnStates = JSON.parse(savedState) as ColumnState<T>[];
       this.#dataTable.columnStates = columnStates;
 
       if (this.#options.saveColumnOrder) {
         this.#dataTable.setColumnOrder(
-          columnStates.map((col: ColumnState) => col.field),
+          columnStates.map((col: ColumnState<T>) => col.field),
         );
       }
     } catch (error) {

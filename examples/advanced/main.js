@@ -1,4 +1,4 @@
-import { DataTable, LocalStorageAdapter } from "../../dist/datatable.mjs";
+import { DataTable, LocalStorageAdapter } from "../../dist/data-table.mjs";
 
 const today = new Date();
 today.setHours(0, 0, 0, 0);
@@ -124,9 +124,7 @@ window.addEventListener("load", () => {
 
   dataTable.addEventListener('dt.row.clicked', (event) => {
     console.log("Row clicked:", event.detail.row, event.detail.index);
-  })
-
-  window.dataTable = dataTable;
+  });
 
   new LocalStorageAdapter(dataTable, "advancedExampleTableState");
 

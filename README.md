@@ -35,16 +35,16 @@ const datatble = DataTable("#myTable", {
 
 ### source (ES6)
 ```javascript
-import { DataTable } from "path/to/datatable.esm.js";
+import { DataTable } from "path/to/data-table.esm.js";
 
-const datatable = new DataTable("#myTable", {
+const dataTable = new DataTable("#myTable", {
    ...
 });
 ```
 
 ### source (UMD)
 ```html
-<script src="path/to/datatable.umd.js"></script>
+<script src="path/to/data-table.umd.js"></script>
 <script>
    const datatble = new yatl.DataTable("#myTable", {
       ...
@@ -57,12 +57,12 @@ Some optional styling is included which adds sorting indicators and sticky heade
 
 ### npm
 ```ts
-import "@timlassiter11/yatl/datatable.css";
+import "@timlassiter11/yatl/data-table.css";
 ```
 
 ### source
 ```html
-<link rel="stylesheet" href="path/to/datatable.css">
+<link rel="stylesheet" href="path/to/data-table.css">
 ```
 
 ## Usage

@@ -1,4 +1,4 @@
-import { DataTable } from "../../dist/datatable.mjs";
+import { DataTable } from "../../dist/data-table.mjs";
 
 /** @type {DataTable} */
 let dataTable;

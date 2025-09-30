@@ -1,7 +1,10 @@
+import type { VirtualScrollOptions, IVirtualScroll, IVirtualScrollConstructor } from "./types";
+
 const MAX_ELEMENT_HEIGHT = 33554400;
 
-export class VirtualScroll {
+export class VirtualScroll implements IVirtualScroll {
   static #warned = false;
+  static AVERAGE_RENDER_COUNT = 1000;
 
   #container;
   #element;
@@ -12,33 +15,28 @@ export class VirtualScroll {
   #animationFrame = 0;
   #started = false;
   #scrollTop = 0;
+  #topPaddingElement: HTMLElement;
+  #bottomPaddingElement: HTMLElement;
+  #resizeObserver: ResizeObserver;
 
   constructor({
-    container,
-    element,
     generator,
+    container,
+    element = container,
     nodePadding = 10,
   }: VirtualScrollOptions) {
     this.#container = container;
     this.#element = element;
     this.#generator = generator;
     this.#padding = nodePadding;
-
-    // Watch for visual changes on our virtual scroll element.
-    // This allows us to avoid rendering when the element isn't
-    // shown since it can't do the calculations and then start
-    // rendering once the element comes into view.
-    const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) {
-        if (entry.intersectionRatio === 1) {
-          this.renderChunk();
-        }
-      }
-    });
-    observer.observe(this.#element);
+    this.#topPaddingElement = document.createElement('div');
+    this.#topPaddingElement.style.visibility = 'hidden';
+    this.#bottomPaddingElement = document.createElement('div');
+    this.#bottomPaddingElement.style.visibility = 'hidden';
+    this.#resizeObserver = new ResizeObserver(() => this.#renderChunk());
   }
 
-  get rowHeight() {
+  private get rowHeight() {
     if (!this.#rowHeight) {
       this.#updateRowHeight();
     }
@@ -66,7 +64,7 @@ export class VirtualScroll {
    */
   scrollToPx(px: number) {
     this.#container.scrollTop = px;
-    this.renderChunk();
+    this.#renderChunk();
   }
 
   #scrollCallback = () => {
@@ -77,23 +75,19 @@ export class VirtualScroll {
       if (this.#animationFrame) {
         cancelAnimationFrame(this.#animationFrame);
       }
-      this.#animationFrame = requestAnimationFrame(() => this.renderChunk());
+      this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
     }
-  };
-
-  #renderCallback = () => {
-    this.renderChunk();
   };
 
   start(rowCount: number) {
     if (!this.#started) {
       this.#container.addEventListener('scroll', this.#scrollCallback);
-      window.addEventListener('resize', this.#renderCallback);
+      this.#resizeObserver.observe(this.#container);
       this.#started = true;
     }
     this.#container.classList.add('dt-virtual-scroll');
     this.#rowCount = rowCount;
-    this.renderChunk();
+    this.#renderChunk();
   }
 
   stop() {
@@ -103,11 +97,11 @@ export class VirtualScroll {
 
     this.#container.classList.remove('dt-virtual-scroll');
     this.#container.removeEventListener('scroll', this.#scrollCallback);
-    window.removeEventListener('resize', this.#renderCallback);
+    this.#resizeObserver.disconnect();
     this.#started = false;
   }
 
-  renderChunk() {
+  #renderChunk() {
     const scrollTop = this.#container.scrollTop;
     const rowCount = this.#rowCount;
     const rowHeight = this.rowHeight;
@@ -115,7 +109,6 @@ export class VirtualScroll {
 
     if (
       !this.started ||
-      !this.#element.checkVisibility() ||
       !rowCount ||
       !rowHeight
     ) {
@@ -140,10 +133,16 @@ export class VirtualScroll {
       );
     }
 
+    let totalPadding = padding * 2;
     let startNode = Math.floor(scrollTop / rowHeight) - padding;
+
+    if (startNode < 0) {
+      totalPadding += startNode;
+    }
+
     startNode = Math.max(0, startNode);
 
-    let visibleNodesCount = Math.ceil(viewHeight / rowHeight) + 2 * padding;
+    let visibleNodesCount = Math.ceil(viewHeight / rowHeight) + totalPadding;
     visibleNodesCount = Math.min(rowCount - startNode, visibleNodesCount);
 
     // Always start with an even row.
@@ -156,45 +155,50 @@ export class VirtualScroll {
     const remainingHeight =
       totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
 
-    try {
-      this.#element.innerHTML = '';
-      const visibleChildren = new Array(visibleNodesCount)
-        .fill(null)
-        .map((_, index) => this.#generator(index + startNode));
-      // We create two empty rows. One at the top and one at the bottom.
-      // Resize the rows accordingly to move the rendered rows to where we want.
-      const topRow = document.createElement('div');
-      const bottomRow = document.createElement('div');
-      topRow.style.visibility = 'hidden';
-      topRow.style.height = offsetY + 'px';
-      bottomRow.style.visibility = 'hidden';
-      bottomRow.style.height = remainingHeight + 'px';
-      this.#element.append(topRow);
-      this.#element.append(...visibleChildren);
-      this.#element.append(bottomRow);
-    } catch (e) {
-      if (e instanceof RangeError) {
-        console.log(e);
-      }
-    }
+    this.#element.innerHTML = '';
+    const visibleChildren = new Array(visibleNodesCount)
+      .fill(null)
+      .map((_, index) => this.#generator(index + startNode));
+    // We create two empty rows. One at the top and one at the bottom.
+    // Resize the rows accordingly to move the rendered rows to where we want.
+    this.#topPaddingElement.style.height = offsetY + 'px';
+    this.#bottomPaddingElement.style.height = remainingHeight + 'px';
+    this.#element.append(this.#topPaddingElement);
+    this.#element.append(...visibleChildren);
+    this.#element.append(this.#bottomPaddingElement);
   }
 
   #updateRowHeight() {
-    if (this.#rowCount === 0 || !this.#element.checkVisibility()) {
+    if (this.#rowCount === 0) {
       this.#rowHeight = 0;
       return;
     }
 
-    const AVERAGE_RENDER_COUNT = 1000;
-    const renderSize = Math.min(AVERAGE_RENDER_COUNT, this.#rowCount);
+    const renderSize = Math.min(VirtualScroll.AVERAGE_RENDER_COUNT, this.#rowCount);
     // Create an average row height by rendering the first N rows.
     const elements = [];
     for (let i = 0; i < renderSize; ++i) {
       elements.push(this.#generator(i));
     }
-    this.#element.innerHTML = '';
-    this.#element.append(...elements);
-    this.#rowHeight = this.#element.offsetHeight / renderSize;
+
+    const container = document.createElement("div");
+    container.style.position = 'absolute';
+    container.style.visibility = 'hidden';
+    container.style.height = 'auto';
+    container.style.width = '100%';
+    container.style.top = '-9999px';
+    container.style.left = '-9999px';
+    container.style.maxHeight = 'none';
+    container.style.overflow = 'visible';
+    container.style.display = 'block';
+
+    try {
+      container.append(...elements);
+      document.body.append(container);
+      this.#rowHeight = container.offsetHeight / renderSize;
+    } finally {
+      container.remove();
+    }
 
     if (this.#rowHeight <= 0) {
       throw new VirtualScrollError(
@@ -215,9 +219,5 @@ export class VirtualScrollError extends Error {
   }
 }
 
-export interface VirtualScrollOptions {
-  container: HTMLElement;
-  element: HTMLElement;
-  generator: (index: number) => HTMLElement;
-  nodePadding?: number;
-}
+// Just to make sure I don't break anything...
+VirtualScroll satisfies IVirtualScrollConstructor;

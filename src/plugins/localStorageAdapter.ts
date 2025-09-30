@@ -1,5 +1,5 @@
-import { DataTable } from '../datatable';
-import { ColumnState } from '../types';
+import { DataTable } from '../data-table/data-table';
+import { ColumnState } from '../data-table/types';
 
 interface Options {
   saveColumnSorting: boolean;

@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: {
-    'datatable': 'src/index.ts',
+    'data-table': 'src/index.ts',
   },
   format: ['cjs', 'esm', 'iife'],
   outDir: 'dist',

@@ -1,4 +1,5 @@
 import { NestedKeyOf } from './utils';
+import { IVirtualScrollConstructor } from '../virtual-scroll/types';
 
 /**
  * Defines the possible sorting orders for columns.
@@ -165,11 +166,11 @@ export interface ColumnOptions<T> {
 }
 
 /** Represents the current state of a column, often used for saving and restoring column configurations. */
-export interface ColumnState {
+export interface ColumnState<T> {
   /**
    * The unique field name of the column.
    */
-  readonly field: string;
+  readonly field: NestedKeyOf<T>;
 
   /**
    * The user friendly title of the column.
@@ -289,7 +290,7 @@ export interface TableOptions<T> {
    * Additional fields to include in the search.
    * Used for fields that are not displayed as columns.
    */
-  extraSearchFields?: string[];
+  extraSearchFields?: NestedKeyOf<T>[];
 
   /**
    * The text to display when there is no data in the table.
@@ -315,6 +316,8 @@ export interface TableOptions<T> {
    * A function to use for tokenizing values for searching.
    */
   tokenizer?: TokenizerCallback;
+
+  virtualScrollClass?: IVirtualScrollConstructor;
 }
 
 export interface LoadOptions {

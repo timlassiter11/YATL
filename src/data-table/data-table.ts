@@ -1,4 +1,4 @@
-import './datatable.css';
+import './data-table.css';
 
 import {
   CellFormatterCallback,
@@ -24,7 +24,8 @@ import {
   toHumanReadable,
   virtualScrollToNumber,
 } from './utils';
-import { VirtualScroll, VirtualScrollError } from './virtualScroll';
+import { VirtualScroll, VirtualScrollError } from '../virtual-scroll/virtual-scroll';
+import { IVirtualScroll } from '../virtual-scroll/types';
 
 /**
  * Represents a dynamic and interactive table with features like sorting, searching, filtering,
@@ -79,6 +80,7 @@ export class DataTable<T> extends EventTarget {
       mark: [],
     },
     tokenizer: createRegexTokenizer(),
+    virtualScrollClass: VirtualScroll
   };
 
   // Table elements
@@ -98,7 +100,7 @@ export class DataTable<T> extends EventTarget {
   #query?: QueryToken[] | RegExp;
   #filters!: Filters<T> | FilterCallback;
 
-  #virtualScroll?: VirtualScroll;
+  #virtualScroll?: IVirtualScroll;
 
   #resizingColumn?: ColumnData<T>;
 
@@ -186,7 +188,7 @@ export class DataTable<T> extends EventTarget {
    * This can be used to save and restore column configurations like visibility, sort order, and width.
    * When setting, it attempts to apply the states to existing columns.
    */
-  get columnStates(): ColumnState[] {
+  get columnStates(): ColumnState<T>[] {
     return [...this.#columnData.values()].map(col => {
       return {
         field: col.field,
@@ -195,11 +197,11 @@ export class DataTable<T> extends EventTarget {
         sortOrder: col.sortOrder,
         sortPriority: col.sortPriority,
         width: col.headerElement.style.width,
-      } as ColumnState;
+      };
     });
   }
 
-  set columnStates(states: ColumnState[]) {
+  set columnStates(states: ColumnState<T>[]) {
     for (const state of states) {
       const column = this.#columnData.get(state.field);
       if (!column) {
@@ -287,7 +289,7 @@ export class DataTable<T> extends EventTarget {
 
     if (extraSearchFields !== undefined) {
       this.#options.extraSearchFields = extraSearchFields;
-      reApplyFilters = true;
+      reloadData = true;
     }
 
     if (noMatchText !== undefined) {
@@ -436,7 +438,6 @@ export class DataTable<T> extends EventTarget {
     if (options.keepScroll) {
       this.#scroller.scrollTop = scrollTop;
       this.#scroller.scrollLeft = scrollLeft;
-      this.#virtualScroll?.renderChunk();
     }
   }
 
@@ -551,7 +552,6 @@ export class DataTable<T> extends EventTarget {
 
     this.#scroller.scrollTop = scrollTop;
     this.#scroller.scrollLeft = scrollLeft;
-    this.#virtualScroll?.renderChunk();
   }
 
   /**
@@ -563,8 +563,7 @@ export class DataTable<T> extends EventTarget {
     const col = this.#columnData.get(colName);
     if (!col) {
       console.warn(
-        `Attempting to ${
-          visisble ? 'show' : 'hide'
+        `Attempting to ${visisble ? 'show' : 'hide'
         } non-existent column ${colName}`,
       );
       return;
@@ -795,10 +794,11 @@ export class DataTable<T> extends EventTarget {
    * }
    * ```
    */
-  updateRow(index: number, data: T) {
+  updateRow(index: number, data: Partial<T>) {
     const current_row = this.#rows.get(index);
     if (current_row) {
       Object.assign(current_row, data);
+      this.#loadRow(current_row, index);
       this.#filterRows();
     }
   }
@@ -818,7 +818,7 @@ export class DataTable<T> extends EventTarget {
    * @param callback - A function to execute. It receives the DataTable instance as its argument.
    * @example dataTable.withoutUpdates(dt => { dt.sort('name', 'asc'); dt.filter({ age: '>30' }); });
    */
-  withoutUpdates(callback: (datatable: DataTable<T>) => void) {
+  withoutUpdates(callback: (dataTable: DataTable<T>) => void) {
     this.#blockUpdates = true;
     try {
       callback(this);
@@ -1022,6 +1022,16 @@ export class DataTable<T> extends EventTarget {
       }
     }
 
+    // Add any extra search fields
+    for (const field of this.#options.extraSearchFields) {
+      const value = this.#getNestedValue(row, field);
+      // Cache precomputed lower-case values for search
+      if (typeof value === 'string') {
+        metadata.compareValues[field] = value.toLocaleLowerCase();
+      }
+
+    }
+
     return row;
   }
 
@@ -1156,6 +1166,12 @@ export class DataTable<T> extends EventTarget {
   #filterRows() {
     if (this.#blockUpdates) return;
 
+    const searchableFields = [...this.#columnData.values()]
+      .filter(col => col.searchable)
+      .map(c => c.field);
+
+    const fields = [...searchableFields, ...this.#options.extraSearchFields];
+
     const rows = [...this.#rows.values()];
     this.#filteredRows = rows.filter((row, index) => {
       row._metadata.searchScore = 0;
@@ -1167,12 +1183,6 @@ export class DataTable<T> extends EventTarget {
       if (!this.#query) {
         return true;
       }
-
-      const searchableFields = [...this.#columnData.values()]
-        .filter(col => col.searchable)
-        .map(c => c.field);
-
-      const fields = [...searchableFields, ...this.#options.extraSearchFields];
 
       for (const field of fields) {
         const originalValue = this.#getNestedValue(row, field);
@@ -1305,7 +1315,7 @@ export class DataTable<T> extends EventTarget {
     const useVirtualScroll = this.rows.length >= this.#options.virtualScroll;
 
     if (useVirtualScroll && !this.#virtualScroll) {
-      this.#virtualScroll = new VirtualScroll({
+      this.#virtualScroll = new this.#options.virtualScrollClass({
         container: this.#scroller,
         element: this.#tbody,
         generator: index => this.#createRow(index),

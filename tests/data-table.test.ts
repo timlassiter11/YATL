@@ -1,34 +1,19 @@
-import { ColumnOptions, DataTable } from '../src/datatable';
-
-global.structuredClone = (val: any) => ({ ...val });
+import { ColumnOptions, DataTable } from '../src/data-table/data-table';
+import { MockVirtualScroll } from './__mocks__/mock-virtual-scroll';
 
 type SampleData = {
   id?: number;
   name: string | null;
   city?: string | null;
   age?: number | null;
+  extra?: string;
 };
 
 const sampleColumns: ColumnOptions<SampleData>[] = [
   { field: 'id', title: 'ID' },
-  { field: 'name', title: 'Name' },
+  { field: 'name', title: 'Name', searchable: true },
   { field: 'age', title: 'Age' },
   { field: 'city', title: 'City' },
-];
-
-const sampleData: SampleData[] = [
-  { id: 1, name: 'Alice', age: 25, city: 'New York' },
-  { id: 2, name: 'Bob', age: 30, city: 'Los Angeles' },
-  { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
-  { id: 4, name: 'John', age: 25, city: 'Boulder' },
-];
-
-const sampleDataWithNulls: SampleData[] = [
-  { id: 1, name: 'Alice', age: 25, city: 'New York' },
-  { id: 2, name: 'Bob', age: null, city: 'Los Angeles' },
-  { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
-  { id: 4, name: 'David', age: undefined, city: null },
-  { id: 5, name: null, age: 40, city: 'Boulder' },
 ];
 
 const defaultTestOptions = {
@@ -38,14 +23,26 @@ const defaultTestOptions = {
 
 describe('DataTable', () => {
   let tableElement: HTMLTableElement;
+  let sampleData: SampleData[];
+
+  beforeAll(() => {
+    // Mock structuredClone
+    global.structuredClone = jest.fn((value: any) => {
+      return { ...value }
+    });
+  });
+
 
   beforeEach(() => {
     document.body.innerHTML = '<table></table>';
     tableElement = document.querySelector('table')!;
-  });
 
-  afterEach(() => {
-    document.body.innerHTML = '';
+    sampleData = [
+      { id: 1, name: 'Alice', age: 25, city: 'New York' },
+      { id: 2, name: 'Bob', age: 30, city: 'Los Angeles' },
+      { id: 3, name: 'Charlie', age: 35, city: 'Chicago' },
+      { id: 4, name: 'John', age: 25, city: 'Boulder', extra: 'foobar' },
+    ];
   });
 
   describe('Core', () => {
@@ -67,32 +64,63 @@ describe('DataTable', () => {
       );
     });
 
+    it('should throw an error if invalid element type', () => {
+      const element = document.createElement('div') as unknown;
+      expect(() => new DataTable(element as HTMLTableElement, sampleColumns)).toThrow(TypeError);
+    });
+
     it('should load data into the table', () => {
       dataTable.loadData([{ id: 1, name: 'Alice' }]);
       expect(dataTable.rows.length).toBe(1);
       expect(dataTable.rows[0].name).toBe('Alice');
     });
 
-    it('should append data', () => {
+    it('should append a new row', () => {
       dataTable.loadData(sampleData);
       expect(dataTable.rows.length).toBe(sampleData.length);
       dataTable.loadData([{ id: 5, name: 'Jane', age: 55 }], { append: true });
       expect(dataTable.rows.length).toBe(sampleData.length + 1);
     });
 
+    it('should delete an existing row', () => {
+      dataTable.loadData(sampleData);
+      dataTable.deleteRow(0);
+      expect(dataTable.rows.length).toBe(sampleData.length - 1);
+      expect(dataTable.rows[0].id).toBe(sampleData[1].id);
+    });
+
+    it('should update a row with new data', () => {
+      dataTable.loadData(sampleData);
+      dataTable.updateRow(0, { name: 'test' });
+      expect(dataTable.rows[0].name).toBe('test');
+    })
+
     it('should handle undefined data in rows', () => {
       dataTable.loadData([{ id: 1, name: 'Jim' }]);
       expect(dataTable.rows[0].age).toBeUndefined();
     });
+
+    it('should not render any changes when called inside withoutUpdates', () => {
+      const refreshSpy = jest.spyOn(dataTable, 'refresh');
+      const searchSpy = jest.spyOn(dataTable, 'search');
+      const filterSpy = jest.spyOn(dataTable, 'filter');
+      dataTable.withoutUpdates(() => {
+        dataTable.search('test');
+        dataTable.filter({ age: 0 });
+        expect(refreshSpy).not.toHaveBeenCalled();
+      });
+      expect(searchSpy).toHaveBeenCalledTimes(1);
+      expect(filterSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Options', () => {
-    let dataTable: DataTable<{ name: string }>;
+    let dataTable: DataTable<SampleData>;
 
     beforeEach(() => {
       dataTable = new DataTable(
         tableElement,
-        [{ field: 'name', searchable: true }],
+        sampleColumns,
         { ...defaultTestOptions },
       );
     });
@@ -182,38 +210,43 @@ describe('DataTable', () => {
       expect(document.querySelector('td')?.innerHTML).toBe('testing123');
     });
 
+    it('should search extra fields', () => {
+      dataTable.loadData(sampleData);
+      dataTable.search('foobar');
+      expect(dataTable.rows.length).toBe(0);
+      dataTable.updateOptions({ extraSearchFields: ['extra'] });
+      expect(dataTable.rows.length).toBe(1);
+    });
+
     it('should update the column title', () => {
-      expect(document.querySelector('.dt-header-title')?.innerHTML).toBe(
-        'Name',
-      );
+      const nameTitleElement = document.querySelector('th[data-dt-field="name"] .dt-header-title')!
+      expect(nameTitleElement.innerHTML).toBe('Name');
       dataTable.updateColumnOptions('name', { title: 'test' });
-      expect(document.querySelector('.dt-header-title')?.innerHTML).toBe(
-        'test',
-      );
+      expect(nameTitleElement.innerHTML).toBe('test');
     });
   });
 
   describe('Search', () => {
-    type SearchData = { id: number; product?: string; category?: string };
-
-    const searchData: SearchData[] = [
-      { id: 1, product: 'Laptop Pro X1', category: 'Electronics' },
-      { id: 2, product: 'Laptop Standard', category: 'Electronics' },
-      { id: 3, product: 'Pro Coffee Grinder', category: 'Home Goods' },
-      { id: 4, product: 'Standard Coffee Filters', category: 'Home Goods' },
-    ];
-
+    type SearchData = { id: number; product?: string | null; category?: string | null};
     const searchColumns: ColumnOptions<SearchData>[] = [
       { field: 'product', searchable: true },
       { field: 'category', searchable: true },
     ];
+    let searchData: SearchData[];
+    let dataTable: DataTable<SearchData>;
+
+    beforeEach(() => {
+      searchData = [
+        { id: 1, product: 'Laptop Pro X1', category: 'Electronics' },
+        { id: 2, product: 'Laptop Standard', category: 'Electronics' },
+        { id: 3, product: 'Pro Coffee Grinder', category: 'Home Goods' },
+        { id: 4, product: 'Standard Coffee Filters', category: 'Home Goods' },
+      ];
+      dataTable = new DataTable(tableElement, searchColumns, {...defaultTestOptions, data: searchData});
+    });
 
     it('should highlight search results', () => {
-      const dataTable = new DataTable(tableElement, searchColumns, {
-        ...defaultTestOptions,
-        highlightSearch: true,
-        data: searchData,
-      });
+      dataTable.updateOptions({highlightSearch: true});
       dataTable.search('Standard');
       const firstCell = tableElement.querySelector(
         'td[data-dt-field="product"]',
@@ -244,23 +277,14 @@ describe('DataTable', () => {
     });
 
     it('should handle searching columns with null or undefined values', () => {
-      const columns: ColumnOptions<SampleData>[] = [
-        { field: 'name', searchable: true },
-      ];
-      const dataTable = new DataTable(tableElement, columns, {
-        ...defaultTestOptions,
-        data: sampleDataWithNulls,
-        tokenizeSearch: true,
-        enableSearchScoring: true, // Test the most complex path
-      });
-      dataTable.loadData(sampleDataWithNulls);
+      dataTable.loadData(searchData);
+      dataTable.updateRow(0, {product: null});
 
       // Should not throw an error when processing the null/undefined names
-      expect(() => dataTable.search('ali')).not.toThrow();
+      expect(() => dataTable.search('laptop')).not.toThrow();
 
-      // Should correctly find the valid row
-      expect(dataTable.rows.length).toBe(1);
-      expect(dataTable.rows[0].name).toBe('Alice');
+      const products = dataTable.rows.map(row => row.product);
+      expect(products).not.toContain(null);
     });
 
     describe('with simple substring search', () => {
@@ -478,7 +502,9 @@ describe('DataTable', () => {
     });
 
     it('should handle null and undefined values gracefully', () => {
-      dataTable.loadData(sampleDataWithNulls);
+      dataTable.loadData(sampleData);
+      dataTable.updateRow(1, {age: null});
+      dataTable.updateRow(3, {age: undefined});
 
       // Should not crash when filtering on a column with nulls
       expect(() => dataTable.filter({ age: 35 })).not.toThrow();
@@ -488,7 +514,7 @@ describe('DataTable', () => {
       // Should correctly filter for null values
       dataTable.filter({ age: null });
       expect(dataTable.rows.length).toBe(1);
-      expect(dataTable.rows[0].name).toBe('Bob');
+      expect(dataTable.rows[0].name).toBe(sampleData[1].name);
 
       // Should correctly filter for undefined values
       dataTable.filter({ age: undefined });
@@ -544,19 +570,14 @@ describe('DataTable', () => {
     });
 
     it('should correctly handle removing a sort from a multi-column sort', () => {
-      // 1. Initial sort: Age (asc) -> Name (asc)
       dataTable.sort('age', 'asc');
       dataTable.sort('name', 'asc');
 
-      // Alice (25) and John (25) are sorted by name
       expect(dataTable.rows[0].name).toBe('Alice');
       expect(dataTable.rows[1].name).toBe('John');
 
-      // 2. Remove the sort on "age"
       dataTable.sort('age', null);
 
-      // The only remaining sort is now "name" (asc).
-      // The overall order should now be purely alphabetical by name.
       expect(dataTable.rows[0].name).toBe('Alice');
       expect(dataTable.rows[1].name).toBe('Bob');
       expect(dataTable.rows[2].name).toBe('Charlie');
@@ -564,8 +585,9 @@ describe('DataTable', () => {
     });
 
     it('should handle null and undefined values, grouping them together', () => {
-      // REUSE the dataTable from the Sort's beforeEach
-      dataTable.loadData(sampleDataWithNulls);
+      dataTable.loadData(sampleData);
+      dataTable.updateRow(1, {age: null});
+      dataTable.updateRow(3, {age: undefined});
 
       // Sort ascending. Nulls/undefineds should typically come first.
       dataTable.sort('age', 'asc');
@@ -575,7 +597,7 @@ describe('DataTable', () => {
       // just that they are grouped and don't cause a crash.
       expect(sortedAges.slice(0, 2)).toContain(null);
       expect(sortedAges.slice(0, 2)).toContain(undefined);
-      expect(sortedAges.slice(2)).toEqual([25, 35, 40]);
+      expect(sortedAges.slice(2)).toEqual([25, 35]);
     });
   });
 
@@ -703,6 +725,50 @@ describe('DataTable', () => {
       // Expect the filter and sort to still be applied
       expect(dataTable.rows.length).toBe(2);
       expect(dataTable.rows[0].name).toBe('Bob');
+    });
+  });
+
+  describe('Virtual Scroll', () => {
+    let dataTable: DataTable<SampleData>;
+
+    function generateData(rows: number) {
+      const data: SampleData[] = [];
+      for (let i = 0; i < rows; ++i) {
+        data.push({ id: i, name: `Name ${i}`, });
+      }
+      return data;
+    }
+
+    beforeEach(() => {
+      tableElement.style.height = '100px';
+      dataTable = new DataTable(tableElement, sampleColumns, {
+        ...defaultTestOptions,
+        virtualScrollClass: MockVirtualScroll
+      });
+    });
+
+    it('should render all rows when virtual scroll is disabled', () => {
+      const rowCount = 100;
+      dataTable.loadData(generateData(rowCount));
+      dataTable.updateOptions({ virtualScroll: false });
+      expect(document.querySelectorAll('tbody tr').length).toBe(rowCount);
+    });
+
+    it('should NOT render all rows when virtual scroll is enabled', () => {
+      const rowCount = 100;
+      dataTable.loadData(generateData(rowCount));
+      dataTable.updateOptions({ virtualScroll: true });
+      // Our mock implementation doesn't actually render anything.
+      expect(document.querySelectorAll('tbody tr').length).toBe(0);
+    });
+
+    it('should enable virtual scroll when enough rows are present', () => {
+      dataTable.updateOptions({ virtualScroll: 100 });
+      dataTable.loadData(generateData(99));
+      expect(document.querySelectorAll('tbody tr').length).toBe(99);
+      dataTable.loadData(generateData(1), { append: true });
+      // Our mock implementation doesn't actually render anything.
+      expect(document.querySelectorAll('tbody tr').length).toBe(0);
     });
   });
 });

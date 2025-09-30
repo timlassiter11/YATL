@@ -2,17 +2,17 @@
   "name": "@timlassiter11/yatl",
   "version": "0.3.2",
   "description": "Yet another table library with all of the standard bells and whistles.",
-  "main": "dist/datatable.js",
-  "module": "dist/datatable.mjs",
-  "browser": "dist/datatable.global.js",
-  "types": "dist/datatable.d.ts",
+  "main": "dist/data-table.js",
+  "module": "dist/data-table.mjs",
+  "browser": "dist/data-table.global.js",
+  "types": "dist/data-table.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/datatable.d.ts",
-      "import": "./dist/datatable.mjs",
-      "require": "./dist/datatable.js"
+      "types": "./dist/data-table.d.ts",
+      "import": "./dist/data-table.mjs",
+      "require": "./dist/data-table.js"
     },
-    "./datatable.css": "./dist/datatable.css"
+    "./data-table.css": "./dist/data-table.css"
   },
   "keywords": [
     "table",

@@ -1,6 +1,6 @@
-import { ColumnOptions, DataTable } from '../src/data-table/data-table';
-import { NestedKeyOf } from '../src/data-table/utils';
-import { MockVirtualScroll } from './__mocks__/mock-virtual-scroll';
+import { ColumnOptions, DataTable } from '../data-table';
+import { NestedKeyOf } from '../utils';
+import { MockVirtualScroll } from '../__mocks__/mock-virtual-scroll';
 
 type SampleData = {
   id: number;

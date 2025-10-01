@@ -1,28 +1,16 @@
-import { DataTable } from '../data-table/data-table';
 import {
   RestorableColumnState,
   RestorableTableState,
-} from '../data-table/types';
-
-interface Options {
-  saveSearch: boolean;
-  saveScrollPosition: boolean;
-  saveColumnTitle: boolean;
-  saveColumnSorting: boolean;
-  saveColumnOrder: boolean;
-  saveColumnVisibility: boolean;
-  saveColumnWidth: boolean;
-}
-
+} from '../../data-table/types';
+import { IDataTable, LocalStorageAdapterOptions } from './types';
 /**
  * Monitors a {@link DataTable} instance for changes and saves the state to local storage.
  */
 export class LocalStorageAdapter<T extends object> {
-  #dataTable: DataTable<T>;
+  #dataTable: IDataTable<T>;
   #storageKey: string;
-  #options: Options = {
+  #options: Required<LocalStorageAdapterOptions> = {
     saveSearch: true,
-    saveScrollPosition: true,
     saveColumnTitle: true,
     saveColumnSorting: true,
     saveColumnVisibility: true,
@@ -35,13 +23,17 @@ export class LocalStorageAdapter<T extends object> {
    * @param storageKey - The key to use for saving the state in localStorage.
    * @param options - The options for configuring what is stored.
    */
-  constructor(dataTable: DataTable<T>, storageKey: string, options?: Options) {
+  constructor(dataTable: IDataTable<T>, storageKey: string, options?: LocalStorageAdapterOptions) {
     this.#dataTable = dataTable;
     this.#storageKey = storageKey;
     this.#options = { ...this.#options, ...options };
 
     // Restore state before adding the listeners.
     this.restoreState();
+
+    if (this.#options.saveSearch) {
+      dataTable.addEventListener('dt.search', this.#saveStateAfterEvent);
+    }
 
     if (this.#options.saveColumnSorting) {
       dataTable.addEventListener('dt.col.sort', this.#saveStateAfterEvent);
@@ -74,10 +66,6 @@ export class LocalStorageAdapter<T extends object> {
 
     if (this.#options.saveSearch) {
       savedTableState.searchQuery = tableState.searchQuery;
-    }
-
-    if (this.#options.saveScrollPosition) {
-      savedTableState.scrollPosition = tableState.scrollPosition;
     }
 
     if (this.#options.saveColumnOrder) {
@@ -122,36 +110,41 @@ export class LocalStorageAdapter<T extends object> {
 
     try {
       const savedTableState = JSON.parse(json) as RestorableTableState<T>;
+      const tableStateToRestore: RestorableTableState<T> = {
 
-      if (!this.#options.saveSearch) {
-        delete savedTableState.searchQuery;
-      }
-      if (!this.#options.saveScrollPosition) {
-        delete savedTableState.scrollPosition;
       }
 
-      if (!this.#options.saveColumnOrder) {
-        delete savedTableState.columnOrder;
+      if (this.#options.saveSearch) {
+        tableStateToRestore.searchQuery = savedTableState.searchQuery;
+      }
+
+      if (this.#options.saveColumnOrder) {
+        tableStateToRestore.columnOrder = savedTableState.columnOrder;
       }
 
       if (savedTableState.columns) {
-        for (const columnState of savedTableState.columns) {
-          if (!this.#options.saveColumnTitle) {
-            delete columnState.title;
+        tableStateToRestore.columns = [];
+        for (const savedColumnState of savedTableState.columns) {
+          const columnStateToRestore: RestorableColumnState<T> = { field: savedColumnState.field };
+
+          if (this.#options.saveColumnTitle) {
+            columnStateToRestore.title = savedColumnState.title;
           }
 
-          if (!this.#options.saveColumnVisibility) {
-            delete columnState.visible;
+          if (this.#options.saveColumnVisibility) {
+            columnStateToRestore.visible = savedColumnState.visible;
           }
 
-          if (!this.#options.saveColumnWidth) {
-            delete columnState.width;
+          if (this.#options.saveColumnWidth) {
+            columnStateToRestore.width = savedColumnState.width;
           }
 
-          if (!this.#options.saveColumnSorting) {
-            delete columnState.sortState;
+          if (this.#options.saveColumnSorting) {
+            columnStateToRestore.sortState = savedColumnState.sortState;
           }
+          tableStateToRestore.columns.push(columnStateToRestore);
         }
+
       }
 
       console.log(savedTableState);

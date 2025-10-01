@@ -502,6 +502,17 @@ export class DataTable<T extends object> extends EventTarget {
    * @param query - The search term (string) or a regular expression. An empty string clears the search.
    */
   search(query?: string | RegExp) {
+    const searchEvent = new CustomEvent<DataTableEventMap<T>['dt.search']>(
+      'dt.search',
+      {cancelable: true, detail: {
+        query: query ?? null
+      }}
+    );
+
+    if (!this.dispatchEvent(searchEvent)) {
+      return;
+    }
+
     this.#userQuery = query;
 
     // Clear search on empty string
@@ -1806,6 +1817,10 @@ export interface DataTableEventMap<T> {
     dropColumn: string;
     order: string[];
   };
+
+  'dt.search': {
+    query: string | RegExp | null;
+  }
 }
 
 // User can provide either string or list of strings. Internally we enforce a list of strings.

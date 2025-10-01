@@ -1,5 +1,5 @@
-import { VirtualScroll } from '../src/virtual-scroll/virtual-scroll';
-import { MockResizeObserver } from './__mocks__/mock-resize-observer';
+import { VirtualScroll } from '../virtual-scroll';
+import { MockResizeObserver } from '../__mocks__/mock-resize-observer';
 
 const itemHeight = 50;
 const containerHeight = 500;

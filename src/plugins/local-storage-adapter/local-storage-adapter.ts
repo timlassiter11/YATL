@@ -147,8 +147,7 @@ export class LocalStorageAdapter<T extends object> {
 
       }
 
-      console.log(savedTableState);
-      this.#dataTable.restoreState(savedTableState);
+      this.#dataTable.restoreState(tableStateToRestore);
     } catch (error) {
       console.error('Failed to restore DataTable state:', error);
     }

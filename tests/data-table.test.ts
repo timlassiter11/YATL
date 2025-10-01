@@ -4,7 +4,7 @@ import { MockVirtualScroll } from './__mocks__/mock-virtual-scroll';
 
 type SampleData = {
   id: number;
-  name: string | null;
+  name: string;
   city?: string | null;
   age?: number | null;
   extra?: string;
@@ -181,6 +181,21 @@ describe('DataTable', () => {
       const state = dataTable.getState();
       expect(state.columns).toEqual(columns);
     });
+
+    it('should show and clear a message', () => {
+      dataTable.loadData(sampleData);
+      dataTable.showMessage('foo');
+      expect(document.querySelectorAll('tbody tr')).toHaveLength(1);
+      dataTable.clearMessage();
+      expect(document.querySelectorAll('tbody tr')).toHaveLength(sampleData.length);
+    });
+
+    it('should apply custom classes to a message', () => {
+      dataTable.showMessage('', 'foo', 'bar');
+      const tr = document.querySelector('tbody tr')!;
+      expect(tr.classList).toContain('foo');
+      expect(tr.classList).toContain('bar');
+    });
   });
 
   describe('Options', () => {
@@ -190,6 +205,54 @@ describe('DataTable', () => {
       dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
       });
+    });
+
+    it('should load data from options', () => {
+      dataTable = new DataTable(tableElement, sampleColumns, { data: sampleData });
+      expect(dataTable.rows).toEqual(sampleData);
+    });
+
+    it('should honor column defaults', () => {
+      dataTable = new DataTable(
+        tableElement,
+        [
+          { field: 'age', sortable: false },
+          { field: 'city', resizable: false },
+        ],
+        {
+          ...defaultTestOptions,
+          sortable: true,
+          resizable: true,
+        },
+      );
+
+      let ageOptions = dataTable.getColumnOptions('age');
+      expect(ageOptions.sortable).toBeFalsy();
+      expect(ageOptions.resizable).toBeTruthy();
+
+      let cityOptions = dataTable.getColumnOptions('city');
+      expect(cityOptions.sortable).toBeTruthy();
+      expect(cityOptions.resizable).toBeFalsy();
+
+
+      dataTable = new DataTable(
+        tableElement,
+        [
+          { field: 'age', sortable: true },
+          { field: 'city', resizable: true },
+        ], {
+        ...defaultTestOptions,
+        sortable: false,
+        resizable: false,
+      });
+
+      ageOptions = dataTable.getColumnOptions('age');
+      expect(ageOptions.sortable).toBeTruthy();
+      expect(ageOptions.resizable).toBeFalsy();
+
+      cityOptions = dataTable.getColumnOptions('city');
+      expect(cityOptions.sortable).toBeFalsy();
+      expect(cityOptions.resizable).toBeTruthy();
     });
 
     it('should apply user defined classes to HTML elements', () => {
@@ -243,10 +306,10 @@ describe('DataTable', () => {
       dataTable.search(row.name);
 
       dataTable.updateTableOptions({ highlightSearch: true });
-      expect(dataTable.options.highlightSearch).toBe(true);
+      expect(dataTable.tableOptions.highlightSearch).toBe(true);
       expect(document.querySelector('mark')?.innerHTML).toBe(row.name);
       dataTable.updateTableOptions({ highlightSearch: false });
-      expect(dataTable.options.highlightSearch).toBe(false);
+      expect(dataTable.tableOptions.highlightSearch).toBe(false);
       expect(document.querySelector('mark')).toBeNull();
     });
 
@@ -260,7 +323,7 @@ describe('DataTable', () => {
       );
 
       expect(document.querySelector('td')?.innerHTML).toBe(
-        dataTable.options.noDataText,
+        dataTable.tableOptions.noDataText,
       );
       dataTable.updateTableOptions({ noDataText: 'testing123' });
       expect(document.querySelector('td')?.innerHTML).toBe('testing123');
@@ -271,7 +334,7 @@ describe('DataTable', () => {
 
       dataTable.search('fjdkajfal');
       expect(document.querySelector('td')?.innerHTML).toBe(
-        dataTable.options.noMatchText,
+        dataTable.tableOptions.noMatchText,
       );
       dataTable.updateTableOptions({ noMatchText: 'testing123' });
       expect(document.querySelector('td')?.innerHTML).toBe('testing123');
@@ -290,10 +353,15 @@ describe('DataTable', () => {
         enableSearchScoring: true,
         tokenizeSearch: true,
       });
-      expect(dataTable.options.enableSearchScoring).toBeTruthy();
-      expect(dataTable.options.tokenizeSearch).toBeTruthy();
+      expect(dataTable.tableOptions.enableSearchScoring).toBeTruthy();
+      expect(dataTable.tableOptions.tokenizeSearch).toBeTruthy();
       dataTable.updateTableOptions({ tokenizeSearch: false });
-      expect(dataTable.options.enableSearchScoring).toBeFalsy();
+      expect(dataTable.tableOptions.enableSearchScoring).toBeFalsy();
+    });
+
+    it('should throw an error when getting / settings column options for an invalid column', () => {
+      expect(() => dataTable.getColumnOptions('foobar' as any)).toThrow(Error);
+      expect(() => dataTable.updateColumnOptions('foobar' as any, {})).toThrow(Error);
     });
 
     it('should update the column title', () => {
@@ -306,9 +374,9 @@ describe('DataTable', () => {
     });
 
     it('should make column searchable', () => {
-      dataTable.updateColumnOptions('name', {searchable: false});
+      dataTable.updateColumnOptions('name', { searchable: false });
       expect(dataTable.getColumnOptions('name').searchable).toBeFalsy();
-      dataTable.updateColumnOptions('name', {searchable: true});
+      dataTable.updateColumnOptions('name', { searchable: true });
       expect(dataTable.getColumnOptions('name').searchable).toBeTruthy();
     });
 
@@ -316,20 +384,42 @@ describe('DataTable', () => {
       const headerElement = document.querySelector(`th[data-dt-field="name"]`)!;
       dataTable.updateColumnOptions('name', { resizable: false });
       expect(dataTable.getColumnOptions('name').resizable).toBeFalsy();
-      expect(headerElement.classList).not.toContain("dt-resizeable");
+      expect(headerElement.classList).not.toContain('dt-resizeable');
       dataTable.updateColumnOptions('name', { resizable: true });
       expect(dataTable.getColumnOptions('name').resizable).toBeTruthy();
-      expect(headerElement.classList).toContain("dt-resizeable");
+      expect(headerElement.classList).toContain('dt-resizeable');
     });
 
     it('should make column sortable', () => {
       const headerElement = document.querySelector(`th[data-dt-field="name"]`)!;
-      dataTable.updateColumnOptions('name', {sortable: false});
+      dataTable.updateColumnOptions('name', { sortable: false });
       expect(dataTable.getColumnOptions('name').sortable).toBeFalsy();
       expect(headerElement.classList).not.toContain('dt-sortable');
-      dataTable.updateColumnOptions('name', {sortable: true});
+      dataTable.updateColumnOptions('name', { sortable: true });
       expect(dataTable.getColumnOptions('name').sortable).toBeTruthy();
       expect(headerElement.classList).toContain('dt-sortable');
+    });
+
+    it('should update the columns value formmatter', () => {
+      dataTable.loadData([{ id: 1, name: 'Bobby' }]);
+      expect(document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML).toBe('Bobby');
+      dataTable.updateColumnOptions('name', { valueFormatter: () => 'foobar' });
+      expect(document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML).toBe('foobar');
+    });
+
+    it('should update the columns element formatter', () => {
+      dataTable.loadData([{ id: 1, name: 'Bobby' }]);
+      expect(document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML).toBe('Bobby');
+      dataTable.updateColumnOptions('name', {
+        elementFormatter: (value, row, element) => {
+          element.classList.add('foobar');
+          element.innerHTML = 'foobar';
+        }
+      });
+
+      const cellElement = document.querySelector('tbody tr td[data-dt-field="name"]')!;
+      expect(cellElement.classList).toContain('foobar');
+      expect(cellElement.innerHTML).toBe('foobar');
     })
   });
 
@@ -357,6 +447,14 @@ describe('DataTable', () => {
         ...defaultTestOptions,
       });
       dataTable.loadData(searchData);
+    });
+
+    it('should clear search on empty string', () => {
+      dataTable.loadData(searchData);
+      dataTable.search(searchData[0].product!);
+      expect(dataTable.rows).toHaveLength(1);
+      dataTable.search('');
+      expect(dataTable.rows).toHaveLength(sampleData.length);
     });
 
     it('should highlight search results', () => {
@@ -656,6 +754,10 @@ describe('DataTable', () => {
       dataTable.loadData(sampleData);
     });
 
+    it('should throw an error when trying to sort an invalid column', () => {
+      expect(() => dataTable.sort('foobar' as any, null)).toThrow(Error)
+    });
+
     it('should sort rows by column ascending', () => {
       dataTable.sort('age', 'asc');
       expect(dataTable.rows[0].name).toBe('Alice');
@@ -681,6 +783,13 @@ describe('DataTable', () => {
       expect(dataTable.rows[1].name).toBe('John');
       expect(dataTable.rows[2].name).toBe('Bob');
       expect(dataTable.rows[3].name).toBe('Charlie');
+    });
+
+    it('should not update sort priority when changing sort order', () => {
+      dataTable.sort('name', 'asc');
+      const originalPriority = dataTable.getState().columns[1].sortState!.priority;
+      dataTable.sort('name', 'desc');
+      expect(dataTable.getState().columns[1].sortState!.priority).toEqual(originalPriority);
     });
 
     it('should correctly handle removing a sort from a multi-column sort', () => {

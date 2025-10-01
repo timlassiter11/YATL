@@ -174,7 +174,7 @@ export class DataTable<T extends object> extends EventTarget {
   /**
    * Gets the current options applied to the table.
    */
-  get options() {
+  get tableOptions() {
     return structuredClone(this.#options);
   }
 
@@ -262,10 +262,6 @@ export class DataTable<T extends object> extends EventTarget {
         }
       }
     });
-  }
-
-  getTableOptions() {
-    return structuredClone(this.#options);
   }
 
   updateTableOptions(options: UpdatableTableOptions<T>) {
@@ -368,7 +364,7 @@ export class DataTable<T extends object> extends EventTarget {
   getColumnOptions(column: NestedKeyOf<T>) {
     const col = this.#columnData.get(column);
     if (!col) {
-      throw new Error(`Cannot update non-existent column "${column}"`);
+      throw new Error(`Cannot get options for non-existent column "${column}"`);
     }
     return col.options;
   }
@@ -379,7 +375,7 @@ export class DataTable<T extends object> extends EventTarget {
   ) {
     const col = this.#columnData.get(column);
     if (!col) {
-      throw new Error(`Cannot update non-existent column "${column}"`);
+      throw new Error(`Cannot update options for non-existent column "${column}"`);
     }
 
     let updateHeaders = false;
@@ -488,15 +484,9 @@ export class DataTable<T extends object> extends EventTarget {
    * @param text - The text or HTML message to display.
    * @param classes - A string or array of strings for CSS classes to apply to the message row.
    */
-  showMessage(text: string, classes: string | string[]) {
-    if (Array.isArray(classes)) {
-      classes = classes.join(' ');
-    } else if (typeof classes !== 'string') {
-      classes = '';
-    }
-
+  showMessage(text: string, ...classes: string[]) {
     const colSpan = this.#columnData.size;
-    this.#tbody.innerHTML = `<tr class="${classes}"><td colSpan=${colSpan}>${text}</td></tr>`;
+    this.#tbody.innerHTML = `<tr class="${classes.join(' ')}"><td colSpan=${colSpan}>${text}</td></tr>`;
   }
 
   /**
@@ -553,8 +543,7 @@ export class DataTable<T extends object> extends EventTarget {
   sort(colName: NestedKeyOf<T>, order: SortOrder | null) {
     const col = this.#columnData.get(colName);
     if (!col) {
-      console.warn(`Attempting to sort non-existent column ${colName}`);
-      return;
+      throw new Error(`Cannot get options for non-existent column "${colName}"`);
     }
 
     if (order === col.sortState?.order) {
@@ -611,12 +600,7 @@ export class DataTable<T extends object> extends EventTarget {
   setColumnVisibility(colName: NestedKeyOf<T>, visisble: boolean) {
     const col = this.#columnData.get(colName);
     if (!col) {
-      console.warn(
-        `Attempting to ${
-          visisble ? 'show' : 'hide'
-        } non-existent column ${colName}`,
-      );
-      return;
+      throw new Error(`Cannot get options for non-existent column "${colName}"`);
     }
 
     if (col.options.visible === visisble) {
@@ -714,7 +698,7 @@ export class DataTable<T extends object> extends EventTarget {
     if (typeof index === 'number') {
       this.scrollToOriginalIndex(index);
     } else {
-      throw new TypeError('Invalid row');
+      throw new Error('Row not in table');
     }
   }
 
@@ -1519,13 +1503,7 @@ export class DataTable<T extends object> extends EventTarget {
     return current;
   }
 
-  #resizeColumn(column: string | ColumnData<T>, width?: number) {
-    if (typeof column === 'string') {
-      const columnData = this.#columnData.get(column as NestedKeyOf<T>);
-      if (!columnData) throw new Error('Column not found');
-      column = columnData;
-    }
-
+  #resizeColumn(column: ColumnData<T>, width?: number) {
     let headerWidth, cellWidth;
     if (width == null) {
       headerWidth = '';
@@ -1663,7 +1641,11 @@ export class DataTable<T extends object> extends EventTarget {
 
     const field = event.currentTarget.dataset.dtField;
     if (!field) return;
-    this.#resizeColumn(field);
+
+    const columnData = this.#columnData.get(field as NestedKeyOf<T>);
+    if (columnData) {
+      this.#resizeColumn(columnData);
+    }
   };
 
   #onDragColumnStart = (event: DragEvent) => {
@@ -1859,8 +1841,6 @@ type UpdatableTableOptions<T extends object> = Pick<
   | 'noDataText'
   | 'classes'
 >;
-
-
 
 export type * from './types';
 export { createRegexTokenizer };

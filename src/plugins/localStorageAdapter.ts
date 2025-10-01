@@ -1,7 +1,13 @@
 import { DataTable } from '../data-table/data-table';
-import { ColumnState } from '../data-table/types';
+import {
+  RestorableColumnState,
+  RestorableTableState,
+} from '../data-table/types';
 
 interface Options {
+  saveSearch: boolean;
+  saveScrollPosition: boolean;
+  saveColumnTitle: boolean;
   saveColumnSorting: boolean;
   saveColumnOrder: boolean;
   saveColumnVisibility: boolean;
@@ -11,10 +17,13 @@ interface Options {
 /**
  * Monitors a {@link DataTable} instance for changes and saves the state to local storage.
  */
-export class LocalStorageAdapter<T> {
+export class LocalStorageAdapter<T extends object> {
   #dataTable: DataTable<T>;
   #storageKey: string;
   #options: Options = {
+    saveSearch: true,
+    saveScrollPosition: true,
+    saveColumnTitle: true,
     saveColumnSorting: true,
     saveColumnVisibility: true,
     saveColumnWidth: true,
@@ -58,44 +67,95 @@ export class LocalStorageAdapter<T> {
    * Saves the current column state to localStorage.
    */
   saveState() {
-    const states: Partial<ColumnState<T>>[] = this.#dataTable.columnStates;
-    for (const state of states) {
-      if (!this.#options.saveColumnSorting) {
-        state.sortOrder = undefined;
-        state.sortPriority = undefined;
-      }
+    const savedTableState: RestorableTableState<T> = {
+      columns: [],
+    };
+    const tableState = this.#dataTable.getState();
 
-      if (!this.#options.saveColumnVisibility) {
-        state.visible = undefined;
-      }
-
-      if (!this.#options.saveColumnWidth) {
-        state.width = undefined;
-      }
+    if (this.#options.saveSearch) {
+      savedTableState.searchQuery = tableState.searchQuery;
     }
 
-    localStorage.setItem(
-      this.#storageKey,
-      JSON.stringify(this.#dataTable.columnStates),
-    );
+    if (this.#options.saveScrollPosition) {
+      savedTableState.scrollPosition = tableState.scrollPosition;
+    }
+
+    if (this.#options.saveColumnOrder) {
+      savedTableState.columnOrder = tableState.columnOrder;
+    }
+
+    for (const columnState of tableState.columns) {
+      const savedColumnState: RestorableColumnState<T> = {
+        field: columnState.field,
+      };
+
+      if (this.#options.saveColumnTitle) {
+        savedColumnState.title = columnState.title;
+      }
+
+      if (this.#options.saveColumnSorting) {
+        savedColumnState.sortState = columnState.sortState;
+      }
+
+      if (this.#options.saveColumnVisibility) {
+        savedColumnState.visible = columnState.visible;
+      }
+
+      if (this.#options.saveColumnWidth) {
+        savedColumnState.width = columnState.width;
+      }
+
+      savedTableState.columns?.push(savedColumnState);
+    }
+
+    localStorage.setItem(this.#storageKey, JSON.stringify(savedTableState));
   }
 
   /**
    * Restores the column state from localStorage.
    */
   restoreState() {
-    const savedState = localStorage.getItem(this.#storageKey);
-    if (!savedState) return;
+    const json = localStorage.getItem(this.#storageKey);
+    if (!json) {
+      return;
+    }
 
     try {
-      const columnStates = JSON.parse(savedState) as ColumnState<T>[];
-      this.#dataTable.columnStates = columnStates;
+      const savedTableState = JSON.parse(json) as RestorableTableState<T>;
 
-      if (this.#options.saveColumnOrder) {
-        this.#dataTable.setColumnOrder(
-          columnStates.map((col: ColumnState<T>) => col.field),
-        );
+      if (!this.#options.saveSearch) {
+        delete savedTableState.searchQuery;
       }
+      if (!this.#options.saveScrollPosition) {
+        delete savedTableState.scrollPosition;
+      }
+
+      if (!this.#options.saveColumnOrder) {
+        delete savedTableState.columnOrder;
+      }
+
+      if (savedTableState.columns) {
+        for (const columnState of savedTableState.columns) {
+          if (!this.#options.saveColumnTitle) {
+            delete columnState.title;
+          }
+
+          if (!this.#options.saveColumnVisibility) {
+            delete columnState.visible;
+          }
+
+          if (!this.#options.saveColumnWidth) {
+            delete columnState.width;
+          }
+
+          if (!this.#options.saveColumnSorting) {
+            delete columnState.sortState;
+          }
+        }
+      }
+
+      console.log(savedTableState);
+      this.#dataTable.restoreState(savedTableState);
     } catch (error) {
       console.error('Failed to restore DataTable state:', error);
     }

@@ -1,14 +1,10 @@
 import { TableClasses } from './types';
 
-export type NestedKeyOf<T> = T extends object
-  ? {
-      [K in keyof T]: K extends string
-        ? T[K] extends object
-          ? `${K}` | `${K}.${NestedKeyOf<T[K]>}`
-          : `${K}`
-        : never;
-    }[keyof T]
-  : never;
+export type NestedKeyOf<ObjectType extends object> = {
+  [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends object
+    ? `${Key}` | `${Key}.${NestedKeyOf<ObjectType[Key]>}`
+    : `${Key}`;
+}[keyof ObjectType & (string | number)];
 
 export type WithRequiredProp<Type, Key extends keyof Type> = Type &
   Required<Pick<Type, Key>>;

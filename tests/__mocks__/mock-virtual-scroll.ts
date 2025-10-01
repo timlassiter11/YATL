@@ -1,8 +1,10 @@
-import type { IVirtualScroll, VirtualScrollOptions } from "../../src/virtual-scroll/types";
+import type {
+  IVirtualScroll,
+  VirtualScrollOptions,
+} from '../../src/virtual-scroll/types';
 
 export class MockVirtualScroll implements IVirtualScroll {
   static AVERAGE_RENDER_COUNT = 1000;
-
 
   options: VirtualScrollOptions;
 

@@ -55,7 +55,7 @@ const updateData = () => {
 
 const updateVirtualScroll = () => {
   const value = document.querySelector('input[name="virtualScrolling"]:checked').value;
-  dataTable.updateOptions({virtualScroll: value === "on"});
+  dataTable.updateTableOptions({virtualScroll: value === "on"});
   updateRenderedRows();
 }
 

@@ -1,6 +1,5 @@
-import { VirtualScroll } from "../src/virtual-scroll/virtual-scroll";
-import { MockResizeObserver } from "./__mocks__/mock-resize-observer";
-
+import { VirtualScroll } from '../src/virtual-scroll/virtual-scroll';
+import { MockResizeObserver } from './__mocks__/mock-resize-observer';
 
 const itemHeight = 50;
 const containerHeight = 500;
@@ -11,7 +10,7 @@ let mockObserverInstances: MockResizeObserver[] = [];
 
 // Mock the global ResizeObserver before all tests.
 beforeAll(() => {
-  global.ResizeObserver = jest.fn((callback) => {
+  global.ResizeObserver = jest.fn(callback => {
     const instance = new MockResizeObserver(callback);
     mockObserverInstances.push(instance);
     return instance;
@@ -19,20 +18,21 @@ beforeAll(() => {
 
   // Mock offsetHeight on all divs
   Object.defineProperty(HTMLDivElement.prototype, 'offsetHeight', {
-    configurable: true, get: function () {
+    configurable: true,
+    get: function () {
       const that = this as HTMLDivElement;
       let height = 0;
       for (const child of that.children) {
         height += (child as HTMLElement).offsetHeight;
       }
       return height;
-    }
+    },
   });
 });
 
 // Mock requestAnimationFrame to make scroll tests work
 let frameRequestCallback: FrameRequestCallback | null = null;
-jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => {
   frameRequestCallback = cb;
   return 1; // Return a mock frame ID
 });
@@ -62,16 +62,27 @@ describe('Virtual Scroll', () => {
     generator = jest.fn((index: number) => {
       const item = document.createElement('div');
       item.textContent = `${index}`;
-      Object.defineProperty(item, 'offsetHeight', { configurable: true, value: itemHeight });
+      Object.defineProperty(item, 'offsetHeight', {
+        configurable: true,
+        value: itemHeight,
+      });
       return item;
     });
 
-    document.body.innerHTML = '<div id="container"><div id="element"></div></div>';
+    document.body.innerHTML =
+      '<div id="container"><div id="element"></div></div>';
     container = document.getElementById('container')!;
-    Object.defineProperty(container, 'offsetHeight', { configurable: true, value: containerHeight });
+    Object.defineProperty(container, 'offsetHeight', {
+      configurable: true,
+      value: containerHeight,
+    });
     element = document.getElementById('element')!;
-    virtualScroll = new VirtualScroll({ generator, container, element, nodePadding });
-
+    virtualScroll = new VirtualScroll({
+      generator,
+      container,
+      element,
+      nodePadding,
+    });
   });
 
   it('should start and stop the virtual scroll', () => {
@@ -86,7 +97,9 @@ describe('Virtual Scroll', () => {
     const visibleRows = containerHeight / itemHeight;
     virtualScroll.start(100);
     // add 2 for the top and bottom padding elements
-    expect(element.querySelectorAll('div').length).toBe(visibleRows + nodePadding + 2);
+    expect(element.querySelectorAll('div').length).toBe(
+      visibleRows + nodePadding + 2,
+    );
   });
 
   it('should scroll to a specific item', () => {
@@ -101,7 +114,9 @@ describe('Virtual Scroll', () => {
     virtualScroll.start(count);
     virtualScroll.scrollToIndex(scrollTo);
     const elements = [...element.querySelectorAll('div')];
-    const items = elements.slice(1, elements.length - 1).map(element => parseInt(element.textContent!));
+    const items = elements
+      .slice(1, elements.length - 1)
+      .map(element => parseInt(element.textContent!));
     expect(items.at(0)).toEqual(paddedIndex);
   });
 
@@ -122,7 +137,9 @@ describe('Virtual Scroll', () => {
     container.dispatchEvent(new Event('scroll'));
     triggerAnimationFrame();
     const elements = [...element.querySelectorAll('div')];
-    const items = elements.slice(1, elements.length - 1).map(element => parseInt(element.textContent!));
+    const items = elements
+      .slice(1, elements.length - 1)
+      .map(element => parseInt(element.textContent!));
     expect(items).toContain(10);
   });
 
@@ -132,6 +149,5 @@ describe('Virtual Scroll', () => {
     container.dispatchEvent(new Event('scroll'));
     virtualScroll.stop();
     triggerAnimationFrame();
-
   });
 });

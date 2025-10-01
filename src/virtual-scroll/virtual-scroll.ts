@@ -1,4 +1,8 @@
-import type { VirtualScrollOptions, IVirtualScroll, IVirtualScrollConstructor } from "./types";
+import type {
+  VirtualScrollOptions,
+  IVirtualScroll,
+  IVirtualScrollConstructor,
+} from './types';
 
 const MAX_ELEMENT_HEIGHT = 33554400;
 
@@ -107,11 +111,7 @@ export class VirtualScroll implements IVirtualScroll {
     const rowHeight = this.rowHeight;
     const padding = this.#padding;
 
-    if (
-      !this.started ||
-      !rowCount ||
-      !rowHeight
-    ) {
+    if (!this.started || !rowCount || !rowHeight) {
       return;
     }
 
@@ -174,14 +174,17 @@ export class VirtualScroll implements IVirtualScroll {
       return;
     }
 
-    const renderSize = Math.min(VirtualScroll.AVERAGE_RENDER_COUNT, this.#rowCount);
+    const renderSize = Math.min(
+      VirtualScroll.AVERAGE_RENDER_COUNT,
+      this.#rowCount,
+    );
     // Create an average row height by rendering the first N rows.
     const elements = [];
     for (let i = 0; i < renderSize; ++i) {
       elements.push(this.#generator(i));
     }
 
-    const container = document.createElement("div");
+    const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.visibility = 'hidden';
     container.style.height = 'auto';

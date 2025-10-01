@@ -1,8 +1,9 @@
 import { ColumnOptions, DataTable } from '../src/data-table/data-table';
+import { NestedKeyOf } from '../src/data-table/utils';
 import { MockVirtualScroll } from './__mocks__/mock-virtual-scroll';
 
 type SampleData = {
-  id?: number;
+  id: number;
   name: string | null;
   city?: string | null;
   age?: number | null;
@@ -28,10 +29,9 @@ describe('DataTable', () => {
   beforeAll(() => {
     // Mock structuredClone
     global.structuredClone = jest.fn((value: any) => {
-      return { ...value }
+      return { ...value };
     });
   });
-
 
   beforeEach(() => {
     document.body.innerHTML = '<table></table>';
@@ -66,7 +66,9 @@ describe('DataTable', () => {
 
     it('should throw an error if invalid element type', () => {
       const element = document.createElement('div') as unknown;
-      expect(() => new DataTable(element as HTMLTableElement, sampleColumns)).toThrow(TypeError);
+      expect(
+        () => new DataTable(element as HTMLTableElement, sampleColumns),
+      ).toThrow(TypeError);
     });
 
     it('should load data into the table', () => {
@@ -85,7 +87,7 @@ describe('DataTable', () => {
     it('should delete an existing row', () => {
       dataTable.loadData(sampleData);
       dataTable.deleteRow(0);
-      expect(dataTable.rows.length).toBe(sampleData.length - 1);
+      expect(dataTable.rows).toHaveLength(sampleData.length - 1);
       expect(dataTable.rows[0].id).toBe(sampleData[1].id);
     });
 
@@ -93,7 +95,7 @@ describe('DataTable', () => {
       dataTable.loadData(sampleData);
       dataTable.updateRow(0, { name: 'test' });
       expect(dataTable.rows[0].name).toBe('test');
-    })
+    });
 
     it('should handle undefined data in rows', () => {
       dataTable.loadData([{ id: 1, name: 'Jim' }]);
@@ -112,21 +114,86 @@ describe('DataTable', () => {
       expect(searchSpy).toHaveBeenCalledTimes(1);
       expect(filterSpy).toHaveBeenCalledTimes(1);
     });
+
+    it('should get the correct initial state', () => {
+      const state = dataTable.getState();
+      expect(state.columns).toHaveLength(sampleColumns.length);
+      expect(state.columns[0].field).toBe(sampleColumns[0].field);
+      expect(state.columns[0].sortState).toBeNull();
+      expect(state.filters).toBeUndefined();
+    });
+
+    it('should get the correct state after changes', () => {
+      dataTable.search('test');
+      dataTable.filter({ age: 35 });
+      dataTable.hideColumn(sampleColumns[0].field);
+      dataTable.sort(sampleColumns[1].field, 'asc');
+
+      const state = dataTable.getState();
+      expect(state.searchQuery).toBe('test');
+      expect((state.filters as any).age).toBe(35);
+      expect(state.columns[0].visible).toBeFalsy();
+      expect(state.columns[1].sortState?.order).toBe('asc');
+      expect(state.columns[1].sortState?.priority).toBe(sampleColumns.length);
+    });
+
+    it('should restore the search state', () => {
+      const searchQuery = sampleData[1].name!;
+      dataTable.loadData(sampleData);
+      dataTable.restoreState({ searchQuery });
+      expect(dataTable.getState().searchQuery).toBe(searchQuery);
+      expect(dataTable.rows).toHaveLength(1);
+      expect(dataTable.rows[0].name).toBe(sampleData[1].name);
+    });
+
+    it('should restore the filter state', () => {
+      const filters = { age: 35 };
+      dataTable.loadData(sampleData);
+      dataTable.restoreState({ filters });
+      expect(dataTable.getState().filters).toEqual(filters);
+      expect(dataTable.rows).toHaveLength(1);
+      expect(dataTable.rows[0].id).toBe(3);
+    });
+
+    it('should restore the column order state', () => {
+      const columnOrder: NestedKeyOf<SampleData>[] = [
+        'name',
+        'age',
+        'city',
+        'id',
+      ];
+      dataTable.loadData(sampleData);
+      dataTable.restoreState({ columnOrder });
+      expect(dataTable.getState().columnOrder).toEqual(columnOrder);
+
+      const titleElements = [...document.querySelectorAll('thead th')];
+      const titles = titleElements.map(
+        element => (element as HTMLElement).dataset.dtField,
+      );
+      expect(titles).toEqual(columnOrder);
+    });
+
+    it('should restore the column states', () => {
+      const columns = dataTable.getState().columns;
+      columns[0].sortState = { order: 'asc', priority: 10 };
+      columns[1].visible = false;
+      dataTable.restoreState({ columns });
+      const state = dataTable.getState();
+      expect(state.columns).toEqual(columns);
+    });
   });
 
   describe('Options', () => {
     let dataTable: DataTable<SampleData>;
 
     beforeEach(() => {
-      dataTable = new DataTable(
-        tableElement,
-        sampleColumns,
-        { ...defaultTestOptions },
-      );
+      dataTable = new DataTable(tableElement, sampleColumns, {
+        ...defaultTestOptions,
+      });
     });
 
     it('should apply user defined classes to HTML elements', () => {
-      const data = [{ name: 'Alice' }];
+      const data = [{ id: 1, name: 'Alice' }];
       const classes = {
         scroller: 'test-scroller',
         thead: 'test-thead',
@@ -137,11 +204,11 @@ describe('DataTable', () => {
         mark: 'test-mark',
       };
       // We need highlight search for mark to work
-      dataTable.updateOptions({ highlightSearch: true });
+      dataTable.updateTableOptions({ highlightSearch: true });
       dataTable.loadData(data);
 
       dataTable.search(data[0].name);
-      dataTable.updateOptions({ classes });
+      dataTable.updateTableOptions({ classes });
 
       expect(
         document
@@ -171,14 +238,14 @@ describe('DataTable', () => {
     });
 
     it('should mark search text', () => {
-      const row = { name: 'Alice' };
+      const row = { id: 1, name: 'Alice' };
       dataTable.loadData([row]);
       dataTable.search(row.name);
 
-      dataTable.updateOptions({ highlightSearch: true });
+      dataTable.updateTableOptions({ highlightSearch: true });
       expect(dataTable.options.highlightSearch).toBe(true);
       expect(document.querySelector('mark')?.innerHTML).toBe(row.name);
-      dataTable.updateOptions({ highlightSearch: false });
+      dataTable.updateTableOptions({ highlightSearch: false });
       expect(dataTable.options.highlightSearch).toBe(false);
       expect(document.querySelector('mark')).toBeNull();
     });
@@ -195,18 +262,18 @@ describe('DataTable', () => {
       expect(document.querySelector('td')?.innerHTML).toBe(
         dataTable.options.noDataText,
       );
-      dataTable.updateOptions({ noDataText: 'testing123' });
+      dataTable.updateTableOptions({ noDataText: 'testing123' });
       expect(document.querySelector('td')?.innerHTML).toBe('testing123');
     });
 
     it('should update no match text', () => {
-      dataTable.loadData([{ name: 'Alice' }]);
+      dataTable.loadData([{ id: 1, name: 'Alice' }]);
 
       dataTable.search('fjdkajfal');
       expect(document.querySelector('td')?.innerHTML).toBe(
         dataTable.options.noMatchText,
       );
-      dataTable.updateOptions({ noMatchText: 'testing123' });
+      dataTable.updateTableOptions({ noMatchText: 'testing123' });
       expect(document.querySelector('td')?.innerHTML).toBe('testing123');
     });
 
@@ -214,20 +281,64 @@ describe('DataTable', () => {
       dataTable.loadData(sampleData);
       dataTable.search('foobar');
       expect(dataTable.rows.length).toBe(0);
-      dataTable.updateOptions({ extraSearchFields: ['extra'] });
+      dataTable.updateTableOptions({ extraSearchFields: ['extra'] });
       expect(dataTable.rows.length).toBe(1);
     });
 
+    it('should disable search scoring if tokenized search is disabled', () => {
+      dataTable.updateTableOptions({
+        enableSearchScoring: true,
+        tokenizeSearch: true,
+      });
+      expect(dataTable.options.enableSearchScoring).toBeTruthy();
+      expect(dataTable.options.tokenizeSearch).toBeTruthy();
+      dataTable.updateTableOptions({ tokenizeSearch: false });
+      expect(dataTable.options.enableSearchScoring).toBeFalsy();
+    });
+
     it('should update the column title', () => {
-      const nameTitleElement = document.querySelector('th[data-dt-field="name"] .dt-header-title')!
+      const nameTitleElement = document.querySelector(
+        'th[data-dt-field="name"] .dt-header-title',
+      )!;
       expect(nameTitleElement.innerHTML).toBe('Name');
       dataTable.updateColumnOptions('name', { title: 'test' });
       expect(nameTitleElement.innerHTML).toBe('test');
     });
+
+    it('should make column searchable', () => {
+      dataTable.updateColumnOptions('name', {searchable: false});
+      expect(dataTable.getColumnOptions('name').searchable).toBeFalsy();
+      dataTable.updateColumnOptions('name', {searchable: true});
+      expect(dataTable.getColumnOptions('name').searchable).toBeTruthy();
+    });
+
+    it('should make column resizable', () => {
+      const headerElement = document.querySelector(`th[data-dt-field="name"]`)!;
+      dataTable.updateColumnOptions('name', { resizable: false });
+      expect(dataTable.getColumnOptions('name').resizable).toBeFalsy();
+      expect(headerElement.classList).not.toContain("dt-resizeable");
+      dataTable.updateColumnOptions('name', { resizable: true });
+      expect(dataTable.getColumnOptions('name').resizable).toBeTruthy();
+      expect(headerElement.classList).toContain("dt-resizeable");
+    });
+
+    it('should make column sortable', () => {
+      const headerElement = document.querySelector(`th[data-dt-field="name"]`)!;
+      dataTable.updateColumnOptions('name', {sortable: false});
+      expect(dataTable.getColumnOptions('name').sortable).toBeFalsy();
+      expect(headerElement.classList).not.toContain('dt-sortable');
+      dataTable.updateColumnOptions('name', {sortable: true});
+      expect(dataTable.getColumnOptions('name').sortable).toBeTruthy();
+      expect(headerElement.classList).toContain('dt-sortable');
+    })
   });
 
   describe('Search', () => {
-    type SearchData = { id: number; product?: string | null; category?: string | null};
+    type SearchData = {
+      id: number;
+      product?: string | null;
+      category?: string | null;
+    };
     const searchColumns: ColumnOptions<SearchData>[] = [
       { field: 'product', searchable: true },
       { field: 'category', searchable: true },
@@ -242,11 +353,14 @@ describe('DataTable', () => {
         { id: 3, product: 'Pro Coffee Grinder', category: 'Home Goods' },
         { id: 4, product: 'Standard Coffee Filters', category: 'Home Goods' },
       ];
-      dataTable = new DataTable(tableElement, searchColumns, {...defaultTestOptions, data: searchData});
+      dataTable = new DataTable(tableElement, searchColumns, {
+        ...defaultTestOptions,
+      });
+      dataTable.loadData(searchData);
     });
 
     it('should highlight search results', () => {
-      dataTable.updateOptions({highlightSearch: true});
+      dataTable.updateTableOptions({ highlightSearch: true });
       dataTable.search('Standard');
       const firstCell = tableElement.querySelector(
         'td[data-dt-field="product"]',
@@ -268,9 +382,9 @@ describe('DataTable', () => {
 
       const dataTable = new DataTable(tableElement, columns, {
         ...defaultTestOptions,
-        data,
       });
 
+      dataTable.loadData(data);
       dataTable.search('New York');
       expect(dataTable.rows.length).toBe(1);
       expect(dataTable.rows[0].user.name).toBe('Alice');
@@ -278,7 +392,7 @@ describe('DataTable', () => {
 
     it('should handle searching columns with null or undefined values', () => {
       dataTable.loadData(searchData);
-      dataTable.updateRow(0, {product: null});
+      dataTable.updateRow(0, { product: null });
 
       // Should not throw an error when processing the null/undefined names
       expect(() => dataTable.search('laptop')).not.toThrow();
@@ -295,8 +409,8 @@ describe('DataTable', () => {
           ...defaultTestOptions,
           tokenizeSearch: false,
           enableSearchScoring: false,
-          data: searchData,
         });
+        dataTable.loadData(searchData);
       });
 
       it('should find rows containing the exact substring case-insensitively', () => {
@@ -329,8 +443,8 @@ describe('DataTable', () => {
           ...defaultTestOptions,
           tokenizeSearch: true,
           enableSearchScoring: false,
-          data: searchData,
         });
+        dataTable.loadData(searchData);
       });
 
       it('should find rows that match any of the search tokens', () => {
@@ -348,10 +462,10 @@ describe('DataTable', () => {
 
         const dataTable = new DataTable(tableElement, columns, {
           ...defaultTestOptions,
-          data: tokenData,
           tokenizeSearch: true,
           tokenizer: commaTokenizer,
         });
+        dataTable.loadData(tokenData);
 
         dataTable.search('banana');
         expect(dataTable.rows.length).toBe(1);
@@ -381,10 +495,10 @@ describe('DataTable', () => {
       beforeEach(() => {
         dataTable = new DataTable(tableElement, scoredSearchColumns, {
           ...defaultTestOptions,
-          data: scoredSearchData,
           tokenizeSearch: true,
           enableSearchScoring: true,
         });
+        dataTable.loadData(scoredSearchData);
       });
 
       it('should order results by relevance, placing better matches first', () => {
@@ -413,9 +527,9 @@ describe('DataTable', () => {
         ];
         const dataTable = new DataTable(tableElement, columns, {
           ...defaultTestOptions,
-          data,
           tokenizeSearch: true, // Tokenization is ON
         });
+        dataTable.loadData(data);
 
         // This regex will only match if it tests against the raw string "Laptop Pro X1",
         // not the individual tokens ['Laptop', 'Pro', 'X1'].
@@ -442,11 +556,11 @@ describe('DataTable', () => {
           ],
           {
             ...defaultTestOptions,
-
-            data: tokenizedSearchData,
             tokenizeSearch: true,
           },
         );
+
+        dataTable.loadData(tokenizedSearchData);
       });
 
       it('should only match on tokens for columns where tokenization is enabled', () => {
@@ -464,8 +578,8 @@ describe('DataTable', () => {
     beforeEach(() => {
       dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        data: sampleData,
       });
+      dataTable.loadData(sampleData);
     });
 
     it('should filter rows based on criteria', () => {
@@ -503,8 +617,8 @@ describe('DataTable', () => {
 
     it('should handle null and undefined values gracefully', () => {
       dataTable.loadData(sampleData);
-      dataTable.updateRow(1, {age: null});
-      dataTable.updateRow(3, {age: undefined});
+      dataTable.updateRow(1, { age: null });
+      dataTable.updateRow(3, { age: undefined });
 
       // Should not crash when filtering on a column with nulls
       expect(() => dataTable.filter({ age: 35 })).not.toThrow();
@@ -538,8 +652,8 @@ describe('DataTable', () => {
     beforeEach(() => {
       dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        data: sampleData,
       });
+      dataTable.loadData(sampleData);
     });
 
     it('should sort rows by column ascending', () => {
@@ -586,8 +700,8 @@ describe('DataTable', () => {
 
     it('should handle null and undefined values, grouping them together', () => {
       dataTable.loadData(sampleData);
-      dataTable.updateRow(1, {age: null});
-      dataTable.updateRow(3, {age: undefined});
+      dataTable.updateRow(1, { age: null });
+      dataTable.updateRow(3, { age: undefined });
 
       // Sort ascending. Nulls/undefineds should typically come first.
       dataTable.sort('age', 'asc');
@@ -607,8 +721,8 @@ describe('DataTable', () => {
     beforeEach(() => {
       dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        data: sampleData,
       });
+      dataTable.loadData(sampleData);
     });
 
     it('should show and hide columns', () => {
@@ -620,7 +734,6 @@ describe('DataTable', () => {
       ) as HTMLElement;
 
       expect(nameHeader.style.display);
-      //const ageColumn = dataTable.columnStates.find(col => col.field === "age");
 
       expect(nameHeader.hidden).toBe(false);
       expect(ageHeader.hidden).toBe(false);
@@ -632,14 +745,6 @@ describe('DataTable', () => {
       dataTable.showColumn('age');
       expect(nameHeader.hidden).toBe(false);
       expect(ageHeader.hidden).toBe(false);
-
-      // Attempt to hide a non-existent column
-      const consoleWarnSpy = jest.spyOn(console, 'warn');
-      dataTable.hideColumn('nonexistent');
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Attempting to hide non-existent column nonexistent',
-      );
-      consoleWarnSpy.mockRestore();
     });
 
     it('should resize columns by simulating mouse events', () => {
@@ -674,11 +779,11 @@ describe('DataTable', () => {
           { field: 'name', title: 'Name' },
         ],
         {
-          data,
           rearrangeable: true, // Ensure rearrangeable is enabled for the table
           virtualScroll: false,
         },
       );
+      dataTable.loadData(data);
 
       const headersBeforeReorder = Array.from(
         tableElement.querySelectorAll('th'),
@@ -708,10 +813,11 @@ describe('DataTable', () => {
           { field: 'age', title: 'Age', sortable: true },
         ],
         {
-          data,
           virtualScroll: false,
         },
       );
+
+      dataTable.loadData(data);
 
       // Apply a filter and sort
       dataTable.filter({ age: 30 });
@@ -734,7 +840,7 @@ describe('DataTable', () => {
     function generateData(rows: number) {
       const data: SampleData[] = [];
       for (let i = 0; i < rows; ++i) {
-        data.push({ id: i, name: `Name ${i}`, });
+        data.push({ id: i, name: `Name ${i}` });
       }
       return data;
     }
@@ -743,27 +849,27 @@ describe('DataTable', () => {
       tableElement.style.height = '100px';
       dataTable = new DataTable(tableElement, sampleColumns, {
         ...defaultTestOptions,
-        virtualScrollClass: MockVirtualScroll
+        virtualScrollClass: MockVirtualScroll,
       });
     });
 
     it('should render all rows when virtual scroll is disabled', () => {
       const rowCount = 100;
       dataTable.loadData(generateData(rowCount));
-      dataTable.updateOptions({ virtualScroll: false });
+      dataTable.updateTableOptions({ virtualScroll: false });
       expect(document.querySelectorAll('tbody tr').length).toBe(rowCount);
     });
 
     it('should NOT render all rows when virtual scroll is enabled', () => {
       const rowCount = 100;
       dataTable.loadData(generateData(rowCount));
-      dataTable.updateOptions({ virtualScroll: true });
+      dataTable.updateTableOptions({ virtualScroll: true });
       // Our mock implementation doesn't actually render anything.
       expect(document.querySelectorAll('tbody tr').length).toBe(0);
     });
 
     it('should enable virtual scroll when enough rows are present', () => {
-      dataTable.updateOptions({ virtualScroll: 100 });
+      dataTable.updateTableOptions({ virtualScroll: 100 });
       dataTable.loadData(generateData(99));
       expect(document.querySelectorAll('tbody tr').length).toBe(99);
       dataTable.loadData(generateData(1), { append: true });

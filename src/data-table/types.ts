@@ -2,16 +2,29 @@ import { NestedKeyOf } from './utils';
 import { IVirtualScrollConstructor } from '../virtual-scroll/types';
 
 /**
+ * Defines options for loading data into the table
+ * */
+export interface LoadOptions {
+  /** If the data should replace or be added to the end of the current data */
+  append?: boolean;
+  /** If the current scroll position should be kepts */
+  keepScroll?: boolean;
+}
+
+/**
  * Defines the possible sorting orders for columns.
  */
-export type SortOrder = 'asc' | 'desc' | null;
+export type SortOrder = 'asc' | 'desc';
 
 /**
  * Callback for formatting a row's  HTML element.
  * @param row - The row data.
  * @param element - The row element.
  */
-export type RowFormatterCallback<T> = (row: T, element: HTMLElement) => void;
+export type RowFormatterCallback<T extends object> = (
+  row: T,
+  element: HTMLElement,
+) => void;
 
 /**
  * Callback for formatting the value of a cell.
@@ -19,7 +32,10 @@ export type RowFormatterCallback<T> = (row: T, element: HTMLElement) => void;
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback<T> = (value: any, row: T) => string;
+export type ValueFormatterCallback<T extends object> = (
+  value: any,
+  row: T,
+) => string;
 
 /**
  * Callback for formatting a cell's HTML element.
@@ -27,7 +43,7 @@ export type ValueFormatterCallback<T> = (value: any, row: T) => string;
  * @param row - The row data.
  * @param element - The cell element.
  */
-export type CellFormatterCallback<T> = (
+export type CellFormatterCallback<T extends object> = (
   value: any,
   row: T,
   element: HTMLElement,
@@ -49,8 +65,25 @@ export type ComparatorCallback = (a: any, b: any) => number;
  */
 export type SortValueCallback = (value: any) => number | string;
 
+/**
+ * A filter object containing keys for the fields to be filtered,
+ * and the values used to compare against.
+ */
+export type Filters<T extends object> = Partial<{ [K in keyof T]: any }>;
+
+/**
+ * A single query token derived from a larger string
+ */
 export interface QueryToken {
+  /**
+   * The value to use for the token
+   */
   value: string;
+
+  /**
+   * If the token should be treated as quoted.
+   * Quoted tokens are searched for exactly, no partial matches.
+   */
   quoted: boolean;
 }
 
@@ -80,7 +113,7 @@ export type ColumnFilterCallback = (value: any, filter: any) => boolean;
 /**
  * Column options for the table.
  */
-export interface ColumnOptions<T> {
+export interface ColumnOptions<T extends object> {
   /**
    * The field name in the data object.
    */
@@ -107,17 +140,6 @@ export interface ColumnOptions<T> {
   tokenize?: boolean;
 
   /**
-   * The initial sort order of the column.
-   */
-  sortOrder?: SortOrder;
-
-  /**
-   * The initial sort priority of the column for sorting.
-   * Lower numbers are sorted first.
-   */
-  sortPriority?: number;
-
-  /**
    * Whether the column should be visible by default.
    */
   visible?: boolean;
@@ -129,74 +151,32 @@ export interface ColumnOptions<T> {
   resizable?: boolean;
 
   /**
-   * The initial width of the column.
-   * Can be a number (in pixels) or a string (e.g. "100px", "50%").
-   */
-  width?: string | number;
-
-  /**
    * A function to format the value for display.
    */
-  valueFormatter?: ValueFormatterCallback<T>;
+  valueFormatter?: ValueFormatterCallback<T> | null;
 
   /**
    * A function to format the element for display.
    */
-  elementFormatter?: CellFormatterCallback<T>;
+  elementFormatter?: CellFormatterCallback<T> | null;
 
   /**
    * A function to use for sorting the column.
    * This overrides the default sorting behavior.
    */
-  sorter?: ComparatorCallback;
+  sorter?: ComparatorCallback | null;
 
   /**
    * A function to derive a comparable value from the cell's original value, specifically for sorting this column.
    * This can be used to preprocess and cache values (e.g., convert to lowercase, extract numbers) before comparison.
    */
-  sortValue?: SortValueCallback;
+  sortValue?: SortValueCallback | null;
 
   /**
    * A custom function to determine if a cell's value in this column matches a given filter criterion.
    * This is used when `DataTable.filter()` is called with an object-based filter that targets this column's field.
-   * @param value - The cell's value.
-   * @param filterCriterion - The criterion provided for this column in the main filter object.
    */
-  filter?: ColumnFilterCallback;
-}
-
-/** Represents the current state of a column, often used for saving and restoring column configurations. */
-export interface ColumnState<T> {
-  /**
-   * The unique field name of the column.
-   */
-  readonly field: NestedKeyOf<T>;
-
-  /**
-   * The user friendly title of the column.
-   */
-  readonly title: string;
-
-  /**
-   * The current visibility of the column.
-   */
-  visible: boolean;
-
-  /**
-   * The current sort order of the column.
-   */
-  sortOrder: SortOrder;
-
-  /**
-   * The current sort priority of the column.
-   * Lower numbers are sorted first.
-   */
-  sortPriority: number;
-
-  /**
-   * The currently set width of the column.
-   */
-  width: string;
+  filter?: ColumnFilterCallback | null;
 }
 
 /**
@@ -242,12 +222,11 @@ export interface TableClasses {
 /**
  * Options for configuring the table.
  */
-export interface TableOptions<T> {
+export interface TableOptions<T extends object> {
   /**
-   * The initial data to load into the table.
+   * Data to load into the table
    */
   data?: T[];
-
   /**
    * Configures virtual scrolling.
    */
@@ -310,7 +289,7 @@ export interface TableOptions<T> {
   /**
    * A function to format each row's HTML element.
    */
-  rowFormatter?: RowFormatterCallback<T>;
+  rowFormatter?: RowFormatterCallback<T> | null;
 
   /**
    * A function to use for tokenizing values for searching.
@@ -320,11 +299,61 @@ export interface TableOptions<T> {
   virtualScrollClass?: IVirtualScrollConstructor;
 }
 
-export interface LoadOptions {
-  /** If the data should replace or be added to the end of the current data */
-  append?: boolean;
-  /** If the current scroll position should be kepts */
-  keepScroll?: boolean;
+/**
+ * Represents the current sort state
+ */
+export interface SortState {
+  /**
+   * The sort order
+   */
+  order: SortOrder;
+  /**
+   * The sort priority.
+   * Lower priority means
+   */
+  priority: number;
 }
 
-export type Filters<T> = Partial<{ [K in keyof T]: any }>;
+/** Represents the current state of a column, often used for saving and restoring column configurations. */
+export interface ColumnState<T extends object> {
+  /**
+   * The unique field name of the column.
+   */
+  field: NestedKeyOf<T>;
+
+  /**
+   * The user friendly title of the column.
+   */
+  title: string;
+
+  /**
+   * The current visibility of the column.
+   */
+  visible: boolean;
+
+  /**
+   * The current sort order of the column.
+   */
+  sortState: SortState | null;
+
+  /**
+   * The currently set width of the column.
+   */
+  width: string;
+}
+
+export interface TableState<T extends object> {
+  columns: ColumnState<T>[];
+  searchQuery?: string | RegExp;
+  filters?: Filters<T> | FilterCallback;
+  scrollPosition: { top: number; left: number };
+  columnOrder: NestedKeyOf<T>[];
+}
+
+export type RestorableColumnState<T extends object> = Partial<
+  Omit<ColumnState<T>, 'field'>
+> &
+  Pick<ColumnState<T>, 'field'>;
+export type RestorableTableState<T extends object> = Partial<
+  Omit<TableState<T>, 'columns'>
+> & { columns?: RestorableColumnState<T>[] };

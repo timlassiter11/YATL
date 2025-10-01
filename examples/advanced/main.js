@@ -126,13 +126,14 @@ window.addEventListener("load", () => {
     console.log("Row clicked:", event.detail.row, event.detail.index);
   });
 
-  new LocalStorageAdapter(dataTable, "advancedExampleTableState");
+  new LocalStorageAdapter(dataTable, "advancedExampleTableState", {saveSearch: false});
 
   const columnToggles = {}
 
   // Create visibility toggles for each column
   const colList = document.getElementById("colSelectDropdown");
-  for (const col of dataTable.columnStates) {
+  const colStates = dataTable.getState().columns;
+  for (const col of colStates) {
     const li = document.createElement("li");
     const wrapper = document.createElement("div");
     wrapper.className = "form-check dropdown-item";
@@ -158,7 +159,7 @@ window.addEventListener("load", () => {
       dataTable.setColumnVisibility(col.field, input.checked);
 
       // Count all visiable columns
-      const visibleColumns = dataTable.columnStates.reduce((accumulator, col) => {
+      const visibleColumns = dataTable.getState().columns.reduce((accumulator, col) => {
         if (col.visible) {
           accumulator.push(col.field);
         }
@@ -197,7 +198,7 @@ window.addEventListener("load", () => {
   }
 
   scoringToggle.onclick = () => {
-    dataTable.updateOptions({enableSearchScoring: scoringToggle.classList.contains("active")});
+    dataTable.updateTableOptions({enableSearchScoring: scoringToggle.classList.contains("active")});
   }
 
   // Search table on input but add debouncing

@@ -187,7 +187,9 @@ describe('DataTable', () => {
       dataTable.showMessage('foo');
       expect(document.querySelectorAll('tbody tr')).toHaveLength(1);
       dataTable.clearMessage();
-      expect(document.querySelectorAll('tbody tr')).toHaveLength(sampleData.length);
+      expect(document.querySelectorAll('tbody tr')).toHaveLength(
+        sampleData.length,
+      );
     });
 
     it('should apply custom classes to a message', () => {
@@ -208,7 +210,9 @@ describe('DataTable', () => {
     });
 
     it('should load data from options', () => {
-      dataTable = new DataTable(tableElement, sampleColumns, { data: sampleData });
+      dataTable = new DataTable(tableElement, sampleColumns, {
+        data: sampleData,
+      });
       expect(dataTable.rows).toEqual(sampleData);
     });
 
@@ -234,17 +238,18 @@ describe('DataTable', () => {
       expect(cityOptions.sortable).toBeTruthy();
       expect(cityOptions.resizable).toBeFalsy();
 
-
       dataTable = new DataTable(
         tableElement,
         [
           { field: 'age', sortable: true },
           { field: 'city', resizable: true },
-        ], {
-        ...defaultTestOptions,
-        sortable: false,
-        resizable: false,
-      });
+        ],
+        {
+          ...defaultTestOptions,
+          sortable: false,
+          resizable: false,
+        },
+      );
 
       ageOptions = dataTable.getColumnOptions('age');
       expect(ageOptions.sortable).toBeTruthy();
@@ -361,7 +366,9 @@ describe('DataTable', () => {
 
     it('should throw an error when getting / settings column options for an invalid column', () => {
       expect(() => dataTable.getColumnOptions('foobar' as any)).toThrow(Error);
-      expect(() => dataTable.updateColumnOptions('foobar' as any, {})).toThrow(Error);
+      expect(() => dataTable.updateColumnOptions('foobar' as any, {})).toThrow(
+        Error,
+      );
     });
 
     it('should update the column title', () => {
@@ -402,25 +409,33 @@ describe('DataTable', () => {
 
     it('should update the columns value formmatter', () => {
       dataTable.loadData([{ id: 1, name: 'Bobby' }]);
-      expect(document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML).toBe('Bobby');
+      expect(
+        document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML,
+      ).toBe('Bobby');
       dataTable.updateColumnOptions('name', { valueFormatter: () => 'foobar' });
-      expect(document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML).toBe('foobar');
+      expect(
+        document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML,
+      ).toBe('foobar');
     });
 
     it('should update the columns element formatter', () => {
       dataTable.loadData([{ id: 1, name: 'Bobby' }]);
-      expect(document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML).toBe('Bobby');
+      expect(
+        document.querySelector('tbody tr td[data-dt-field="name"]')?.innerHTML,
+      ).toBe('Bobby');
       dataTable.updateColumnOptions('name', {
         elementFormatter: (value, row, element) => {
           element.classList.add('foobar');
           element.innerHTML = 'foobar';
-        }
+        },
       });
 
-      const cellElement = document.querySelector('tbody tr td[data-dt-field="name"]')!;
+      const cellElement = document.querySelector(
+        'tbody tr td[data-dt-field="name"]',
+      )!;
       expect(cellElement.classList).toContain('foobar');
       expect(cellElement.innerHTML).toBe('foobar');
-    })
+    });
   });
 
   describe('Search', () => {
@@ -755,7 +770,7 @@ describe('DataTable', () => {
     });
 
     it('should throw an error when trying to sort an invalid column', () => {
-      expect(() => dataTable.sort('foobar' as any, null)).toThrow(Error)
+      expect(() => dataTable.sort('foobar' as any, null)).toThrow(Error);
     });
 
     it('should sort rows by column ascending', () => {
@@ -787,9 +802,12 @@ describe('DataTable', () => {
 
     it('should not update sort priority when changing sort order', () => {
       dataTable.sort('name', 'asc');
-      const originalPriority = dataTable.getState().columns[1].sortState!.priority;
+      const originalPriority =
+        dataTable.getState().columns[1].sortState!.priority;
       dataTable.sort('name', 'desc');
-      expect(dataTable.getState().columns[1].sortState!.priority).toEqual(originalPriority);
+      expect(dataTable.getState().columns[1].sortState!.priority).toEqual(
+        originalPriority,
+      );
     });
 
     it('should correctly handle removing a sort from a multi-column sort', () => {

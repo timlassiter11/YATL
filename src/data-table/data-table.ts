@@ -375,7 +375,9 @@ export class DataTable<T extends object> extends EventTarget {
   ) {
     const col = this.#columnData.get(column);
     if (!col) {
-      throw new Error(`Cannot update options for non-existent column "${column}"`);
+      throw new Error(
+        `Cannot update options for non-existent column "${column}"`,
+      );
     }
 
     let updateHeaders = false;
@@ -504,9 +506,12 @@ export class DataTable<T extends object> extends EventTarget {
   search(query?: string | RegExp) {
     const searchEvent = new CustomEvent<DataTableEventMap<T>['dt.search']>(
       'dt.search',
-      {cancelable: true, detail: {
-        query: query ?? null
-      }}
+      {
+        cancelable: true,
+        detail: {
+          query: query ?? null,
+        },
+      },
     );
 
     if (!this.dispatchEvent(searchEvent)) {
@@ -554,7 +559,9 @@ export class DataTable<T extends object> extends EventTarget {
   sort(colName: NestedKeyOf<T>, order: SortOrder | null) {
     const col = this.#columnData.get(colName);
     if (!col) {
-      throw new Error(`Cannot get options for non-existent column "${colName}"`);
+      throw new Error(
+        `Cannot get options for non-existent column "${colName}"`,
+      );
     }
 
     if (order === col.sortState?.order) {
@@ -611,7 +618,9 @@ export class DataTable<T extends object> extends EventTarget {
   setColumnVisibility(colName: NestedKeyOf<T>, visisble: boolean) {
     const col = this.#columnData.get(colName);
     if (!col) {
-      throw new Error(`Cannot get options for non-existent column "${colName}"`);
+      throw new Error(
+        `Cannot get options for non-existent column "${colName}"`,
+      );
     }
 
     if (col.options.visible === visisble) {
@@ -1820,7 +1829,7 @@ export interface DataTableEventMap<T> {
 
   'dt.search': {
     query: string | RegExp | null;
-  }
+  };
 }
 
 // User can provide either string or list of strings. Internally we enforce a list of strings.

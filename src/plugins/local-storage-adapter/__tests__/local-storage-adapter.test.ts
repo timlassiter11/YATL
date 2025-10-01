@@ -1,5 +1,8 @@
 import { LocalStorageAdapter } from '../local-storage-adapter';
-import type { RestorableTableState, TableState } from '../../../data-table/types';
+import type {
+  RestorableTableState,
+  TableState,
+} from '../../../data-table/types';
 
 // Mock the global localStorage
 const localStorageMock = (() => {
@@ -31,7 +34,7 @@ class MockDataTable<T extends object> extends EventTarget {
 }
 
 describe('LocalStorageAdapter', () => {
-  type SampleData = {id: number, name: string};
+  type SampleData = { id: number; name: string };
   const storageKey = 'test-table-state';
   let mockDataTable: MockDataTable<SampleData>;
 
@@ -40,8 +43,20 @@ describe('LocalStorageAdapter', () => {
     scrollPosition: { top: 100, left: 0 },
     columnOrder: ['name', 'id'],
     columns: [
-      { field: 'id', visible: true, width: '50px', sortState: null, title: 'ID' },
-      { field: 'name', visible: false, width: '150px', sortState: { order: 'asc', priority: 1 }, title: 'Name' },
+      {
+        field: 'id',
+        visible: true,
+        width: '50px',
+        sortState: null,
+        title: 'ID',
+      },
+      {
+        field: 'name',
+        visible: false,
+        width: '150px',
+        sortState: { order: 'asc', priority: 1 },
+        title: 'Name',
+      },
     ],
   };
 
@@ -58,27 +73,59 @@ describe('LocalStorageAdapter', () => {
 
   describe('Constructor and Initialization', () => {
     it('should restore state from localStorage on initialization', () => {
-      localStorageMock.setItem(storageKey, JSON.stringify({ searchQuery: 'Bob' }));
+      localStorageMock.setItem(
+        storageKey,
+        JSON.stringify({ searchQuery: 'Bob' }),
+      );
       new LocalStorageAdapter(mockDataTable, storageKey);
-      expect(mockDataTable.restoreState).toHaveBeenCalledWith({ searchQuery: 'Bob' });
+      expect(mockDataTable.restoreState).toHaveBeenCalledWith({
+        searchQuery: 'Bob',
+      });
     });
 
     it('should attach event listeners based on default options', () => {
       const addListenerSpy = jest.spyOn(mockDataTable, 'addEventListener');
       new LocalStorageAdapter(mockDataTable, storageKey);
-      expect(addListenerSpy).toHaveBeenCalledWith('dt.search', expect.any(Function));
-      expect(addListenerSpy).toHaveBeenCalledWith('dt.col.sort', expect.any(Function));
-      expect(addListenerSpy).toHaveBeenCalledWith('dt.col.visibility', expect.any(Function));
-      expect(addListenerSpy).toHaveBeenCalledWith('dt.col.resize', expect.any(Function));
-      expect(addListenerSpy).toHaveBeenCalledWith('dt.col.reorder', expect.any(Function));
+      expect(addListenerSpy).toHaveBeenCalledWith(
+        'dt.search',
+        expect.any(Function),
+      );
+      expect(addListenerSpy).toHaveBeenCalledWith(
+        'dt.col.sort',
+        expect.any(Function),
+      );
+      expect(addListenerSpy).toHaveBeenCalledWith(
+        'dt.col.visibility',
+        expect.any(Function),
+      );
+      expect(addListenerSpy).toHaveBeenCalledWith(
+        'dt.col.resize',
+        expect.any(Function),
+      );
+      expect(addListenerSpy).toHaveBeenCalledWith(
+        'dt.col.reorder',
+        expect.any(Function),
+      );
     });
 
     it('should NOT attach listeners if options are disabled', () => {
-        const addListenerSpy = jest.spyOn(mockDataTable, 'addEventListener');
-        new LocalStorageAdapter(mockDataTable, storageKey, { saveColumnSorting: false, saveColumnWidth: false });
-        expect(addListenerSpy).not.toHaveBeenCalledWith('dt.col.sort', expect.any(Function));
-        expect(addListenerSpy).toHaveBeenCalledWith('dt.col.visibility', expect.any(Function));
-        expect(addListenerSpy).not.toHaveBeenCalledWith('dt.col.resize', expect.any(Function));
+      const addListenerSpy = jest.spyOn(mockDataTable, 'addEventListener');
+      new LocalStorageAdapter(mockDataTable, storageKey, {
+        saveColumnSorting: false,
+        saveColumnWidth: false,
+      });
+      expect(addListenerSpy).not.toHaveBeenCalledWith(
+        'dt.col.sort',
+        expect.any(Function),
+      );
+      expect(addListenerSpy).toHaveBeenCalledWith(
+        'dt.col.visibility',
+        expect.any(Function),
+      );
+      expect(addListenerSpy).not.toHaveBeenCalledWith(
+        'dt.col.resize',
+        expect.any(Function),
+      );
     });
   });
 
@@ -101,7 +148,7 @@ describe('LocalStorageAdapter', () => {
       });
       adapter.saveState();
       const savedState = JSON.parse(localStorageMock.getItem(storageKey)!);
-      
+
       expect(savedState.searchQuery).toBeUndefined();
       expect(savedState.columns[0].visible).toBeUndefined();
 
@@ -118,7 +165,8 @@ describe('LocalStorageAdapter', () => {
       });
 
       // restoreState is called in the constructor, so we check the mock
-      const restoredState = mockDataTable.restoreState.mock.calls[0][0] as RestorableTableState<object>;
+      const restoredState = mockDataTable.restoreState.mock
+        .calls[0][0] as RestorableTableState<object>;
       expect(restoredState.searchQuery).toBe('Alice');
       // Visibility should have been deleted from the column state before restoring
       expect(restoredState.columns![0].visible).toBeUndefined();
@@ -131,7 +179,9 @@ describe('LocalStorageAdapter', () => {
 
     it('should handle corrupted JSON gracefully', () => {
       localStorageMock.setItem(storageKey, '{"bad json":,');
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       new LocalStorageAdapter(mockDataTable, storageKey);
       expect(mockDataTable.restoreState).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -152,13 +202,13 @@ describe('LocalStorageAdapter', () => {
     it('should call saveState after an event is dispatched', () => {
       const adapter = new LocalStorageAdapter(mockDataTable, storageKey);
       const saveSpy = jest.spyOn(adapter, 'saveState');
-      
+
       // Dispatch a mock event
       mockDataTable.dispatchEvent(new CustomEvent('dt.col.sort'));
 
       // saveState should not be called synchronously due to setTimeout
       expect(saveSpy).not.toHaveBeenCalled();
-      
+
       // Fast-forward timers to execute the setTimeout callback
       jest.runAllTimers();
 

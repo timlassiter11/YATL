@@ -23,7 +23,11 @@ export class LocalStorageAdapter<T extends object> {
    * @param storageKey - The key to use for saving the state in localStorage.
    * @param options - The options for configuring what is stored.
    */
-  constructor(dataTable: IDataTable<T>, storageKey: string, options?: LocalStorageAdapterOptions) {
+  constructor(
+    dataTable: IDataTable<T>,
+    storageKey: string,
+    options?: LocalStorageAdapterOptions,
+  ) {
     this.#dataTable = dataTable;
     this.#storageKey = storageKey;
     this.#options = { ...this.#options, ...options };
@@ -110,9 +114,7 @@ export class LocalStorageAdapter<T extends object> {
 
     try {
       const savedTableState = JSON.parse(json) as RestorableTableState<T>;
-      const tableStateToRestore: RestorableTableState<T> = {
-
-      }
+      const tableStateToRestore: RestorableTableState<T> = {};
 
       if (this.#options.saveSearch) {
         tableStateToRestore.searchQuery = savedTableState.searchQuery;
@@ -125,7 +127,9 @@ export class LocalStorageAdapter<T extends object> {
       if (savedTableState.columns) {
         tableStateToRestore.columns = [];
         for (const savedColumnState of savedTableState.columns) {
-          const columnStateToRestore: RestorableColumnState<T> = { field: savedColumnState.field };
+          const columnStateToRestore: RestorableColumnState<T> = {
+            field: savedColumnState.field,
+          };
 
           if (this.#options.saveColumnTitle) {
             columnStateToRestore.title = savedColumnState.title;
@@ -144,7 +148,6 @@ export class LocalStorageAdapter<T extends object> {
           }
           tableStateToRestore.columns.push(columnStateToRestore);
         }
-
       }
 
       this.#dataTable.restoreState(tableStateToRestore);

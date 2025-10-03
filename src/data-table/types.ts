@@ -7,7 +7,7 @@ import { IVirtualScrollConstructor } from '../virtual-scroll/types';
 export interface LoadOptions {
   /** If the data should replace or be added to the end of the current data */
   append?: boolean;
-  /** If the current scroll position should be kepts */
+  /** If the current scroll position should be kept */
   keepScroll?: boolean;
 }
 
@@ -21,10 +21,7 @@ export type SortOrder = 'asc' | 'desc';
  * @param row - The row data.
  * @param element - The row element.
  */
-export type RowFormatterCallback<T extends object> = (
-  row: T,
-  element: HTMLElement,
-) => void;
+export type RowFormatterCallback<T> = (row: T, element: HTMLElement) => void;
 
 /**
  * Callback for formatting the value of a cell.
@@ -32,18 +29,16 @@ export type RowFormatterCallback<T extends object> = (
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback<T extends object> = (
-  value: any,
-  row: T,
-) => string;
+export type ValueFormatterCallback<T> = (value: any, row: T) => string;
 
 /**
  * Callback for formatting a cell's HTML element.
+ * Called when the cell is created but NOT when exporting to CSV.
  * @param value - The value of the field.
  * @param row - The row data.
  * @param element - The cell element.
  */
-export type CellFormatterCallback<T extends object> = (
+export type CellFormatterCallback<T> = (
   value: any,
   row: T,
   element: HTMLElement,
@@ -69,7 +64,7 @@ export type SortValueCallback = (value: any) => number | string;
  * A filter object containing keys for the fields to be filtered,
  * and the values used to compare against.
  */
-export type Filters<T extends object> = Partial<{ [K in keyof T]: any }>;
+export type Filters<T extends object> = Partial<{ [K in NestedKeyOf<T>]: any }>;
 
 /**
  * A single query token derived from a larger string
@@ -100,7 +95,7 @@ export type TokenizerCallback = (value: any) => QueryToken[];
  * @param index - The index of the row.
  * @returns True if the row matches the filter, false otherwise.
  */
-export type FilterCallback = (row: any, index: number) => boolean;
+export type FilterCallback<T> = (row: T, index: number) => boolean;
 
 /**
  * Callback for filtering a field value against the filter data.
@@ -109,6 +104,21 @@ export type FilterCallback = (row: any, index: number) => boolean;
  * @returns True if the value matches the filter, false otherwise.
  */
 export type ColumnFilterCallback = (value: any, filter: any) => boolean;
+
+/**
+ * Represents the current sort state
+ */
+export interface SortState {
+  /**
+   * The sort order
+   */
+  order: SortOrder;
+  /**
+   * The sort priority.
+   * Lower priority means
+   */
+  priority: number;
+}
 
 /**
  * Column options for the table.
@@ -140,13 +150,7 @@ export interface ColumnOptions<T extends object> {
   tokenize?: boolean;
 
   /**
-   * Whether the column should be visible by default.
-   */
-  visible?: boolean;
-
-  /**
    * Whether the column should be resizable.
-   * Defaults to the table's resizable option.
    */
   resizable?: boolean;
 
@@ -177,6 +181,31 @@ export interface ColumnOptions<T extends object> {
    * This is used when `DataTable.filter()` is called with an object-based filter that targets this column's field.
    */
   filter?: ColumnFilterCallback | null;
+}
+
+/**
+ * Represents the current state of a column.
+ */
+export interface ColumnState<T extends object> {
+  /**
+   * The unique field name of the column.
+   */
+  field: NestedKeyOf<T>;
+
+  /**
+   * The current visibility of the column.
+   */
+  visible: boolean;
+
+  /**
+   * The current sort order of the column.
+   */
+  sortState?: SortState | null;
+
+  /**
+   * The currently set width of the column in pixels.
+   */
+  width?: number | null;
 }
 
 /**
@@ -224,10 +253,6 @@ export interface TableClasses {
  */
 export interface TableOptions<T extends object> {
   /**
-   * Data to load into the table
-   */
-  data?: T[];
-  /**
    * Configures virtual scrolling.
    */
   virtualScroll?: boolean | number;
@@ -247,18 +272,6 @@ export interface TableOptions<T extends object> {
    * Scoring is very computationally expensive...
    */
   enableSearchScoring?: boolean;
-
-  /**
-   * Whether columns should be sortable by default.
-   * Can be overridden on individual columns.
-   */
-  sortable?: boolean;
-
-  /**
-   * Whether columns should be resizable by default.
-   * Can be overridden on individual columns.
-   */
-  resizable?: boolean;
 
   /**
    * Whether columns should be rearrangeable by drag and drop.
@@ -296,57 +309,39 @@ export interface TableOptions<T extends object> {
    */
   tokenizer?: TokenizerCallback;
 
+  /**
+   * A specific virtual scroll class to use
+   */
   virtualScrollClass?: IVirtualScrollConstructor;
 }
 
 /**
- * Represents the current sort state
+ * Represents the current state of the table
  */
-export interface SortState {
-  /**
-   * The sort order
-   */
-  order: SortOrder;
-  /**
-   * The sort priority.
-   * Lower priority means
-   */
-  priority: number;
-}
-
-/** Represents the current state of a column, often used for saving and restoring column configurations. */
-export interface ColumnState<T extends object> {
-  /**
-   * The unique field name of the column.
-   */
-  field: NestedKeyOf<T>;
-
-  /**
-   * The user friendly title of the column.
-   */
-  title: string;
-
-  /**
-   * The current visibility of the column.
-   */
-  visible: boolean;
-
-  /**
-   * The current sort order of the column.
-   */
-  sortState: SortState | null;
-
-  /**
-   * The currently set width of the column.
-   */
-  width: string;
-}
-
 export interface TableState<T extends object> {
+  /**
+   * A list of {@link ColumnState}s representing all of the columns in the table.
+   */
   columns: ColumnState<T>[];
-  searchQuery?: string | RegExp;
-  filters?: Filters<T> | FilterCallback;
+
+  /**
+   * The current query applied to the table or null if no query is applied.
+   */
+  searchQuery: string | RegExp | null;
+
+  /**
+   * The current filters applied to the table or null if no filters are applied.
+   */
+  filters: Filters<T> | FilterCallback<T> | null;
+
+  /**
+   * The current scroll position of the table
+   */
   scrollPosition: { top: number; left: number };
+
+  /**
+   * The current column order represented as a list of their fields from left to right.
+   */
   columnOrder: NestedKeyOf<T>[];
 }
 

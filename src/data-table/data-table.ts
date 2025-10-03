@@ -3,13 +3,13 @@ import './data-table.css';
 import {
   ColumnFilterCallback,
   ColumnOptions,
+  ColumnState,
   FilterCallback,
   Filters,
   LoadOptions,
   QueryToken,
   RestorableTableState,
   SortOrder,
-  SortState,
   TableClasses,
   TableOptions,
   TableState,
@@ -18,6 +18,7 @@ import {
 import {
   convertClasses,
   createRegexTokenizer,
+  getNestedValue,
   NestedKeyOf,
   toHumanReadable,
   virtualScrollToNumber,
@@ -60,13 +61,11 @@ export class DataTable<T extends object> extends EventTarget {
 
   // Centralized default options for the DataTable.
   // These are the base values used if not overridden by user-provided options.
-  private readonly DEFAULT_OPTIONS: RequiredTableOptions<T> = {
+  private readonly DEFAULT_OPTIONS: ConcreteTableOptions<T> = {
     virtualScroll: 1000,
     highlightSearch: true,
     tokenizeSearch: false,
     enableSearchScoring: false,
-    sortable: true,
-    resizable: true,
     rearrangeable: true,
     extraSearchFields: [],
     noDataText: 'No records found',
@@ -97,16 +96,16 @@ export class DataTable<T extends object> extends EventTarget {
   #rows: Map<number, InternalRowData<T>> = new Map();
   #filteredRows: InternalRowData<T>[] = [];
 
-  #userQuery?: string | RegExp;
   // Search and filter data
-  #query?: QueryToken[] | RegExp;
-  #filters?: Filters<T> | FilterCallback;
+  #userQuery: string | RegExp | null = null;
+  #query: QueryToken[] | RegExp | null = null;
+  #filters: Filters<T> | FilterCallback<T> | null = null;
 
-  #virtualScroll?: IVirtualScroll;
+  #virtualScroll: IVirtualScroll | null = null;
 
-  #resizingColumn?: ColumnData<T>;
+  #resizingColumn: ColumnData<T> | null = null;
 
-  #options: RequiredTableOptions<T>;
+  #options: ConcreteTableOptions<T> = { ...this.DEFAULT_OPTIONS };
 
   #blockUpdates = false;
 
@@ -120,25 +119,12 @@ export class DataTable<T extends object> extends EventTarget {
    */
   constructor(
     table: string | HTMLTableElement,
-    columns: ColumnOptions<T>[],
-    options: TableOptions<T> = {},
+    columns: ColumnInitOptions<T>[],
+    options: TableInitOptions<T> = {},
   ) {
     super();
 
-    this.#options = {
-      ...this.DEFAULT_OPTIONS,
-    };
-
-    const { data, sortable, resizable, virtualScrollClass, ...restOptions } =
-      options;
-
-    if (sortable !== undefined) {
-      this.#options.sortable = sortable;
-    }
-
-    if (resizable !== undefined) {
-      this.#options.resizable = resizable;
-    }
+    const { data, virtualScrollClass, ...restOptions } = options;
 
     if (virtualScrollClass !== undefined) {
       this.#options.virtualScrollClass = virtualScrollClass;
@@ -166,6 +152,7 @@ export class DataTable<T extends object> extends EventTarget {
     this.#tbody = tbody;
 
     this.#initColumns(columns, headerRow);
+    this.#initOptions();
     this.updateTableOptions({ ...this.#options, ...restOptions });
 
     this.loadData(data ?? []);
@@ -214,10 +201,9 @@ export class DataTable<T extends object> extends EventTarget {
       columnOrder: columns.map(column => column.field),
       columns: columns.map(column => ({
         field: column.field,
-        title: column.options.title,
-        visible: column.options.visible,
-        sortState: column.sortState,
-        width: column.headerElement.style.width,
+        visible: column.state.visible,
+        sortState: column.state.sortState,
+        width: column.state.width,
       })),
     };
   }
@@ -228,23 +214,23 @@ export class DataTable<T extends object> extends EventTarget {
    */
   restoreState(state: RestorableTableState<T>) {
     this.withoutUpdates(() => {
-      if ('searchQuery' in state) {
+      if ('searchQuery' in state && state.searchQuery !== undefined) {
         this.search(state.searchQuery);
       }
 
-      if ('filters' in state) {
+      if ('filters' in state && state.filters !== undefined) {
         this.#filters = state.filters;
       }
 
-      if ('scrollPosition' in state && state.scrollPosition) {
+      if ('scrollPosition' in state && state.scrollPosition !== undefined) {
         this.#scroller.scrollTop = state.scrollPosition.top;
       }
 
-      if ('columnOrder' in state && state.columnOrder) {
+      if ('columnOrder' in state && state.columnOrder !== undefined) {
         this.setColumnOrder(state.columnOrder);
       }
 
-      if ('columns' in state && state.columns) {
+      if ('columns' in state && state.columns !== undefined) {
         for (const columnState of state.columns) {
           const columnData = this.#columnData.get(columnState.field);
           if (!columnData) {
@@ -254,93 +240,42 @@ export class DataTable<T extends object> extends EventTarget {
             continue;
           }
 
-          columnData.options.visible =
-            columnState.visible ?? columnData.options.visible;
-          columnData.sortState = columnState.sortState ?? columnData.sortState;
-          columnData.headerElement.style.width =
-            columnState.width ?? columnData.headerElement.style.width;
+          if ('visible' in columnState && columnState.visible !== undefined) {
+            columnData.state.visible = columnState.visible;
+          }
+
+          if (
+            'sortState' in columnState &&
+            columnState.sortState !== undefined
+          ) {
+            columnData.state.sortState = columnState.sortState;
+          }
+
+          if ('width' in columnState && columnState.width !== undefined) {
+            columnData.headerElement.style.width = `${columnState.width}px`;
+          }
         }
       }
     });
   }
 
   updateTableOptions(options: UpdatableTableOptions<T>) {
-    let reRenderTable = false;
-    let reApplyFilters = false;
-    let reloadData = false;
+    const effects: TableEffect[] = [];
     this.#blockUpdates = true;
 
-    const {
-      virtualScroll,
-      highlightSearch,
-      tokenizeSearch,
-      enableSearchScoring,
-      rearrangeable,
-      extraSearchFields,
-      noMatchText,
-      noDataText,
-      classes,
-    } = options;
+    for (const key in options) {
+      const optionKey = key as keyof UpdatableTableOptions<T>;
+      const value = options[optionKey]!;
+      const config = this.TABLE_OPTION_CONFIGS[optionKey];
 
-    if (virtualScroll !== undefined) {
-      this.#options.virtualScroll = virtualScrollToNumber(virtualScroll);
-      reRenderTable = true;
-    }
-
-    if (highlightSearch !== undefined) {
-      this.#options.highlightSearch = highlightSearch;
-      reRenderTable = true;
-    }
-
-    if (tokenizeSearch !== undefined) {
-      this.#options.tokenizeSearch = tokenizeSearch;
-      reloadData = true;
-      this.search(this.#userQuery);
-    }
-
-    if (enableSearchScoring !== undefined) {
-      this.#options.enableSearchScoring = enableSearchScoring;
-      reApplyFilters = true;
-    }
-
-    if (rearrangeable !== undefined) {
-      this.#options.rearrangeable = rearrangeable;
-      for (const col of this.#columnData.values()) {
-        col.headerElement.draggable = rearrangeable;
+      if (!config) {
+        continue;
       }
-    }
 
-    if (extraSearchFields !== undefined) {
-      this.#options.extraSearchFields = extraSearchFields;
-      reloadData = true;
-    }
-
-    if (noMatchText !== undefined) {
-      this.#options.noMatchText = noMatchText;
-      if (this.rows.length === 0) {
-        reRenderTable = true;
-      }
-    }
-
-    if (noDataText !== undefined) {
-      this.#options.noDataText = noDataText;
-      if (this.rows.length === 0) {
-        reRenderTable = true;
-      }
-    }
-
-    if (classes !== undefined) {
-      this.#options.classes = convertClasses(this.#options.classes, classes);
-      this.#scroller.className = this.#options.classes.scroller.join(' ');
-      this.#thead.className = this.#options.classes.thead.join(' ');
-      this.#tbody.className = this.#options.classes.tbody.join(' ');
-
-      for (const col of this.#columnData.values()) {
-        col.headerElement.className = this.#options.classes.th.join(' ');
-        // Call this to add the current sort
-        this.updateColumnOptions(col.field, { sortable: col.options.sortable });
-      }
-      reRenderTable = true;
+      effects.push(config.effect);
+      const handler = config.handler as ((v: any) => any) | undefined;
+      const finalValue = handler ? handler(value) : value;
+      (this.#options as any)[optionKey] = finalValue;
     }
 
     // Search scoring is only useful with tokenization.
@@ -352,13 +287,7 @@ export class DataTable<T extends object> extends EventTarget {
     }
 
     this.#blockUpdates = false;
-    if (reloadData) {
-      this.loadData(this.data);
-    } else if (reApplyFilters) {
-      this.#filterRows();
-    } else if (reRenderTable) {
-      this.#renderTable();
-    }
+    this.#updateTableBasedOnEffects(effects);
   }
 
   getColumnOptions(column: NestedKeyOf<T>) {
@@ -371,7 +300,7 @@ export class DataTable<T extends object> extends EventTarget {
 
   updateColumnOptions(
     column: NestedKeyOf<T>,
-    options: UpdateableColumnOptions<T>,
+    options: ColumnOptionsWithoutField<T>,
   ) {
     const col = this.#columnData.get(column);
     if (!col) {
@@ -380,74 +309,26 @@ export class DataTable<T extends object> extends EventTarget {
       );
     }
 
-    let updateHeaders = false;
-    let reloadData = false;
-    let reApplyFilters = false;
-    let reSortRows = false;
-    let reRenderTable = false;
+    const effects: TableEffect[] = [];
+    this.#blockUpdates = true;
 
-    const {
-      title,
-      searchable,
-      resizable,
-      sortable,
-      tokenize,
-      valueFormatter,
-      elementFormatter,
-      sorter,
-    } = options;
+    for (const key in options) {
+      const optionKey = key as keyof ColumnOptionsWithoutField<T>;
+      const value = options[optionKey]!;
+      const config = this.COLUMN_OPTION_CONFIGS[optionKey];
 
-    if (title !== undefined) {
-      col.titleElement.textContent = title;
-      col.options.title = title;
+      if (!config) {
+        continue;
+      }
+      effects.push(config.effect);
+      const handler = config.handler as ((v: any) => any) | undefined;
+
+      const finalValue = handler ? handler(value) : value;
+      (col.options as any)[optionKey] = finalValue;
     }
 
-    if (searchable !== undefined) {
-      col.options.searchable = searchable;
-      reApplyFilters = true;
-    }
-
-    if (sortable !== undefined) {
-      col.options.sortable = sortable;
-      updateHeaders = true;
-    }
-
-    if (resizable !== undefined) {
-      col.options.resizable = resizable;
-      updateHeaders = true;
-    }
-
-    if (tokenize !== undefined) {
-      col.options.tokenize = tokenize;
-      reloadData = true;
-    }
-
-    if (valueFormatter !== undefined) {
-      col.options.valueFormatter = valueFormatter;
-      reRenderTable = true;
-    }
-
-    if (elementFormatter !== undefined) {
-      col.options.elementFormatter = elementFormatter;
-      reRenderTable = true;
-    }
-
-    if (sorter !== undefined) {
-      col.options.sorter = sorter;
-      reSortRows = true;
-    }
-
-    if (reloadData) {
-      this.loadData(this.data);
-    } else if (reApplyFilters) {
-      this.#filterRows();
-    } else if (reSortRows) {
-      this.#sortRows();
-    } else if (reRenderTable) {
-      this.#renderTable();
-    } else if (updateHeaders) {
-      this.#updateHeaders();
-    }
+    this.#blockUpdates = false;
+    this.#updateTableBasedOnEffects(effects);
   }
 
   /**
@@ -503,7 +384,9 @@ export class DataTable<T extends object> extends EventTarget {
    * The search is performed on columns marked as `searchable` and `extraSearchFields`.
    * @param query - The search term (string) or a regular expression. An empty string clears the search.
    */
-  search(query?: string | RegExp) {
+  search(query?: string | RegExp | null) {
+    query ??= null;
+
     const searchEvent = new CustomEvent<DataTableEventMap<T>['dt.search']>(
       'dt.search',
       {
@@ -522,7 +405,7 @@ export class DataTable<T extends object> extends EventTarget {
 
     // Clear search on empty string
     if (query === '') {
-      query = undefined;
+      query = null;
     }
 
     if (typeof query === 'string') {
@@ -545,8 +428,8 @@ export class DataTable<T extends object> extends EventTarget {
    * @param filters - An object defining field-based filters or a custom filter callback function.
    * @throws {TypeError} If `filters` is not an object or a function.
    */
-  filter(filters?: Filters<T> | FilterCallback) {
-    this.#filters = filters;
+  filter(filters?: Filters<T> | FilterCallback<T>) {
+    this.#filters = filters ?? null;
     this.#filterRows();
   }
 
@@ -564,7 +447,7 @@ export class DataTable<T extends object> extends EventTarget {
       );
     }
 
-    if (order === col.sortState?.order) {
+    if (order === col.state.sortState?.order) {
       return;
     }
 
@@ -584,20 +467,20 @@ export class DataTable<T extends object> extends EventTarget {
     }
 
     // Column was unsorted, give it a new priority
-    if (order && !col.sortState) {
+    if (order && !col.state.sortState) {
       // Create a list of current sort priorities
       const priorities = [...this.#columnData.values()]
-        .map(col => col.sortState?.priority)
+        .map(col => col.state.sortState?.priority)
         .filter(priority => priority !== undefined);
 
       const maxPriority = this.#columnData.size + 1;
       const priority = Math.min(maxPriority, ...priorities) - 1;
-      col.sortState = { order, priority };
-    } else if (order && col.sortState) {
+      col.state.sortState = { order, priority };
+    } else if (order && col.state.sortState) {
       // Column was sorted, just updated the order
-      col.sortState.order = order;
+      col.state.sortState.order = order;
     } else {
-      col.sortState = null;
+      col.state.sortState = null;
     }
 
     const scrollTop = this.#scroller.scrollTop;
@@ -623,7 +506,7 @@ export class DataTable<T extends object> extends EventTarget {
       );
     }
 
-    if (col.options.visible === visisble) {
+    if (col.state.visible === visisble) {
       return;
     }
 
@@ -641,7 +524,7 @@ export class DataTable<T extends object> extends EventTarget {
       return;
     }
 
-    col.options.visible = visisble;
+    col.state.visible = visisble;
     this.#updateHeaders();
     // If we hide a column that has sorting, we need to resort.
     // This will also handle hiding all of the columns elements.
@@ -674,7 +557,7 @@ export class DataTable<T extends object> extends EventTarget {
     const rows = [...data.values()];
 
     const csvHeaders = [...this.#columnData.values()]
-      .filter(col => all || col.options.visible)
+      .filter(col => all || col.state.visible)
       .map(col => `"${col.options.title}"`)
       .join(',');
 
@@ -935,28 +818,27 @@ export class DataTable<T extends object> extends EventTarget {
       const titleWrapper = document.createElement('div');
       const titleElement = document.createElement('span');
 
-      const tokenize = this.#options.tokenizeSearch
-        ? (colOptions.tokenize ?? false)
-        : false;
-
       const colData: ColumnData<T> = {
         field: colOptions.field,
         options: {
           title: colOptions.title ?? toHumanReadable(colOptions.field),
-          visible: colOptions.visible ?? true,
-          sortable: colOptions.sortable ?? this.#options.sortable,
+          sortable: colOptions.sortable ?? true,
           searchable: colOptions.searchable ?? false,
-          tokenize: tokenize,
-          resizable: colOptions.resizable ?? this.#options.resizable,
+          tokenize: colOptions.tokenize ?? false,
+          resizable: colOptions.resizable ?? true,
           valueFormatter: colOptions.valueFormatter ?? null,
           elementFormatter: colOptions.elementFormatter ?? null,
           sorter: colOptions.sorter ?? null,
           sortValue: colOptions.sortValue ?? null,
           filter: colOptions.filter ?? null,
         },
+        state: {
+          visible: true,
+          sortState: null,
+          width: null,
+        },
         headerElement: header,
         titleElement: titleElement,
-        sortState: null,
         resizeStartWidth: null,
         resizeStartX: null,
       };
@@ -964,7 +846,7 @@ export class DataTable<T extends object> extends EventTarget {
       this.#columnData.set(colOptions.field, colData);
 
       header.dataset.dtField = colOptions.field;
-      header.hidden = !colData.options.visible;
+      header.hidden = !colData.state.visible;
 
       headerContent.classList.add('dt-header-content');
       header.append(headerContent);
@@ -986,7 +868,7 @@ export class DataTable<T extends object> extends EventTarget {
 
       headerRow.append(header);
 
-      if (colData.options.visible) {
+      if (colData.state.visible) {
         colVisible = true;
       }
 
@@ -1000,11 +882,11 @@ export class DataTable<T extends object> extends EventTarget {
       titleWrapper.addEventListener('click', () => {
         if (!header.classList.contains('dt-sortable')) return;
 
-        if (!colData.sortState) {
+        if (!colData.state.sortState) {
           this.sort(colData.field, 'asc');
-        } else if (colData.sortState.order === 'asc') {
+        } else if (colData.state.sortState.order === 'asc') {
           this.sort(colData.field, 'desc');
-        } else if (colData.sortState.order) {
+        } else if (colData.state.sortState.order) {
           this.sort(colData.field, null);
         }
       });
@@ -1032,6 +914,8 @@ export class DataTable<T extends object> extends EventTarget {
     }
   }
 
+  #initOptions() {}
+
   #loadRow(row: InternalRowData<T>, index: number) {
     // Add the index
     const metadata: RowMetadata = {
@@ -1043,7 +927,7 @@ export class DataTable<T extends object> extends EventTarget {
     row._metadata = metadata;
 
     for (const [field, col] of this.#columnData) {
-      const value = this.#getNestedValue(row, field);
+      const value = getNestedValue(row, field);
 
       // Cache precomputed values for sorting
       if (typeof col.options.sortValue === 'function') {
@@ -1069,7 +953,7 @@ export class DataTable<T extends object> extends EventTarget {
 
     // Add any extra search fields
     for (const field of this.#options.extraSearchFields) {
-      const value = this.#getNestedValue(row, field);
+      const value = getNestedValue(row, field);
       // Cache precomputed lower-case values for search
       if (typeof value === 'string') {
         metadata.compareValues[field] = value.toLocaleLowerCase();
@@ -1191,7 +1075,7 @@ export class DataTable<T extends object> extends EventTarget {
 
     for (const field in this.#filters) {
       const filter = (this.#filters as any)[field];
-      const value = this.#getNestedValue(row, field);
+      const value = getNestedValue(row, field);
       if (typeof filter === 'function') {
         if (!filter(value)) {
           return false;
@@ -1229,7 +1113,7 @@ export class DataTable<T extends object> extends EventTarget {
       }
 
       for (const field of fields) {
-        const originalValue = this.#getNestedValue(row, field);
+        const originalValue = getNestedValue(row, field);
         const compareValue = row._metadata.compareValues[field];
         const columnTokens = row._metadata.tokens[field];
 
@@ -1277,14 +1161,14 @@ export class DataTable<T extends object> extends EventTarget {
   ): number {
     let aValue, bValue;
 
-    if (!col.sortState) {
+    if (!col.state.sortState) {
       return 0;
     }
 
-    if (col.sortState?.order === 'asc') {
+    if (col.state.sortState?.order === 'asc') {
       aValue = a._metadata.sortValues[col.field];
       bValue = b._metadata.sortValues[col.field];
-    } else if (col.sortState?.order === 'desc') {
+    } else if (col.state.sortState?.order === 'desc') {
       aValue = b._metadata.sortValues[col.field];
       bValue = a._metadata.sortValues[col.field];
     }
@@ -1310,10 +1194,12 @@ export class DataTable<T extends object> extends EventTarget {
 
     const sortedColumns = [...this.#columnData.values()]
       // Filter to visible columns with active sort states
-      .filter(col => !col.headerElement.hidden && col.sortState)
+      .filter(col => !col.headerElement.hidden && col.state.sortState)
       // Sort our columns by their sort priority.
       // This is how sorting by multiple columns is handled.
-      .sort((a, b) => b.sortState!.priority - a.sortState!.priority);
+      .sort(
+        (a, b) => b.state.sortState!.priority - a.state.sortState!.priority,
+      );
 
     this.#filteredRows.sort((a, b) => {
       // Try to sort by search score if we're using scoring and there is a query.
@@ -1343,7 +1229,9 @@ export class DataTable<T extends object> extends EventTarget {
     for (const col of this.#columnData.values()) {
       // Update the order of headers
       col.headerElement.parentElement?.append(col.headerElement);
-      col.headerElement.hidden = !col.options.visible;
+      col.headerElement.hidden = !col.state.visible;
+      col.headerElement.draggable = this.#options.rearrangeable;
+      col.titleElement.textContent = col.options.title;
 
       if (col.options.resizable) {
         col.headerElement.classList.add('dt-resizeable');
@@ -1357,13 +1245,13 @@ export class DataTable<T extends object> extends EventTarget {
         col.headerElement.classList.remove('dt-sortable');
       }
 
-      if (!col.sortState) {
+      if (!col.state.sortState) {
         col.headerElement?.classList.remove('dt-ascending');
         col.headerElement?.classList.remove('dt-descending');
-      } else if (col.sortState.order === 'asc') {
+      } else if (col.state.sortState.order === 'asc') {
         col.headerElement?.classList.add('dt-ascending');
         col.headerElement?.classList.remove('dt-descending');
-      } else if (col.sortState.order === 'desc') {
+      } else if (col.state.sortState.order === 'desc') {
         col.headerElement?.classList.add('dt-descending');
         col.headerElement?.classList.remove('dt-ascending');
       }
@@ -1383,7 +1271,7 @@ export class DataTable<T extends object> extends EventTarget {
       });
     } else if (!useVirtualScroll && this.#virtualScroll) {
       this.#virtualScroll.stop();
-      this.#virtualScroll = undefined;
+      this.#virtualScroll = null;
     }
 
     this.#tbody.innerHTML = '';
@@ -1471,7 +1359,7 @@ export class DataTable<T extends object> extends EventTarget {
       this.#markText(td, regex);
     }
 
-    td.hidden = col.options.visible ? false : true;
+    td.hidden = col.state.visible ? false : true;
   }
 
   #createRow(index: number): HTMLTableRowElement {
@@ -1481,7 +1369,7 @@ export class DataTable<T extends object> extends EventTarget {
     tr.dataset.dtIndex = String(row._metadata.index);
 
     for (const [field, col] of this.#columnData) {
-      const value = this.#getNestedValue(row, field);
+      const value = getNestedValue(row, field);
       const td = document.createElement('td');
       td.classList.add(...this.#options.classes.td);
       td.dataset.dtField = field;
@@ -1508,22 +1396,13 @@ export class DataTable<T extends object> extends EventTarget {
     return tr;
   }
 
-  #getNestedValue(obj: any, path: string): any {
-    const keys = path.split('.');
-    let current = obj;
-
-    for (const key of keys) {
-      if (current && typeof current === 'object') {
-        current = current[key];
-      } else {
-        return undefined; // Or handle the error as needed
-      }
+  #resizeColumn(column: ColumnData<T>, width: number | null) {
+    if (width !== null && width < 0) {
+      width = 0;
     }
 
-    return current;
-  }
+    column.state.width = width;
 
-  #resizeColumn(column: ColumnData<T>, width?: number) {
     let headerWidth, cellWidth;
     if (width == null) {
       headerWidth = '';
@@ -1553,6 +1432,20 @@ export class DataTable<T extends object> extends EventTarget {
     const delta = column.headerElement.offsetWidth - prevWidth;
     const tableWidth = this.#table.offsetWidth + delta;
     this.#table.style.width = `${tableWidth}px`;
+  }
+
+  #updateTableBasedOnEffects(effects: TableEffect[]) {
+    if (effects.includes('reloadData')) {
+      this.loadData(this.data);
+    } else if (effects.includes('reApplyFilters')) {
+      this.#filterRows();
+    } else if (effects.includes('reRenderTable')) {
+      this.#renderTable();
+    }
+
+    if (effects.includes('updateHeaders')) {
+      this.#updateHeaders();
+    }
   }
 
   /* Event handlers */
@@ -1648,7 +1541,7 @@ export class DataTable<T extends object> extends EventTarget {
 
     this.dispatchEvent(resizeEvent);
 
-    this.#resizingColumn = undefined;
+    this.#resizingColumn = null;
   };
 
   #onResizeColumnDoubleClick = (event: MouseEvent) => {
@@ -1664,7 +1557,7 @@ export class DataTable<T extends object> extends EventTarget {
 
     const columnData = this.#columnData.get(field as NestedKeyOf<T>);
     if (columnData) {
-      this.#resizeColumn(columnData);
+      this.#resizeColumn(columnData, null);
     }
   };
 
@@ -1762,17 +1655,166 @@ export class DataTable<T extends object> extends EventTarget {
   addEventListener(type: any, listener: any, options?: any) {
     super.addEventListener(type, listener, options);
   }
+
+  private readonly TABLE_OPTION_CONFIGS: TableOptionConfigs<T> = {
+    virtualScroll: {
+      effect: 'reRenderTable',
+      handler: value => {
+        return virtualScrollToNumber(value);
+      },
+    },
+    highlightSearch: {
+      effect: 'reRenderTable',
+    },
+    tokenizeSearch: {
+      effect: 'reloadData',
+      handler: value => {
+        this.search(this.#userQuery);
+        return value;
+      },
+    },
+    enableSearchScoring: {
+      effect: 'reApplyFilters',
+    },
+    rearrangeable: {
+      effect: 'updateHeaders',
+    },
+    extraSearchFields: {
+      effect: 'reloadData',
+    },
+    noDataText: {
+      effect: 'reRenderTable',
+    },
+    noMatchText: {
+      effect: 'reRenderTable',
+    },
+    classes: {
+      effect: 'reRenderTable',
+      handler: value => {
+        const classes = convertClasses(this.#options.classes, value);
+        this.#scroller.className = classes.scroller.join(' ');
+        this.#thead.className = classes.thead.join(' ');
+        this.#tbody.className = classes.tbody.join(' ');
+
+        for (const col of this.#columnData.values()) {
+          col.headerElement.className = classes.th.join(' ');
+        }
+        return classes;
+      },
+    },
+    rowFormatter: {
+      effect: 'reRenderTable',
+    },
+    tokenizer: {
+      effect: 'reloadData',
+    },
+    virtualScrollClass: {
+      effect: 'reRenderTable',
+      handler: value => {
+        this.#virtualScroll?.stop();
+        this.#virtualScroll = null;
+        return value;
+      },
+    },
+  };
+
+  private readonly COLUMN_OPTION_CONFIGS: ColumnOptionConfigs<T> = {
+    title: {
+      effect: 'updateHeaders',
+    },
+    searchable: {
+      effect: 'reApplyFilters',
+    },
+    sortable: {
+      effect: 'updateHeaders',
+    },
+    resizable: {
+      effect: 'updateHeaders',
+    },
+    tokenize: {
+      effect: 'reloadData',
+    },
+    valueFormatter: {
+      effect: 'reRenderTable',
+    },
+    elementFormatter: {
+      effect: 'reRenderTable',
+    },
+    sorter: {
+      effect: 'reSortRows',
+    },
+    sortValue: {
+      effect: 'reloadData',
+    },
+    filter: {
+      effect: 'reApplyFilters',
+    },
+  };
 }
 
-type RequiredColumnOptions<T extends object> = Required<
-  Omit<ColumnOptions<T>, 'field'>
+// Special type to represent the normal table options
+// but with additional opptions passed to the constructor.
+type TableInitOptions<T extends object> = TableOptions<T> & {
+  data?: T[];
+};
+
+type ColumnInitOptions<T extends object> = ColumnOptions<T> &
+  Partial<ColumnState<T>>;
+
+// User can provide either string or list of strings. Internally we enforce a list of strings.
+type ConcreteTableClasses = Required<{ [K in keyof TableClasses]: string[] }>;
+// Table options without data and with classes and virtual scroll as a single type for internal use
+type ConcreteTableOptions<T extends object> = Required<
+  Omit<TableOptions<T>, 'data' | 'classes' | 'virtualScroll'>
+> & { classes: ConcreteTableClasses; virtualScroll: number };
+
+type UpdatableTableOptions<T extends object> = TableOptions<T>;
+
+// Type for describing what effect a change has on the table
+type TableEffect =
+  | 'reloadData'
+  | 'reApplyFilters'
+  | 'reRenderTable'
+  | 'reSortRows'
+  | 'updateHeaders'
+  | null;
+
+// Type for controlling how each table option effects the table
+type TableOptionConfigs<T extends object> = {
+  [K in keyof Required<UpdatableTableOptions<T>>]: {
+    // The effect changing the option has on the table.
+    effect: TableEffect;
+    // A handler to modify the value of the option before it is applied or provide any specialized logic
+    handler?: (
+      value: Required<UpdatableTableOptions<T>>[K],
+    ) => ConcreteTableOptions<T>[K];
+  };
+};
+
+type ColumnOptionConfigs<T extends object> = {
+  [K in keyof Required<ColumnOptionsWithoutField<T>>]: {
+    effect: TableEffect;
+    handler?: (
+      value: Required<ColumnOptionsWithoutField<T>>[K],
+    ) => Required<ColumnOptionsWithoutField<T>>[K];
+  };
+};
+
+type ColumnOptionsWithoutField<T extends object> = Omit<
+  ColumnOptions<T>,
+  'field'
 >;
+type ColumnStateWithoutField<T extends object> = Omit<ColumnState<T>, 'field'>;
+
+type ColumnDataOptions<T extends object> = Required<
+  ColumnOptionsWithoutField<T>
+>;
+type ColumnDataState<T extends object> = Required<ColumnStateWithoutField<T>>;
 
 interface ColumnData<T extends object> {
   field: NestedKeyOf<T>;
-  options: RequiredColumnOptions<T>;
-
-  sortState: SortState | null;
+  options: ColumnDataOptions<T>;
+  state: ColumnDataState<T>;
 
   headerElement: HTMLElement;
   titleElement: HTMLElement;
@@ -1831,40 +1873,6 @@ export interface DataTableEventMap<T> {
     query: string | RegExp | null;
   };
 }
-
-// User can provide either string or list of strings. Internally we enforce a list of strings.
-type ConcreteTableClasses = Required<{ [K in keyof TableClasses]: string[] }>;
-// Table options without data and with classes as a concrete type
-type RequiredTableOptions<T extends object> = Required<
-  Omit<TableOptions<T>, 'data' | 'classes' | 'virtualScroll'>
-> & { classes: ConcreteTableClasses; virtualScroll: number };
-
-// Column options that the user can update after initialization
-type UpdateableColumnOptions<T extends object> = Pick<
-  ColumnOptions<T>,
-  | 'title'
-  | 'searchable'
-  | 'resizable'
-  | 'sortable'
-  | 'tokenize'
-  | 'valueFormatter'
-  | 'elementFormatter'
-  | 'sorter'
->;
-
-// Table options the user can update after initialization
-type UpdatableTableOptions<T extends object> = Pick<
-  TableOptions<T>,
-  | 'virtualScroll'
-  | 'highlightSearch'
-  | 'tokenizeSearch'
-  | 'enableSearchScoring'
-  | 'rearrangeable'
-  | 'extraSearchFields'
-  | 'noMatchText'
-  | 'noDataText'
-  | 'classes'
->;
 
 export type * from './types';
 export { createRegexTokenizer };

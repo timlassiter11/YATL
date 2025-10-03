@@ -1,8 +1,5 @@
 import { LocalStorageAdapter } from '../local-storage-adapter';
-import type {
-  RestorableTableState,
-  TableState,
-} from '../../../data-table/types';
+import type { TableState } from '../../../data-table/types';
 
 // Mock the global localStorage
 const localStorageMock = (() => {
@@ -42,20 +39,19 @@ describe('LocalStorageAdapter', () => {
     searchQuery: 'Alice',
     scrollPosition: { top: 100, left: 0 },
     columnOrder: ['name', 'id'],
+    filters: null,
     columns: [
       {
         field: 'id',
         visible: true,
-        width: '50px',
+        width: 50,
         sortState: null,
-        title: 'ID',
       },
       {
         field: 'name',
         visible: false,
-        width: '150px',
+        width: 150,
         sortState: { order: 'asc', priority: 1 },
-        title: 'Name',
       },
     ],
   };
@@ -152,7 +148,7 @@ describe('LocalStorageAdapter', () => {
       expect(savedState.searchQuery).toBeUndefined();
       expect(savedState.columns[0].visible).toBeUndefined();
 
-      expect(savedState.columns[0].width).toBe('50px');
+      expect(savedState.columns[0].width).toBe(50);
     });
   });
 
@@ -166,7 +162,7 @@ describe('LocalStorageAdapter', () => {
 
       // restoreState is called in the constructor, so we check the mock
       const restoredState = mockDataTable.restoreState.mock
-        .calls[0][0] as RestorableTableState<object>;
+        .calls[0][0] as TableState<object>;
       expect(restoredState.searchQuery).toBe('Alice');
       // Visibility should have been deleted from the column state before restoring
       expect(restoredState.columns![0].visible).toBeUndefined();

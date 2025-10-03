@@ -120,7 +120,7 @@ describe('DataTable', () => {
       expect(state.columns).toHaveLength(sampleColumns.length);
       expect(state.columns[0].field).toBe(sampleColumns[0].field);
       expect(state.columns[0].sortState).toBeNull();
-      expect(state.filters).toBeUndefined();
+      expect(state.filters).toBeNull();
     });
 
     it('should get the correct state after changes', () => {
@@ -214,50 +214,6 @@ describe('DataTable', () => {
         data: sampleData,
       });
       expect(dataTable.rows).toEqual(sampleData);
-    });
-
-    it('should honor column defaults', () => {
-      dataTable = new DataTable(
-        tableElement,
-        [
-          { field: 'age', sortable: false },
-          { field: 'city', resizable: false },
-        ],
-        {
-          ...defaultTestOptions,
-          sortable: true,
-          resizable: true,
-        },
-      );
-
-      let ageOptions = dataTable.getColumnOptions('age');
-      expect(ageOptions.sortable).toBeFalsy();
-      expect(ageOptions.resizable).toBeTruthy();
-
-      let cityOptions = dataTable.getColumnOptions('city');
-      expect(cityOptions.sortable).toBeTruthy();
-      expect(cityOptions.resizable).toBeFalsy();
-
-      dataTable = new DataTable(
-        tableElement,
-        [
-          { field: 'age', sortable: true },
-          { field: 'city', resizable: true },
-        ],
-        {
-          ...defaultTestOptions,
-          sortable: false,
-          resizable: false,
-        },
-      );
-
-      ageOptions = dataTable.getColumnOptions('age');
-      expect(ageOptions.sortable).toBeTruthy();
-      expect(ageOptions.resizable).toBeFalsy();
-
-      cityOptions = dataTable.getColumnOptions('city');
-      expect(cityOptions.sortable).toBeFalsy();
-      expect(cityOptions.resizable).toBeTruthy();
     });
 
     it('should apply user defined classes to HTML elements', () => {

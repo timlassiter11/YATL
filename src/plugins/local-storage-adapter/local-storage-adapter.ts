@@ -11,7 +11,6 @@ export class LocalStorageAdapter<T extends object> {
   #storageKey: string;
   #options: Required<LocalStorageAdapterOptions> = {
     saveSearch: true,
-    saveColumnTitle: true,
     saveColumnSorting: true,
     saveColumnVisibility: true,
     saveColumnWidth: true,
@@ -81,10 +80,6 @@ export class LocalStorageAdapter<T extends object> {
         field: columnState.field,
       };
 
-      if (this.#options.saveColumnTitle) {
-        savedColumnState.title = columnState.title;
-      }
-
       if (this.#options.saveColumnSorting) {
         savedColumnState.sortState = columnState.sortState;
       }
@@ -130,10 +125,6 @@ export class LocalStorageAdapter<T extends object> {
           const columnStateToRestore: RestorableColumnState<T> = {
             field: savedColumnState.field,
           };
-
-          if (this.#options.saveColumnTitle) {
-            columnStateToRestore.title = savedColumnState.title;
-          }
 
           if (this.#options.saveColumnVisibility) {
             columnStateToRestore.visible = savedColumnState.visible;

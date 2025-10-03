@@ -101,3 +101,24 @@ export function convertClasses(
     ],
   };
 }
+
+/**
+ * Get a value from an object based on a path.
+ * @param obj - The object to get the value from
+ * @param path - The path of the value
+ * @returns The value found at the given path
+ */
+export function getNestedValue(obj: any, path: string): any {
+  const keys = path.split('.');
+  let current = obj;
+
+  for (const key of keys) {
+    if (current && typeof current === 'object') {
+      current = current[key];
+    } else {
+      return undefined; // Or handle the error as needed
+    }
+  }
+
+  return current;
+}

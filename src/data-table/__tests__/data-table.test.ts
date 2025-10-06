@@ -103,16 +103,15 @@ describe('DataTable', () => {
     });
 
     it('should not render any changes when called inside withoutUpdates', () => {
-      const refreshSpy = jest.spyOn(dataTable, 'refresh');
-      const searchSpy = jest.spyOn(dataTable, 'search');
-      const filterSpy = jest.spyOn(dataTable, 'filter');
+      dataTable.loadData(sampleData);
       dataTable.withoutUpdates(() => {
         dataTable.search('test');
+        expect(dataTable.rows).toEqual(dataTable.data);
         dataTable.filter({ age: 0 });
-        expect(refreshSpy).not.toHaveBeenCalled();
+        expect(dataTable.rows).toEqual(dataTable.data);
       });
-      expect(searchSpy).toHaveBeenCalledTimes(1);
-      expect(filterSpy).toHaveBeenCalledTimes(1);
+
+      expect(dataTable.rows).toHaveLength(0);
     });
 
     it('should get the correct initial state', () => {

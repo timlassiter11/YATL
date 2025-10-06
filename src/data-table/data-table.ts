@@ -903,8 +903,6 @@ export class DataTable<T extends object> extends EventTarget {
       header.addEventListener('dragend', this.#onDragColumnEnd);
       // Resize event listeners
       header.addEventListener('mousedown', this.#onResizeColumnStart);
-      // FIXME: double click for resize to fit causes column to have no width
-      // and get's hidden when the table exceeds the scroller
       header.addEventListener('dblclick', this.#onResizeColumnDoubleClick);
     }
 
@@ -1412,13 +1410,18 @@ export class DataTable<T extends object> extends EventTarget {
     return tr;
   }
 
+  /**
+   * Force the table to a fixed layout by setting the width of all columns
+   * to their current width in pixels and then setting the table to fit-content.
+   */
   #ensureFixedLayout() {
     if (!this.#tableWidthIsFixed) {
       this.#tableWidthIsFixed = true;
 
       for (const column of this.#columnData.values()) {
         const currentWidth = column.headerElement.offsetWidth;
-        this.#resizeColumn(column, currentWidth);
+        column.state.width = currentWidth;
+        column.headerElement.style.width = `${currentWidth}px`;
       }
 
       this.#table.style.width = 'fit-content';
@@ -1578,7 +1581,8 @@ export class DataTable<T extends object> extends EventTarget {
 
     // Calculate the width of the widest cell by rendering
     // offscreen and then resize the column to that value.
-    let maxWidth = 0;
+
+    let maxWidth = columnData.titleElement.scrollWidth;
     if (this.#filteredRows.length > 0) {
       if (!this.#textMeasurementContext) {
         this.#textMeasurementContext = document
@@ -1596,8 +1600,6 @@ export class DataTable<T extends object> extends EventTarget {
         cellPadding =
           parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
       }
-
-      maxWidth = cellPadding;
 
       for (const row of this.#filteredRows) {
         let value = getNestedValue(row, field);

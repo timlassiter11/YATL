@@ -849,6 +849,7 @@ export class DataTable<T extends object> extends EventTarget {
 
       header.dataset.dtField = colOptions.field;
       header.hidden = !colData.state.visible;
+      header.title = colData.options.title;
 
       headerContent.classList.add('dt-header-content');
       header.append(headerContent);

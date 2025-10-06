@@ -90,6 +90,10 @@ export class DataTable<T extends object> extends EventTarget {
   #tbody: HTMLElement;
   #scroller: HTMLElement;
 
+  // Used to render cells offscreen and calculate their widths
+  // for the auto-resize logic used on resize double click.
+  #textMeasurementContext: CanvasRenderingContext2D | null = null;
+
   #columnData: Map<NestedKeyOf<T>, ColumnData<T>> = new Map();
 
   // Current data stored by the initial index
@@ -104,10 +108,12 @@ export class DataTable<T extends object> extends EventTarget {
   #virtualScroll: IVirtualScroll | null = null;
 
   #resizingColumn: ColumnData<T> | null = null;
+  #tableWidthIsFixed = false;
 
   #options: ConcreteTableOptions<T> = { ...this.DEFAULT_OPTIONS };
 
   #blockUpdates = false;
+  #blockedUpdates: Set<TableEffect> = new Set();
 
   /**
    * Initializes a new instance of the DataTable.
@@ -152,7 +158,6 @@ export class DataTable<T extends object> extends EventTarget {
     this.#tbody = tbody;
 
     this.#initColumns(columns, headerRow);
-    this.#initOptions();
     this.updateTableOptions({ ...this.#options, ...restOptions });
 
     this.loadData(data ?? []);
@@ -220,6 +225,7 @@ export class DataTable<T extends object> extends EventTarget {
 
       if ('filters' in state && state.filters !== undefined) {
         this.#filters = state.filters;
+        this.filter(state.filters);
       }
 
       if ('scrollPosition' in state && state.scrollPosition !== undefined) {
@@ -252,7 +258,7 @@ export class DataTable<T extends object> extends EventTarget {
           }
 
           if ('width' in columnState && columnState.width !== undefined) {
-            columnData.headerElement.style.width = `${columnState.width}px`;
+            this.#resizeColumn(columnData, columnState.width);
           }
         }
       }
@@ -260,34 +266,32 @@ export class DataTable<T extends object> extends EventTarget {
   }
 
   updateTableOptions(options: UpdatableTableOptions<T>) {
-    const effects: TableEffect[] = [];
-    this.#blockUpdates = true;
 
-    for (const key in options) {
-      const optionKey = key as keyof UpdatableTableOptions<T>;
-      const value = options[optionKey]!;
-      const config = this.TABLE_OPTION_CONFIGS[optionKey];
+    this.withoutUpdates(() => {
+      for (const key in options) {
+        const optionKey = key as keyof UpdatableTableOptions<T>;
+        const value = options[optionKey]!;
+        const config = this.TABLE_OPTION_CONFIGS[optionKey];
 
-      if (!config) {
-        continue;
+        if (!config) {
+          continue;
+        }
+
+        this.#blockedUpdates.add(config.effect);
+        const handler = config.handler as ((v: any) => any) | undefined;
+        const finalValue = handler ? handler(value) : value;
+        (this.#options as any)[optionKey] = finalValue;
       }
 
-      effects.push(config.effect);
-      const handler = config.handler as ((v: any) => any) | undefined;
-      const finalValue = handler ? handler(value) : value;
-      (this.#options as any)[optionKey] = finalValue;
-    }
+      // Search scoring is only useful with tokenization.
+      if (this.#options.enableSearchScoring && !this.#options.tokenizeSearch) {
+        this.#options.enableSearchScoring = false;
+        console.warn(
+          'Search scoring enabled with tokenization disabled... Ignoring',
+        );
+      }
 
-    // Search scoring is only useful with tokenization.
-    if (this.#options.enableSearchScoring && !this.#options.tokenizeSearch) {
-      this.#options.enableSearchScoring = false;
-      console.warn(
-        'Search scoring enabled with tokenization disabled... Ignoring',
-      );
-    }
-
-    this.#blockUpdates = false;
-    this.#updateTableBasedOnEffects(effects);
+    });
   }
 
   getColumnOptions(column: NestedKeyOf<T>) {
@@ -309,26 +313,24 @@ export class DataTable<T extends object> extends EventTarget {
       );
     }
 
-    const effects: TableEffect[] = [];
-    this.#blockUpdates = true;
+    this.withoutUpdates(() => {
 
-    for (const key in options) {
-      const optionKey = key as keyof ColumnOptionsWithoutField<T>;
-      const value = options[optionKey]!;
-      const config = this.COLUMN_OPTION_CONFIGS[optionKey];
+      for (const key in options) {
+        const optionKey = key as keyof ColumnOptionsWithoutField<T>;
+        const value = options[optionKey]!;
+        const config = this.COLUMN_OPTION_CONFIGS[optionKey];
 
-      if (!config) {
-        continue;
+        if (!config) {
+          continue;
+        }
+        this.#blockedUpdates.add(config.effect);
+        const handler = config.handler as ((v: any) => any) | undefined;
+
+        const finalValue = handler ? handler(value) : value;
+        (col.options as any)[optionKey] = finalValue;
       }
-      effects.push(config.effect);
-      const handler = config.handler as ((v: any) => any) | undefined;
 
-      const finalValue = handler ? handler(value) : value;
-      (col.options as any)[optionKey] = finalValue;
-    }
-
-    this.#blockUpdates = false;
-    this.#updateTableBasedOnEffects(effects);
+    });
   }
 
   /**
@@ -428,7 +430,7 @@ export class DataTable<T extends object> extends EventTarget {
    * @param filters - An object defining field-based filters or a custom filter callback function.
    * @throws {TypeError} If `filters` is not an object or a function.
    */
-  filter(filters?: Filters<T> | FilterCallback<T>) {
+  filter(filters?: Filters<T> | FilterCallback<T> | null) {
     this.#filters = filters ?? null;
     this.#filterRows();
   }
@@ -756,22 +758,22 @@ export class DataTable<T extends object> extends EventTarget {
    * @example dataTable.withoutUpdates(dt => { dt.sort('name', 'asc'); dt.filter({ age: '>30' }); });
    */
   withoutUpdates(callback: (dataTable: DataTable<T>) => void) {
+    const prevBlock = this.#blockUpdates;
     this.#blockUpdates = true;
     try {
       callback(this);
     } finally {
-      this.#blockUpdates = false;
-      this.refresh();
+      this.#blockUpdates = prevBlock;
+      if (!this.#blockUpdates) {
+        this.#applyBlockedUpdates();
+      }
     }
   }
 
   #initTableElements() {
     this.#table.classList.add('data-table');
-
     // Inner element that handles the virtual scroll.
     const scroller = document.createElement('div');
-    scroller.style.overflow = 'auto';
-    scroller.style.height = '100%';
 
     // If the user tries to provide a height, we will use that for the scroller.
     if (this.#table.style.height !== '') {
@@ -900,6 +902,8 @@ export class DataTable<T extends object> extends EventTarget {
       header.addEventListener('dragend', this.#onDragColumnEnd);
       // Resize event listeners
       header.addEventListener('mousedown', this.#onResizeColumnStart);
+      // FIXME: double click for resize to fit causes column to have no width
+      // and get's hidden when the table exceeds the scroller
       header.addEventListener('dblclick', this.#onResizeColumnDoubleClick);
     }
 
@@ -913,8 +917,6 @@ export class DataTable<T extends object> extends EventTarget {
       this.showColumn(col);
     }
   }
-
-  #initOptions() {}
 
   #loadRow(row: InternalRowData<T>, index: number) {
     // Add the index
@@ -1092,7 +1094,12 @@ export class DataTable<T extends object> extends EventTarget {
   }
 
   #filterRows() {
-    if (this.#blockUpdates) return;
+    if (this.#blockUpdates) {
+      this.#blockedUpdates.add('reApplyFilters');
+      return;
+    } else {
+      this.#blockedUpdates.delete('reApplyFilters');
+    }
 
     const searchableFields = [...this.#columnData.values()]
       .filter(col => col.options.searchable)
@@ -1190,7 +1197,12 @@ export class DataTable<T extends object> extends EventTarget {
   }
 
   #sortRows() {
-    if (this.#blockUpdates) return;
+    if (this.#blockUpdates) {
+      this.#blockedUpdates.add('reSortRows');
+      return;
+    } else {
+      this.#blockedUpdates.delete('reSortRows');
+    }
 
     const sortedColumns = [...this.#columnData.values()]
       // Filter to visible columns with active sort states
@@ -1224,7 +1236,12 @@ export class DataTable<T extends object> extends EventTarget {
   }
 
   #updateHeaders() {
-    if (this.#blockUpdates) return;
+    if (this.#blockUpdates) {
+      this.#blockedUpdates.add('updateHeaders');
+      return;
+    } else {
+      this.#blockedUpdates.delete('updateHeaders');
+    }
 
     for (const col of this.#columnData.values()) {
       // Update the order of headers
@@ -1259,7 +1276,12 @@ export class DataTable<T extends object> extends EventTarget {
   }
 
   #renderTable() {
-    if (this.#blockUpdates) return;
+    if (this.#blockUpdates) {
+      this.#blockedUpdates.add('reRenderTable');
+      return;
+    } else {
+      this.#blockedUpdates.delete('reRenderTable');
+    }
 
     const useVirtualScroll = this.rows.length >= this.#options.virtualScroll;
 
@@ -1373,13 +1395,6 @@ export class DataTable<T extends object> extends EventTarget {
       const td = document.createElement('td');
       td.classList.add(...this.#options.classes.td);
       td.dataset.dtField = field;
-      const colWidth = col.headerElement.style.width;
-      // If the column has been resized, force the cells to that width.
-      if (colWidth && colWidth !== '0px') {
-        // We have to set the cells max width to allow text-overflow: ellipsis to work.
-        td.style.maxWidth = colWidth;
-      }
-
       this.#updateCell(td, value, col, row);
       tr.append(td);
     }
@@ -1396,55 +1411,59 @@ export class DataTable<T extends object> extends EventTarget {
     return tr;
   }
 
+  #ensureFixedLayout() {
+    if (!this.#tableWidthIsFixed) {
+      this.#tableWidthIsFixed = true;
+
+      for (const column of this.#columnData.values()) {
+        const currentWidth = column.headerElement.offsetWidth;
+        this.#resizeColumn(column, currentWidth);
+      }
+
+      this.#table.style.width = 'fit-content';
+    }
+  }
+
   #resizeColumn(column: ColumnData<T>, width: number | null) {
+    this.#ensureFixedLayout();
+
     if (width !== null && width < 0) {
       width = 0;
     }
 
     column.state.width = width;
 
-    let headerWidth, cellWidth;
+    let headerWidth;
     if (width == null) {
       headerWidth = '';
-      cellWidth = '';
     } else if (width <= 0) {
       headerWidth = '0px';
-      cellWidth = '';
     } else {
       headerWidth = `${width}px`;
-      cellWidth = `${width}px`;
     }
-    const prevWidth = column.headerElement.offsetWidth;
     column.headerElement.style.width = headerWidth;
-    column.headerElement.style.maxWidth = headerWidth;
-
-    const cells = this.#tbody.querySelectorAll<HTMLTableCellElement>(
-      `td[data-dt-field="${column.field}"]`,
-    );
-    for (const cell of cells) {
-      // If width is 0 it means we want to auto size the columns.
-      // To do that we set the width to 0px on the header
-      // and clear the max width on all of the cells.
-      cell.style.maxWidth = cellWidth;
-    }
-
-    // Resize the table based on how much the column changed
-    const delta = column.headerElement.offsetWidth - prevWidth;
-    const tableWidth = this.#table.offsetWidth + delta;
-    this.#table.style.width = `${tableWidth}px`;
+    //column.headerElement.style.maxWidth = headerWidth;
   }
 
-  #updateTableBasedOnEffects(effects: TableEffect[]) {
-    if (effects.includes('reloadData')) {
-      this.loadData(this.data);
-    } else if (effects.includes('reApplyFilters')) {
-      this.#filterRows();
-    } else if (effects.includes('reRenderTable')) {
-      this.#renderTable();
-    }
+  #applyBlockedUpdates() {
+    while (this.#blockedUpdates.size) {
+      if (this.#blockedUpdates.has('reloadData')) {
+        this.loadData(this.data);
+        this.#blockedUpdates.delete('reloadData');
+      } else if (this.#blockedUpdates.has('reApplyFilters')) {
+        this.#filterRows();
+        this.#blockedUpdates.delete('reApplyFilters');
+      } else if (this.#blockedUpdates.has('reSortRows')) {
+        this.#sortRows();
+        this.#blockedUpdates.delete('reSortRows');
+      } else if (this.#blockedUpdates.has('reRenderTable')) {
+        this.#renderTable();
+        this.#blockedUpdates.delete('reRenderTable');
+      }
 
-    if (effects.includes('updateHeaders')) {
-      this.#updateHeaders();
+      if (this.#blockedUpdates.has('updateHeaders')) {
+        this.#updateHeaders();
+      }
     }
   }
 
@@ -1553,12 +1572,44 @@ export class DataTable<T extends object> extends EventTarget {
     if (!event.currentTarget.dataset.dtField) return;
 
     const field = event.currentTarget.dataset.dtField;
-    if (!field) return;
-
     const columnData = this.#columnData.get(field as NestedKeyOf<T>);
-    if (columnData) {
-      this.#resizeColumn(columnData, null);
+    if (!columnData) return;
+
+    // Calculate the width of the widest cell by rendering
+    // offscreen and then resize the column to that value.
+    let maxWidth = 0;
+    if (this.#filteredRows.length > 0) {
+      if (!this.#textMeasurementContext) {
+        this.#textMeasurementContext = document
+          .createElement('canvas')
+          .getContext('2d');
+      }
+      const context = this.#textMeasurementContext;
+
+      // Get the font styles and padding from a sample cell
+      const sampleCell = this.#tbody.querySelector('td');
+      let cellPadding = 0;
+      if (sampleCell && context) {
+        const style = window.getComputedStyle(sampleCell);
+        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        cellPadding =
+          parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      }
+
+      maxWidth = cellPadding;
+
+      for (const row of this.#filteredRows) {
+        let value = getNestedValue(row, field);
+        if (typeof columnData.options.valueFormatter === 'function') {
+          value = columnData.options.valueFormatter(value, row);
+        }
+        const text = value == null ? '' : String(value);
+        const textWidth = context?.measureText(text).width ?? 0;
+        maxWidth = Math.max(maxWidth, textWidth + cellPadding);
+      }
     }
+
+    this.#resizeColumn(columnData, maxWidth);
   };
 
   #onDragColumnStart = (event: DragEvent) => {

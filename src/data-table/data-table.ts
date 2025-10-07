@@ -1,7 +1,8 @@
 import './data-table.css';
 
-import {
+import type {
   ColumnFilterCallback,
+  ColumnInitOptions,
   ColumnOptions,
   ColumnState,
   FilterCallback,
@@ -11,6 +12,7 @@ import {
   RestorableTableState,
   SortOrder,
   TableClasses,
+  TableInitOptions,
   TableOptions,
   TableState,
 } from './types';
@@ -27,7 +29,7 @@ import {
   VirtualScroll,
   VirtualScrollError,
 } from '../virtual-scroll/virtual-scroll';
-import { IVirtualScroll } from '../virtual-scroll/types';
+import type { IVirtualScroll } from '../virtual-scroll/types';
 
 /**
  * Represents a dynamic and interactive table with features like sorting, searching, filtering,
@@ -1809,15 +1811,6 @@ export class DataTable<T extends object> extends EventTarget {
     },
   };
 }
-
-// Special type to represent the normal table options
-// but with additional opptions passed to the constructor.
-type TableInitOptions<T extends object> = TableOptions<T> & {
-  data?: T[];
-};
-
-type ColumnInitOptions<T extends object> = ColumnOptions<T> &
-  Partial<ColumnState<T>>;
 
 // User can provide either string or list of strings. Internally we enforce a list of strings.
 type ConcreteTableClasses = Required<{ [K in keyof TableClasses]: string[] }>;

@@ -350,6 +350,15 @@ export interface TableState<T extends object> {
   columnOrder: NestedKeyOf<T>[];
 }
 
+// Special type to represent the normal table options
+// but with additional opptions passed to the constructor.
+export type TableInitOptions<T extends object> = TableOptions<T> & {
+  data?: T[];
+};
+
+export type ColumnInitOptions<T extends object> = ColumnOptions<T> &
+  Partial<ColumnState<T>>;
+
 export type RestorableColumnState<T extends object> = Partial<
   Omit<ColumnState<T>, 'field'>
 > &

@@ -68,6 +68,7 @@ export class DataTable<T extends object> extends EventTarget {
     enableSearchScoring: false,
     rearrangeable: true,
     extraSearchFields: [],
+    emptyValuePlaceholder: '-',
     noDataText: 'No records found',
     noMatchText: 'No matching records found',
     classes: {
@@ -266,7 +267,6 @@ export class DataTable<T extends object> extends EventTarget {
   }
 
   updateTableOptions(options: UpdatableTableOptions<T>) {
-
     this.withoutUpdates(() => {
       for (const key in options) {
         const optionKey = key as keyof UpdatableTableOptions<T>;
@@ -290,7 +290,6 @@ export class DataTable<T extends object> extends EventTarget {
           'Search scoring enabled with tokenization disabled... Ignoring',
         );
       }
-
     });
   }
 
@@ -314,7 +313,6 @@ export class DataTable<T extends object> extends EventTarget {
     }
 
     this.withoutUpdates(() => {
-
       for (const key in options) {
         const optionKey = key as keyof ColumnOptionsWithoutField<T>;
         const value = options[optionKey]!;
@@ -329,7 +327,6 @@ export class DataTable<T extends object> extends EventTarget {
         const finalValue = handler ? handler(value) : value;
         (col.options as any)[optionKey] = finalValue;
       }
-
     });
   }
 
@@ -1352,13 +1349,17 @@ export class DataTable<T extends object> extends EventTarget {
     col: ColumnData<T>,
     row: T,
   ) {
-    // Full text on hover
-    td.title = String(value);
-
     if (typeof col.options.valueFormatter === 'function') {
       value = col.options.valueFormatter(value, row);
     }
-    td.textContent = value == null ? '-' : value;
+
+    if (value != null) {
+      td.textContent = value;
+      // Full text on hover
+      td.title = String(value);
+    } else {
+      td.textContent = this.#options.emptyValuePlaceholder;
+    }
 
     if (typeof col.options.elementFormatter === 'function') {
       col.options.elementFormatter(value, row, td);
@@ -1735,6 +1736,9 @@ export class DataTable<T extends object> extends EventTarget {
     },
     extraSearchFields: {
       effect: 'reloadData',
+    },
+    emptyValuePlaceholder: {
+      effect: 'reRenderTable',
     },
     noDataText: {
       effect: 'reRenderTable',

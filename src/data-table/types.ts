@@ -29,7 +29,7 @@ export type RowFormatterCallback<T> = (row: T, element: HTMLElement) => void;
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback<T> = (value: any, row: T) => string;
+export type ValueFormatterCallback<T> = (value: any, row: T) => string | null;
 
 /**
  * Callback for formatting a cell's HTML element.
@@ -283,6 +283,11 @@ export interface TableOptions<T extends object> {
    * Used for fields that are not displayed as columns.
    */
   extraSearchFields?: NestedKeyOf<T>[];
+
+  /**
+   * A placeholder to use for null or undefined values.
+   */
+  emptyValuePlaceholder?: string;
 
   /**
    * The text to display when there is no data in the table.

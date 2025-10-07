@@ -366,3 +366,5 @@ export type RestorableColumnState<T extends object> = Partial<
 export type RestorableTableState<T extends object> = Partial<
   Omit<TableState<T>, 'columns'>
 > & { columns?: RestorableColumnState<T>[] };
+
+export type { NestedKeyOf, IVirtualScrollConstructor };

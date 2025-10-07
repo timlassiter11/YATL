@@ -295,9 +295,9 @@ export class DataTable<T extends object> extends EventTarget {
     });
   }
 
-  getColumnOptions(): ColumnOptions<T>[];
-  getColumnOptions(field: NestedKeyOf<T>): ColumnOptions<T>;
-  getColumnOptions(field?: any): ColumnOptions<T>[] | ColumnOptions<T> {
+  getColumnOptions(): Required<ColumnOptions<T>>[];
+  getColumnOptions(field: NestedKeyOf<T>): Required<ColumnOptions<T>>;
+  getColumnOptions(field?: any) {
     if (field) {
       const columnData = this.#columnData.get(field);
       if (!columnData) {

@@ -326,6 +326,13 @@ describe('DataTable', () => {
       );
     });
 
+    it('should get all of the column options', () => {
+      const options = dataTable.getColumnOptions();
+      const optionsOrder = options.map(column => column.field);
+      const originalOrder = sampleColumns.map(column => column.field);
+      expect(optionsOrder).toEqual(originalOrder);
+    })
+
     it('should update the column title', () => {
       const nameTitleElement = document.querySelector(
         'th[data-dt-field="name"] .dt-header-title',

@@ -295,12 +295,20 @@ export class DataTable<T extends object> extends EventTarget {
     });
   }
 
-  getColumnOptions(column: NestedKeyOf<T>) {
-    const col = this.#columnData.get(column);
-    if (!col) {
-      throw new Error(`Cannot get options for non-existent column "${column}"`);
+  getColumnOptions(): ColumnOptions<T>[];
+  getColumnOptions(field: NestedKeyOf<T>): ColumnOptions<T>;
+  getColumnOptions(field?: any): ColumnOptions<T>[] | ColumnOptions<T> {
+    if (field) {
+      const columnData = this.#columnData.get(field);
+      if (!columnData) {
+        throw new Error(`Cannot get options for non-existent column "${field}"`);
+      }
+      const options: ColumnOptions<T> = {...columnData.options, field: columnData.field};
+      return options;
     }
-    return col.options;
+
+    const options = [...this.#columnData.values()].map((data): ColumnOptions<T> => ({...data.options, field: data.field}));
+    return options;
   }
 
   updateColumnOptions(

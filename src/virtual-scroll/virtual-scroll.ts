@@ -149,12 +149,16 @@ export class VirtualScroll implements IVirtualScroll {
     // This helps striped tables.
     if (startNode % 2 === 1) {
       startNode--;
+      // If we don't add this we might not render the last row
+      visibleNodesCount++;
     }
 
     const offsetY = startNode * rowHeight;
-    const remainingHeight =
-      totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
-
+    let remainingHeight = totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
+    if (remainingHeight < 0) {
+      remainingHeight = 0;
+    }
+  
     this.#element.innerHTML = '';
     const visibleChildren = new Array(visibleNodesCount)
       .fill(null)

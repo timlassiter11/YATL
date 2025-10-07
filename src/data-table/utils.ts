@@ -2,14 +2,17 @@ import { TableClasses } from './types';
 
 export type NestedKeyOf<ObjectType> = ObjectType extends object
   ? {
-      [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends any[]
-        ? // If it's an array, STOP and only return the key itself.
-          `${Key}`
-        : ObjectType[Key] extends object
-        ? // If it's a non-array object, recurse as before.
-          `${Key}` | `${Key}.${NestedKeyOf<ObjectType[Key]>}`
-        : // Otherwise, it's a primitive, so just output the key.
-          `${Key}`;
+      [Key in keyof ObjectType &
+        (
+          | string
+          | number
+        )]: // Use NonNullable to include optional properties
+      NonNullable<ObjectType[Key]> extends any[]
+        ? `${Key}`
+        : NonNullable<ObjectType[Key]> extends object
+          ? // Recurse with the non-nullable type
+            `${Key}` | `${Key}.${NestedKeyOf<NonNullable<ObjectType[Key]>>}`
+          : `${Key}`;
     }[keyof ObjectType & (string | number)]
   : never;
 

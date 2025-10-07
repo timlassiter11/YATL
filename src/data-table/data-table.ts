@@ -54,7 +54,7 @@ import type { IVirtualScroll } from '../virtual-scroll/types';
  * });
  * ```
  */
-export class DataTable<T extends object> extends EventTarget {
+export class DataTable<T> extends EventTarget {
   private static readonly MatchWeights = {
     EXACT: 100,
     PREFIX: 50,
@@ -1823,11 +1823,11 @@ export class DataTable<T extends object> extends EventTarget {
 // User can provide either string or list of strings. Internally we enforce a list of strings.
 type ConcreteTableClasses = Required<{ [K in keyof TableClasses]: string[] }>;
 // Table options without data and with classes and virtual scroll as a single type for internal use
-type ConcreteTableOptions<T extends object> = Required<
+type ConcreteTableOptions<T> = Required<
   Omit<TableOptions<T>, 'data' | 'classes' | 'virtualScroll'>
 > & { classes: ConcreteTableClasses; virtualScroll: number };
 
-type UpdatableTableOptions<T extends object> = TableOptions<T>;
+type UpdatableTableOptions<T> = TableOptions<T>;
 
 // Type for describing what effect a change has on the table
 type TableEffect =
@@ -1839,7 +1839,7 @@ type TableEffect =
   | null;
 
 // Type for controlling how each table option effects the table
-type TableOptionConfigs<T extends object> = {
+type TableOptionConfigs<T> = {
   [K in keyof Required<UpdatableTableOptions<T>>]: {
     // The effect changing the option has on the table.
     effect: TableEffect;
@@ -1850,7 +1850,7 @@ type TableOptionConfigs<T extends object> = {
   };
 };
 
-type ColumnOptionConfigs<T extends object> = {
+type ColumnOptionConfigs<T> = {
   [K in keyof Required<ColumnOptionsWithoutField<T>>]: {
     effect: TableEffect;
     handler?: (
@@ -1859,18 +1859,18 @@ type ColumnOptionConfigs<T extends object> = {
   };
 };
 
-type ColumnOptionsWithoutField<T extends object> = Omit<
+type ColumnOptionsWithoutField<T> = Omit<
   ColumnOptions<T>,
   'field'
 >;
-type ColumnStateWithoutField<T extends object> = Omit<ColumnState<T>, 'field'>;
+type ColumnStateWithoutField<T> = Omit<ColumnState<T>, 'field'>;
 
-type ColumnDataOptions<T extends object> = Required<
+type ColumnDataOptions<T> = Required<
   ColumnOptionsWithoutField<T>
 >;
-type ColumnDataState<T extends object> = Required<ColumnStateWithoutField<T>>;
+type ColumnDataState<T> = Required<ColumnStateWithoutField<T>>;
 
-interface ColumnData<T extends object> {
+interface ColumnData<T> {
   field: NestedKeyOf<T>;
   options: ColumnDataOptions<T>;
   state: ColumnDataState<T>;

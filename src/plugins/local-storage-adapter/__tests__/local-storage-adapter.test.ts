@@ -20,7 +20,7 @@ const localStorageMock = (() => {
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 // Create a mock DataTable class that we can control
-class MockDataTable<T extends object> extends EventTarget {
+class MockDataTable<T> extends EventTarget {
   state: TableState<T>;
   constructor(initialState: TableState<T>) {
     super();

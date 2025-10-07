@@ -8,7 +8,7 @@ export interface LocalStorageAdapterOptions {
   saveColumnWidth?: boolean;
 }
 
-export interface IDataTable<T extends object> extends EventTarget {
+export interface IDataTable<T> extends EventTarget {
   getState(): TableState<T>;
   restoreState(state: RestorableTableState<T>): void;
 }

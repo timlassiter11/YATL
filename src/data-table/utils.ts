@@ -1,10 +1,17 @@
 import { TableClasses } from './types';
 
-export type NestedKeyOf<ObjectType extends object> = {
-  [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends object
-    ? `${Key}` | `${Key}.${NestedKeyOf<ObjectType[Key]>}`
-    : `${Key}`;
-}[keyof ObjectType & (string | number)];
+export type NestedKeyOf<ObjectType> = ObjectType extends object
+  ? {
+      [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends any[]
+        ? // If it's an array, STOP and only return the key itself.
+          `${Key}`
+        : ObjectType[Key] extends object
+        ? // If it's a non-array object, recurse as before.
+          `${Key}` | `${Key}.${NestedKeyOf<ObjectType[Key]>}`
+        : // Otherwise, it's a primitive, so just output the key.
+          `${Key}`;
+    }[keyof ObjectType & (string | number)]
+  : never;
 
 export type WithRequiredProp<Type, Key extends keyof Type> = Type &
   Required<Pick<Type, Key>>;

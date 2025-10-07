@@ -6,7 +6,7 @@ import { IDataTable, LocalStorageAdapterOptions } from './types';
 /**
  * Monitors a {@link DataTable} instance for changes and saves the state to local storage.
  */
-export class LocalStorageAdapter<T extends object> {
+export class LocalStorageAdapter<T> {
   #dataTable: IDataTable<T>;
   #storageKey: string;
   #options: Required<LocalStorageAdapterOptions> = {

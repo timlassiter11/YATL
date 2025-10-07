@@ -64,7 +64,7 @@ export type SortValueCallback = (value: any) => number | string;
  * A filter object containing keys for the fields to be filtered,
  * and the values used to compare against.
  */
-export type Filters<T extends object> = Partial<{ [K in NestedKeyOf<T>]: any }>;
+export type Filters<T> = Partial<{ [K in NestedKeyOf<T>]: any }>;
 
 /**
  * A single query token derived from a larger string
@@ -123,7 +123,7 @@ export interface SortState {
 /**
  * Column options for the table.
  */
-export interface ColumnOptions<T extends object> {
+export interface ColumnOptions<T> {
   /**
    * The field name in the data object.
    */
@@ -186,7 +186,7 @@ export interface ColumnOptions<T extends object> {
 /**
  * Represents the current state of a column.
  */
-export interface ColumnState<T extends object> {
+export interface ColumnState<T> {
   /**
    * The unique field name of the column.
    */
@@ -251,7 +251,7 @@ export interface TableClasses {
 /**
  * Options for configuring the table.
  */
-export interface TableOptions<T extends object> {
+export interface TableOptions<T> {
   /**
    * Configures virtual scrolling.
    */
@@ -323,7 +323,7 @@ export interface TableOptions<T extends object> {
 /**
  * Represents the current state of the table
  */
-export interface TableState<T extends object> {
+export interface TableState<T> {
   /**
    * A list of {@link ColumnState}s representing all of the columns in the table.
    */
@@ -352,18 +352,18 @@ export interface TableState<T extends object> {
 
 // Special type to represent the normal table options
 // but with additional opptions passed to the constructor.
-export type TableInitOptions<T extends object> = TableOptions<T> & {
+export type TableInitOptions<T> = TableOptions<T> & {
   data?: T[];
 };
 
-export type ColumnInitOptions<T extends object> = ColumnOptions<T> &
+export type ColumnInitOptions<T> = ColumnOptions<T> &
   Partial<ColumnState<T>>;
 
-export type RestorableColumnState<T extends object> = Partial<
+export type RestorableColumnState<T> = Partial<
   Omit<ColumnState<T>, 'field'>
 > &
   Pick<ColumnState<T>, 'field'>;
-export type RestorableTableState<T extends object> = Partial<
+export type RestorableTableState<T> = Partial<
   Omit<TableState<T>, 'columns'>
 > & { columns?: RestorableColumnState<T>[] };
 

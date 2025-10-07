@@ -37,7 +37,7 @@ export class VirtualScroll implements IVirtualScroll {
     this.#topPaddingElement.style.visibility = 'hidden';
     this.#bottomPaddingElement = document.createElement('div');
     this.#bottomPaddingElement.style.visibility = 'hidden';
-    this.#resizeObserver = new ResizeObserver(() => this.#renderChunk());
+    this.#resizeObserver = new ResizeObserver(() => this.#scheduleRender());
   }
 
   private get rowHeight() {
@@ -76,10 +76,7 @@ export class VirtualScroll implements IVirtualScroll {
     // Fixes horizontal scroll bug.
     if (this.#container.scrollTop !== this.#scrollTop) {
       this.#scrollTop = this.#container.scrollTop;
-      if (this.#animationFrame) {
-        cancelAnimationFrame(this.#animationFrame);
-      }
-      this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
+      this.#scheduleRender();
     }
   };
 
@@ -105,6 +102,13 @@ export class VirtualScroll implements IVirtualScroll {
     this.#started = false;
   }
 
+  #scheduleRender() {
+    if (this.#animationFrame) {
+      cancelAnimationFrame(this.#animationFrame);
+    }
+    this.#animationFrame = requestAnimationFrame(() => this.#renderChunk());
+  }
+
   #renderChunk() {
     const scrollTop = this.#container.scrollTop;
     const rowCount = this.#rowCount;
@@ -119,19 +123,10 @@ export class VirtualScroll implements IVirtualScroll {
     // Max out the element height so we can get a real height of the container.
     // This fixes an issue when the parent isn't set to grow causing only a
     // small number of rows to render until you scroll.
-    this.#element.innerHTML = `<div style="height: ${totalContentHeight}px;"></div>`;
-    const actualHeight = this.#element.offsetHeight;
+    const originalHeight = this.#container.style.height;
+    this.#container.style.height = '100%';
     const viewHeight = this.#container.offsetHeight;
-
-    if (
-      !VirtualScroll.#warned &&
-      actualHeight < Math.round(totalContentHeight - 1)
-    ) {
-      VirtualScroll.#warned = true;
-      console.error(
-        'Max element height exceeded. Virtual scroll may not work.',
-      );
-    }
+    this.#container.style.height = originalHeight;
 
     let totalPadding = padding * 2;
     let startNode = Math.floor(scrollTop / rowHeight) - padding;
@@ -158,18 +153,39 @@ export class VirtualScroll implements IVirtualScroll {
     if (remainingHeight < 0) {
       remainingHeight = 0;
     }
-  
-    this.#element.innerHTML = '';
+
+    // Remove the old visible nodes (all nodes between the padding elements)
+    while (this.#topPaddingElement.nextSibling && this.#topPaddingElement.nextSibling !== this.#bottomPaddingElement) {
+      this.#element.removeChild(this.#topPaddingElement.nextSibling);
+    }
+
+    // Generate the new visible nodes
     const visibleChildren = new Array(visibleNodesCount)
       .fill(null)
       .map((_, index) => this.#generator(index + startNode));
-    // We create two empty rows. One at the top and one at the bottom.
-    // Resize the rows accordingly to move the rendered rows to where we want.
+
+    // Update padding heights and insert new nodes
     this.#topPaddingElement.style.height = offsetY + 'px';
     this.#bottomPaddingElement.style.height = remainingHeight + 'px';
-    this.#element.append(this.#topPaddingElement);
-    this.#element.append(...visibleChildren);
-    this.#element.append(this.#bottomPaddingElement);
+
+    // If the top element isn't in the DOM, we need to add the initial structure
+    if (!this.#topPaddingElement.parentElement) {
+      this.#element.append(this.#topPaddingElement, ...visibleChildren, this.#bottomPaddingElement);
+    } else {
+      // Otherwise, just insert the new children after the top padding element
+      this.#topPaddingElement.after(...visibleChildren);
+    }
+
+    const actualHeight = this.#element.offsetHeight;
+    if (
+      !VirtualScroll.#warned &&
+      actualHeight < Math.round(totalContentHeight - 1)
+    ) {
+      VirtualScroll.#warned = true;
+      console.error(
+        'Max element height exceeded. Virtual scroll may not work.',
+      );
+    }
   }
 
   #updateRowHeight() {

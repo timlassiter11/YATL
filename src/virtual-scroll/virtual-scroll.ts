@@ -149,13 +149,17 @@ export class VirtualScroll implements IVirtualScroll {
     }
 
     const offsetY = startNode * rowHeight;
-    let remainingHeight = totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
+    let remainingHeight =
+      totalContentHeight - (offsetY + visibleNodesCount * rowHeight);
     if (remainingHeight < 0) {
       remainingHeight = 0;
     }
 
     // Remove the old visible nodes (all nodes between the padding elements)
-    while (this.#topPaddingElement.nextSibling && this.#topPaddingElement.nextSibling !== this.#bottomPaddingElement) {
+    while (
+      this.#topPaddingElement.nextSibling &&
+      this.#topPaddingElement.nextSibling !== this.#bottomPaddingElement
+    ) {
       this.#element.removeChild(this.#topPaddingElement.nextSibling);
     }
 
@@ -170,7 +174,11 @@ export class VirtualScroll implements IVirtualScroll {
 
     // If the top element isn't in the DOM, we need to add the initial structure
     if (!this.#topPaddingElement.parentElement) {
-      this.#element.append(this.#topPaddingElement, ...visibleChildren, this.#bottomPaddingElement);
+      this.#element.append(
+        this.#topPaddingElement,
+        ...visibleChildren,
+        this.#bottomPaddingElement,
+      );
     } else {
       // Otherwise, just insert the new children after the top padding element
       this.#topPaddingElement.after(...visibleChildren);

@@ -331,7 +331,7 @@ describe('DataTable', () => {
       const optionsOrder = options.map(column => column.field);
       const originalOrder = sampleColumns.map(column => column.field);
       expect(optionsOrder).toEqual(originalOrder);
-    })
+    });
 
     it('should update the column title', () => {
       const nameTitleElement = document.querySelector(

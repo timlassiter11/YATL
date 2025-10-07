@@ -301,13 +301,20 @@ export class DataTable<T> extends EventTarget {
     if (field) {
       const columnData = this.#columnData.get(field);
       if (!columnData) {
-        throw new Error(`Cannot get options for non-existent column "${field}"`);
+        throw new Error(
+          `Cannot get options for non-existent column "${field}"`,
+        );
       }
-      const options: ColumnOptions<T> = {...columnData.options, field: columnData.field};
+      const options: ColumnOptions<T> = {
+        ...columnData.options,
+        field: columnData.field,
+      };
       return options;
     }
 
-    const options = [...this.#columnData.values()].map((data): ColumnOptions<T> => ({...data.options, field: data.field}));
+    const options = [...this.#columnData.values()].map(
+      (data): ColumnOptions<T> => ({ ...data.options, field: data.field }),
+    );
     return options;
   }
 
@@ -1859,15 +1866,10 @@ type ColumnOptionConfigs<T> = {
   };
 };
 
-type ColumnOptionsWithoutField<T> = Omit<
-  ColumnOptions<T>,
-  'field'
->;
+type ColumnOptionsWithoutField<T> = Omit<ColumnOptions<T>, 'field'>;
 type ColumnStateWithoutField<T> = Omit<ColumnState<T>, 'field'>;
 
-type ColumnDataOptions<T> = Required<
-  ColumnOptionsWithoutField<T>
->;
+type ColumnDataOptions<T> = Required<ColumnOptionsWithoutField<T>>;
 type ColumnDataState<T> = Required<ColumnStateWithoutField<T>>;
 
 interface ColumnData<T> {

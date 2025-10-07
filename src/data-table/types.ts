@@ -356,12 +356,9 @@ export type TableInitOptions<T> = TableOptions<T> & {
   data?: T[];
 };
 
-export type ColumnInitOptions<T> = ColumnOptions<T> &
-  Partial<ColumnState<T>>;
+export type ColumnInitOptions<T> = ColumnOptions<T> & Partial<ColumnState<T>>;
 
-export type RestorableColumnState<T> = Partial<
-  Omit<ColumnState<T>, 'field'>
-> &
+export type RestorableColumnState<T> = Partial<Omit<ColumnState<T>, 'field'>> &
   Pick<ColumnState<T>, 'field'>;
 export type RestorableTableState<T> = Partial<
   Omit<TableState<T>, 'columns'>

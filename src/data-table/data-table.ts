@@ -812,7 +812,7 @@ export class DataTable<T> extends EventTarget {
 
     // Add the scroller before the table so when we move the
     // table into the scroller it stays in the same place.
-    this.#table.parentElement?.insertBefore(scroller, this.#table);
+    this.#table.parentNode?.insertBefore(scroller, this.#table);
     scroller.append(this.#table);
 
     return {

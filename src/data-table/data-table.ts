@@ -1065,7 +1065,14 @@ export class DataTable<T> extends EventTarget {
       }
       // If it's an array, we will use an OR filter.
       // If any filters in the array match, keep it.
-      return filter.some(element => this.#filterField(value, element));
+      return filter.some(element => this.#filterField(value, element, filterFunction));
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return false;
+      }
+      return value.some(element => this.#filterField(element, filter, filterFunction));
     }
 
     if (typeof filterFunction === 'function') {
@@ -1504,7 +1511,7 @@ export class DataTable<T> extends EventTarget {
       tr = event.target;
     }
 
-    if (tr) {
+    if (tr && field) {
       const index = parseInt(tr.dataset.dtIndex || '');
       if (!isNaN(index)) {
         const row = this.#filteredRows.find(
@@ -1518,7 +1525,7 @@ export class DataTable<T> extends EventTarget {
             detail: {
               row: row,
               index: index,
-              column: field,
+              column: field as NestedKeyOf<T>,
               originalEvent: event,
             },
           });
@@ -1903,7 +1910,7 @@ export interface DataTableEventMap<T> {
   'dt.row.clicked': {
     row: T;
     index: number;
-    column: string | undefined;
+    column: NestedKeyOf<T>;
     originalEvent: MouseEvent;
   };
 
@@ -1915,18 +1922,18 @@ export interface DataTableEventMap<T> {
   };
 
   'dt.col.visibility': {
-    column: string;
+    column: NestedKeyOf<T>;
     visible: boolean;
   };
 
   'dt.col.resize': {
-    column: string;
+    column: NestedKeyOf<T>;
     width: number;
   };
 
   'dt.col.reorder': {
-    draggedColumn: string;
-    dropColumn: string;
+    draggedColumn: NestedKeyOf<T>;
+    dropColumn: NestedKeyOf<T>;
     order: string[];
   };
 

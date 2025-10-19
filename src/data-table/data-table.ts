@@ -17,6 +17,11 @@ import type {
   TableState,
 } from './types';
 
+import type { IVirtualScroll } from '../virtual-scroll/types';
+import {
+  VirtualScroll,
+  VirtualScrollError,
+} from '../virtual-scroll/virtual-scroll';
 import {
   convertClasses,
   createRegexTokenizer,
@@ -25,11 +30,6 @@ import {
   toHumanReadable,
   virtualScrollToNumber,
 } from './utils';
-import {
-  VirtualScroll,
-  VirtualScrollError,
-} from '../virtual-scroll/virtual-scroll';
-import type { IVirtualScroll } from '../virtual-scroll/types';
 
 /**
  * Represents a dynamic and interactive table with features like sorting, searching, filtering,
@@ -115,7 +115,7 @@ export class DataTable<T> extends EventTarget {
 
   #options: ConcreteTableOptions<T> = { ...this.DEFAULT_OPTIONS };
 
-  #blockUpdates = false;
+  #blockUpdates = true;
   #blockedUpdates: Set<TableEffect> = new Set();
 
   /**
@@ -162,6 +162,9 @@ export class DataTable<T> extends EventTarget {
 
     this.#initColumns(columns, headerRow);
     this.updateTableOptions({ ...this.#options, ...restOptions });
+
+    this.#blockUpdates = false;
+    this.#blockedUpdates.clear();
 
     this.loadData(data ?? []);
   }
@@ -1948,3 +1951,4 @@ export interface DataTableEventMap<T> {
 
 export type * from './types';
 export { createRegexTokenizer };
+

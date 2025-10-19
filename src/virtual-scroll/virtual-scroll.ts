@@ -207,29 +207,21 @@ export class VirtualScroll implements IVirtualScroll {
       this.#rowCount,
     );
     // Create an average row height by rendering the first N rows.
-    const elements = [];
+    let newInnerHtml = ''
     for (let i = 0; i < renderSize; ++i) {
-      elements.push(this.#generator(i));
+      newInnerHtml += this.#generator(i).outerHTML;
     }
 
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.visibility = 'hidden';
-    container.style.height = 'auto';
-    container.style.width = '100%';
-    container.style.top = '-9999px';
-    container.style.left = '-9999px';
-    container.style.maxHeight = 'none';
-    container.style.overflow = 'visible';
-    container.style.display = 'block';
+    const visibility = this.#element.style.visibility;
+    const innerHtml = this.#element.innerHTML;
 
-    try {
-      container.append(...elements);
-      document.body.append(container);
-      this.#rowHeight = container.offsetHeight / renderSize;
-    } finally {
-      container.remove();
-    }
+    this.#element.style.visibility = 'hidden';
+    this.#element.innerHTML = newInnerHtml;
+    this.#rowHeight = this.#element.offsetHeight / renderSize;
+    this.#element.innerHTML = innerHtml;
+    this.#element.style.visibility = visibility;
+
+
 
     if (this.#rowHeight <= 0) {
       throw new VirtualScrollError(

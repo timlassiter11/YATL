@@ -353,8 +353,12 @@ export class DataTable<T> extends EventTarget {
    * @param options - Configuration for the load operation
    */
   loadData(rows: T[], options: LoadOptions = {}) {
-    const scrollTop = this.#scroller.scrollTop;
-    const scrollLeft = this.#scroller.scrollLeft;
+    
+    let scrollTop, scrollLeft;
+    if (options.keepScroll) {
+      scrollTop = this.#scroller.scrollTop;
+      scrollLeft = this.#scroller.scrollLeft;
+    }
 
     if (!options.append) {
       this.#rows.clear();
@@ -371,7 +375,7 @@ export class DataTable<T> extends EventTarget {
     this.#updateHeaders();
     this.#filterRows();
 
-    if (options.keepScroll) {
+    if (scrollTop && scrollLeft) {
       this.#scroller.scrollTop = scrollTop;
       this.#scroller.scrollLeft = scrollLeft;
     }

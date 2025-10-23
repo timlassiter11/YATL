@@ -791,6 +791,13 @@ export class DataTable<T> extends EventTarget {
     }
   }
 
+  destroy() {
+    this.#virtualScroll?.stop();
+    this.#table.innerHTML = '';
+    this.#scroller.parentElement?.insertBefore(this.#table, this.#scroller);
+    this.#scroller.remove();
+  }
+
   #initTableElements() {
     this.#table.classList.add('data-table');
     // Inner element that handles the virtual scroll.

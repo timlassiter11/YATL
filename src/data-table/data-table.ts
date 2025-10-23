@@ -794,8 +794,9 @@ export class DataTable<T> extends EventTarget {
   destroy() {
     this.#virtualScroll?.stop();
     this.#table.innerHTML = '';
+    this.#table.classList.remove('data-table');
     this.#scroller.parentElement?.insertBefore(this.#table, this.#scroller);
-    this.#scroller.remove();
+    this.#scroller.remove(); 
   }
 
   #initTableElements() {

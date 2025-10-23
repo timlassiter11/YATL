@@ -1750,6 +1750,27 @@ export class DataTable<T> extends EventTarget {
     super.addEventListener(type, listener, options);
   }
 
+  removeEventListener<K extends keyof DataTableEventMap<T>>(
+    type: K,
+    listener: (
+      this: DataTable<T>,
+      ev: CustomEvent<DataTableEventMap<T>[K]>,
+    ) => any,
+    options?: boolean | EventListenerOptions,
+  ): void;
+
+  // This is the generic fallback for any other string event type (e.g., standard DOM events).
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
+  ): void;
+
+  // The single implementation for both overloads.
+  removeEventListener(type: any, listener: any, options?: any) {
+    super.removeEventListener(type, listener, options);
+  }
+
   private readonly TABLE_OPTION_CONFIGS: TableOptionConfigs<T> = {
     virtualScroll: {
       effect: 'reRenderTable',

@@ -3,17 +3,20 @@ import {
   RestorableTableState,
 } from '../../data-table/types';
 import { IDataTable, LocalStorageAdapterOptions } from './types';
-/**
- * Monitors a {@link DataTable} instance for changes and saves the state to local storage.
- */
-export class LocalStorageAdapter<T> {
-  private readonly options: Required<LocalStorageAdapterOptions> = {
+
+const DEFAULT_OPTIONS: Required<LocalStorageAdapterOptions> = {
     saveSearch: true,
     saveColumnSorting: true,
     saveColumnVisibility: true,
     saveColumnWidth: true,
     saveColumnOrder: true,
   };
+
+/**
+ * Monitors a {@link DataTable} instance for changes and saves the state to local storage.
+ */
+export class LocalStorageAdapter<T> {
+  private options: Required<LocalStorageAdapterOptions>;
 
   /**
    * @param dataTable - The DataTable instance to monitor.
@@ -25,7 +28,7 @@ export class LocalStorageAdapter<T> {
     private dataTable?: IDataTable<T>,
     options?: LocalStorageAdapterOptions,
   ) {
-    this.options = { ...this.options, ...options };
+    this.options = { ...DEFAULT_OPTIONS, ...options };
     if (dataTable) {
       this.setDataTable(dataTable);
     }
@@ -64,18 +67,18 @@ export class LocalStorageAdapter<T> {
   }
 
   destroy() {
-    this.dataTable?.addEventListener('dt.search', this.#saveStateAfterEvent);
-    this.dataTable?.addEventListener('dt.col.sort', this.#saveStateAfterEvent);
-    this.dataTable?.addEventListener(
+    this.dataTable?.removeEventListener('dt.search', this.#saveStateAfterEvent);
+    this.dataTable?.removeEventListener('dt.col.sort', this.#saveStateAfterEvent);
+    this.dataTable?.removeEventListener(
       'dt.col.visibility',
       this.#saveStateAfterEvent,
     );
 
-    this.dataTable?.addEventListener(
+    this.dataTable?.removeEventListener(
       'dt.col.resize',
       this.#saveStateAfterEvent,
     );
-    this.dataTable?.addEventListener(
+    this.dataTable?.removeEventListener(
       'dt.col.reorder',
       this.#saveStateAfterEvent,
     );

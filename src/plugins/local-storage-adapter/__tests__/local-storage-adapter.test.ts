@@ -73,7 +73,7 @@ describe('LocalStorageAdapter', () => {
         storageKey,
         JSON.stringify({ searchQuery: 'Bob' }),
       );
-      new LocalStorageAdapter(mockDataTable, storageKey);
+      new LocalStorageAdapter(storageKey, mockDataTable);
       expect(mockDataTable.restoreState).toHaveBeenCalledWith({
         searchQuery: 'Bob',
       });
@@ -81,7 +81,7 @@ describe('LocalStorageAdapter', () => {
 
     it('should attach event listeners based on default options', () => {
       const addListenerSpy = jest.spyOn(mockDataTable, 'addEventListener');
-      new LocalStorageAdapter(mockDataTable, storageKey);
+      new LocalStorageAdapter(storageKey, mockDataTable);
       expect(addListenerSpy).toHaveBeenCalledWith(
         'dt.search',
         expect.any(Function),
@@ -106,7 +106,7 @@ describe('LocalStorageAdapter', () => {
 
     it('should NOT attach listeners if options are disabled', () => {
       const addListenerSpy = jest.spyOn(mockDataTable, 'addEventListener');
-      new LocalStorageAdapter(mockDataTable, storageKey, {
+      new LocalStorageAdapter(storageKey, mockDataTable, {
         saveColumnSorting: false,
         saveColumnWidth: false,
       });
@@ -127,7 +127,7 @@ describe('LocalStorageAdapter', () => {
 
   describe('saveState', () => {
     it('should save the full state when all options are enabled', () => {
-      const adapter = new LocalStorageAdapter(mockDataTable, storageKey);
+      const adapter = new LocalStorageAdapter(storageKey, mockDataTable);
       adapter.saveState();
       const savedJSON = localStorageMock.getItem(storageKey);
       expect(savedJSON).not.toBeNull();
@@ -137,7 +137,7 @@ describe('LocalStorageAdapter', () => {
     });
 
     it('should save only specified properties when options are disabled', () => {
-      const adapter = new LocalStorageAdapter(mockDataTable, storageKey, {
+      const adapter = new LocalStorageAdapter(storageKey, mockDataTable, {
         saveSearch: false,
         saveColumnVisibility: false,
         saveColumnWidth: true,
@@ -155,7 +155,7 @@ describe('LocalStorageAdapter', () => {
   describe('restoreState', () => {
     it('should call dataTable.restoreState with the filtered state', () => {
       localStorageMock.setItem(storageKey, JSON.stringify(tableState));
-      new LocalStorageAdapter(mockDataTable, storageKey, {
+      new LocalStorageAdapter(storageKey, mockDataTable, {
         saveSearch: true,
         saveColumnVisibility: false,
       });
@@ -169,7 +169,7 @@ describe('LocalStorageAdapter', () => {
     });
 
     it('should not do anything if no state is in localStorage', () => {
-      new LocalStorageAdapter(mockDataTable, storageKey);
+      new LocalStorageAdapter(storageKey, mockDataTable);
       expect(mockDataTable.restoreState).not.toHaveBeenCalled();
     });
 
@@ -178,7 +178,7 @@ describe('LocalStorageAdapter', () => {
       const consoleErrorSpy = jest
         .spyOn(console, 'error')
         .mockImplementation(() => {});
-      new LocalStorageAdapter(mockDataTable, storageKey);
+      new LocalStorageAdapter(storageKey, mockDataTable);
       expect(mockDataTable.restoreState).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
@@ -188,7 +188,7 @@ describe('LocalStorageAdapter', () => {
   describe('clearState', () => {
     it('should remove the item from localStorage', () => {
       localStorageMock.setItem(storageKey, '{"test":1}');
-      const adapter = new LocalStorageAdapter(mockDataTable, storageKey);
+      const adapter = new LocalStorageAdapter(storageKey, mockDataTable);
       adapter.clearState();
       expect(localStorageMock.getItem(storageKey)).toBeNull();
     });
@@ -196,7 +196,7 @@ describe('LocalStorageAdapter', () => {
 
   describe('Event Handling', () => {
     it('should call saveState after an event is dispatched', () => {
-      const adapter = new LocalStorageAdapter(mockDataTable, storageKey);
+      const adapter = new LocalStorageAdapter(storageKey, mockDataTable);
       const saveSpy = jest.spyOn(adapter, 'saveState');
 
       // Dispatch a mock event

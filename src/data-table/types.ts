@@ -1,15 +1,5 @@
 import { NestedKeyOf } from './utils';
-import { IVirtualScrollConstructor } from '../virtual-scroll/types';
 
-/**
- * Defines options for loading data into the table
- * */
-export interface LoadOptions {
-  /** If the data should replace or be added to the end of the current data */
-  append?: boolean;
-  /** If the current scroll position should be kept */
-  keepScroll?: boolean;
-}
 
 /**
  * Defines the possible sorting orders for columns.
@@ -17,11 +7,28 @@ export interface LoadOptions {
 export type SortOrder = 'asc' | 'desc';
 
 /**
- * Callback for formatting a row's  HTML element.
+ * Callback for conditionally adding classes to a row
  * @param row - The row data.
- * @param element - The row element.
+ * @returns the part string or list of part strings that should be added to this row.
  */
-export type RowFormatterCallback<T> = (row: T, element: HTMLElement) => void;
+export type RowPartsCallback<T> = (row: T) => string | string[];
+
+/**
+ * Callback for conditionally adding classes to a cell
+ * @param value - The value of the cell.
+ * @param field - The field of the column.
+ * @param row - The row data.
+ */
+export type CellPartsCallback<T> = (value: unknown, field: NestedKeyOf<T>, row: T) => string | string[];
+
+/**
+ * Callback for providing the full contents of a rendered cell.
+ * @param value - The value of the cell.
+ * @param field - The field of the column.
+ * @param row - The row data.
+ * @returns - Should return an HTMLElement or anything Lit can render
+ */
+export type CellRenderCallback<T> = (value: unknown, field: NestedKeyOf<T>, row: T) => unknown;
 
 /**
  * Callback for formatting the value of a cell.
@@ -30,19 +37,6 @@ export type RowFormatterCallback<T> = (row: T, element: HTMLElement) => void;
  * @param row - The row data.
  */
 export type ValueFormatterCallback<T> = (value: any, row: T) => string | null;
-
-/**
- * Callback for formatting a cell's HTML element.
- * Called when the cell is created but NOT when exporting to CSV.
- * @param value - The value of the field.
- * @param row - The row data.
- * @param element - The cell element.
- */
-export type CellFormatterCallback<T> = (
-  value: any,
-  row: T,
-  element: HTMLElement,
-) => void;
 
 /**
  * Callback for comparing two values.
@@ -155,32 +149,44 @@ export interface ColumnOptions<T> {
   resizable?: boolean;
 
   /**
-   * A function to format the value for display.
+   * A function for tokenizing this column's data.
+   * Fallback to the main table tokenizer if not provided.
    */
-  valueFormatter?: ValueFormatterCallback<T> | null;
+  searchTokenizer?: TokenizerCallback;
 
   /**
-   * A function to format the element for display.
+   * A function to format the value for display.
    */
-  elementFormatter?: CellFormatterCallback<T> | null;
+  valueFormatter?: ValueFormatterCallback<T>;
+
+  /**
+   * A function for conditinally adding classes to a cell.
+   */
+  cellParts?: CellPartsCallback<T>;
+
+  /**
+   * A function for rendering the contents of a cell.
+   * NOTE: Search highlighting will not work for this cell when used.
+   */
+  cellRenderer?: CellRenderCallback<T>;
 
   /**
    * A function to use for sorting the column.
    * This overrides the default sorting behavior.
    */
-  sorter?: ComparatorCallback | null;
+  sorter?: ComparatorCallback;
 
   /**
    * A function to derive a comparable value from the cell's original value, specifically for sorting this column.
    * This can be used to preprocess and cache values (e.g., convert to lowercase, extract numbers) before comparison.
    */
-  sortValue?: SortValueCallback | null;
+  sortValue?: SortValueCallback;
 
   /**
    * A custom function to determine if a cell's value in this column matches a given filter criterion.
    * This is used when `DataTable.filter()` is called with an object-based filter that targets this column's field.
    */
-  filter?: ColumnFilterCallback | null;
+  filter?: ColumnFilterCallback;
 }
 
 /**
@@ -209,118 +215,6 @@ export interface ColumnState<T> {
 }
 
 /**
- * Defines CSS classes to be applied to different parts of the table.
- */
-export interface TableClasses {
-  /**
-   * Classes for the scroller element.
-   */
-  scroller?: string | string[];
-
-  /**
-   * Classes for the thead element.
-   */
-  thead?: string | string[];
-
-  /**
-   * Classes for the tbody element.
-   */
-  tbody?: string | string[];
-
-  /**
-   * Classes for each table row element.
-   */
-  tr?: string | string[];
-
-  /**
-   * Classes for each header element.
-   */
-  th?: string | string[];
-
-  /**
-   * Classes for each cell element.
-   */
-  td?: string | string[];
-
-  /**
-   * Classes for the mark elements used to highligh search results.
-   */
-  mark?: string | string[];
-}
-
-/**
- * Options for configuring the table.
- */
-export interface TableOptions<T> {
-  /**
-   * Configures virtual scrolling.
-   */
-  virtualScroll?: boolean | number;
-
-  /**
-   * Whether to highlight search results in the table cells.
-   */
-  highlightSearch?: boolean;
-
-  /**
-   * Whether the search query should be tokenized.
-   */
-  tokenizeSearch?: boolean;
-
-  /**
-   * Whether search results should be scored or not.
-   * Scoring is very computationally expensive...
-   */
-  enableSearchScoring?: boolean;
-
-  /**
-   * Whether columns should be rearrangeable by drag and drop.
-   */
-  rearrangeable?: boolean;
-
-  /**
-   * Additional fields to include in the search.
-   * Used for fields that are not displayed as columns.
-   */
-  extraSearchFields?: NestedKeyOf<T>[];
-
-  /**
-   * A placeholder to use for null or undefined values.
-   */
-  emptyValuePlaceholder?: string;
-
-  /**
-   * The text to display when there is no data in the table.
-   */
-  noDataText?: string;
-
-  /**
-   * The text to display when there are no matching records after filtering or searching.
-   */
-  noMatchText?: string;
-
-  /**
-   * Custom CSS classes to apply to various table elements.
-   */
-  classes?: TableClasses;
-
-  /**
-   * A function to format each row's HTML element.
-   */
-  rowFormatter?: RowFormatterCallback<T> | null;
-
-  /**
-   * A function to use for tokenizing values for searching.
-   */
-  tokenizer?: TokenizerCallback;
-
-  /**
-   * A specific virtual scroll class to use
-   */
-  virtualScrollClass?: IVirtualScrollConstructor;
-}
-
-/**
  * Represents the current state of the table
  */
 export interface TableState<T> {
@@ -332,7 +226,7 @@ export interface TableState<T> {
   /**
    * The current query applied to the table or null if no query is applied.
    */
-  searchQuery: string | RegExp | null;
+  searchQuery: string;
 
   /**
    * The current filters applied to the table or null if no filters are applied.
@@ -340,21 +234,37 @@ export interface TableState<T> {
   filters: Filters<T> | FilterCallback<T> | null;
 
   /**
-   * The current scroll position of the table
-   */
-  scrollPosition: { top: number; left: number };
-
-  /**
    * The current column order represented as a list of their fields from left to right.
    */
   columnOrder: NestedKeyOf<T>[];
 }
 
-// Special type to represent the normal table options
-// but with additional opptions passed to the constructor.
-export type TableInitOptions<T> = TableOptions<T> & {
-  data?: T[];
-};
+export interface StorageOptions {
+  /**
+   * The unique key used to store the table state in the browser.
+   * * @example "my-app-users-table-v1"
+   */
+  key: string;
+
+  /**
+   * Which storage engine to use.
+   * * 'local': Persists after browser is closed (Default).
+   * * 'session': Cleared when tab is closed.
+   */
+  storage?: 'local' | 'session';
+
+  /** Save the current column sorting */
+  saveColumnSortOrders?: boolean;
+
+  /** Save the current column visibility */
+  saveColumnVisibility?: boolean;
+
+  /** Save the current column widths */
+  saveColumnWidths?: boolean;
+
+  /** Save the current order of columns */
+  saveColumnOrder?: boolean;
+}
 
 export type ColumnInitOptions<T> = ColumnOptions<T> & Partial<ColumnState<T>>;
 
@@ -364,4 +274,4 @@ export type RestorableTableState<T> = Partial<
   Omit<TableState<T>, 'columns'>
 > & { columns?: RestorableColumnState<T>[] };
 
-export type { NestedKeyOf, IVirtualScrollConstructor };
+export type { NestedKeyOf };

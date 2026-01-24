@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Advanced Example</title>
+  <link rel="stylesheet" href="./site.css">
+  <style>
+    .critical,
+    .critical>td {
+      background-color: rgba(255, 0, 0, 0.2) !important;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-direction: row;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-check.dropdown-item .form-check-input {
+      margin-left: 0;
+      margin-right: 0.25rem;
+    }
+
+    .table-wrapper {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .table-border {
+      border-radius: 0.25rem;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    .tag-wrapper {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+
+    .tag {
+      padding: 0.25rem;
+      border-radius: 0.25rem;
+      background-color: var(--bg-subtle);
+    }
+
+    .toolbar-buttons {
+      display: flex;
+      flex-direction: row;
+    }
+
+    .button {
+      box-sizing: border-box;
+      height: 100%;
+      cursor: pointer;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-subtle);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-hi);
+    }
+
+    .button:hover {
+      background: var(--bg-hover);
+    }
+
+    /* The Dropdown Container */
+    .col-picker {
+      position: relative;
+    }
+
+    /* The Button (Summary) */
+    .col-picker summary {
+      box-sizing: border-box;
+      height: 100%;
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+    }
+
+    /* The Menu (Details content) */
+    .col-picker-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      width: 200px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 8px;
+      z-index: 50;
+
+      /* Animation helper */
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* Checkbox Items */
+    .col-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-hi);
+      padding: 4px;
+      cursor: pointer;
+    }
+
+    .col-item:hover {
+      background-color: var(--bg-hover);
+      border-radius: 4px;
+    }
+
+    #searchInput {
+      flex-grow: 1;
+    }
+
+    yatl-table::part(urgent) {
+      background-color: color-mix(in srgb, red 20%, transparent);
+    }
+  </style>
+</head>
+
+<body class="dark">
+  <div class="options-wrapper">
+    <div class="option">
+      <span class="option-header">Filters</span>
+      <label class="inline">
+        From
+        <input type="date" class="form-control" id="startDateInput" />
+      </label>
+      <label class="inline">
+        To
+        <input type="date" class="form-control" id="endDateInput" />
+      </label>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <div class="toolbar">
+      <input id="searchInput" type="search" placeholder="Search" />
+      <details class="col-picker" id="columnPicker">
+        <summary class="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
+          </svg>
+        </summary>
+        <div class="col-picker-menu" id="columnList">
+        </div>
+      </details>
+      <button id="exportButton" class="button" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="table-border">
+      <yatl-table></yatl-table>
+    </div>
+    <p class="mt-3"><span id="rowCount"></span></p>
+  </div>
+  <script type="importmap">
+  {
+    "imports": {
+      "lit": "https://cdn.jsdelivr.net/npm/lit@3.1.2/+esm",
+      "lit/": "https://cdn.jsdelivr.net/npm/lit@3.1.2/",
+    
+      "lit-html": "https://cdn.jsdelivr.net/npm/lit-html@3.1.2/+esm",
+      "lit-html/": "https://cdn.jsdelivr.net/npm/lit-html@3.1.2/",
+    
+      "@lit/reactive-element": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/+esm",
+    
+      "// NOTE": "This is the line that fixes your specific error:",
+      "@lit/reactive-element/": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/",
+    
+      "@lit-labs/virtualizer": "https://cdn.jsdelivr.net/npm/@lit-labs/virtualizer@2.0.12/+esm",
+      "@lit-labs/virtualizer/": "https://cdn.jsdelivr.net/npm/@lit-labs/virtualizer@2.0.12/"
+    }
+  }
+  </script>
+  <script type="module" src="./3_advanced.js"></script>
+</body>
+
+</html>

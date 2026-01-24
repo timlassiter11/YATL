@@ -1,13 +1,12 @@
-import { TableClasses } from './types';
+import { html, TemplateResult } from 'lit';
+import { ColumnState } from './types';
 
 export type NestedKeyOf<ObjectType> = ObjectType extends object
   ? {
-      [Key in keyof ObjectType &
-        (
-          | string
-          | number
-        )]: // Use NonNullable to include optional properties
-      NonNullable<ObjectType[Key]> extends any[]
+      [Key in keyof ObjectType & (string | number)]: NonNullable<
+        // Use NonNullable to include optional properties
+        ObjectType[Key]
+      > extends any[]
         ? `${Key}`
         : NonNullable<ObjectType[Key]> extends object
           ? // Recurse with the non-nullable type
@@ -15,20 +14,6 @@ export type NestedKeyOf<ObjectType> = ObjectType extends object
           : `${Key}`;
     }[keyof ObjectType & (string | number)]
   : never;
-
-export type WithRequiredProp<Type, Key extends keyof Type> = Type &
-  Required<Pick<Type, Key>>;
-
-export const classesToArray = (classes: string[] | string | undefined) => {
-  if (typeof classes === 'string' && classes !== '') {
-    return classes.split(' ');
-  } else if (Array.isArray(classes)) {
-    return classes;
-  } else if (!classes) {
-    return [];
-  }
-  throw new TypeError('classes must be string or array of strings');
-};
 
 /*
  * Converts a string to a human-readable format.
@@ -69,48 +54,7 @@ export const createRegexTokenizer = (exp: string = '\\S+') => {
   };
 };
 
-export function virtualScrollToNumber(virtualScroll: boolean | number) {
-  if (typeof virtualScroll === 'boolean') {
-    return virtualScroll ? 1 : Number.MAX_SAFE_INTEGER;
-  }
-  return virtualScroll;
-}
-
-export function convertClasses(
-  defaultClasses: TableClasses,
-  userClasses: TableClasses = {},
-) {
-  return {
-    scroller: [
-      ...classesToArray(userClasses.scroller),
-      ...classesToArray(defaultClasses.scroller),
-    ],
-    thead: [
-      ...classesToArray(userClasses.thead),
-      ...classesToArray(defaultClasses.thead),
-    ],
-    tbody: [
-      ...classesToArray(userClasses.tbody),
-      ...classesToArray(defaultClasses.tbody),
-    ],
-    tr: [
-      ...classesToArray(userClasses.tr),
-      ...classesToArray(defaultClasses.tr),
-    ],
-    th: [
-      ...classesToArray(userClasses.th),
-      ...classesToArray(defaultClasses.th),
-    ],
-    td: [
-      ...classesToArray(userClasses.td),
-      ...classesToArray(defaultClasses.td),
-    ],
-    mark: [
-      ...classesToArray(userClasses.mark),
-      ...classesToArray(defaultClasses.mark),
-    ],
-  };
-}
+export const whitespaceTokenizer = createRegexTokenizer();
 
 /**
  * Get a value from an object based on a path.
@@ -131,4 +75,113 @@ export function getNestedValue(obj: any, path: string): any {
   }
 
   return current;
+}
+
+export function findColumn<T extends { field: string }>(
+  field: string,
+  columns: T[],
+) {
+  return columns.find(c => c.field === field);
+}
+
+/**
+ * Highlights sections of a string based on index ranges.
+ * @param text - The original string to render.
+ * @param ranges - An array of [start, end] tuples representing matches.
+ * @returns A Lit TemplateResult with <mark> tags, or the original string if no ranges exist.
+ */
+export function highlightText(
+  text: string,
+  ranges: [number, number][],
+): TemplateResult | string {
+  if (!text || !ranges || ranges.length === 0) {
+    return text;
+  }
+
+  // 1. Sort ranges by start position to process linearly
+  const sortedRanges = [...ranges].sort((a, b) => a[0] - b[0]);
+
+  // 2. Merge overlapping ranges
+  // Example: [[0, 5], [2, 6]] becomes [[0, 6]]
+  const mergedRanges: [number, number][] = [];
+  let currentRange = sortedRanges[0];
+
+  for (let i = 1; i < sortedRanges.length; i++) {
+    const nextRange = sortedRanges[i];
+
+    if (nextRange[0] < currentRange[1]) {
+      // Overlap detected: Extend the current end if needed
+      currentRange[1] = Math.max(currentRange[1], nextRange[1]);
+    } else {
+      // No overlap: Push current and start a new one
+      mergedRanges.push(currentRange);
+      currentRange = nextRange;
+    }
+  }
+  mergedRanges.push(currentRange);
+
+  // 3. Slice the string
+  const result: (string | TemplateResult)[] = [];
+  let lastIndex = 0;
+
+  for (const [start, end] of mergedRanges) {
+    // Clamp values to prevent out-of-bounds errors
+    const safeStart = Math.max(0, Math.min(start, text.length));
+    const safeEnd = Math.max(0, Math.min(end, text.length));
+
+    // Append non-highlighted text before the match
+    if (safeStart > lastIndex) {
+      result.push(text.slice(lastIndex, safeStart));
+    }
+
+    // Append highlighted text
+    // We use the 'mark' tag, but you can change this to a span with a class
+    result.push(
+      html`<mark class="highlight">${text.slice(safeStart, safeEnd)}</mark>`,
+    );
+
+    lastIndex = safeEnd;
+  }
+
+  // 4. Append any remaining text after the last match
+  if (lastIndex < text.length) {
+    result.push(text.slice(lastIndex));
+  }
+
+  return html`${result}`;
+}
+
+export function widthsToGridTemplates(
+  widths: Array<number | null>,
+  defaultWidth = '1fr',
+) {
+  return widths.map(width => (width ? `${width}px` : defaultWidth));
+}
+
+export function didSortStateChange<T>(
+  newState: ColumnState<T>[],
+  oldState?: ColumnState<T>[],
+) {
+  // If it is undefined it means this is the first render.
+  if (!oldState) {
+    return true;
+  }
+
+  const allKeys = new Set([
+    ...oldState.map(s => s.field),
+    ...newState.map(s => s.field),
+  ]) as Set<NestedKeyOf<T>>;
+
+  for (const key of allKeys) {
+    const oldSort = findColumn(key, oldState)?.sortState;
+    const newSort = findColumn(key, newState)?.sortState;
+
+    if (
+      oldSort?.order !== newSort?.order ||
+      oldSort?.priority !== newSort?.priority
+    ) {
+      return true;
+    }
+  }
+  return false;
 }

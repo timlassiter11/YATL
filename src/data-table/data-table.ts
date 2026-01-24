@@ -1,221 +1,464 @@
-import './data-table.css';
-
 import type {
   ColumnFilterCallback,
-  ColumnInitOptions,
   ColumnOptions,
   ColumnState,
   FilterCallback,
   Filters,
-  LoadOptions,
   QueryToken,
+  RestorableColumnState,
   RestorableTableState,
+  RowPartsCallback,
   SortOrder,
-  TableClasses,
-  TableInitOptions,
-  TableOptions,
+  StorageOptions,
   TableState,
+  TokenizerCallback,
 } from './types';
 
-import type { IVirtualScroll } from '../virtual-scroll/types';
 import {
-  VirtualScroll,
-  VirtualScrollError,
-} from '../virtual-scroll/virtual-scroll';
-import {
-  convertClasses,
   createRegexTokenizer,
+  didSortStateChange,
+  findColumn,
   getNestedValue,
+  highlightText,
   NestedKeyOf,
   toHumanReadable,
-  virtualScrollToNumber,
+  whitespaceTokenizer,
+  widthsToGridTemplates,
 } from './utils';
+
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from 'lit';
+import { customElement, property, query, state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { styleMap } from 'lit/directives/style-map.js';
+
+import '@lit-labs/virtualizer';
+
+import styles from './data-table.styles';
+import { LitVirtualizer } from '@lit-labs/virtualizer';
+
+// #region --- Constants ---
+
+// Debounce between state saves
+const STATE_SAVE_DEBOUNCE = 1000;
+
+const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
+  storage: 'local',
+  saveColumnSortOrders: true,
+  saveColumnVisibility: true,
+  saveColumnWidths: true,
+  saveColumnOrder: true,
+};
+
+// Properties that should trigger a save
+const SAVE_TRIGGERS = new Set<keyof YatlTable<any>>([
+  'searchQuery',
+  'filters',
+  // Covers column order
+  'columns',
+  // Covers sort, visibility, and width
+  'columnStates',
+  'storageOptions',
+]);
+
+const MATCH_WEIGHTS = {
+  EXACT: 100,
+  PREFIX: 50,
+  SUBSTRING: 10,
+};
+
+// #endregion
 
 /**
  * Represents a dynamic and interactive table with features like sorting, searching, filtering,
  * column resizing, column rearranging, and virtual scrolling.
- *
- * @example
- * ```ts
- * type DataType = {id: number, name: string, age: number};
- *
- * const dataTable = new DataTable<DataType>('#myTable', [
- *     { field: 'id', title: 'ID', sortable: true },
- *     { field: 'name', title: 'Name', searchable: true },
- *     { field: 'age', title: 'Age', sortable: true, valueFormatter: (value) => `${value} years` }
- *   ], {
- *   data: [
- *     { id: 1, name: 'Alice', age: 30 },
- *     { id: 2, name: 'Bob', age: 24 },
- *   ],
- *   virtualScroll: true,
- *   resizable: true,
- *   rearrangeable: true,
- * });
- * ```
  */
-export class DataTable<T> extends EventTarget {
-  private static readonly MatchWeights = {
-    EXACT: 100,
-    PREFIX: 50,
-    SUBSTRING: 10,
-  };
+@customElement('yatl-table')
+export class YatlTable<T extends WeakKey> extends LitElement {
+  public static override styles = [styles];
 
-  // Centralized default options for the DataTable.
-  // These are the base values used if not overridden by user-provided options.
-  private readonly DEFAULT_OPTIONS: ConcreteTableOptions<T> = {
-    virtualScroll: 1000,
-    highlightSearch: true,
-    tokenizeSearch: false,
-    enableSearchScoring: false,
-    rearrangeable: true,
-    extraSearchFields: [],
-    emptyValuePlaceholder: '-',
-    noDataText: 'No records found',
-    noMatchText: 'No matching records found',
-    classes: {
-      scroller: ['dt-scroller'],
-      thead: ['dt-headers'],
-      tbody: [],
-      tr: [],
-      th: [],
-      td: [],
-      mark: [],
-    },
-    rowFormatter: null,
-    tokenizer: createRegexTokenizer(),
-    virtualScrollClass: VirtualScroll,
-  };
+  @query('.table')
+  private tableElement!: HTMLElement;
+  @query('lit-virtualizer')
+  private virtualizer?: LitVirtualizer;
 
-  // Table elements
-  #table: HTMLTableElement;
-  #thead: HTMLElement;
-  #tbody: HTMLElement;
-  #scroller: HTMLElement;
+  // #region --- State Data ---
 
-  // Used to render cells offscreen and calculate their widths
-  // for the auto-resize logic used on resize double click.
-  #textMeasurementContext: CanvasRenderingContext2D | null = null;
+  // Property data
+  private _enableSearchTokenization = false;
+  private _enableSearchScoring = false;
+  private _columns: ColumnOptions<T>[] = [];
+  private _columnStates: ColumnState<T>[] = [];
+  private _storageOptions: StorageOptions | null = null;
+  private _data: T[] = [];
+  private _searchQuery = '';
+  private _searchIncludedFields: NestedKeyOf<T>[] = [];
+  private _searchTokenizer: TokenizerCallback = whitespaceTokenizer;
+  private _filters: Filters<T> | FilterCallback<T> | null = null;
 
-  #columnData: Map<NestedKeyOf<T>, ColumnData<T>> = new Map();
+  @state()
+  private _filteredData: T[] = [];
 
-  // Current data stored by the initial index
-  #rows: Map<number, InternalRowData<T>> = new Map();
-  #filteredRows: InternalRowData<T>[] = [];
+  // Flag if we have already restored the state or not.
+  private hasRestoredState = false;
 
-  // Search and filter data
-  #userQuery: string | RegExp | null = null;
-  #query: QueryToken[] | RegExp | null = null;
-  #filters: Filters<T> | FilterCallback<T> | null = null;
+  // save state debounce timer
+  private saveTimer = 0;
 
-  #virtualScroll: IVirtualScroll | null = null;
+  // Flags set when something changes that
+  // requires the filter or sort logic to re-run.
+  private filterDirty = false;
+  private sortDirty = false;
 
-  #resizingColumn: ColumnData<T> | null = null;
-  #tableWidthIsFixed = false;
+  // The last time the data was updated.
+  // For displaying in the footer only.
+  private dataLastUpdate: Date | null = null;
 
-  #options: ConcreteTableOptions<T> = { ...this.DEFAULT_OPTIONS };
+  // Maps rows to their metadata
+  private rowMetadata = new WeakMap<T, RowMetadata>();
+  // List of tokens created from the current query
+  private queryTokens: QueryToken[] | null = null;
+  // Column resize state
+  private resizeState: {
+    active: boolean;
+    startX: number;
+    startWidth: number;
+    columnIndex: number;
+    columnField: NestedKeyOf<T>;
+    currentWidths: string[];
+  } | null = null;
 
-  #blockUpdates = true;
-  #blockedUpdates: Set<TableEffect> = new Set();
+  // Column drag & drop state
+  private dragColumn: NestedKeyOf<T> | null = null;
+
+  // #endregion
+
+  // #region --- Properties ---
 
   /**
-   * Initializes a new instance of the DataTable.
-   * @param table - The HTMLTableElement or a CSS selector string for the table.
-   * @param columns - List of {@link ColumnOptions} for the table.
-   * @param options - Optional configuration options for the DataTable.
-   * @throws {SyntaxError} If the table selector does not find an element.
-   * @throws {TypeError} If the provided table element is not an HTMLTableElement or if columns option is not an array.
+   * Enables virtual scrolling for the table.
+   * When enabled, only the visible rows are rendered to the DOM, significantly improving
+   * performance for large datasets (1000+ rows).
+   * @default false
    */
-  constructor(
-    table: string | HTMLTableElement,
-    columns: ColumnInitOptions<T>[],
-    options: TableInitOptions<T> = {},
-  ) {
-    super();
+  @property({ type: Boolean, attribute: 'enable-virtual-scroll' })
+  public enableVirtualScroll = false;
 
-    const { data, virtualScrollClass, ...restOptions } = options;
+  /**
+   * When enabled, text matching the current search query will be wrapped in `<mark>` tags.
+   * This applies to all visible cells that contain the search term.
+   * This does NOT apply to content rendered by the user such as the ColumnOptions.render callback.
+   * @default true
+   */
+  @property({ type: Boolean, attribute: 'enable-search-highlight' })
+  public enableSearchHighlight = true;
 
-    if (virtualScrollClass !== undefined) {
-      this.#options.virtualScrollClass = virtualScrollClass;
+  /**
+   * Enables tokenized search behavior.
+   * When enabled, the search query is split into individual tokens using the
+   * `searchTokenizer` function (defaults to splitting on whitespace).
+   * A row is considered a match if **ANY** of the tokens appear in the searchable fields.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'enable-search-tokenization' })
+  public get enableSearchTokenization() {
+    return this._enableSearchTokenization;
+  }
+
+  public set enableSearchTokenization(enable) {
+    if (this._enableSearchTokenization === enable) {
+      return;
     }
 
-    if (typeof table === 'string') {
-      const tableElement = document.querySelector(table);
-      if (!tableElement)
-        throw new SyntaxError(`Failed to find table using selector ${table}`);
-      this.#table = tableElement as HTMLTableElement;
-    } else {
-      this.#table = table;
+    const oldValue = this._enableSearchTokenization;
+    this._enableSearchTokenization = enable;
+    this.updateInternalQuery();
+    this.filterDirty = true;
+    this.requestUpdate('enableSearchTokenization', oldValue);
+  }
+
+  /**
+   * Enables weighted relevance scoring for search results.
+   * When enabled, exact matches and prefix matches are ranked higher than substring matches.
+   * Rows are sorted by their relevance score descending.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'enable-search-scoring' })
+  public get enableSearchScoring() {
+    return this._enableSearchScoring;
+  }
+
+  public set enableSearchScoring(enable) {
+    if (this._enableSearchScoring === enable) {
+      return;
     }
 
-    if (!(this.#table instanceof HTMLTableElement)) {
-      throw new TypeError(
-        `Invalid table element type. Must be HTMLTableElement`,
-      );
+    const oldValue = this._enableSearchScoring;
+    this._enableSearchScoring = enable;
+    this.filterDirty = true;
+    this.requestUpdate('enableSearchScoring', oldValue);
+  }
+
+  /**
+   * Allows users to reorder columns by dragging and dropping headers.
+   * @default true
+   */
+  @property({ type: Boolean, attribute: 'enable-column-reorder' })
+  public enableColumnReorder = true;
+
+  /**
+   * Shows the built-in footer row which displays the current record count.
+   * The footer content can be customized using the `slot="footer"` element.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'enable-footer' })
+  public enableFooter = false;
+
+  /**
+   * The string to display in a cell when the data value is `null` or `undefined`.
+   * @default "-"
+   */
+  @property({ type: String, attribute: 'null-value-placeholder' })
+  public nullValuePlaceholder = '-';
+
+  /**
+   * The message displayed when the `data` array is empty.
+   * @default "No records to display"
+   */
+  @property({ type: String, attribute: 'empty-message' })
+  public emptyMessage = 'No records to display';
+
+  /**
+   * The message displayed when `data` exists but the current search/filter
+   * results in zero visible rows.
+   * @default "No matching records found"
+   */
+  @property({ type: String, attribute: 'no-results-message' })
+  public noResultsMessage = 'No matching records found';
+
+  /**
+   * The definitions for the columns to be rendered.
+   * This defines the field mapping, titles, sortability, and other static options.
+   */
+  @property({ attribute: false })
+  public get columns() {
+    return this._columns;
+  }
+
+  public set columns(columns) {
+    if (this._columns === columns) {
+      return;
     }
 
-    const { scroller, thead, headerRow, tbody } = this.#initTableElements();
-
-    this.#scroller = scroller;
-    this.#thead = thead;
-    this.#tbody = tbody;
-
-    this.#initColumns(columns, headerRow);
-    this.updateTableOptions({ ...this.#options, ...restOptions });
-
-    this.#blockUpdates = false;
-    this.#blockedUpdates.clear();
-
-    this.loadData(data ?? []);
+    const oldValue = this._columns;
+    this._columns = columns;
+    this.createColumnStates();
+    this.filterDirty = true;
+    this.requestUpdate('columns', oldValue);
   }
 
   /**
-   * Gets the current options applied to the table.
+   * The current dynamic state of the columns (width, visibility, sort order).
+   * This property is updated automatically when users interact with the table.
    */
-  get tableOptions() {
-    return structuredClone(this.#options);
+  @property({ attribute: false })
+  public get columnStates(): ColumnState<T>[] {
+    return this._columnStates.map(state => ({
+      ...state,
+      sortState: state.sortState ? { ...state.sortState } : undefined,
+    }));
+  }
+
+  public set columnStates(states) {
+    if (this._columnStates === states) {
+      return;
+    }
+
+    const oldValue = this._columnStates;
+    this._columnStates = states;
+
+    if (didSortStateChange(this._columnStates, oldValue)) {
+      this.sortDirty = true;
+    }
+
+    this.requestUpdate('columnStates', oldValue);
   }
 
   /**
-   * Gets the currently filtered and sorted rows displayed in the table.
+   * The current text string used to filter the table data.
+   * Setting this property triggers a new search and render cycle.
    */
-  get rows(): T[] {
-    return [...this.#filteredRows];
+  @property({ type: String, attribute: 'search-query' })
+  public get searchQuery() {
+    return this._searchQuery;
+  }
+
+  public set searchQuery(query) {
+    if (this._searchQuery === query) {
+      return;
+    }
+
+    const oldValue = this._searchQuery;
+    this._searchQuery = query;
+    this.updateInternalQuery();
+    this.filterDirty = true;
+    this.requestUpdate('searchQuery', oldValue);
   }
 
   /**
-   * Gets the underlying data
+   * A list of extra data fields to include in the search index, even if they are not
+   * displayed as visible columns. Useful for searching by ID, hidden keywords, or tags.
    */
-  get data(): T[] {
-    return [...this.#rows.values()];
+  @property({ type: Array, attribute: 'search-included-fields' })
+  public get searchIncludedFields() {
+    return this._searchIncludedFields;
+  }
+
+  public set searchIncludedFields(fields) {
+    if (this._searchIncludedFields === fields) {
+      return;
+    }
+
+    const oldValue = this._searchIncludedFields;
+    this._searchIncludedFields = fields;
+    this.filterDirty = true;
+    this.requestUpdate('searchIncludedFields', oldValue);
   }
 
   /**
-   * Gets the underlying HTMLTableElement managed by this DataTable instance.
+   * A function that splits the search query into tokens.
+   * Only used if `enableSearchTokenization` is true.
+   * @default whitespaceTokenizer
    */
-  get table(): HTMLTableElement {
-    return this.#table;
+  @property({ attribute: false })
+  public get searchTokenizer() {
+    return this._searchTokenizer;
+  }
+
+  public set searchTokenizer(tokenizer) {
+    if (this._searchTokenizer === tokenizer) {
+      return;
+    }
+
+    const oldValue = this._searchTokenizer;
+    this._searchTokenizer = tokenizer;
+    this.filterDirty = true;
+    this.requestUpdate('searchTokenizer', oldValue);
   }
 
   /**
-   * Gets the current state of the table.
+   * An optional set of criteria to filter the visible rows.
+   * This runs **before** the global search query is applied.
+   * * You can provide:
+   * 1. A **Partial Object**: matches rows where specific keys equal specific values (AND logic).
+   * 2. A **Callback Function**: returns `true` to keep the row, `false` to hide it.
+   * * @example
+   * // 1. Object Syntax (Simple Exact Match)
+   * // Shows rows where status is 'active' AND role is 'admin'
+   * table.filters = { status: 'active', role: 'admin' };
+   * * @example
+   * // 2. Callback Syntax (Complex Logic)
+   * // Shows rows where age is over 21 OR they are a VIP
+   * table.filters = (row) => row.age > 21 || row.isVip;
    */
-  getState(): TableState<T> {
-    const columns = [...this.#columnData.values()];
+  @property({ attribute: false })
+  public get filters() {
+    return this._filters;
+  }
+
+  public set filters(filters) {
+    if (this._filters === filters) {
+      return;
+    }
+
+    const oldValue = this._filters;
+    this._filters = filters;
+    this.filterDirty = true;
+    this.requestUpdate('filters', oldValue);
+  }
+
+  /**
+   * A callback function to conditionally apply CSS parts to table rows.
+   */
+  @property({ attribute: false })
+  public rowParts: RowPartsCallback<T> | null = null;
+
+  /**
+   * Configuration options for automatically saving and restoring table state
+   * (column width, order, visibility, etc.) to browser storage.
+   */
+  @property({ type: Object, attribute: 'storage-options' })
+  public get storageOptions() {
+    return this._storageOptions;
+  }
+
+  public set storageOptions(options) {
+    if (this._storageOptions === options) {
+      return;
+    }
+
+    const oldValue = this._storageOptions;
+    this._storageOptions = options;
+    if (!this.hasRestoredState) {
+      this.loadStateFromStorage();
+    }
+    this.requestUpdate('storageOptions', oldValue);
+  }
+
+  /**
+   * The array of data objects to be displayed.
+   * Objects must satisfy the `WeakKey` constraint (objects only, no primitives).
+   */
+  @property({ attribute: false })
+  public get data() {
+    return this._data;
+  }
+
+  public set data(value: T[]) {
+    const oldValue = this._data;
+    this._data = value;
+    this.dataLastUpdate = new Date();
+    this.createMetadata();
+    this.filterDirty = true;
+    this.requestUpdate('data', oldValue);
+  }
+
+  get filteredData() {
+    if (this.filterDirty) {
+      this.filterRows();
+    } else if (this.sortDirty) {
+      this.sortRows();
+    }
+
+    this.filterDirty = false;
+    this.sortDirty = false;
+
+    return [...this._filteredData];
+  }
+
+  // #endregion
+
+  // #region --- Public Methods ---
+
+  /**
+   * Gets a copy of the current state of the table.
+   */
+  public getState(): TableState<T> {
+    const states = this.columnStates;
     return {
-      searchQuery: this.#userQuery,
-      filters: this.#filters,
-      scrollPosition: {
-        top: this.#scroller.scrollTop,
-        left: this.#scroller.scrollLeft,
-      },
-      columnOrder: columns.map(column => column.field),
-      columns: columns.map(column => ({
-        field: column.field,
-        visible: column.state.visible,
-        sortState: column.state.sortState,
-        width: column.state.width,
-      })),
+      searchQuery: this.searchQuery,
+      filters: this.filters,
+      columnOrder: this.columns.map(column => column.field),
+      columns: this.columns.map(column => {
+        const columnState = findColumn(column.field, states);
+        return {
+          field: column.field,
+          visible: columnState?.visible ?? true,
+          sortState: columnState?.sortState,
+          width: columnState?.width,
+        };
+      }),
     };
   }
 
@@ -223,254 +466,72 @@ export class DataTable<T> extends EventTarget {
    * Restores the table to the provided state.
    * @param state - The state to restore the table to.
    */
-  restoreState(state: RestorableTableState<T>) {
-    this.withoutUpdates(() => {
-      if ('searchQuery' in state && state.searchQuery !== undefined) {
-        this.search(state.searchQuery);
-      }
+  public restoreState(state: RestorableTableState<T>) {
+    if ('searchQuery' in state && state.searchQuery !== undefined) {
+      this.searchQuery = state.searchQuery;
+    }
 
-      if ('filters' in state && state.filters !== undefined) {
-        this.#filters = state.filters;
-        this.filter(state.filters);
-      }
+    if ('filters' in state && state.filters !== undefined) {
+      this.filters = state.filters;
+    }
 
-      if ('scrollPosition' in state && state.scrollPosition !== undefined) {
-        this.#scroller.scrollTop = state.scrollPosition.top;
-      }
+    if ('columnOrder' in state && state.columnOrder !== undefined) {
+      this.setColumnOrder(state.columnOrder);
+    }
 
-      if ('columnOrder' in state && state.columnOrder !== undefined) {
-        this.setColumnOrder(state.columnOrder);
-      }
+    if ('columns' in state && state.columns !== undefined) {
+      const newColumnStates: ColumnState<T>[] = [];
 
-      if ('columns' in state && state.columns !== undefined) {
-        for (const columnState of state.columns) {
-          const columnData = this.#columnData.get(columnState.field);
-          if (!columnData) {
-            console.warn(
-              `Attempting to restore state for non-existent column ${columnState.field}`,
-            );
-            continue;
-          }
+      for (const newState of state.columns) {
+        // We don't check if this is a valid column becuase we
+        // could be restoring the state before the columns are loaded.
+        const currentState = findColumn(newState.field, this._columnStates) ?? {
+          field: newState.field,
+          visible: true,
+        };
 
-          if ('visible' in columnState && columnState.visible !== undefined) {
-            columnData.state.visible = columnState.visible;
-          }
+        newColumnStates.push(currentState);
 
-          if (
-            'sortState' in columnState &&
-            columnState.sortState !== undefined
-          ) {
-            columnData.state.sortState = columnState.sortState;
-          }
-
-          if ('width' in columnState && columnState.width !== undefined) {
-            this.#resizeColumn(columnData, columnState.width);
-          }
-        }
-      }
-    });
-  }
-
-  updateTableOptions(options: UpdatableTableOptions<T>) {
-    this.withoutUpdates(() => {
-      for (const key in options) {
-        const optionKey = key as keyof UpdatableTableOptions<T>;
-        const value = options[optionKey]!;
-        const config = this.TABLE_OPTION_CONFIGS[optionKey];
-
-        if (!config) {
+        if (!newState) {
           continue;
         }
 
-        this.#blockedUpdates.add(config.effect);
-        const handler = config.handler as ((v: any) => any) | undefined;
-        const finalValue = handler ? handler(value) : value;
-        (this.#options as any)[optionKey] = finalValue;
-      }
-
-      // Search scoring is only useful with tokenization.
-      if (this.#options.enableSearchScoring && !this.#options.tokenizeSearch) {
-        this.#options.enableSearchScoring = false;
-        console.warn(
-          'Search scoring enabled with tokenization disabled... Ignoring',
-        );
-      }
-    });
-  }
-
-  getColumnOptions(): Required<ColumnOptions<T>>[];
-  getColumnOptions(field: NestedKeyOf<T>): Required<ColumnOptions<T>>;
-  getColumnOptions(field?: any) {
-    if (field) {
-      const columnData = this.#columnData.get(field);
-      if (!columnData) {
-        throw new Error(
-          `Cannot get options for non-existent column "${field}"`,
-        );
-      }
-      const options: ColumnOptions<T> = {
-        ...columnData.options,
-        field: columnData.field,
-      };
-      return options;
-    }
-
-    const options = [...this.#columnData.values()].map(
-      (data): ColumnOptions<T> => ({ ...data.options, field: data.field }),
-    );
-    return options;
-  }
-
-  updateColumnOptions(
-    column: NestedKeyOf<T>,
-    options: ColumnOptionsWithoutField<T>,
-  ) {
-    const col = this.#columnData.get(column);
-    if (!col) {
-      throw new Error(
-        `Cannot update options for non-existent column "${column}"`,
-      );
-    }
-
-    this.withoutUpdates(() => {
-      for (const key in options) {
-        const optionKey = key as keyof ColumnOptionsWithoutField<T>;
-        const value = options[optionKey]!;
-        const config = this.COLUMN_OPTION_CONFIGS[optionKey];
-
-        if (!config) {
-          continue;
+        if ('visible' in newState && newState.visible !== undefined) {
+          currentState.visible = newState.visible;
         }
-        this.#blockedUpdates.add(config.effect);
-        const handler = config.handler as ((v: any) => any) | undefined;
 
-        const finalValue = handler ? handler(value) : value;
-        (col.options as any)[optionKey] = finalValue;
+        if ('sortState' in newState && newState.sortState !== undefined) {
+          currentState.sortState = newState.sortState;
+        }
+
+        if ('width' in newState && newState.width !== undefined) {
+          currentState.width = newState.width;
+        }
       }
-    });
-  }
-
-  /**
-   * Loads data into the table
-   * @param rows - An array of data to be loaded
-   * @param options - Configuration for the load operation
-   */
-  loadData(rows: T[], options: LoadOptions = {}) {
-    
-    let scrollTop, scrollLeft;
-    if (options.keepScroll) {
-      scrollTop = this.#scroller.scrollTop;
-      scrollLeft = this.#scroller.scrollLeft;
+      this.columnStates = newColumnStates;
     }
-
-    if (!options.append) {
-      this.#rows.clear();
-      this.#filteredRows = [];
-    }
-
-    let index = this.#rows.size;
-    for (const row of rows as InternalRowData<T>[]) {
-      const internal_row = this.#loadRow(row, index);
-      this.#rows.set(index, internal_row);
-      index++;
-    }
-
-    this.#updateHeaders();
-    this.#filterRows();
-
-    if (scrollTop && scrollLeft) {
-      this.#scroller.scrollTop = scrollTop;
-      this.#scroller.scrollLeft = scrollLeft;
-    }
-  }
-
-  /**
-   * Displays a message in the table body, typically used for "no data" or "no results" states.
-   * The message is shown in a single row spanning all columns.
-   * @param text - The text or HTML message to display.
-   * @param classes - A string or array of strings for CSS classes to apply to the message row.
-   */
-  showMessage(text: string, ...classes: string[]) {
-    const colSpan = this.#columnData.size;
-    this.#tbody.innerHTML = `<tr class="${classes.join(' ')}"><td colSpan=${colSpan}>${text}</td></tr>`;
-  }
-
-  /**
-   * Clears the current message and dispalsy the normal table data.
-   */
-  clearMessage() {
-    this.#renderTable();
-  }
-
-  /**
-   * Filters rows based on a search query.
-   * The search is performed on columns marked as `searchable` and `extraSearchFields`.
-   * @param query - The search term (string) or a regular expression. An empty string clears the search.
-   */
-  search(query?: string | RegExp | null) {
-    query ??= null;
-
-    const searchEvent = new CustomEvent<DataTableEventMap<T>['dt.search']>(
-      'dt.search',
-      {
-        cancelable: true,
-        detail: {
-          query: query ?? null,
-        },
-      },
-    );
-
-    if (!this.dispatchEvent(searchEvent)) {
-      return;
-    }
-
-    this.#userQuery = query;
-
-    // Clear search on empty string
-    if (query === '') {
-      query = null;
-    }
-
-    if (typeof query === 'string') {
-      if (this.#options.tokenizeSearch) {
-        this.#query = this.#options.tokenizer(query);
-      } else {
-        this.#query = [{ value: query.toLocaleLowerCase(), quoted: true }];
-      }
-    } else {
-      this.#query = query;
-    }
-
-    this.#filterRows();
-  }
-
-  /**
-   * Applies filters to the table rows.
-   * Filters can be an object where keys are field names and values are the criteria to filter by,
-   * or a callback function that receives a row and its index and returns `true` if the row should be included.
-   * @param filters - An object defining field-based filters or a custom filter callback function.
-   * @throws {TypeError} If `filters` is not an object or a function.
-   */
-  filter(filters?: Filters<T> | FilterCallback<T> | null) {
-    this.#filters = filters ?? null;
-    this.#filterRows();
   }
 
   /**
    * Sorts the table by a specified column and order.
    * If `order` is `null`, the sort on this column is removed.
-   * @param colName - The field name of the column to sort by.
+   * @param field - The field name of the column to sort by.
    * @param order - The sort order: 'asc', 'desc', or `null` to remove sorting for this column.
+   * @param clear - Clear all other sorting
    */
-  sort(colName: NestedKeyOf<T>, order: SortOrder | null) {
-    const col = this.#columnData.get(colName);
-    if (!col) {
-      throw new Error(
-        `Cannot get options for non-existent column "${colName}"`,
-      );
+  public sort(
+    field: NestedKeyOf<T>,
+    order: SortOrder | null,
+    clear: boolean = true,
+  ) {
+    // Get a copy of the current column states.
+    const columnStates = this.columnStates;
+    const state = findColumn(field, columnStates);
+    if (!state) {
+      throw new Error(`Cannot get options for non-existent column "${field}"`);
     }
 
-    if (order === col.state.sortState?.order) {
+    if (order === state.sortState?.order) {
       return;
     }
 
@@ -479,7 +540,7 @@ export class DataTable<T> extends EventTarget {
       {
         cancelable: true,
         detail: {
-          column: col.field,
+          column: state.field,
           order: order,
         },
       },
@@ -490,46 +551,47 @@ export class DataTable<T> extends EventTarget {
     }
 
     // Column was unsorted, give it a new priority
-    if (order && !col.state.sortState) {
+    if (order && !state.sortState) {
       // Create a list of current sort priorities
-      const priorities = [...this.#columnData.values()]
-        .map(col => col.state.sortState?.priority)
+      const priorities = columnStates
+        .map(col => col.sortState?.priority)
         .filter(priority => priority !== undefined);
 
-      const maxPriority = this.#columnData.size + 1;
+      const maxPriority = this.columns.length + 1;
       const priority = Math.min(maxPriority, ...priorities) - 1;
-      col.state.sortState = { order, priority };
-    } else if (order && col.state.sortState) {
+      state.sortState = { order, priority };
+    } else if (order && state.sortState) {
       // Column was sorted, just updated the order
-      col.state.sortState.order = order;
+      state.sortState.order = order;
     } else {
-      col.state.sortState = null;
+      state.sortState = null;
     }
 
-    const scrollTop = this.#scroller.scrollTop;
-    const scrollLeft = this.#scroller.scrollLeft;
+    // Clear all other sorting
+    if (clear) {
+      for (const state of columnStates) {
+        if (state.field !== field) {
+          state.sortState = null;
+        }
+      }
+    }
 
-    this.#updateHeaders();
-    this.#sortRows();
-
-    this.#scroller.scrollTop = scrollTop;
-    this.#scroller.scrollLeft = scrollLeft;
+    this.columnStates = columnStates;
   }
 
   /**
    * Sets the visibility of a specified column.
-   * @param colName - The field name of the column.
-   * @param visisble - `true` to show the column, `false` to hide it.
+   * @param field - The field name of the column.
+   * @param visible - `true` to show the column, `false` to hide it.
    */
-  setColumnVisibility(colName: NestedKeyOf<T>, visisble: boolean) {
-    const col = this.#columnData.get(colName);
-    if (!col) {
-      throw new Error(
-        `Cannot get options for non-existent column "${colName}"`,
-      );
+  public setColumnVisibility(field: NestedKeyOf<T>, visible: boolean) {
+    const columnStates = this.columnStates;
+    const state = findColumn(field, columnStates);
+    if (!state) {
+      throw new Error(`Cannot get options for non-existent column "${field}"`);
     }
 
-    if (col.state.visible === visisble) {
+    if (state.visible === visible) {
       return;
     }
 
@@ -538,8 +600,8 @@ export class DataTable<T> extends EventTarget {
     >('dt.col.visibility', {
       cancelable: true,
       detail: {
-        column: col.field,
-        visible: visisble,
+        column: state.field,
+        visible: visible,
       },
     });
 
@@ -547,26 +609,34 @@ export class DataTable<T> extends EventTarget {
       return;
     }
 
-    col.state.visible = visisble;
-    this.#updateHeaders();
-    // If we hide a column that has sorting, we need to resort.
-    // This will also handle hiding all of the columns elements.
-    this.#sortRows();
+    state.visible = visible;
+    this.columnStates = columnStates;
   }
 
   /**
-   * Shows a previously hidden column.
+   * Toggles the visibility of hte specified column
+   * @param field - The field name of the column to toggle.
+   */
+  public toggleColumnVisibility(field: NestedKeyOf<T>) {
+    const state = findColumn(field, this._columnStates);
+    // If state is null here becuase the column doesn't exist
+    // setColumnVisibility will throw an error. We don't need to.
+    this.setColumnVisibility(field, !state);
+  }
+
+  /**
+   * Shows the specified column
    * @param field - The field name of the column to show.
    */
-  showColumn(field: NestedKeyOf<T>) {
+  public showColumn(field: NestedKeyOf<T>) {
     this.setColumnVisibility(field, true);
   }
 
   /**
-   * Hides a visible column.
+   * Hides the specified column
    * @param field - The field name of the column to hide.
    */
-  hideColumn(field: NestedKeyOf<T>) {
+  public hideColumn(field: NestedKeyOf<T>) {
     this.setColumnVisibility(field, false);
   }
 
@@ -575,26 +645,23 @@ export class DataTable<T> extends EventTarget {
    * @param filename - The name of the file to save.
    * @param all - If `true`, exports all original data (ignoring filters). If `false` (default), exports only the currently visible (filtered and sorted) rows.
    */
-  export(filename: string, all = false) {
-    const data = all ? this.#rows : this.#filteredRows;
+  public export(filename: string, all = false) {
+    const data = all ? this.data : this.filteredData;
     const rows = [...data.values()];
 
-    const csvHeaders = [...this.#columnData.values()]
-      .filter(col => all || col.state.visible)
+    const columnData = this.columnData;
+
+    const csvHeaders = columnData
+      .filter(col => all || col.state?.visible)
       .map(col => `"${col.options.title}"`)
       .join(',');
 
     const csvRows = rows
       .map(row => {
         const list: string[] = [];
-        for (const key of this.#columnData.keys()) {
-          const col = this.#columnData.get(key);
-          if (!col) {
-            continue;
-          }
-
-          let value = (row as any)[key];
-          if (all || !col.headerElement.hidden) {
+        for (const col of columnData) {
+          let value = (row as any)[col.field];
+          if (all || col.state.visible) {
             if (typeof col.options.valueFormatter === 'function') {
               value = col.options.valueFormatter(value, row);
             }
@@ -618,11 +685,10 @@ export class DataTable<T> extends EventTarget {
     a.remove();
   }
 
-  scrollToRow(row: T) {
-    const rowData = row as InternalRowData<T>;
-    const index = rowData._metadata?.index;
+  public scrollToRow(row: T) {
+    const index = this.data.findIndex(v => v === row);
     if (typeof index === 'number') {
-      this.scrollToOriginalIndex(index);
+      return this.scrollToOriginalIndex(index);
     } else {
       throw new Error('Row not in table');
     }
@@ -632,13 +698,12 @@ export class DataTable<T> extends EventTarget {
    * Scrolls the table to bring the row at the specified original index into view.
    * @param index - The original index of the row (from the initial dataset).
    */
-  scrollToOriginalIndex(index: number) {
-    const rowData = this.#rows.get(index);
+  public scrollToOriginalIndex(index: number) {
+    const rowData = this.data[index];
     if (rowData) {
-      const filteredIndex = this.#filteredRows.indexOf(rowData);
+      const filteredIndex = this.filteredData.indexOf(rowData);
       if (filteredIndex >= 0) {
-        this.scrollToFilteredIndex(filteredIndex);
-        return;
+        return this.scrollToFilteredIndex(filteredIndex);
       } else {
         throw new Error('Cannot scroll to filtered out row');
       }
@@ -647,32 +712,46 @@ export class DataTable<T> extends EventTarget {
     }
   }
 
-  scrollToFilteredIndex(index: number) {
-    const rowData = this.#filteredRows[index];
+  public async scrollToFilteredIndex(index: number) {
+    // FIXME: Scrolling to an index using lit-virtualizer is buggy.
+    // It usually stops short of the requested index.
+    // The amount it stops short seems to be proportinal to how far away the index is.
+    // Scrolling without VS works but since I use sticky headers, it seems to be one row off.
+
+    const rowData = this.filteredData[index];
     if (!rowData) {
       throw new RangeError(`Row index ${index} out of range`);
     }
 
-    if (this.#virtualScroll) {
-      this.#virtualScroll.scrollToIndex(index);
+    await this.updateComplete;
+
+    // TODO: Should I check if virtual scroll is enabled
+    // or just rely on the appropriate elements existing?
+    if (this.virtualizer) {
+      this.virtualizer.element(index)?.scrollIntoView({
+        block: 'start',
+        behavior: 'instant',
+      });
     } else {
-      const row = this.#tbody.querySelector(
-        `tr[data-dt-index="${rowData._metadata.index}"]`,
+      const row = this.tableElement.querySelector(
+        `.row[data-filtered-index="${index}"]`,
       );
-      if (row) {
-        row.scrollIntoView(true);
-        const theadHeight = parseFloat(getComputedStyle(this.#thead).height);
-        this.#scroller.scrollTop -= theadHeight;
-      }
+      row?.scrollIntoView({
+        block: 'start',
+        behavior: 'smooth',
+      });
     }
   }
 
-  scrollToPx(px: number) {
-    if (this.#virtualScroll) {
-      this.#virtualScroll.scrollToPx(px);
+  public async scrollToPx(px: number) {
+    // FIXME: This doesn't work with lit-virtualizer at all.
+
+    await this.updateComplete;
+
+    if (this.virtualizer) {
+      this.virtualizer.scrollTop = px;
     } else {
-      const theadHeight = parseFloat(getComputedStyle(this.#thead).height);
-      this.#scroller.scrollTop = px - theadHeight;
+      this.tableElement.scrollTop = px;
     }
   }
 
@@ -682,35 +761,35 @@ export class DataTable<T> extends EventTarget {
    * @param fields - An array of field names representing the new order of columns. Columns not included in the array will be placed at the end.
    * @throws {TypeError} If `fields` is not an array.
    */
-  setColumnOrder(fields: NestedKeyOf<T>[]) {
-    if (!Array.isArray(fields)) {
-      throw new TypeError('fields must be an array of field names');
-    }
-
-    const newColumns = new Map<NestedKeyOf<T>, ColumnData<T>>();
+  public setColumnOrder(fields: NestedKeyOf<T>[]) {
+    const newColumns: ColumnOptions<T>[] = [];
     for (const field of fields) {
-      const col = this.#columnData.get(field);
+      const col = findColumn(field, this.columns);
       if (col) {
-        newColumns.set(field, col);
+        newColumns.push(col);
       }
     }
 
-    for (const [field, col] of this.#columnData) {
-      if (!newColumns.has(field)) {
-        newColumns.set(field, col);
+    for (const col of this.columns) {
+      if (!findColumn(col.field, newColumns)) {
+        newColumns.push(col);
       }
     }
 
-    this.#columnData = newColumns;
-    this.refresh();
+    this.columns = [...newColumns];
   }
 
   /**
-   * Refreshes the table display. This re-applies filters, sorting, and updates headers and rows.
+   * Finds the first row
+   * @param field
+   * @param value
+   * @returns
    */
-  refresh() {
-    this.#updateHeaders();
-    this.#filterRows();
+  public findRow(field: NestedKeyOf<T>, value: unknown) {
+    return this.data.find(row => {
+      const rowValue = getNestedValue(row, field);
+      return rowValue === value;
+    });
   }
 
   /**
@@ -727,16 +806,10 @@ export class DataTable<T> extends EventTarget {
    * }
    * ```
    */
-  indexOf(field: string, value: any) {
-    const rows = [...this.#rows.values()];
-    const found_row = rows.find(row => {
-      if (field in row) {
-        return (row as any)[field] === value;
-      }
-    });
-
-    if (found_row) {
-      return found_row._metadata.index;
+  public findRowIndex(field: NestedKeyOf<T>, value: unknown) {
+    const row = this.findRow(field, value);
+    if (row) {
+      return this.rowMetadata.get(row)!.index;
     }
     return -1;
   }
@@ -754,12 +827,11 @@ export class DataTable<T> extends EventTarget {
    * }
    * ```
    */
-  updateRow(index: number, data: Partial<T>) {
-    const current_row = this.#rows.get(index);
+  public updateRow(index: number, data: Partial<T>) {
+    const current_row = this.data[index];
     if (current_row) {
       Object.assign(current_row, data);
-      this.#loadRow(current_row, index);
-      this.#filterRows();
+      this.requestUpdate('data');
     }
   }
 
@@ -767,231 +839,274 @@ export class DataTable<T> extends EventTarget {
    * Deletes a row at a specific original index from the table.
    * @param index - The original index of the row to delete.
    */
-  deleteRow(index: number) {
-    this.#rows.delete(index);
-    this.#filterRows();
+  public deleteRow(index: number) {
+    this.data = this.data.toSpliced(index, 1);
   }
 
-  /**
-   * Executes a callback function without triggering table updates (like re-rendering or event dispatches)
-   * until the callback has completed. This is useful for batching multiple operations.
-   * @param callback - A function to execute. It receives the DataTable instance as its argument.
-   * @example dataTable.withoutUpdates(dt => { dt.sort('name', 'asc'); dt.filter({ age: '>30' }); });
-   */
-  withoutUpdates(callback: (dataTable: DataTable<T>) => void) {
-    const prevBlock = this.#blockUpdates;
-    this.#blockUpdates = true;
-    try {
-      callback(this);
-    } finally {
-      this.#blockUpdates = prevBlock;
-      if (!this.#blockUpdates) {
-        this.#applyBlockedUpdates();
-      }
+  // #endregion
+
+  // #region --- Render Methods ---
+
+  protected renderColumnSortIcon(
+    column: ColumnOptions<T>,
+    state: ColumnState<T>,
+  ) {
+    return column.sortable
+      ? html`<div
+          part="header-sort-icon"
+          class=${classMap({
+            'sort-icon': true,
+            ascending: state.sortState?.order === 'asc',
+            descending: state.sortState?.order === 'desc',
+          })}
+        ></div>`
+      : nothing;
+  }
+
+  protected renderColumnResizer(
+    column: ColumnOptions<T>,
+    state: ColumnState<T>,
+  ) {
+    return column.resizable
+      ? html`<div
+          part="header-resizer"
+          class="resizer"
+          @click=${(event: MouseEvent) => event.stopPropagation()}
+          @mousedown=${(event: MouseEvent) =>
+            this.handleResizeMouseDown(event, column.field)}
+        ></div>`
+      : nothing;
+  }
+
+  protected renderHeaderCell(column: ColumnOptions<T>) {
+    const state = findColumn(column.field, this._columnStates)!;
+    if (state.visible == false) {
+      return nothing;
+    }
+
+    return html`
+      <div
+        part="cell header-cell"
+        class=${classMap({
+          cell: true,
+          sortable: column.sortable ?? false,
+        })}
+        draggable=${ifDefined(this.enableColumnReorder ? true : undefined)}
+        data-field=${column.field}
+        @dragstart=${(event: DragEvent) =>
+          this.handleDragColumnStart(event, column.field)}
+        @dragenter=${this.handleDragColumnEnter}
+        @dragleave=${this.handleDragColumnLeave}
+        @dragover=${this.handleDragColumnOver}
+        @drop=${(event: DragEvent) =>
+          this.handleDragColumnDrop(event, column.field)}
+        @dragend=${this.handleDragColumnEnd}
+        @click=${(event: MouseEvent) => this.handleHeaderClicked(event, column)}
+      >
+        <div class="header-content">
+          <span class="header-title truncate" part="header-title">
+            ${column.title ?? toHumanReadable(column.field)}
+          </span>
+          ${this.renderColumnSortIcon(column, state)}
+        </div>
+        ${this.renderColumnResizer(column, state)}
+        <div part="drop-indicator" class="drop-indicator"></div>
+      </div>
+    `;
+  }
+
+  protected renderHeader() {
+    return html`
+      <div part="header" class="header row">
+        ${this.columns.map(column => this.renderHeaderCell(column))}
+      </div>
+    `;
+  }
+
+  protected renderCellContents(
+    value: unknown,
+    column: ColumnOptions<T>,
+    row: T,
+  ) {
+    if (column.cellRenderer) {
+      return column.cellRenderer(value, column.field, row);
+    }
+
+    if (value == null) {
+      return this.nullValuePlaceholder;
+    }
+
+    const indices = this.rowMetadata.get(row)!.highlightIndices;
+
+    return this.enableSearchHighlight && indices
+      ? highlightText(String(value), indices[column.field])
+      : value;
+  }
+
+  protected renderCell(column: ColumnOptions<T>, row: T) {
+    const state = findColumn(column.field, this._columnStates);
+    if (state?.visible == false) {
+      return nothing;
+    }
+
+    let value = getNestedValue(row, column.field);
+    // Get the user parts from the raw value
+    // before we call the value formatter.
+    let userParts = column.cellParts?.call(this, value, column.field, row);
+    if (Array.isArray(userParts)) {
+      userParts = userParts.join(' ');
+    }
+
+    if (typeof column.valueFormatter === 'function') {
+      value = column.valueFormatter(value, row);
+    }
+
+    return html`
+      <div
+        part="cell body-cell cell-${column.field} ${userParts}"
+        class="cell"
+        title=${ifDefined(value ? String(value) : undefined)}
+        @click=${(event: MouseEvent) =>
+          this.handleCellClick(event, row, column.field)}
+      >
+        <span class="truncate">
+          ${this.renderCellContents(value, column, row)}
+        </span>
+      </div>
+    `;
+  }
+
+  protected renderRow(row: T, index: number) {
+    const metadata = this.rowMetadata.get(row)!;
+    let userParts = this.rowParts?.(row) ?? '';
+    if (Array.isArray(userParts)) {
+      userParts = userParts.join(' ');
+    }
+
+    return html`
+      <div
+        part=${'row ' + userParts}
+        class="row"
+        data-index=${metadata.index}
+        data-filtered-index=${index}
+      >
+        ${this.columns.map(column => this.renderCell(column, row))}
+      </div>
+    `;
+  }
+
+  protected renderBody() {
+    if (this.columnWidths.length === 0) {
+      return html`
+        <div part="message" class="message">No visible columns.</div>
+      `;
+    }
+
+    if (this.data.length === 0) {
+      return html`<div part="message" class="message">
+        ${this.emptyMessage}
+      </div>`;
+    }
+    if (this.filteredData.length === 0) {
+      return html`<div part="message" class="message">
+        ${this.noResultsMessage}
+      </div>`;
+    }
+
+    if (this.enableVirtualScroll) {
+      return html`
+        <lit-virtualizer
+          .items=${this.filteredData}
+          .renderItem=${(item: T, index: number) =>
+            this.renderRow(item, index) as TemplateResult}
+        ></lit-virtualizer>
+      `;
+    }
+
+    return html`
+      ${repeat(
+        this.filteredData,
+        item => this.rowMetadata.get(item)!.index,
+        (item, index) => this.renderRow(item, index),
+      )}
+    `;
+  }
+
+  protected renderFooter() {
+    if (!this.enableFooter) {
+      return nothing;
+    }
+
+    const total = this.data.length;
+    const filtered = this.filteredData.length;
+
+    const fmt = new Intl.NumberFormat(undefined);
+    const totalStr = fmt.format(total);
+    const filteredStr = fmt.format(filtered);
+
+    const rowCountText =
+      total !== filtered
+        ? `Showing ${filteredStr} of ${totalStr} records`
+        : `Total records: ${totalStr}`;
+
+    const formatter = Intl.DateTimeFormat(undefined, {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+    const lastUpdateText = this.dataLastUpdate
+      ? formatter.format(this.dataLastUpdate)
+      : 'Never';
+
+    return html`
+      <div part="footer" class="footer">
+        <slot name="footer">
+          <span part="row-count">${rowCountText}</span>
+          <span part="timestamp">${lastUpdateText}</span>
+        </slot>
+      </div>
+    `;
+  }
+
+  protected override render() {
+    const gridTemplate = widthsToGridTemplates(this.columnWidths).join(' ');
+
+    return html`
+      <div
+        part="table"
+        class="table"
+        style=${styleMap({ '--grid-template': gridTemplate })}
+      >
+        ${this.renderHeader()} ${this.renderBody()} ${this.renderFooter()}
+      </div>
+    `;
+  }
+
+  // #endregion
+
+  // #region --- Lifecycle Methods ---
+
+  protected override updated(changedProperties: PropertyValues<YatlTable<T>>) {
+    super.updated(changedProperties);
+
+    if (!this.storageOptions?.key) return;
+    const shouldSave = Array.from(changedProperties.keys()).some(prop =>
+      SAVE_TRIGGERS.has(prop as any),
+    );
+
+    if (shouldSave) {
+      this.scheduleSave();
     }
   }
 
-  destroy() {
-    this.#virtualScroll?.stop();
-    this.#table.innerHTML = '';
-    this.#table.classList.remove('data-table');
-    this.#scroller.parentElement?.insertBefore(this.#table, this.#scroller);
-    this.#scroller.remove(); 
+  public override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.addEventListener('mousemove', this.handleResizeMouseMove);
+    window.addEventListener('mouseup', this.handleResizeMouseUp);
   }
 
-  #initTableElements() {
-    this.#table.classList.add('data-table');
-    // Inner element that handles the virtual scroll.
-    const scroller = document.createElement('div');
+  // #endregion
 
-    // If the user tries to provide a height, we will use that for the scroller.
-    if (this.#table.style.height !== '') {
-      scroller.style.height = this.#table.style.height;
-      this.#table.style.height = '';
-    }
-
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    const tbody = document.createElement('tbody');
-
-    tbody.addEventListener('click', this.#onTableClicked);
-
-    // We currently don't support HTML based columns.
-    // Clear the table and start fresh.
-    // TODO: Add ability to use HTML headers provided by the user.
-    this.#table.innerHTML = '';
-
-    thead.append(headerRow);
-    this.#table.append(thead);
-    this.#table.append(tbody);
-
-    // Add the scroller before the table so when we move the
-    // table into the scroller it stays in the same place.
-    this.#table.parentNode?.insertBefore(scroller, this.#table);
-    scroller.append(this.#table);
-
-    return {
-      scroller,
-      thead,
-      headerRow,
-      tbody,
-    };
-  }
-
-  #initColumns(columns: ColumnOptions<T>[], headerRow: HTMLElement) {
-    this.#columnData.clear();
-    // We need to make sure at least one column is visible
-    let colVisible = false;
-
-    for (const colOptions of columns) {
-      const header = document.createElement('th');
-      const headerContent = document.createElement('div');
-      const titleWrapper = document.createElement('div');
-      const titleElement = document.createElement('span');
-
-      const colData: ColumnData<T> = {
-        field: colOptions.field,
-        options: {
-          title: colOptions.title ?? toHumanReadable(colOptions.field),
-          sortable: colOptions.sortable ?? true,
-          searchable: colOptions.searchable ?? false,
-          tokenize: colOptions.tokenize ?? false,
-          resizable: colOptions.resizable ?? true,
-          valueFormatter: colOptions.valueFormatter ?? null,
-          elementFormatter: colOptions.elementFormatter ?? null,
-          sorter: colOptions.sorter ?? null,
-          sortValue: colOptions.sortValue ?? null,
-          filter: colOptions.filter ?? null,
-        },
-        state: {
-          visible: true,
-          sortState: null,
-          width: null,
-        },
-        headerElement: header,
-        titleElement: titleElement,
-        resizeStartWidth: null,
-        resizeStartX: null,
-      };
-
-      this.#columnData.set(colOptions.field, colData);
-
-      header.dataset.dtField = colOptions.field;
-      header.hidden = !colData.state.visible;
-      header.title = colData.options.title;
-
-      headerContent.classList.add('dt-header-content');
-      header.append(headerContent);
-
-      titleWrapper.classList.add('dt-header-title-wrapper');
-      headerContent.append(titleWrapper);
-
-      titleElement.classList.add('dt-header-title');
-      titleElement.innerHTML = colData.options.title;
-      titleWrapper.append(titleElement);
-
-      const sorter = document.createElement('div');
-      sorter.classList.add('dt-sort-icon');
-      titleWrapper.append(sorter);
-
-      const resizer = document.createElement('div');
-      resizer.classList.add('dt-resizer');
-      headerContent.append(resizer);
-
-      headerRow.append(header);
-
-      if (colData.state.visible) {
-        colVisible = true;
-      }
-
-      this.updateColumnOptions(colOptions.field, colData.options);
-
-      if (this.#options.rearrangeable) {
-        header.draggable = true;
-      }
-
-      // Sort event listener
-      titleWrapper.addEventListener('click', () => {
-        if (!header.classList.contains('dt-sortable')) return;
-
-        if (!colData.state.sortState) {
-          this.sort(colData.field, 'asc');
-        } else if (colData.state.sortState.order === 'asc') {
-          this.sort(colData.field, 'desc');
-        } else if (colData.state.sortState.order) {
-          this.sort(colData.field, null);
-        }
-      });
-
-      // Drag and drop event listeners
-      header.addEventListener('dragstart', this.#onDragColumnStart);
-      header.addEventListener('dragenter', this.#onDragColumnEnter);
-      header.addEventListener('dragover', this.#onDragColumnOver);
-      header.addEventListener('dragleave', this.#onDragColumnLeave);
-      header.addEventListener('drop', this.#onDragColumnDrop);
-      header.addEventListener('dragend', this.#onDragColumnEnd);
-      // Resize event listeners
-      header.addEventListener('mousedown', this.#onResizeColumnStart);
-      header.addEventListener('dblclick', this.#onResizeColumnDoubleClick);
-    }
-
-    if (this.#columnData.size === 0) {
-      console.warn('No columns found. At least one column is required.');
-    } else if (!colVisible) {
-      console.warn(
-        'At least a single column must be visible. Showing the first column.',
-      );
-      const col = columns[0].field;
-      this.showColumn(col);
-    }
-  }
-
-  #loadRow(row: InternalRowData<T>, index: number) {
-    // Add the index
-    const metadata: RowMetadata = {
-      index: index++,
-      tokens: {},
-      compareValues: {},
-      sortValues: {},
-    };
-    row._metadata = metadata;
-
-    for (const [field, col] of this.#columnData) {
-      const value = getNestedValue(row, field);
-
-      // Cache precomputed values for sorting
-      if (typeof col.options.sortValue === 'function') {
-        metadata.sortValues[field] = col.options.sortValue(value);
-      } else if (typeof value === 'string') {
-        metadata.sortValues[field] = value.toLocaleLowerCase();
-      } else {
-        metadata.sortValues[field] = value;
-      }
-
-      // Cache precomputed lower-case values for search
-      if (typeof value === 'string') {
-        metadata.compareValues[field] = value.toLocaleLowerCase();
-      }
-
-      // Tokenize any searchable columns
-      if (col.options.searchable && col.options.tokenize && value) {
-        metadata.tokens[field] = this.#options
-          .tokenizer(value)
-          .map(token => token.value);
-      }
-    }
-
-    // Add any extra search fields
-    for (const field of this.#options.extraSearchFields) {
-      const value = getNestedValue(row, field);
-      // Cache precomputed lower-case values for search
-      if (typeof value === 'string') {
-        metadata.compareValues[field] = value.toLocaleLowerCase();
-      }
-    }
-
-    return row;
-  }
+  // #region --- Filter Methods ---
 
   /**
    * Calculates a relevance score for a given query against a target string.
@@ -1008,25 +1123,38 @@ export class DataTable<T> extends EventTarget {
    * @param target The string to be searched (e.g., "Apple" or "Application").
    * @returns A numerical score representing the relevance of the match. Higher is better. Returns 0 if no match is found.
    */
-  #calculateSearchScore(query: string, target: string): number {
+  private calculateSearchScore(query: string, target: string): SearchResult {
+    const results: SearchResult = { score: 0, ranges: [] };
+
     if (!query || !target) {
-      return 0;
+      return results;
     }
 
     let baseScore = 0;
     let matchTypeWeight = 0;
 
     if (target === query) {
-      matchTypeWeight = DataTable.MatchWeights.EXACT;
+      matchTypeWeight = MATCH_WEIGHTS.EXACT;
       baseScore = query.length;
+      results.ranges.push([0, target.length]);
     } else if (target.startsWith(query)) {
-      matchTypeWeight = DataTable.MatchWeights.PREFIX;
+      matchTypeWeight = MATCH_WEIGHTS.PREFIX;
       baseScore = query.length;
-    } else if (target.includes(query)) {
-      matchTypeWeight = DataTable.MatchWeights.SUBSTRING;
-      baseScore = query.length;
+      results.ranges.push([0, query.length]);
     } else {
-      return 0;
+      const index = target.indexOf(query);
+      if (index !== -1) {
+        matchTypeWeight = MATCH_WEIGHTS.SUBSTRING;
+        baseScore = query.length;
+
+        let cursor = index;
+        while (cursor !== -1) {
+          results.ranges.push([cursor, cursor + query.length]);
+          cursor = target.indexOf(query, cursor + 1);
+        }
+      } else {
+        return results;
+      }
     }
 
     // Reward matches where the query length is close to the target length.
@@ -1035,41 +1163,69 @@ export class DataTable<T> extends EventTarget {
 
     // The final score is a combination of the match type's importance,
     // the base score from the query length, and the specificity bonus.
-    return baseScore * matchTypeWeight * specificityBonus;
+    results.score = baseScore * matchTypeWeight * specificityBonus;
+    return results;
   }
 
-  #searchField(
-    query: QueryToken | RegExp,
+  private searchField(
+    query: QueryToken,
     value: string,
     tokens?: string[],
-  ): number {
-    // RegExp bypasses tokenization and scoring
-    if (query instanceof RegExp) {
-      return query.test(value) ? 1 : 0;
-    }
+  ): SearchResult {
+    const result: SearchResult = { score: 0, ranges: [] };
 
-    // Simple search, no scoring
-    if (!this.#options.enableSearchScoring) {
-      // Quoted tokens bypass tokenization and no tokens means column wasn't tokenized.
-      if (query.quoted || !tokens) {
-        return value.includes(query.value) ? 1 : 0;
+    const addRangesFromValue = (searchTerm: string) => {
+      let idx = value.indexOf(searchTerm);
+      while (idx !== -1) {
+        result.ranges.push([idx, idx + searchTerm.length]);
+        idx = value.indexOf(searchTerm, idx + 1);
       }
+    };
 
-      return tokens.some(token => token == query.value) ? 1 : 0;
-    }
-
-    // Complex scored search
-    // Quoted tokens bypass tokenization and no tokens means column wasn't tokenized.
+    // Handle Quoted/Untokenized (Direct Search)
     if (query.quoted || !tokens) {
-      return this.#calculateSearchScore(query.value, value);
+      if (!this.enableSearchScoring) {
+        // Simple boolean match
+        if (value.includes(query.value)) {
+          result.score = 1;
+          addRangesFromValue(query.value);
+        }
+      } else {
+        // Scored match
+        const calculation = this.calculateSearchScore(query.value, value);
+        result.score = calculation.score;
+        result.ranges = calculation.ranges;
+      }
+      return result;
     }
 
-    return tokens
-      .map(token => this.#calculateSearchScore(query.value, token))
-      .reduce((accumulator, score) => (accumulator += score), 0);
+    // Handle Tokenized Search
+    // We search the tokens to check for validity/scoring,
+    // but we map back to the 'value' for highlighting.
+    if (!this.enableSearchScoring) {
+      const isMatch = tokens.some(token => token.includes(query.value));
+      if (isMatch) {
+        result.score = 1;
+        addRangesFromValue(query.value);
+      }
+      return result;
+    }
+
+    // Complex Scored Token Search
+    // We sum the scores of all matching tokens
+    for (const token of tokens) {
+      const calculation = this.calculateSearchScore(query.value, token);
+      if (calculation.score > 0) {
+        result.score += calculation.score;
+        // If a token matched, find that query in the main string
+        addRangesFromValue(query.value);
+      }
+    }
+
+    return result;
   }
 
-  #filterField(
+  private filterField(
     value: any,
     filter: any,
     filterFunction: ColumnFilterCallback | null = null,
@@ -1080,14 +1236,18 @@ export class DataTable<T> extends EventTarget {
       }
       // If it's an array, we will use an OR filter.
       // If any filters in the array match, keep it.
-      return filter.some(element => this.#filterField(value, element, filterFunction));
+      return filter.some(element =>
+        this.filterField(value, element, filterFunction),
+      );
     }
 
     if (Array.isArray(value)) {
       if (value.length === 0) {
         return false;
       }
-      return value.some(element => this.#filterField(element, filter, filterFunction));
+      return value.some(element =>
+        this.filterField(element, filter, filterFunction),
+      );
     }
 
     if (typeof filterFunction === 'function') {
@@ -1101,26 +1261,26 @@ export class DataTable<T> extends EventTarget {
     return filter === value;
   }
 
-  #filterRow(row: InternalRowData<T>, index: number): boolean {
-    if (!this.#filters) {
+  private filterRow(row: T, index: number): boolean {
+    if (!this.filters) {
       return true;
     }
 
-    if (typeof this.#filters === 'function') {
-      return this.#filters(row, index);
+    if (typeof this.filters === 'function') {
+      return this.filters(row, index);
     }
 
-    for (const field in this.#filters) {
-      const filter = (this.#filters as any)[field];
+    for (const field in this.filters) {
+      const filter = (this.filters as any)[field];
       const value = getNestedValue(row, field);
       if (typeof filter === 'function') {
         if (!filter(value)) {
           return false;
         }
       } else {
-        const col = this.#columnData.get(field as NestedKeyOf<T>);
-        const filterCallback = col ? col.options.filter : undefined;
-        if (!this.#filterField(value, filter, filterCallback)) {
+        const col = findColumn(field, this.columns);
+        const filterCallback = col ? col.filter : undefined;
+        if (!this.filterField(value, filter, filterCallback)) {
           return false;
         }
       }
@@ -1128,36 +1288,30 @@ export class DataTable<T> extends EventTarget {
     return true;
   }
 
-  #filterRows() {
-    if (this.#blockUpdates) {
-      this.#blockedUpdates.add('reApplyFilters');
-      return;
-    } else {
-      this.#blockedUpdates.delete('reApplyFilters');
-    }
-
-    const searchableFields = [...this.#columnData.values()]
+  private filterRows() {
+    const searchableFields = [...this.columnData.values()]
       .filter(col => col.options.searchable)
       .map(c => c.field);
 
-    const fields = [...searchableFields, ...this.#options.extraSearchFields];
+    const fields = [...searchableFields, ...this.searchIncludedFields];
 
-    const rows = [...this.#rows.values()];
-    this.#filteredRows = rows.filter((row, index) => {
-      row._metadata.searchScore = 0;
+    this._filteredData = this.data.filter((row, index) => {
+      const metadata = this.rowMetadata.get(row)!;
+      metadata.searchScore = 0;
+      metadata.highlightIndices = {};
       // Filter takes precedence over search.
-      if (!this.#filterRow(row, index)) {
+      if (!this.filterRow(row, index)) {
         return false;
       }
 
-      if (!this.#query) {
+      if (!this.queryTokens) {
         return true;
       }
 
       for (const field of fields) {
         const originalValue = getNestedValue(row, field);
-        const compareValue = row._metadata.compareValues[field];
-        const columnTokens = row._metadata.tokens[field];
+        const compareValue = metadata.searchValues[field];
+        const columnTokens = metadata.searchTokens[field];
 
         if (
           typeof originalValue !== 'string' ||
@@ -1166,23 +1320,25 @@ export class DataTable<T> extends EventTarget {
           continue;
         }
 
-        let score: number = 0;
-        if (this.#query instanceof RegExp) {
-          score = this.#searchField(this.#query, originalValue, columnTokens);
-        } else {
-          for (const token of this.#query) {
-            score += this.#searchField(token, compareValue, columnTokens);
-          }
+        const fieldResults: SearchResult = { score: 0, ranges: [] };
+        for (const token of this.queryTokens) {
+          const results = this.searchField(token, compareValue, columnTokens);
+          fieldResults.score += results.score;
+          fieldResults.ranges.push(...results.ranges);
         }
 
-        //const score = this.#searchField([...tokens], this.#query);
-        row._metadata.searchScore += score;
+        if (fieldResults.score > 0) {
+          metadata.searchScore += fieldResults.score;
+          metadata.highlightIndices[field] = fieldResults.ranges;
+        }
       }
 
-      return row._metadata.searchScore > 0;
+      return metadata.searchScore > 0;
     });
 
-    this.#sortRows();
+    this.filterDirty = false;
+
+    this.sortRows();
 
     const changeEvent = new CustomEvent<
       DataTableEventMap<T>['dt.rows.changed']
@@ -1196,27 +1352,32 @@ export class DataTable<T> extends EventTarget {
     this.dispatchEvent(changeEvent);
   }
 
-  #compareRows(
-    a: InternalRowData<T>,
-    b: InternalRowData<T>,
-    col: ColumnData<T>,
-  ): number {
+  // #endregion
+
+  // #region --- Sort Methods ---
+
+  private compareRows(a: T, b: T, field: NestedKeyOf<T>): number {
     let aValue, bValue;
 
-    if (!col.state.sortState) {
+    const columnData = findColumn(field, this.columnData)!;
+
+    if (!columnData.state.sortState) {
       return 0;
     }
 
-    if (col.state.sortState?.order === 'asc') {
-      aValue = a._metadata.sortValues[col.field];
-      bValue = b._metadata.sortValues[col.field];
-    } else if (col.state.sortState?.order === 'desc') {
-      aValue = b._metadata.sortValues[col.field];
-      bValue = a._metadata.sortValues[col.field];
+    const aMetadata = this.rowMetadata.get(a)!;
+    const bMetadata = this.rowMetadata.get(b)!;
+
+    if (columnData.state.sortState?.order === 'asc') {
+      aValue = aMetadata.sortValues[columnData.field];
+      bValue = bMetadata.sortValues[columnData.field];
+    } else if (columnData.state.sortState?.order === 'desc') {
+      aValue = bMetadata.sortValues[columnData.field];
+      bValue = aMetadata.sortValues[columnData.field];
     }
 
-    if (typeof col.options.sorter === 'function') {
-      const ret = col.options.sorter(aValue, bValue);
+    if (typeof columnData.options.sorter === 'function') {
+      const ret = columnData.options.sorter(aValue, bValue);
       if (ret !== 0) return ret;
     }
 
@@ -1231,475 +1392,445 @@ export class DataTable<T> extends EventTarget {
     return 0;
   }
 
-  #sortRows() {
-    if (this.#blockUpdates) {
-      this.#blockedUpdates.add('reSortRows');
+  private sortRows() {
+    if (this.filterDirty) {
+      this.filterRows();
       return;
-    } else {
-      this.#blockedUpdates.delete('reSortRows');
     }
 
-    const sortedColumns = [...this.#columnData.values()]
+    const sortedColumns = this.columnData
       // Filter to visible columns with active sort states
-      .filter(col => !col.headerElement.hidden && col.state.sortState)
+      .filter(col => col.state.visible && col.state.sortState)
       // Sort our columns by their sort priority.
       // This is how sorting by multiple columns is handled.
       .sort(
         (a, b) => b.state.sortState!.priority - a.state.sortState!.priority,
       );
 
-    this.#filteredRows.sort((a, b) => {
+    this._filteredData = this._filteredData.toSorted((a, b) => {
+      const aMetadata = this.rowMetadata.get(a)!;
+      const bMetadata = this.rowMetadata.get(b)!;
+
       // Try to sort by search score if we're using scoring and there is a query.
-      if (this.#options.enableSearchScoring && this.#query) {
-        const aValue = a._metadata.searchScore || 0;
-        const bValue = b._metadata.searchScore || 0;
+      if (this.enableSearchScoring && this.queryTokens) {
+        const aValue = aMetadata.searchScore || 0;
+        const bValue = bMetadata.searchScore || 0;
         if (aValue > bValue) return -1;
         if (aValue < bValue) return 1;
       }
 
       for (const col of sortedColumns) {
-        const comp = this.#compareRows(a, b, col);
+        const comp = this.compareRows(a, b, col.field);
         if (comp !== 0) {
           return comp;
         }
       }
 
       // Always fall back to the index column
-      return a._metadata.index - b._metadata.index;
+      return aMetadata.index - bMetadata.index;
     });
-    this.#renderTable();
   }
 
-  #updateHeaders() {
-    if (this.#blockUpdates) {
-      this.#blockedUpdates.add('updateHeaders');
-      return;
-    } else {
-      this.#blockedUpdates.delete('updateHeaders');
-    }
+  // #endregion
 
-    for (const col of this.#columnData.values()) {
-      // Update the order of headers
-      col.headerElement.parentElement?.append(col.headerElement);
-      col.headerElement.hidden = !col.state.visible;
-      col.headerElement.draggable = this.#options.rearrangeable;
-      col.titleElement.textContent = col.options.title;
+  // #region --- State Methods ---
 
-      if (col.options.resizable) {
-        col.headerElement.classList.add('dt-resizeable');
-      } else {
-        col.headerElement.classList.remove('dt-resizeable');
-      }
-
-      if (col.options.sortable) {
-        col.headerElement.classList.add('dt-sortable');
-      } else {
-        col.headerElement.classList.remove('dt-sortable');
-      }
-
-      if (!col.state.sortState) {
-        col.headerElement?.classList.remove('dt-ascending');
-        col.headerElement?.classList.remove('dt-descending');
-      } else if (col.state.sortState.order === 'asc') {
-        col.headerElement?.classList.add('dt-ascending');
-        col.headerElement?.classList.remove('dt-descending');
-      } else if (col.state.sortState.order === 'desc') {
-        col.headerElement?.classList.add('dt-descending');
-        col.headerElement?.classList.remove('dt-ascending');
-      }
-    }
+  private createColumnStates() {
+    this.columnStates = this.columns.map(column => {
+      const previousState = findColumn(column.field, this._columnStates);
+      return {
+        field: column.field,
+        visible: previousState?.visible ?? true,
+        sortState: previousState?.sortState,
+        width: previousState?.width,
+      };
+    });
   }
 
-  #renderTable() {
-    if (this.#blockUpdates) {
-      this.#blockedUpdates.add('reRenderTable');
-      return;
-    } else {
-      this.#blockedUpdates.delete('reRenderTable');
-    }
+  private createMetadata() {
+    this.rowMetadata = new WeakMap();
 
-    const useVirtualScroll = this.rows.length >= this.#options.virtualScroll;
+    let index = 0;
+    for (const row of this.data) {
+      // Add the index
+      const metadata: RowMetadata = {
+        index: index++,
+        searchTokens: {},
+        searchValues: {},
+        sortValues: {},
+      };
+      this.rowMetadata.set(row, metadata);
 
-    if (useVirtualScroll && !this.#virtualScroll) {
-      this.#virtualScroll = new this.#options.virtualScrollClass({
-        container: this.#scroller,
-        element: this.#tbody,
-        generator: index => this.#createRow(index),
-      });
-    } else if (!useVirtualScroll && this.#virtualScroll) {
-      this.#virtualScroll.stop();
-      this.#virtualScroll = null;
-    }
+      for (const column of this.columns) {
+        const value = getNestedValue(row, column.field);
 
-    this.#tbody.innerHTML = '';
-    if (this.#virtualScroll) {
-      try {
-        this.#virtualScroll.start(this.#filteredRows.length);
-      } catch (error) {
-        if (error instanceof VirtualScrollError) {
-          console.warn(
-            'Failed to start virtual scroll... falling back to standard rendering',
+        // Cache precomputed values for sorting
+        if (typeof column.sortValue === 'function') {
+          metadata.sortValues[column.field] = column.sortValue(value);
+        } else if (typeof value === 'string') {
+          metadata.sortValues[column.field] = value.toLocaleLowerCase();
+        } else {
+          metadata.sortValues[column.field] = value;
+        }
+
+        // Cache precomputed lower-case values for search
+        if (typeof value === 'string') {
+          metadata.searchValues[column.field] = value.toLocaleLowerCase();
+        }
+
+        // Tokenize any searchable columns
+        if (column.searchable && column.tokenize && value) {
+          const tokenizer = column.searchTokenizer ?? this.searchTokenizer;
+          metadata.searchTokens[column.field] = tokenizer(value).map(
+            token => token.value,
           );
-          console.warn(error.stack);
         }
       }
-    } else {
-      if (this.#filteredRows.length > WARN_ROW_COUNT) {
-        const count = WARN_ROW_COUNT.toLocaleString();
-        console.warn(
-          `Virtual scroll disabled with more than ${count} rows... Good luck with that!`,
-        );
-      }
 
-      const rowElements = this.#filteredRows.map((_, index) =>
-        this.#createRow(index),
-      );
-      this.#tbody.append(...rowElements);
-    }
-
-    if (this.#rows.size === 0) {
-      this.showMessage(this.#options.noDataText, 'dt-empty');
-    } else if (this.#filteredRows.length === 0) {
-      this.showMessage(this.#options.noMatchText, 'dt-empty');
-    }
-  }
-
-  #markText(element: HTMLElement, query: RegExp) {
-    if (element.children.length === 0) {
-      let text = element.textContent ?? '';
-      const classes = this.#options.classes.mark.join(' ');
-      text = text.replace(
-        query,
-        match => `<mark class="${classes}">${match}</mark>`,
-      );
-      element.innerHTML = text;
-    } else {
-      for (const child of element.children) {
-        if (child instanceof HTMLElement) {
-          this.#markText(child, query);
+      // Add any extra search fields
+      for (const field of this.searchIncludedFields) {
+        const value = getNestedValue(row, field);
+        // Cache precomputed lower-case values for search
+        if (typeof value === 'string') {
+          metadata.searchValues[field] = value.toLocaleLowerCase();
         }
       }
     }
   }
 
-  #updateCell(
-    td: HTMLTableCellElement,
-    value: any,
-    col: ColumnData<T>,
+  private updateInternalQuery() {
+    if (this.searchQuery.length === 0) {
+      this.queryTokens = null;
+      return;
+    }
+
+    this.queryTokens = [
+      { value: this.searchQuery.toLocaleLowerCase(), quoted: true },
+    ];
+
+    if (this.enableSearchTokenization) {
+      this.queryTokens.push(...this.searchTokenizer(this.searchQuery));
+    }
+  }
+
+  // #endregion
+
+  // #region --- Utilities ---
+
+  private get columnData() {
+    return this.columns.map(column => ({
+      field: column.field,
+      options: column,
+      state: findColumn(column.field, this._columnStates) ?? {
+        field: column.field,
+        visible: true,
+      },
+    }));
+  }
+
+  private get columnWidths() {
+    // Search through the user defined columns (not the states just in case)
+    // Filter out any hidden columns (columns with no state are considered visible)
+    return this.columns
+      .map(col => findColumn(col.field, this._columnStates))
+      .filter(state => (state ? state.visible : true))
+      .map(state => state?.width ?? null);
+  }
+
+  private scheduleSave() {
+    window.clearTimeout(this.saveTimer);
+
+    this.saveTimer = window.setTimeout(() => {
+      this.saveStateToStorage();
+    }, STATE_SAVE_DEBOUNCE);
+  }
+
+  // #endregion
+
+  // #region --- Storage Methods  ---
+
+  private saveStateToStorage() {
+    if (!this.storageOptions) {
+      return;
+    }
+
+    const options = { ...DEFAULT_STORAGE_OPTIONS, ...this.storageOptions };
+    const savedTableState: RestorableTableState<T> = {
+      columns: [],
+    };
+    const tableState = this.getState();
+
+    if (options.saveColumnOrder) {
+      savedTableState.columnOrder = tableState.columnOrder;
+    }
+
+    for (const columnState of tableState.columns) {
+      const savedColumnState: RestorableColumnState<T> = {
+        field: columnState.field,
+      };
+
+      if (options.saveColumnSortOrders) {
+        savedColumnState.sortState = columnState.sortState;
+      }
+
+      if (options.saveColumnVisibility) {
+        savedColumnState.visible = columnState.visible;
+      }
+
+      if (options.saveColumnWidths) {
+        savedColumnState.width = columnState.width;
+      }
+
+      savedTableState.columns?.push(savedColumnState);
+    }
+
+    const storage =
+      options.storage === 'session' ? sessionStorage : localStorage;
+    try {
+      storage.setItem(options.key, JSON.stringify(savedTableState));
+    } catch (error) {
+      console.warn('Failed to save table state', error);
+    }
+  }
+
+  private loadStateFromStorage() {
+    if (!this.storageOptions) {
+      return;
+    }
+
+    const options = { ...DEFAULT_STORAGE_OPTIONS, ...this.storageOptions };
+    const json = localStorage.getItem(options.key);
+    if (!json) {
+      return;
+    }
+
+    try {
+      const savedTableState = JSON.parse(json) as RestorableTableState<T>;
+      const tableStateToRestore: RestorableTableState<T> = {};
+
+      if (options.saveColumnOrder) {
+        tableStateToRestore.columnOrder = savedTableState.columnOrder;
+      }
+
+      if (savedTableState.columns) {
+        tableStateToRestore.columns = [];
+        for (const savedColumnState of savedTableState.columns) {
+          const columnStateToRestore: RestorableColumnState<T> = {
+            field: savedColumnState.field,
+          };
+
+          if (options.saveColumnVisibility) {
+            columnStateToRestore.visible = savedColumnState.visible;
+          }
+
+          if (options.saveColumnWidths) {
+            columnStateToRestore.width = savedColumnState.width;
+          }
+
+          if (options.saveColumnSortOrders) {
+            columnStateToRestore.sortState = savedColumnState.sortState;
+          }
+          tableStateToRestore.columns.push(columnStateToRestore);
+        }
+      }
+
+      this.restoreState(tableStateToRestore);
+      this.hasRestoredState = true;
+    } catch (error) {
+      console.error('Failed to restore DataTable state:', error);
+    }
+  }
+
+  // #endregion
+
+  // #region --- Event Handlers ---
+
+  private handleHeaderClicked = (
+    event: MouseEvent,
+    column: ColumnOptions<T>,
+  ) => {
+    const target = event.target as HTMLElement;
+    if (!column.sortable || target.classList.contains('resizer')) {
+      return;
+    }
+
+    const multiSort = event.shiftKey;
+    const state = findColumn(column.field, this._columnStates);
+
+    if (!state?.sortState) {
+      this.sort(column.field, 'asc', !multiSort);
+    } else if (state.sortState.order === 'asc') {
+      this.sort(column.field, 'desc', !multiSort);
+    } else if (state.sortState.order) {
+      this.sort(column.field, null, !multiSort);
+    }
+  };
+
+  private handleCellClick = (
+    event: MouseEvent,
     row: T,
-  ) {
-    if (typeof col.options.valueFormatter === 'function') {
-      value = col.options.valueFormatter(value, row);
-    }
-
-    if (value != null) {
-      td.textContent = value;
-      // Full text on hover
-      td.title = String(value);
-    } else {
-      td.textContent = this.#options.emptyValuePlaceholder;
-    }
-
-    if (typeof col.options.elementFormatter === 'function') {
-      col.options.elementFormatter(value, row, td);
-    }
-
-    if (
-      this.#options.highlightSearch &&
-      this.#query &&
-      col.options.searchable
-    ) {
-      let regex: RegExp;
-      if (this.#query instanceof RegExp) {
-        regex = this.#query;
-      } else {
-        const tokens = this.#query.map(token => token.value).join('|');
-        regex = new RegExp(tokens, 'gi');
-      }
-
-      this.#markText(td, regex);
-    }
-
-    td.hidden = col.state.visible ? false : true;
-  }
-
-  #createRow(index: number): HTMLTableRowElement {
-    const row = this.#filteredRows[index];
-    const tr = document.createElement('tr');
-    tr.classList.add(...this.#options.classes.tr);
-    tr.dataset.dtIndex = String(row._metadata.index);
-
-    for (const [field, col] of this.#columnData) {
-      const value = getNestedValue(row, field);
-      const td = document.createElement('td');
-      td.classList.add(...this.#options.classes.td);
-      td.dataset.dtField = field;
-      this.#updateCell(td, value, col, row);
-      tr.append(td);
-    }
-
-    if (typeof this.#options.rowFormatter === 'function') {
-      try {
-        this.#options.rowFormatter(row, tr);
-      } catch (error) {
-        console.error('Row formatter callback failed with the following error');
-        console.error(error);
-      }
-    }
-
-    return tr;
-  }
-
-  /**
-   * Force the table to a fixed layout by setting the width of all columns
-   * to their current width in pixels and then setting the table to fit-content.
-   */
-  #ensureFixedLayout() {
-    if (!this.#tableWidthIsFixed) {
-      this.#tableWidthIsFixed = true;
-
-      for (const column of this.#columnData.values()) {
-        const currentWidth = column.headerElement.offsetWidth;
-        column.state.width = currentWidth;
-        column.headerElement.style.width = `${currentWidth}px`;
-      }
-
-      this.#table.style.width = 'fit-content';
-    }
-  }
-
-  #resizeColumn(column: ColumnData<T>, width: number | null) {
-    this.#ensureFixedLayout();
-
-    if (width !== null && width < 0) {
-      width = 0;
-    }
-
-    column.state.width = width;
-
-    let headerWidth;
-    if (width == null) {
-      headerWidth = '';
-    } else if (width <= 0) {
-      headerWidth = '0px';
-    } else {
-      headerWidth = `${width}px`;
-    }
-    column.headerElement.style.width = headerWidth;
-    //column.headerElement.style.maxWidth = headerWidth;
-  }
-
-  #applyBlockedUpdates() {
-    while (this.#blockedUpdates.size) {
-      if (this.#blockedUpdates.has('reloadData')) {
-        this.loadData(this.data);
-        this.#blockedUpdates.delete('reloadData');
-      } else if (this.#blockedUpdates.has('reApplyFilters')) {
-        this.#filterRows();
-        this.#blockedUpdates.delete('reApplyFilters');
-      } else if (this.#blockedUpdates.has('reSortRows')) {
-        this.#sortRows();
-        this.#blockedUpdates.delete('reSortRows');
-      } else if (this.#blockedUpdates.has('reRenderTable')) {
-        this.#renderTable();
-        this.#blockedUpdates.delete('reRenderTable');
-      }
-
-      if (this.#blockedUpdates.has('updateHeaders')) {
-        this.#updateHeaders();
-      }
-    }
-  }
-
-  /* Event handlers */
-
-  #onTableClicked = (event: MouseEvent) => {
+    field: NestedKeyOf<T>,
+  ) => {
     // Ignore events if the user is highlighting text
     if (window.getSelection()?.toString()) return;
 
-    let tr, td, field;
-    if (event.target instanceof HTMLTableCellElement) {
-      td = event.target;
-      tr = td.parentElement;
-      field = td.dataset.dtField;
-    } else if (event.target instanceof HTMLTableRowElement) {
-      tr = event.target;
-    }
-
-    if (tr && field) {
-      const index = parseInt(tr.dataset.dtIndex || '');
-      if (!isNaN(index)) {
-        const row = this.#filteredRows.find(
-          value => value._metadata.index === index,
-        );
-        if (row) {
-          const rowEvent = new CustomEvent<
-            DataTableEventMap<T>['dt.row.clicked']
-          >('dt.row.clicked', {
-            cancelable: false,
-            detail: {
-              row: row,
-              index: index,
-              column: field as NestedKeyOf<T>,
-              originalEvent: event,
-            },
-          });
-          this.dispatchEvent(rowEvent);
-        }
-      }
-    }
-  };
-
-  #onResizeColumnStart = (event: MouseEvent) => {
-    // If target is not the resizer, we don't care.
-    if (!(event.target instanceof HTMLElement)) return;
-    if (!event.target.classList.contains('dt-resizer')) return;
-    // If the current target isn't the header, we don't care.
-    if (!(event.currentTarget instanceof HTMLElement)) return;
-    if (!event.currentTarget.dataset.dtField) return;
-
-    event.stopImmediatePropagation();
-    event.preventDefault();
-
-    const field = event.currentTarget.dataset.dtField;
-    const col = this.#columnData.get(field as NestedKeyOf<T>);
-    if (!col) return;
-    this.#resizingColumn = col;
-
-    col.resizeStartX = event.clientX;
-    col.resizeStartWidth = col.headerElement.offsetWidth;
-
-    document.addEventListener('mousemove', this.#onResizeColumnMove);
-    document.addEventListener('mouseup', this.#onResizeColumnEnd);
-  };
-
-  #onResizeColumnMove = (event: MouseEvent) => {
-    if (!this.#resizingColumn) return;
-    event.stopImmediatePropagation();
-    event.preventDefault();
-
-    const dx = event.clientX - this.#resizingColumn.resizeStartX!;
-    const newWidth = this.#resizingColumn.resizeStartWidth! + dx;
-    this.#resizeColumn(this.#resizingColumn, newWidth);
-  };
-
-  #onResizeColumnEnd = (event: MouseEvent) => {
-    if (!this.#resizingColumn) return;
-    event.stopImmediatePropagation();
-    event.preventDefault();
-
-    document.removeEventListener('mousemove', this.#onResizeColumnMove);
-    document.removeEventListener('mouseup', this.#onResizeColumnEnd);
-
-    const resizeEvent = new CustomEvent<DataTableEventMap<T>['dt.col.resize']>(
-      'dt.col.resize',
+    const rowEvent = new CustomEvent<DataTableEventMap<T>['dt.row.clicked']>(
+      'dt.row.clicked',
       {
         cancelable: false,
+        bubbles: true,
         detail: {
-          column: this.#resizingColumn.field,
-          width: this.#resizingColumn.headerElement.offsetWidth,
+          row: row,
+          index: this.rowMetadata.get(row)!.index,
+          field: field,
+          originalEvent: event,
         },
       },
     );
-
-    this.dispatchEvent(resizeEvent);
-
-    this.#resizingColumn = null;
+    this.dispatchEvent(rowEvent);
   };
 
-  #onResizeColumnDoubleClick = (event: MouseEvent) => {
-    // If target is not the resizer, we don't care.
-    if (!(event.target instanceof HTMLElement)) return;
-    if (!event.target.classList.contains('dt-resizer')) return;
-    // If the current target isn't the header, we don't care.
-    if (!(event.currentTarget instanceof HTMLElement)) return;
-    if (!event.currentTarget.dataset.dtField) return;
+  private handleResizeMouseDown(event: MouseEvent, field: NestedKeyOf<T>) {
+    event.preventDefault();
+    event.stopPropagation();
 
-    const field = event.currentTarget.dataset.dtField;
-    const columnData = this.#columnData.get(field as NestedKeyOf<T>);
-    if (!columnData) return;
-
-    // Calculate the width of the widest cell by rendering
-    // offscreen and then resize the column to that value.
-
-    let maxWidth = columnData.titleElement.scrollWidth;
-    if (this.#filteredRows.length > 0) {
-      if (!this.#textMeasurementContext) {
-        this.#textMeasurementContext = document
-          .createElement('canvas')
-          .getContext('2d');
-      }
-      const context = this.#textMeasurementContext;
-
-      // Get the font styles and padding from a sample cell
-      const sampleCell = this.#tbody.querySelector('td');
-      let cellPadding = 0;
-      if (sampleCell && context) {
-        const style = window.getComputedStyle(sampleCell);
-        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-        cellPadding =
-          parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-      }
-
-      for (const row of this.#filteredRows) {
-        let value = getNestedValue(row, field);
-        if (typeof columnData.options.valueFormatter === 'function') {
-          value = columnData.options.valueFormatter(value, row);
-        }
-        const text = value == null ? '' : String(value);
-        const textWidth = context?.measureText(text).width ?? 0;
-        maxWidth = Math.max(maxWidth, textWidth + cellPadding);
-      }
+    const target = event.target as HTMLElement;
+    const header = target.closest('.cell');
+    if (!header) {
+      return;
     }
 
-    this.#resizeColumn(columnData, maxWidth);
+    const columnIndex = this.columns.findIndex(col => col.field === field);
+    if (columnIndex < 0) {
+      return;
+    }
+
+    // Freeze the current widths as soon as the users starts resizing
+    this.tableElement
+      .querySelectorAll<HTMLElement>('.header .cell')
+      .forEach(element => {
+        const field = element.dataset.field;
+        if (field) {
+          const state = findColumn(field, this._columnStates);
+          if (state) {
+            state.width = element.getBoundingClientRect().width;
+          }
+        }
+      });
+
+    this.resizeState = {
+      active: true,
+      startX: event.pageX,
+      startWidth: header.getBoundingClientRect().width,
+      columnIndex: columnIndex,
+      columnField: field,
+      currentWidths: widthsToGridTemplates(this.columnWidths),
+    };
+
+    this.tableElement.style.setProperty(
+      '--grid-template',
+      this.resizeState.currentWidths.join(' '),
+    );
+
+    window.addEventListener('mousemove', this.handleResizeMouseMove);
+    window.addEventListener('mouseup', this.handleResizeMouseUp);
+    document.body.style.cursor = 'col-resize';
+  }
+
+  private handleResizeMouseMove = (event: MouseEvent) => {
+    if (!this.resizeState?.active) return;
+
+    requestAnimationFrame(() => {
+      if (!this.resizeState?.active) return;
+
+      const deltaX = event.pageX - this.resizeState.startX;
+      const newWidth = Math.max(50, this.resizeState.startWidth + deltaX);
+      this.resizeState.currentWidths[this.resizeState.columnIndex] =
+        `${newWidth}px`;
+      this.tableElement.style.setProperty(
+        '--grid-template',
+        this.resizeState.currentWidths.join(' '),
+      );
+    });
   };
 
-  #onDragColumnStart = (event: DragEvent) => {
-    const target = event.target as HTMLElement;
-    const field = target.dataset.dtField;
+  private handleResizeMouseUp = (event: MouseEvent) => {
+    window.removeEventListener('mousemove', this.handleResizeMouseMove);
+    window.removeEventListener('mouseup', this.handleResizeMouseUp);
+    document.body.style.cursor = '';
 
-    if (event.dataTransfer && field) {
+    if (this.resizeState?.active) {
+      // Calculate the final width based on the DOM's current style
+      const finalWidth = parseFloat(
+        this.resizeState.currentWidths[this.resizeState.columnIndex],
+      );
+      const columnStates = this.columnStates;
+      const state = findColumn(this.resizeState.columnField, columnStates)!;
+      state.width = finalWidth;
+      // We need to trigger a lifecycle update
+      // to force any logic from updating the width.
+      // Right now this is just the save state logic.
+      this.columnStates = columnStates;
+    }
+
+    this.resizeState = null;
+  };
+
+  private handleDragColumnStart = (event: DragEvent, field: NestedKeyOf<T>) => {
+    const target = event.target as HTMLElement;
+    console.log('Starting drag event');
+    console.log(target);
+
+    if (target?.classList.contains('resizer')) {
+      event.preventDefault();
+      return;
+    }
+
+    if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', field);
+      this.dragColumn = field;
     }
   };
 
-  #onDragColumnOver = (event: DragEvent) => {
+  private handleDragColumnEnter = (event: DragEvent) => {
+    const cell = event.currentTarget as HTMLElement;
+    cell.querySelector('.drop-indicator')?.classList.add('active');
+  };
+
+  private handleDragColumnLeave = (event: DragEvent) => {
+    const cell = event.currentTarget as HTMLElement;
+    const enteringElement = event.relatedTarget as Node;
+
+    if (cell.contains(enteringElement)) {
+      return;
+    }
+
+    cell.querySelector('.drop-indicator')?.classList.remove('active');
+  };
+
+  private handleDragColumnOver = (event: DragEvent) => {
     event.preventDefault();
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = 'move';
     }
-    return false;
   };
 
-  #onDragColumnEnter = (event: DragEvent) => {
-    const target = event.target as HTMLElement;
-    target.classList.add('dt-drag-over');
-  };
-
-  #onDragColumnLeave = (event: DragEvent) => {
-    const target = event.target as HTMLElement;
-    target.classList.remove('dt-drag-over');
-  };
-
-  #onDragColumnDrop = (event: DragEvent) => {
-    const dragField = event.dataTransfer?.getData('text/plain');
-    const target = event.currentTarget as HTMLElement;
-    const dropField = target.dataset.dtField;
-
-    if (!dragField || !dropField) return;
+  private handleDragColumnDrop = (event: DragEvent, field: NestedKeyOf<T>) => {
+    if (!this.dragColumn || this.dragColumn === field) {
+      return;
+    }
 
     event.preventDefault();
     event.stopPropagation();
 
-    const columns = [...this.#columnData.values()];
-    const dragIndex = columns.findIndex(col => col.field === dragField);
-    const dropIndex = columns.findIndex(col => col.field === dropField);
+    const columns = [...this.columns];
+    const dragIndex = columns.findIndex(col => col.field === this.dragColumn);
+    const dropIndex = columns.findIndex(col => col.field === field);
 
     if (dragIndex > -1 && dropIndex > -1) {
       const [draggedColumn] = columns.splice(dragIndex, 1);
-      const droppedColumn = this.#columnData.get(dropField as NestedKeyOf<T>);
+      const droppedColumn = findColumn(field, this.columns);
       if (!droppedColumn) return;
 
       columns.splice(dropIndex, 0, draggedColumn);
@@ -1722,17 +1853,22 @@ export class DataTable<T> extends EventTarget {
     }
   };
 
-  #onDragColumnEnd = () => {
-    const elements = document.querySelectorAll('.dt-drag-over');
-    for (const element of elements) {
-      element.classList.remove('dt-drag-over');
-    }
+  private handleDragColumnEnd = () => {
+    this.dragColumn = null;
+    // Clean up just in case
+    this.tableElement
+      .querySelectorAll('.drop-indicator.active')
+      .forEach(element => element.classList.remove('active'));
   };
+
+  // #endregion
+
+  // #region EventTarget Methods
 
   addEventListener<K extends keyof DataTableEventMap<T>>(
     type: K,
     listener: (
-      this: DataTable<T>,
+      this: YatlTable<T>,
       ev: CustomEvent<DataTableEventMap<T>[K]>,
     ) => any,
     options?: boolean | AddEventListenerOptions,
@@ -1753,7 +1889,7 @@ export class DataTable<T> extends EventTarget {
   removeEventListener<K extends keyof DataTableEventMap<T>>(
     type: K,
     listener: (
-      this: DataTable<T>,
+      this: YatlTable<T>,
       ev: CustomEvent<DataTableEventMap<T>[K]>,
     ) => any,
     options?: boolean | EventListenerOptions,
@@ -1771,173 +1907,25 @@ export class DataTable<T> extends EventTarget {
     super.removeEventListener(type, listener, options);
   }
 
-  private readonly TABLE_OPTION_CONFIGS: TableOptionConfigs<T> = {
-    virtualScroll: {
-      effect: 'reRenderTable',
-      handler: value => {
-        return virtualScrollToNumber(value);
-      },
-    },
-    highlightSearch: {
-      effect: 'reRenderTable',
-    },
-    tokenizeSearch: {
-      effect: 'reloadData',
-      handler: value => {
-        this.search(this.#userQuery);
-        return value;
-      },
-    },
-    enableSearchScoring: {
-      effect: 'reApplyFilters',
-    },
-    rearrangeable: {
-      effect: 'updateHeaders',
-    },
-    extraSearchFields: {
-      effect: 'reloadData',
-    },
-    emptyValuePlaceholder: {
-      effect: 'reRenderTable',
-    },
-    noDataText: {
-      effect: 'reRenderTable',
-    },
-    noMatchText: {
-      effect: 'reRenderTable',
-    },
-    classes: {
-      effect: 'reRenderTable',
-      handler: value => {
-        const classes = convertClasses(this.#options.classes, value);
-        this.#scroller.className = classes.scroller.join(' ');
-        this.#thead.className = classes.thead.join(' ');
-        this.#tbody.className = classes.tbody.join(' ');
-
-        for (const col of this.#columnData.values()) {
-          col.headerElement.className = classes.th.join(' ');
-        }
-        return classes;
-      },
-    },
-    rowFormatter: {
-      effect: 'reRenderTable',
-    },
-    tokenizer: {
-      effect: 'reloadData',
-    },
-    virtualScrollClass: {
-      effect: 'reRenderTable',
-      handler: value => {
-        this.#virtualScroll?.stop();
-        this.#virtualScroll = null;
-        return value;
-      },
-    },
-  };
-
-  private readonly COLUMN_OPTION_CONFIGS: ColumnOptionConfigs<T> = {
-    title: {
-      effect: 'updateHeaders',
-    },
-    searchable: {
-      effect: 'reApplyFilters',
-    },
-    sortable: {
-      effect: 'updateHeaders',
-    },
-    resizable: {
-      effect: 'updateHeaders',
-    },
-    tokenize: {
-      effect: 'reloadData',
-    },
-    valueFormatter: {
-      effect: 'reRenderTable',
-    },
-    elementFormatter: {
-      effect: 'reRenderTable',
-    },
-    sorter: {
-      effect: 'reSortRows',
-    },
-    sortValue: {
-      effect: 'reloadData',
-    },
-    filter: {
-      effect: 'reApplyFilters',
-    },
-  };
-}
-
-// User can provide either string or list of strings. Internally we enforce a list of strings.
-type ConcreteTableClasses = Required<{ [K in keyof TableClasses]: string[] }>;
-// Table options without data and with classes and virtual scroll as a single type for internal use
-type ConcreteTableOptions<T> = Required<
-  Omit<TableOptions<T>, 'data' | 'classes' | 'virtualScroll'>
-> & { classes: ConcreteTableClasses; virtualScroll: number };
-
-type UpdatableTableOptions<T> = TableOptions<T>;
-
-// Type for describing what effect a change has on the table
-type TableEffect =
-  | 'reloadData'
-  | 'reApplyFilters'
-  | 'reRenderTable'
-  | 'reSortRows'
-  | 'updateHeaders'
-  | null;
-
-// Type for controlling how each table option effects the table
-type TableOptionConfigs<T> = {
-  [K in keyof Required<UpdatableTableOptions<T>>]: {
-    // The effect changing the option has on the table.
-    effect: TableEffect;
-    // A handler to modify the value of the option before it is applied or provide any specialized logic
-    handler?: (
-      value: Required<UpdatableTableOptions<T>>[K],
-    ) => ConcreteTableOptions<T>[K];
-  };
-};
-
-type ColumnOptionConfigs<T> = {
-  [K in keyof Required<ColumnOptionsWithoutField<T>>]: {
-    effect: TableEffect;
-    handler?: (
-      value: Required<ColumnOptionsWithoutField<T>>[K],
-    ) => Required<ColumnOptionsWithoutField<T>>[K];
-  };
-};
-
-type ColumnOptionsWithoutField<T> = Omit<ColumnOptions<T>, 'field'>;
-type ColumnStateWithoutField<T> = Omit<ColumnState<T>, 'field'>;
-
-type ColumnDataOptions<T> = Required<ColumnOptionsWithoutField<T>>;
-type ColumnDataState<T> = Required<ColumnStateWithoutField<T>>;
-
-interface ColumnData<T> {
-  field: NestedKeyOf<T>;
-  options: ColumnDataOptions<T>;
-  state: ColumnDataState<T>;
-
-  headerElement: HTMLElement;
-  titleElement: HTMLElement;
-
-  resizeStartX: number | null;
-  resizeStartWidth: number | null;
+  // #endregion
 }
 
 interface RowMetadata {
   index: number;
   searchScore?: number;
-  tokens: Record<string, string[]>;
-  compareValues: Record<string, string>;
+  /** Precomputed search tokens */
+  searchTokens: Record<string, string[]>;
+  /** Precomputed search values */
+  searchValues: Record<string, string>;
+  /** Precomputed sort values */
   sortValues: Record<string, any>;
+  highlightIndices?: Record<string, [number, number][]>;
 }
 
-type InternalRowData<T> = T & { _metadata: RowMetadata };
-
-const WARN_ROW_COUNT = 10_000;
+interface SearchResult {
+  score: number;
+  ranges: [number, number][]; // Array of [start, end] tuples
+}
 
 /**
  * Defines the mapping between event names and their detail object types.
@@ -1946,7 +1934,7 @@ export interface DataTableEventMap<T> {
   'dt.row.clicked': {
     row: T;
     index: number;
-    column: NestedKeyOf<T>;
+    field: NestedKeyOf<T>;
     originalEvent: MouseEvent;
   };
 
@@ -1974,10 +1962,9 @@ export interface DataTableEventMap<T> {
   };
 
   'dt.search': {
-    query: string | RegExp | null;
+    query: string;
   };
 }
 
 export type * from './types';
-export { createRegexTokenizer };
-
+export { createRegexTokenizer, findColumn, whitespaceTokenizer };

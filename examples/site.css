@@ -1,11 +1,56 @@
-::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary-light);
+body {
+  font-family: system-ui, sans-serif;
+
+  --space-x: 16px;
+  --space-y: 12px;
+  --radius: 8px;
+  --accent: #38bdf8;
+
+  --bg-screen: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-hover: var(--accent);
+  --border: #e2e8f0;
+  --text-hi: #0f172a;
+  --text-lo: #64748b;
+}
+
+body.dark {
+  color-scheme: dark;
+
+  --bg-screen: #020617;
+  --bg-surface: #0f172a;
+  --bg-subtle: #1e293b;
+  --bg-hover: var(--accent);
+  --border: #334155;
+  --text-hi: #f8fafc;
+  --text-lo: #94a3b8;
 }
 
 body {
   height: 100vh;
+  width: 100vw;
+  padding: 20px;
+  margin: 0;
   display: flex;
   flex-direction: row;
+  box-sizing: border-box;
+  color: var(--text-hi);
+  background-color: var(--bg-screen);
+  overflow: hidden;
+}
+
+input[type='text'],
+input[type='number'],
+input[type='search'],
+input[type='date'],
+input:not([type]) {
+  background-color: var(--bg-subtle);
+  line-height: 1.5;
+  border: none;
+  border-radius: var(--radius);
+  font-size: large;
+  padding: 0.5rem;
 }
 
 .options-wrapper {
@@ -13,17 +58,27 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
-.table-wrapper {
+.option {
   display: flex;
   flex-direction: column;
-  margin-bottom: 10px;
-  margin-left: 10px;
-  margin-right: 10px;
-  flex-grow: 1;
-  /* This forces the dt-scroller to scroll horizontally instead of the body*/
-  min-width: 0;
-  min-height: 0;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.option-header {
+  font-weight: bold;
+  font-size: x-large;
+}
+
+label.inline {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
 }

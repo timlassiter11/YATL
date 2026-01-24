@@ -1,16 +1,23 @@
 {
     "compilerOptions": {
         "target": "ES6",
-        "module": "ESNext",
+        "module": "nodenext",
         "declaration": true,
         "outDir": "dist",
         "strict": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "allowJs": true
+        "allowJs": true,
+        "moduleResolution": "nodenext",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": false,
+        "lib": ["ES2023"]
     },
-    "include": ["src", "tests"],
+    "include": [
+        "src",
+        "tests"
+    ],
     "exclude": [
         "node_modules",
         "dist"

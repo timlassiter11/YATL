@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Virtual Scrolling Example</title>
+  <link rel="stylesheet" href="./site.css">
+  <style>
+    body {
+      height: 100vh;
+      display: flex;
+      flex-direction: row;
+    }
+    
+    .table-wrapper {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+      margin-left: 10px;
+      margin-right: 10px;
+      flex-grow: 1;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "lit": "https://cdn.jsdelivr.net/npm/lit@3.1.2/+esm",
+      "lit/": "https://cdn.jsdelivr.net/npm/lit@3.1.2/",
+    
+      "lit-html": "https://cdn.jsdelivr.net/npm/lit-html@3.1.2/+esm",
+      "lit-html/": "https://cdn.jsdelivr.net/npm/lit-html@3.1.2/",
+    
+      "@lit/reactive-element": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/+esm",
+    
+      "// NOTE": "This is the line that fixes your specific error:",
+      "@lit/reactive-element/": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/",
+    
+      "@lit-labs/virtualizer": "https://cdn.jsdelivr.net/npm/@lit-labs/virtualizer@2.0.12/+esm",
+      "@lit-labs/virtualizer/": "https://cdn.jsdelivr.net/npm/@lit-labs/virtualizer@2.0.12/"
+    }
+}
+</script>
+</head>
+
+<body class="dark">
+  <div class="options-wrapper">
+    <div class="option">
+      <span class="option-header">Data Rows</span>
+      <input type="number" id="rowCount" value="100000" lang="en-US">
+    </div>
+
+    <div class="option" id="virtualScrolling">
+      <span class="option-header">Virtual Scrolling</span>
+      <label>
+        <input type="radio" id="virtualScrollingOff" name="virtualScrolling" value="off">
+        Off
+      </label>
+      <label>
+        <input type="radio" id="virtualScrollingOn" name="virtualScrolling" value="on" checked>
+        On
+      </label>
+    </div>
+    <div class="option">
+      <span class="option-header">Total Rows</span>
+      <p id="totalRows">0</p>
+    </div>
+    <div class="option">
+      <span class="option-header">Rendered Rows</span>
+      <p id="renderedRows">0</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <yatl-table></yatl-table>
+  </div>
+  <script type="module">
+    import { YatlTable } from '../dist/index.mjs';
+
+    var table;
+
+    window.addEventListener("load", () => {
+      table = document.querySelector('yatl-table');
+
+      table.columns = [
+        { field: "id", title: "ID", sortable: true, resizable: true },
+        { field: "name", title: "Name", sortable: true, resizable: true },
+        { field: "age", title: "Age", sortable: true, resizable: true },
+        { field: "city", title: "City", sortable: true, resizable: true },
+      ];
+      table.rearrangeable = true;
+
+      // Watch for changes in the table to update the number of rendered rows.
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "childList") {
+            updateRenderedRows();
+          }
+        }
+      });
+      observer.observe(table.shadowRoot, { childList: true, subtree: true });
+
+      // Update the table data when the row count changes
+      const rowCountInput = document.getElementById("rowCount");
+      rowCountInput.addEventListener("input", () => {
+        updateData();
+      });
+
+      // Update the virtual scrolling setting
+      const virtualScrollingWrapper = document.getElementById("virtualScrolling");
+      virtualScrollingWrapper.addEventListener("change", (event) => {
+        updateVirtualScroll();
+      });
+
+      updateVirtualScroll();
+      updateData();
+    });
+
+    const updateData = () => {
+      const rowCount = parseInt(document.getElementById("rowCount").value, 10);
+      const data = Array.from({ length: rowCount }, (_, i) => ({
+        id: i + 1,
+        name: `User ${i + 1}`,
+        age: Math.floor(Math.random() * 100),
+        city: ["New York", "Los Angeles", "Chicago", "Houston"][i % 4],
+      }));
+      table.data = data;
+      document.getElementById("totalRows").textContent = data.length.toLocaleString();
+      updateRenderedRows();
+    };
+
+    const updateVirtualScroll = () => {
+      const value = document.querySelector('input[name="virtualScrolling"]:checked').value;
+      table.virtualScroll = value === "on";
+      updateRenderedRows();
+    }
+
+    const updateRenderedRows = () => {
+      const renderedRows = table.shadowRoot.querySelectorAll(".row").length - 1;
+      document.getElementById("renderedRows").textContent = renderedRows.toLocaleString();
+    }
+
+  </script>
+</body>
+
+</html>

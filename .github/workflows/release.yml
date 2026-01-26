@@ -36,7 +36,7 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        run: npm publish --access public
 
       - name: Archive dist folder
         run: zip -r -j yatl-${{ github.ref_name }}.zip dist/

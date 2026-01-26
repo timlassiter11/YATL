@@ -1,144 +1,297 @@
 # YATL
+
 **Yet Another Table Library**
 
-YATL is a lightweight and customizable JavaScript library for creating dynamic, interactive tables. It provides features like sorting, filtering, searching, and virtual scrolling, making it easy to work with large datasets in a performant way.
+YATL is a powerful, feature-rich, and lightweight Web Component data table built with Lit. It handles large datasets with ease using virtual scrolling, offers advanced fuzzy search capabilities, supports state persistence, and works in any framework (React, Vue, Angular, or Vanilla JS).
 
 ## Why?!?
-I needed a free and simple table library for vanilla JS that was easy to customize and could handle large datasets... so I created YATL. It is designed with performance and simplicity in mind. It has zero dependencies, is incredibly lightweight, and uses a highly efficient virtual scrolling engine to handle massive datasets with ease. If you need a powerful table without the bloat of larger frameworks, YATL is for you.
+
+I needed a free and simple table library for vanilla JS that was easy to customize and could handle large datasets... so I created YATL. As the project that I wrote this for grew, so did this library. Now it is a web component built using Lit that is fairly feature rich for simple use cases. There are many other great table libraries out there but if you want something simple to just drop in but with all of the major features already included, YATL might be for you.
 
 ## Features
-- **Sorting**: Sort table rows by multiple columns (ascending or descending).
-- **Filtering**: Filter rows based on multiple criteria or custom filter functions.
-- **Searching**: Perform case-insensitive searches across table data with support for tokenization and regular expressions.
-- **Virtual Scrolling**: Efficiently render large datasets with virtual scrolling.
-- **Customizable Columns**: Define column properties like visibility, formatting, and sorting behavior.
-- **Export to CSV**: Export table data to a CSV file.
+
+- **Virtual Scrolling**: Render 100,000+ rows smoothly with virtual scrolling.
+- **Smart Search**: Tokenized fuzzy search with relevance scoring and highlighting.
+- **State Persistence**: Automatically save and restore column order, visibility, sort, and widths to LocalStorage.
+- **Highly Customizable**: Slot support, CSS Shadow Parts, and custom cell renderers.
+- **Interactive**: Drag-and-drop column reordering, multi-column sorting (`SHIFT+CLICK`), and resizeable headers.
+- **Export**: Built-in CSV export for visible or all data.
+- **Type Safe**: Generic component with full type hint support.
 
 ## Installation
 
 The recommend method is to use npm.
+
 ```bash
 npm install @timlassiter11/yatl
 ```
 
 Alternatively you can manually download the source files from the [releases](https://github.com/timlassiter11/YATL/releases) section.
 
-### npm
+### Lit
 ```ts
-import { DataTable } from "@timlassiter11/yatl";
+import { html, LitElement } from 'lit';
 
-const datatble = DataTable("#myTable", {
-   ...
-});
+import '@timlassiter11/yatl';
 
+class MyComponent extends LitElement {
+   @state()
+   private _tableData: User[] = [];
+
+   private _tableColums: ColumnOptions<User>[] = [
+      {
+         field: 'id',
+         title: 'ID',
+         resizeable: true,
+         sortable: true,
+         searchable: false,
+      },
+      {
+         field: 'name',
+         resizeable: true,
+         sortable: true,
+         searchable: true,
+         tokenize: true,
+      },
+      {
+         field: 'status',
+         resizeable: true,
+         sortable: true,
+         searchable: false,
+      }
+   ];
+
+   protected override render() {
+      return html`<yatl-table 
+         .columns=${this._columns} 
+         .data=${this._tableData} 
+         enable-virtual-scroll 
+         @dt.row.clicked=${(event) => console.log(event.detail.row)}></yatl-table>`
+   }
+
+   private handleRowClicked = (event) => {
+      console.log(event.detail)
+   }
+}
 ```
 
-### source (ES6)
-```javascript
-import { DataTable } from "path/to/data-table.esm.js";
+### npm
 
-const dataTable = new DataTable("#myTable", {
-   ...
-});
+```ts
+import '@timlassiter11/yatl';
+
+const table = document.querySelector('yatl-table');
+
+table.columns = [
+  { field: 'id', title: 'ID', sortable: true, width: 60 },
+  { field: 'name', title: 'Name', sortable: true, searchable: true },
+  { field: 'role', title: 'Role', sortable: true },
+  {
+    field: 'status',
+    title: 'Status',
+    // Custom renderer example
+    cellRenderer: value => (value === 'Active' ? '🟢' : '🔴'),
+  },
+];
+
+table.data = [
+  { id: 1, name: 'Alice', role: 'Admin', status: 'Active' },
+  { id: 2, name: 'Bob', role: 'User', status: 'Inactive' },
+  // ... more data
+];
 ```
 
-### source (UMD)
+### Vanilla JS
+
 ```html
-<script src="path/to/data-table.umd.js"></script>
-<script>
-   const datatble = new yatl.DataTable("#myTable", {
-      ...
-   });
-</script>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>YATL Demo</title>
+    <script src="yatl.min.global.js"></script>
+
+    <style>
+      yatl-table {
+        height: 500px;
+        display: block;
+        border: 1px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <yatl-table id="my-table" enable-footer enable-column-reorder></yatl-table>
+
+    <script>
+      const table = document.getElementById('my-table');
+
+      // Define Columns
+      table.columns = [
+        { field: 'id', title: 'ID', width: 50 },
+        { field: 'firstName', title: 'First Name', sortable: true },
+        { field: 'lastName', title: 'Last Name', sortable: true },
+        { field: 'email', title: 'Email', width: 200 },
+      ];
+
+      // Load some data
+      table.data = Array.from({ length: 1000 }, (_, i) => ({
+        id: i + 1,
+        firstName: `User ${i}`,
+        lastName: `Doe`,
+        email: `user${i}@example.com`,
+      }));
+    </script>
+  </body>
+</html>
 ```
 
 ## Styling
-Some optional styling is included which adds sorting indicators and sticky headers. To use them simply include the stylesheet.
 
-### npm
-```ts
-import "@timlassiter11/yatl/data-table.css";
+`yatl-table` uses the native Web Component Shadow DOM to encapsulate its styles. This prevents your global CSS from accidentally breaking the table, and prevents the table's styles from leaking out.
+
+To customize the table, you use the standard CSS ::part() pseudo-element.
+### The Basics
+
+To style a specific part of the table, select the element and use ::part(name).
+
+```css
+/* Target the main table container */
+yatl-table::part(table) {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Target the header row */
+yatl-table::part(header) {
+  background-color: #f8fafc;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
 ```
 
-### source
-```html
-<link rel="stylesheet" href="path/to/data-table.css">
+
+### Part Reference
+
+Here is a list of all exposed parts you can target:
+
+| Part Name         | Description                                       |
+|-------------------|---------------------------------------------------|
+| table             | The main container grid.                          |
+| header            | The container for the header row.                 |
+| header-cell       | Individual header cells.                          |
+| header-title      | The text span inside a header cell.               |
+| header-sort-icon  | The sorting arrow icon.                           |
+| header-resizer    | The drag handle for resizing columns.             |
+| row               | The container for a data row.                     |
+| cell              | Targets all cells (both header and body).         |
+| body-cell         | Targets only data cells (not headers).            |
+| footer            | The footer container.                             |
+| message           | The empty state / no results message container.   |
+
+### Common Recipes
+#### Zebra Striping
+You can use standard pseudo-classes like :nth-child combined with ::part.
+
+```css
+/* Stripe every even row */
+yatl-table::part(row):nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Add a hover effect to rows */
+yatl-table::part(row):hover {
+  background-color: #e0f2fe;
+  cursor: pointer;
+}
 ```
 
-## Usage
-```javascript
-// Initialize the DataTable
-const dataTable = new DataTable("#myTable", {
-    columns: [
-        { field: "name", title: "First Name", sortable: true, searchable: true },
-        // Titles will be created from the field name
-        { field: "age", sortable: true },
-        { field: "city", searchable: true },
-    ],
-    data: [
-        { name: "Alice", age: 25, city: "New York" },
-        { name: "Bob", age: 30, city: "Los Angeles" },
-        { name: "Charlie", age: 35, city: "Chicago" },
-    ],
-});
+#### Targeting Specific Columns
+Every cell automatically gets a part name based on its field property in the format cell-{field}.
 
-// Sort by age in ascending order
-dataTable.sort("age", "asc");
+For example, if you have a column defined as `{ field: 'status' }`:
 
-// Filter rows to only people aged 25
-dataTable.filter({ age: 25 });
+```css
+/* Center the 'status' column and make it bold */
+yatl-table::part(cell-status) {
+  justify-content: center; /* Flex alignment */
+  font-weight: bold;
+  text-align: center;
+}
 
-// Filter rows to only people over 25
-dataTable.filter((row) => row.age > 25);
+/* Set a specific width or background for the ID column */
+yatl-table::part(cell-id) {
+  background-color: #f1f5f9;
+  font-family: monospace;
+}
+```
 
-// Search for Bob
-dataTable.search("bob");
+#### Conditional Row Styling
 
-// Export table data to CSV
-dataTable.export("my-table-data");
+You can style rows based on their data using the rowParts property in JavaScript combined with CSS.
+
+```js
+const table = document.querySelector('yatl-table');
+
+// Return a string (or array of strings) to add to the row's parts
+table.rowParts = (row) => {
+  const parts = [];
+  if (row.stock < 5) parts.push('low-stock');
+  if (row.price > 1000) parts.push('expensive');
+  return parts;
+};
+```
+
+```css
+/* Style rows tagged as 'low-stock' */
+yatl-table::part(low-stock) {
+  background-color: #fef2f2; /* Light red */
+  border-left: 4px solid #ef4444;
+}
+
+/* Style rows tagged as 'expensive' */
+yatl-table::part(expensive) {
+  color: #0f172a;
+  font-weight: 600;
+}
+```
+
+#### Customizing the Footer
+```css
+yatl-table::part(footer) {
+  background-color: #1e293b;
+  color: white;
+  padding: 1rem;
+}
 ```
 
 ### Virtual Scroll
-Virtual scrolling is used to render only the rows that are visible (with some extras before and after). This allows the library to support tables with hundreads of thousands of rows without issue. This is done using some magic (*simple math...*) but requires it's parent enforce a height. To do this you can simply add a height to the table.
+
+Virtual scrolling is used to render only the rows that are visible (with some extras before and after). This allows the library to support tables with hundreads of thousands of rows without issue. This is done using `lit-virtualizer` and requires it's parent enforce a height. To do this you can simply add a height to the table.
 
 ```html
 <body>
-   <table style="height: 500px;"></table>
+  <yatl-table style="height: 500px;"></yatl-table>
 </body>
 ```
 
-This will result in the following HTML after the table is initialized
-```html
-<body>
-   <div class="dt-scroller" style="overflow: auto; height: 500px;">
-      <table></table>
-   </div>
-</body>
-```
-
-Most of the time this isn't ideal though and instead we'd like to let the layout work it's magic (*probably also simple math...*). To do this, it's best to wrap the table in an element that can enforce a height.
+Most of the time this isn't ideal though and instead we'd like to let the layout work it's magic. To do this, it's best to wrap the table in an element that can enforce a height.
 
 ```html
 <body style="height: 100vh;">
-   <div style="display: flex; flex-direction: column; overflow: auto; height: 100%;">
-      <div>
-         ... Lot's of cool table controls or filters
-      </div>
-      <table></table>
-      <div>
-         ... Some boring footer info or something
-      </div>
-   </div>
+  <div style="display: flex;">
+    <div>... Lot's of cool table controls or filters</div>
+    <yatl-table style="flex-grow: 1;"></yatl-table>
+    <div>... Some boring footer info or something</div>
+  </div>
 </body>
 ```
 
-Since the `dt-scroller` wrapper listens to scroll and resize events, this allows the table to be responsive and update what is rendered as the layout changes. 
-
 ### Docs
+
 Full API docs can be found [here](https://timlassiter11.github.io/YATL/docs/index.html).
 
-# Known Issues
-There are some limitations to virtual scrolling. For one, rows need to be a uniform height to accurately calculate the table height. Also, there seems to be a maximum element size that once exceeded, the contents are no longer rendered. I've found this to occur with datasets approaching 1 million rows in Chrome and unfortunately I have no workaround for it. If you have that many rows you definitely need some server side pagination and this is probably not the library for you.
-
 # Examples
-Examples can be found in the examples directoy and are also hosted [here](https://timlassiter11.github.io/YATL/index.html) to view live.
+
+Examples can be found in the examples directoy and are also hosted [here](https://timlassiter11.github.io/YATL/examples/index.html) to view live.

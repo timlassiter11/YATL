@@ -1,12 +1,12 @@
 import { html, TemplateResult } from 'lit';
-import { ColumnState } from './types';
+import { ColumnState, Compareable } from './types';
 
 export type NestedKeyOf<ObjectType> = ObjectType extends object
   ? {
       [Key in keyof ObjectType & (string | number)]: NonNullable<
         // Use NonNullable to include optional properties
         ObjectType[Key]
-      > extends any[]
+      > extends unknown[]
         ? `${Key}`
         : NonNullable<ObjectType[Key]> extends object
           ? // Recurse with the non-nullable type
@@ -56,18 +56,39 @@ export const createRegexTokenizer = (exp: string = '\\S+') => {
 
 export const whitespaceTokenizer = createRegexTokenizer();
 
+// Source - https://stackoverflow.com/a
+// Posted by Emma
+// Retrieved 2026-01-26, License - CC BY-SA 4.0
+export function isStringRecord(obj: unknown): obj is Record<string, unknown> {
+  if (typeof obj !== 'object') return false;
+
+  if (Array.isArray(obj)) return false;
+
+  if (Object.getOwnPropertySymbols(obj).length > 0) return false;
+
+  return true;
+}
+
+function isValidKey<K extends string>(
+  key: string,
+  obj: Record<K, unknown>,
+): key is K {
+  return key in obj;
+}
+
 /**
  * Get a value from an object based on a path.
  * @param obj - The object to get the value from
  * @param path - The path of the value
  * @returns The value found at the given path
  */
-export function getNestedValue(obj: any, path: string): any {
+export function getNestedValue(obj: object, path: string): unknown {
   const keys = path.split('.');
+
   let current = obj;
 
   for (const key of keys) {
-    if (current && typeof current === 'object') {
+    if (current && isValidKey(key, current)) {
       current = current[key];
     } else {
       return undefined; // Or handle the error as needed
@@ -184,4 +205,13 @@ export function didSortStateChange<T>(
     }
   }
   return false;
+}
+
+export function isCompareable(value: unknown): value is Compareable {
+  return (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value instanceof Date
+  );
 }

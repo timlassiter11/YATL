@@ -1,1 +1,2 @@
-export * from './data-table/index';
+export * from './yatl-table';
+export * from './types';

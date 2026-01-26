@@ -2,6 +2,7 @@ import type {
   ColumnFilterCallback,
   ColumnOptions,
   ColumnState,
+  Compareable,
   FilterCallback,
   Filters,
   QueryToken,
@@ -20,6 +21,7 @@ import {
   findColumn,
   getNestedValue,
   highlightText,
+  isCompareable,
   NestedKeyOf,
   toHumanReadable,
   whitespaceTokenizer,
@@ -35,7 +37,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 
-import styles from './data-table.styles';
+import styles from './yatl-table.styles';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
 
 // #region --- Constants ---
@@ -52,7 +54,7 @@ const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
 };
 
 // Properties that should trigger a save
-const SAVE_TRIGGERS = new Set<keyof YatlTable<any>>([
+const SAVE_TRIGGERS = new Set<keyof YatlTable<object>>([
   'searchQuery',
   'filters',
   // Covers column order
@@ -75,7 +77,7 @@ const MATCH_WEIGHTS = {
  * column resizing, column rearranging, and virtual scrolling.
  */
 @customElement('yatl-table')
-export class YatlTable<T extends WeakKey> extends LitElement {
+export class YatlTable<T extends object> extends LitElement {
   public static override styles = [styles];
 
   @query('.table')
@@ -660,7 +662,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
       .map(row => {
         const list: string[] = [];
         for (const col of columnData) {
-          let value = (row as any)[col.field];
+          let value = getNestedValue(row, col.field);
           if (all || col.state.visible) {
             if (typeof col.options.valueFormatter === 'function') {
               value = col.options.valueFormatter(value, row);
@@ -865,7 +867,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
 
   protected renderColumnResizer(
     column: ColumnOptions<T>,
-    state: ColumnState<T>,
+    _state: ColumnState<T>,
   ) {
     return column.resizable
       ? html`<div
@@ -964,6 +966,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
     return html`
       <div
         part="cell body-cell cell-${column.field} ${userParts}"
+        data-field=${column.field}
         class="cell"
         title=${ifDefined(value ? String(value) : undefined)}
         @click=${(event: MouseEvent) =>
@@ -1090,7 +1093,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
 
     if (!this.storageOptions?.key) return;
     const shouldSave = Array.from(changedProperties.keys()).some(prop =>
-      SAVE_TRIGGERS.has(prop as any),
+      SAVE_TRIGGERS.has(prop as keyof YatlTable<T>),
     );
 
     if (shouldSave) {
@@ -1226,8 +1229,8 @@ export class YatlTable<T extends WeakKey> extends LitElement {
   }
 
   private filterField(
-    value: any,
-    filter: any,
+    value: unknown,
+    filter: unknown,
     filterFunction: ColumnFilterCallback | null = null,
   ): boolean {
     if (Array.isArray(filter)) {
@@ -1271,7 +1274,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
     }
 
     for (const field in this.filters) {
-      const filter = (this.filters as any)[field];
+      const filter = getNestedValue(this.filters, field);
       const value = getNestedValue(row, field);
       if (typeof filter === 'function') {
         if (!filter(value)) {
@@ -1371,7 +1374,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
     if (columnData.state.sortState?.order === 'asc') {
       aValue = aMetadata.sortValues[columnData.field];
       bValue = bMetadata.sortValues[columnData.field];
-    } else if (columnData.state.sortState?.order === 'desc') {
+    } else {
       aValue = bMetadata.sortValues[columnData.field];
       bValue = aMetadata.sortValues[columnData.field];
     }
@@ -1469,8 +1472,10 @@ export class YatlTable<T extends WeakKey> extends LitElement {
           metadata.sortValues[column.field] = column.sortValue(value);
         } else if (typeof value === 'string') {
           metadata.sortValues[column.field] = value.toLocaleLowerCase();
-        } else {
+        } else if (isCompareable(value)) {
           metadata.sortValues[column.field] = value;
+        } else {
+          metadata.sortValues[column.field] = String(value);
         }
 
         // Cache precomputed lower-case values for search
@@ -1481,7 +1486,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
         // Tokenize any searchable columns
         if (column.searchable && column.tokenize && value) {
           const tokenizer = column.searchTokenizer ?? this.searchTokenizer;
-          metadata.searchTokens[column.field] = tokenizer(value).map(
+          metadata.searchTokens[column.field] = tokenizer(String(value)).map(
             token => token.value,
           );
         }
@@ -1754,7 +1759,7 @@ export class YatlTable<T extends WeakKey> extends LitElement {
     });
   };
 
-  private handleResizeMouseUp = (event: MouseEvent) => {
+  private handleResizeMouseUp = (_event: MouseEvent) => {
     window.removeEventListener('mousemove', this.handleResizeMouseMove);
     window.removeEventListener('mouseup', this.handleResizeMouseUp);
     document.body.style.cursor = '';
@@ -1863,48 +1868,50 @@ export class YatlTable<T extends WeakKey> extends LitElement {
 
   // #endregion
 
-  // #region EventTarget Methods
+  // #region --- Event Target ---
 
-  addEventListener<K extends keyof DataTableEventMap<T>>(
+  public override addEventListener<K extends keyof DataTableEventMap<T>>(
     type: K,
-    listener: (
-      this: YatlTable<T>,
-      ev: CustomEvent<DataTableEventMap<T>[K]>,
-    ) => any,
+    listener: (this: DataTableEventMap<T>, ev: DataTableEventMap<T>[K]) => void,
     options?: boolean | AddEventListenerOptions,
   ): void;
 
-  // This is the generic fallback for any other string event type (e.g., standard DOM events).
-  addEventListener(
+  public override addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | AddEventListenerOptions,
   ): void;
 
-  // The single implementation for both overloads.
-  addEventListener(type: any, listener: any, options?: any) {
-    super.addEventListener(type, listener, options);
+  public override addEventListener(
+    type: string,
+    listener: unknown,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    super.addEventListener(
+      type,
+      listener as EventListenerOrEventListenerObject,
+      options,
+    );
   }
 
-  removeEventListener<K extends keyof DataTableEventMap<T>>(
+  public override removeEventListener<K extends keyof DataTableEventMap<T>>(
     type: K,
-    listener: (
-      this: YatlTable<T>,
-      ev: CustomEvent<DataTableEventMap<T>[K]>,
-    ) => any,
-    options?: boolean | EventListenerOptions,
-  ): void;
-
-  // This is the generic fallback for any other string event type (e.g., standard DOM events).
-  removeEventListener(
-    type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | EventListenerOptions,
   ): void;
 
-  // The single implementation for both overloads.
-  removeEventListener(type: any, listener: any, options?: any) {
+  public override removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
+  ): void {
     super.removeEventListener(type, listener, options);
+  }
+
+  public override dispatchEvent<K extends keyof DataTableEventMap<T>>(
+    event: CustomEvent<DataTableEventMap<T>[K]>,
+  ): boolean {
+    return super.dispatchEvent(event);
   }
 
   // #endregion
@@ -1918,7 +1925,7 @@ interface RowMetadata {
   /** Precomputed search values */
   searchValues: Record<string, string>;
   /** Precomputed sort values */
-  sortValues: Record<string, any>;
+  sortValues: Record<string, Compareable>;
   highlightIndices?: Record<string, [number, number][]>;
 }
 

@@ -42,10 +42,10 @@ jobs:
       run: npm run build
 
     - name: Test library
-      run: npm test
+      run: npm run test
 
     - name: Generate Docs
-      run: npx typedoc src/data-table/data-table.ts --out docs
+      run: npx typedoc src/yatl-table.ts --out docs
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -59,7 +59,6 @@ jobs:
         cp -r ./examples ./pages
         cp -r ./dist ./pages
         cp -r ./docs ./pages
-        cp ./index.html ./pages/index.html
         
     - name: Upload pages
       uses: actions/upload-pages-artifact@v3

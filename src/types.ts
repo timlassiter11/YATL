@@ -1,10 +1,14 @@
 import { NestedKeyOf } from './utils';
 
-
 /**
  * Defines the possible sorting orders for columns.
  */
 export type SortOrder = 'asc' | 'desc';
+
+/**
+ * Known compareable type
+ */
+export type Compareable = string | number | boolean | Date;
 
 /**
  * Callback for conditionally adding classes to a row
@@ -19,7 +23,11 @@ export type RowPartsCallback<T> = (row: T) => string | string[];
  * @param field - The field of the column.
  * @param row - The row data.
  */
-export type CellPartsCallback<T> = (value: unknown, field: NestedKeyOf<T>, row: T) => string | string[];
+export type CellPartsCallback<T> = (
+  value: unknown,
+  field: NestedKeyOf<T>,
+  row: T,
+) => string | string[];
 
 /**
  * Callback for providing the full contents of a rendered cell.
@@ -28,7 +36,11 @@ export type CellPartsCallback<T> = (value: unknown, field: NestedKeyOf<T>, row: 
  * @param row - The row data.
  * @returns - Should return an HTMLElement or anything Lit can render
  */
-export type CellRenderCallback<T> = (value: unknown, field: NestedKeyOf<T>, row: T) => unknown;
+export type CellRenderCallback<T> = (
+  value: unknown,
+  field: NestedKeyOf<T>,
+  row: T,
+) => unknown;
 
 /**
  * Callback for formatting the value of a cell.
@@ -36,7 +48,10 @@ export type CellRenderCallback<T> = (value: unknown, field: NestedKeyOf<T>, row:
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback<T> = (value: any, row: T) => string | null;
+export type ValueFormatterCallback<T> = (
+  value: unknown,
+  row: T,
+) => string | null;
 
 /**
  * Callback for comparing two values.
@@ -44,7 +59,7 @@ export type ValueFormatterCallback<T> = (value: any, row: T) => string | null;
  * @param b - The second value.
  * @returns A negative number if a < b, a positive number if a > b, or 0 if they are equal.
  */
-export type ComparatorCallback = (a: any, b: any) => number;
+export type ComparatorCallback = (a: unknown, b: unknown) => number;
 
 /**
  * Callback for caching the sort value of a field
@@ -52,13 +67,13 @@ export type ComparatorCallback = (a: any, b: any) => number;
  * @param value - The value of the field.
  * @returns The derived value for sorting (e.g., a number or a standardized string).
  */
-export type SortValueCallback = (value: any) => number | string;
+export type SortValueCallback = (value: unknown) => Compareable;
 
 /**
  * A filter object containing keys for the fields to be filtered,
  * and the values used to compare against.
  */
-export type Filters<T> = Partial<{ [K in NestedKeyOf<T>]: any }>;
+export type Filters<T> = Partial<{ [K in NestedKeyOf<T>]: unknown }>;
 
 /**
  * A single query token derived from a larger string
@@ -81,7 +96,7 @@ export interface QueryToken {
  * @param value - The value to tokenize.
  * @returns An array of tokens.
  */
-export type TokenizerCallback = (value: any) => QueryToken[];
+export type TokenizerCallback = (value: string) => QueryToken[];
 
 /**
  * Callback for filtering a row.
@@ -97,7 +112,7 @@ export type FilterCallback<T> = (row: T, index: number) => boolean;
  * @param filter - The filter to apply.
  * @returns True if the value matches the filter, false otherwise.
  */
-export type ColumnFilterCallback = (value: any, filter: any) => boolean;
+export type ColumnFilterCallback = (value: unknown, filter: unknown) => boolean;
 
 /**
  * Represents the current sort state

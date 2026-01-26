@@ -15,7 +15,22 @@ export default tseslint.config(
   tseslint.configs.recommended,
   {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ]
+    }
+  },
+  {
+    files: ["**/*.test.ts"],
+    rules: {
+      "no-unused-expressions": "off",
+      "@typescript-eslint/no-unused-expressions": "off"
     },
   },
+
 );

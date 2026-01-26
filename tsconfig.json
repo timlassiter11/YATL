@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "target": "ES6",
+        "target": "ES2020",
         "module": "nodenext",
         "declaration": true,
         "outDir": "dist",
@@ -12,11 +12,15 @@
         "moduleResolution": "nodenext",
         "experimentalDecorators": true,
         "emitDecoratorMetadata": false,
-        "lib": ["ES2023"]
+        "useDefineForClassFields": false,
+        "lib": [
+            "DOM",
+            "DOM.Iterable",
+            "ES2023"
+        ]
     },
     "include": [
-        "src",
-        "tests"
+        "src"
     ],
     "exclude": [
         "node_modules",

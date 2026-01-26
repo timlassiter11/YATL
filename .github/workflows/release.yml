@@ -8,7 +8,7 @@ on:
 
 permissions:
   id-token: write  # Required for OIDC
-  contents: read
+  contents: write
 
 jobs:
   create_release:
@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           registry-url: 'https://registry.npmjs.org'
           node-version: 24.x
@@ -36,10 +36,7 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        env:
-          NPM_CONFIG_PROVENANCE: true
-        run: |
-          npm publish --access public
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
 
       - name: Archive dist folder
         run: zip -r -j yatl-${{ github.ref_name }}.zip dist/

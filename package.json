@@ -45,7 +45,11 @@
   },
   "homepage": "https://github.com/timlassiter11/YATL#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">22.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",

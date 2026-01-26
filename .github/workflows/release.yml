@@ -35,6 +35,8 @@ jobs:
 
       - name: Publish to npm
         run: npm publish
+        env:
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Archive dist folder
         run: zip -r -j yatl-${{ github.ref_name }}.zip dist/

@@ -5,13 +5,7 @@
   <meta charset="utf-8">
   <title>Virtual Scrolling Example</title>
   <link rel="stylesheet" href="./site.css">
-  <style>
-    body {
-      height: 100vh;
-      display: flex;
-      flex-direction: row;
-    }
-    
+  <style>    
     .table-wrapper {
       display: flex;
       flex-direction: column;
@@ -46,7 +40,7 @@
   <div class="options-wrapper">
     <div class="option">
       <span class="option-header">Data Rows</span>
-      <input type="number" id="rowCount" value="100000" lang="en-US">
+      <input type="number" id="rowCount" value="2000" lang="en-US">
     </div>
 
     <div class="option" id="virtualScrolling">
@@ -77,7 +71,7 @@
 
     var table;
 
-    window.addEventListener("load", () => {
+    window.addEventListener("DOMContentLoaded", () => {
       table = document.querySelector('yatl-table');
 
       table.columns = [
@@ -93,6 +87,7 @@
         for (const mutation of mutations) {
           if (mutation.type === "childList") {
             updateRenderedRows();
+            break;
           }
         }
       });
@@ -129,7 +124,7 @@
 
     const updateVirtualScroll = () => {
       const value = document.querySelector('input[name="virtualScrolling"]:checked').value;
-      table.virtualScroll = value === "on";
+      table.enableVirtualScroll = value === "on";
       updateRenderedRows();
     }
 

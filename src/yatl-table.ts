@@ -39,6 +39,15 @@ import '@lit-labs/virtualizer';
 
 import styles from './yatl-table.styles';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
+import {
+  YatlChangeEvent,
+  YatlColumnReorderEvent,
+  YatlColumnResizeEvent,
+  YatlColumnToggleEvent as YatlColumnToggleEvent,
+  YatlRowClickEvent,
+  YatlSearchEvent,
+  YatlSortEvent,
+} from './events';
 
 // #region --- Constants ---
 
@@ -537,18 +546,7 @@ export class YatlTable<T extends object> extends LitElement {
       return;
     }
 
-    const sortEvent = new CustomEvent<DataTableEventMap<T>['dt.col.sort']>(
-      'dt.col.sort',
-      {
-        cancelable: true,
-        detail: {
-          column: state.field,
-          order: order,
-        },
-      },
-    );
-
-    if (!this.dispatchEvent(sortEvent)) {
+    if (!this.dispatchEvent(new YatlSortEvent(field, order))) {
       return;
     }
 
@@ -597,17 +595,7 @@ export class YatlTable<T extends object> extends LitElement {
       return;
     }
 
-    const visibilityEvent = new CustomEvent<
-      DataTableEventMap<T>['dt.col.visibility']
-    >('dt.col.visibility', {
-      cancelable: true,
-      detail: {
-        column: state.field,
-        visible: visible,
-      },
-    });
-
-    if (!this.dispatchEvent(visibilityEvent)) {
+    if (!this.dispatchEvent(new YatlColumnToggleEvent(field, visible))) {
       return;
     }
 
@@ -1342,17 +1330,7 @@ export class YatlTable<T extends object> extends LitElement {
     this.filterDirty = false;
 
     this.sortRows();
-
-    const changeEvent = new CustomEvent<
-      DataTableEventMap<T>['dt.rows.changed']
-    >('dt.rows.changed', {
-      cancelable: false,
-      detail: {
-        dataTable: this,
-      },
-    });
-
-    this.dispatchEvent(changeEvent);
+    this.dispatchEvent(new YatlChangeEvent(this.data));
   }
 
   // #endregion
@@ -1432,6 +1410,7 @@ export class YatlTable<T extends object> extends LitElement {
       // Always fall back to the index column
       return aMetadata.index - bMetadata.index;
     });
+    this.sortDirty = false;
   }
 
   // #endregion
@@ -1679,20 +1658,8 @@ export class YatlTable<T extends object> extends LitElement {
     // Ignore events if the user is highlighting text
     if (window.getSelection()?.toString()) return;
 
-    const rowEvent = new CustomEvent<DataTableEventMap<T>['dt.row.clicked']>(
-      'dt.row.clicked',
-      {
-        cancelable: false,
-        bubbles: true,
-        detail: {
-          row: row,
-          index: this.rowMetadata.get(row)!.index,
-          field: field,
-          originalEvent: event,
-        },
-      },
-    );
-    this.dispatchEvent(rowEvent);
+    const rowIndex = this.rowMetadata.get(row)!.index;
+    this.dispatchEvent(new YatlRowClickEvent(row, rowIndex, field, event));
   };
 
   private handleResizeMouseDown(event: MouseEvent, field: NestedKeyOf<T>) {
@@ -1776,6 +1743,8 @@ export class YatlTable<T extends object> extends LitElement {
       // to force any logic from updating the width.
       // Right now this is just the save state logic.
       this.columnStates = columnStates;
+
+      this.dispatchEvent(new YatlColumnResizeEvent(state.field, state.width));
     }
 
     this.resizeState = null;
@@ -1840,16 +1809,11 @@ export class YatlTable<T extends object> extends LitElement {
 
       columns.splice(dropIndex, 0, draggedColumn);
       const newColumnOrder = columns.map(col => col.field);
-      const reorderEvent = new CustomEvent<
-        DataTableEventMap<T>['dt.col.reorder']
-      >('dt.col.reorder', {
-        cancelable: true,
-        detail: {
-          draggedColumn: draggedColumn.field,
-          dropColumn: droppedColumn.field,
-          order: newColumnOrder,
-        },
-      });
+      const reorderEvent = new YatlColumnReorderEvent(
+        draggedColumn.field,
+        droppedColumn.field,
+        newColumnOrder,
+      );
       if (!this.dispatchEvent(reorderEvent)) {
         return;
       }
@@ -1870,9 +1834,9 @@ export class YatlTable<T extends object> extends LitElement {
 
   // #region --- Event Target ---
 
-  public override addEventListener<K extends keyof DataTableEventMap<T>>(
+  public override addEventListener<K extends keyof EventMap<T>>(
     type: K,
-    listener: (this: DataTableEventMap<T>, ev: DataTableEventMap<T>[K]) => void,
+    listener: (this: EventMap<T>, ev: EventMap<T>[K]) => void,
     options?: boolean | AddEventListenerOptions,
   ): void;
 
@@ -1894,7 +1858,7 @@ export class YatlTable<T extends object> extends LitElement {
     );
   }
 
-  public override removeEventListener<K extends keyof DataTableEventMap<T>>(
+  public override removeEventListener<K extends keyof EventMap<T>>(
     type: K,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | EventListenerOptions,
@@ -1908,8 +1872,8 @@ export class YatlTable<T extends object> extends LitElement {
     super.removeEventListener(type, listener, options);
   }
 
-  public override dispatchEvent<K extends keyof DataTableEventMap<T>>(
-    event: CustomEvent<DataTableEventMap<T>[K]>,
+  public override dispatchEvent<K extends keyof EventMap<T>>(
+    event: EventMap<T>[K],
   ): boolean {
     return super.dispatchEvent(event);
   }
@@ -1937,41 +1901,14 @@ interface SearchResult {
 /**
  * Defines the mapping between event names and their detail object types.
  */
-export interface DataTableEventMap<T> {
-  'dt.row.clicked': {
-    row: T;
-    index: number;
-    field: NestedKeyOf<T>;
-    originalEvent: MouseEvent;
-  };
-
-  'dt.rows.changed': object;
-
-  'dt.col.sort': {
-    column: string;
-    order: SortOrder | null;
-  };
-
-  'dt.col.visibility': {
-    column: NestedKeyOf<T>;
-    visible: boolean;
-  };
-
-  'dt.col.resize': {
-    column: NestedKeyOf<T>;
-    width: number;
-  };
-
-  'dt.col.reorder': {
-    draggedColumn: NestedKeyOf<T>;
-    dropColumn: NestedKeyOf<T>;
-    order: string[];
-  };
-
-  'dt.search': {
-    query: string;
-  };
+interface EventMap<T> {
+  'yatl-row-click': YatlRowClickEvent<T>;
+  'yatl-change': YatlChangeEvent<T>;
+  'yatl-sort': YatlSortEvent<T>;
+  'yatl-column-toggle': YatlColumnToggleEvent<T>;
+  'yatl-column-resize': YatlColumnResizeEvent<T>;
+  'yatl-column-reorder': YatlColumnReorderEvent<T>;
+  'yatl-search': YatlSearchEvent;
 }
 
-export type * from './types';
 export { createRegexTokenizer, findColumn, whitespaceTokenizer };

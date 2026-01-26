@@ -96,6 +96,7 @@ export default css`
     background-color: var(--yatl-bg);
     border-bottom: 1px solid var(--yatl-border-color);
     transition: background-color 50ms;
+    position: relative;
   }
 
   .row:last-child {

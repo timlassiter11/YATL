@@ -6,7 +6,8 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write # Required to create releases and upload assets to them
+  id-token: write  # Required for OIDC
+  contents: read
 
 jobs:
   create_release:
@@ -33,8 +34,6 @@ jobs:
 
       - name: Publish to npm
         run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Archive dist folder
         run: zip -r -j yatl-${{ github.ref_name }}.zip dist/

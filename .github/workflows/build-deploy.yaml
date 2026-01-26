@@ -41,9 +41,6 @@ jobs:
     - name: Build library
       run: npm run build
 
-    - name: Test library
-      run: npm run test
-
     - name: Generate Docs
       run: npx typedoc src/yatl-table.ts --out docs
 

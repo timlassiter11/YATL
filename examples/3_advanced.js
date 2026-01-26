@@ -134,8 +134,8 @@ window.addEventListener("load", () => {
 
   table.data = generateMockData(count);
 
-  table.addEventListener('dt.row.clicked', (event) => {
-    console.log("Row clicked:", event.detail.row, event.detail.index);
+  table.addEventListener('yatl-row-click', (event) => {
+    console.log("Row clicked:", event.detail);
   });
 
   

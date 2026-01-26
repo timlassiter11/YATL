@@ -1,3 +1,3 @@
-export * from './data-table/index';
-export * from './virtual-scroll/index';
-export * from './plugins/index';
+export * from './events';
+export * from './types';
+export * from './yatl-table';

@@ -151,6 +151,22 @@ export class YatlTable<T extends object> extends LitElement {
   // #region --- Properties ---
 
   /**
+   * Default sortability for all columns.
+   * Can be overridden by setting `sortable` on the specific column definition.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'default-sortable' })
+  public defaultSortable = false;
+
+  /**
+   * Default resizability for all columns.
+   * Can be overridden by setting `resizable` on the specific column definition.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'default-resizable' })
+  public defaultResizable = false;
+
+  /**
    * Enables virtual scrolling for the table.
    * When enabled, only the visible rows are rendered to the DOM, significantly improving
    * performance for large datasets (1000+ rows).
@@ -271,6 +287,10 @@ export class YatlTable<T extends object> extends LitElement {
     this.requestUpdate('columns', oldValue);
   }
 
+  /**
+   * The current order of the columns.
+   * **This includes hidden columns**
+   */
   @property({ attribute: false })
   public get columnOrder() {
     // Augment the column order with missing columns
@@ -301,6 +321,10 @@ export class YatlTable<T extends object> extends LitElement {
     this.requestUpdate('columnOrder', oldValue);
   }
 
+  /**
+   * The current visibility state of all columns.
+   * **This will always be ordered by {@link YatlTable.columnOrder}**
+   */
   @property({ attribute: false })
   public get columnVisibility(): { field: NestedKeyOf<T>; visible: boolean }[] {
     return this.columnOrder.map(field => ({
@@ -328,6 +352,10 @@ export class YatlTable<T extends object> extends LitElement {
     this.requestUpdate('columnVisibility', oldValue);
   }
 
+  /**
+   * The current sort state of all columns.
+   * **This will always be orderd by {@link YatlTable.columnOrder}**
+   */
   @property({ attribute: false })
   public get columnSort(): { field: NestedKeyOf<T>; sort: SortState | null }[] {
     return this.columnOrder.map(field => {
@@ -365,6 +393,10 @@ export class YatlTable<T extends object> extends LitElement {
     this.requestUpdate('columnSort', oldValue);
   }
 
+  /**
+   * The current width of all columns.
+   * **This will always be ordered by {@link YatlTable.columnOrder}**
+   */
   @property({ attribute: false })
   public get columnWidths(): { field: NestedKeyOf<T>; width: number | null }[] {
     return this.columnOrder.map(field => ({
@@ -909,7 +941,7 @@ export class YatlTable<T extends object> extends LitElement {
     column: ColumnOptions<T>,
     state: ColumnState<T>,
   ) {
-    return column.sortable
+    return (column.sortable ?? this.defaultSortable)
       ? html`<div
           part="header-sort-icon"
           class=${classMap({
@@ -925,7 +957,7 @@ export class YatlTable<T extends object> extends LitElement {
     column: ColumnOptions<T>,
     _state: ColumnState<T>,
   ) {
-    return column.resizable
+    return (column.resizable ?? this.defaultResizable)
       ? html`<div
           part="header-resizer"
           class="resizer"
@@ -948,7 +980,7 @@ export class YatlTable<T extends object> extends LitElement {
         part="cell header-cell"
         class=${classMap({
           cell: true,
-          sortable: column.sortable ?? false,
+          sortable: column.sortable ?? this.defaultSortable,
         })}
         draggable=${ifDefined(this.enableColumnReorder ? true : undefined)}
         data-field=${column.field}
@@ -1725,7 +1757,10 @@ export class YatlTable<T extends object> extends LitElement {
     column: ColumnOptions<T>,
   ) => {
     const target = event.target as HTMLElement;
-    if (!column.sortable || target.classList.contains('resizer')) {
+    if (
+      !target.classList.contains('sortable') ||
+      target.classList.contains('resizer')
+    ) {
       return;
     }
 

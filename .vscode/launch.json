@@ -8,15 +8,21 @@
             "type": "chrome",
             "request": "launch",
             "name": "Chrome",
-            "preLaunchTask": "npm: build",
-            "url": "http://127.0.0.1:3000/examples/advanced.html"
+            "url": "http://localhost:8000/examples/index.html", // Default WDS port
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Start Server", // 2. Triggers the task chain
+            "sourceMaps": true,
+            "smartStep": true
         },
         {
             "type": "msedge",
             "request": "launch",
             "name": "Edge",
-            "preLaunchTask": "npm: build",
-            "url": "http://127.0.0.1:3000/examples/advanced.html"
+            "url": "http://localhost:8000/examples/index.html", // Default WDS port
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Start Server", // 2. Triggers the task chain
+            "sourceMaps": true,
+            "smartStep": true
         }
     ]
 }

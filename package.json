@@ -33,6 +33,8 @@
     "lint": "eslint",
     "format": "prettier src/* --write",
     "build": "tsup",
+    "start": "web-dev-server --node-resolve",
+    "start:watch": "web-dev-server --node-resolve --watch",
     "test": "web-test-runner src/**/*.test.ts --node-resolve",
     "test:watch": "web-test-runner src/**/*.test.ts --node-resolve --watch"
   },

@@ -1,0 +1,37 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Table",
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Start Server",
+      "type": "npm",
+      "script": "start",
+      "isBackground": true,
+      "dependsOn": ["Build Table"],
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^$" // Matches nothing, prevents looking for compile errors
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Web Dev Server started",
+          "endsPattern": "Local:",
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "group": "server"
+      }
+    }
+  ]
+}

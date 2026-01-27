@@ -153,18 +153,20 @@ export class YatlTable<T extends object> extends LitElement {
   /**
    * Default sortability for all columns.
    * Can be overridden by setting `sortable` on the specific column definition.
+   * * **NOTE:** Changing this will not clear sorted column states.
    * @default false
    */
-  @property({ type: Boolean, attribute: 'default-sortable' })
-  public defaultSortable = false;
+  @property({ type: Boolean, attribute: 'sortable' })
+  public sortable = false;
 
   /**
    * Default resizability for all columns.
    * Can be overridden by setting `resizable` on the specific column definition.
+   * *  **NOTE:** Changing this will not clear current column widths.
    * @default false
    */
-  @property({ type: Boolean, attribute: 'default-resizable' })
-  public defaultResizable = false;
+  @property({ type: Boolean, attribute: 'resizable' })
+  public resizable = false;
 
   /**
    * Enables virtual scrolling for the table.
@@ -941,7 +943,7 @@ export class YatlTable<T extends object> extends LitElement {
     column: ColumnOptions<T>,
     state: ColumnState<T>,
   ) {
-    return (column.sortable ?? this.defaultSortable)
+    return (column.sortable ?? this.sortable)
       ? html`<div
           part="header-sort-icon"
           class=${classMap({
@@ -957,7 +959,7 @@ export class YatlTable<T extends object> extends LitElement {
     column: ColumnOptions<T>,
     _state: ColumnState<T>,
   ) {
-    return (column.resizable ?? this.defaultResizable)
+    return (column.resizable ?? this.resizable)
       ? html`<div
           part="header-resizer"
           class="resizer"
@@ -980,7 +982,7 @@ export class YatlTable<T extends object> extends LitElement {
         part="cell header-cell"
         class=${classMap({
           cell: true,
-          sortable: column.sortable ?? this.defaultSortable,
+          sortable: column.sortable ?? this.sortable,
         })}
         draggable=${ifDefined(this.enableColumnReorder ? true : undefined)}
         data-field=${column.field}

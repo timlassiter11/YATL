@@ -164,7 +164,8 @@ export default css`
   :host {
     display: block;
     height: 100%;
-    width: 100%;
+    width: fit-content;
+    overflow: auto;
   }
 
   .table {

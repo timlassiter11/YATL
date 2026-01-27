@@ -1,6 +1,9 @@
-# YATL
+# YATL (Yet Another Table Library)
 
-**Yet Another Table Library**
+[![NPM Version](https://img.shields.io/npm/v/@timlassiter11/yatl)](https://www.npmjs.com/package/@timlassiter11/yatl)
+[![API Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://timlassiter11.github.io/YATL/docs/index.html)
+[![Live Demo](https://img.shields.io/badge/demo-online-green)](https://timlassiter11.github.io/YATL/examples/index.html)
+[![License](https://img.shields.io/npm/l/@timlassiter11/yatl)](LICENSE)
 
 YATL is a powerful, feature-rich, and lightweight Web Component data table built with Lit. It handles large datasets with ease using virtual scrolling, offers advanced fuzzy search capabilities, supports state persistence, and works in any framework (React, Vue, Angular, or Vanilla JS).
 
@@ -62,11 +65,14 @@ class MyComponent extends LitElement {
    ];
 
    protected override render() {
-      return html`<yatl-table 
-         .columns=${this._columns} 
-         .data=${this._tableData} 
-         enable-virtual-scroll 
-         @dt.row.clicked=${(event) => console.log(event.detail.row)}></yatl-table>`
+      return html`
+        <yatl-table 
+          .columns=${this._columns} 
+          .data=${this._tableData} 
+          enable-virtual-scroll 
+          @yatl-row-click=${this.handleRowClicked}>
+        </yatl-table>
+      `;
    }
 
    private handleRowClicked = (event) => {
@@ -75,11 +81,9 @@ class MyComponent extends LitElement {
 }
 ```
 
-### npm
+### js
 
-```ts
-import '@timlassiter11/yatl';
-
+```js
 const table = document.querySelector('yatl-table');
 
 table.columns = [
@@ -287,11 +291,3 @@ Most of the time this isn't ideal though and instead we'd like to let the layout
   </div>
 </body>
 ```
-
-### Docs
-
-Full API docs can be found [here](https://timlassiter11.github.io/YATL/docs/index.html).
-
-# Examples
-
-Examples can be found in the examples directoy and are also hosted [here](https://timlassiter11.github.io/YATL/examples/index.html) to view live.

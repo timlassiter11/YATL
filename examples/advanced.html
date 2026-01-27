@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Advanced Example</title>
+  <link rel="stylesheet" href="./site.css" />
+  <style>
+    #searchInput {
+      flex-grow: 1;
+    }
+
+    yatl-table {
+      width: 100%;
+    }
+
+    yatl-table::part(urgent) {
+      background-color: color-mix(in srgb, red 20%, transparent);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <form id="filtersForm">
+      <div class="card">
+        <h1>Filters</h1>
+        <div class="option-group">
+          <h2>Status</h2>
+          <select multiple name="status"></select>
+        </div>
+        <div class="option-group">
+          <h2>Date Modified</h2>
+          <label class="inline">
+            From
+            <input type="date" class="form-control" name="startDate" />
+          </label>
+          <label class="inline">
+            To
+            <input type="date" class="form-control" name="endDate" />
+          </label>
+        </div>
+      </div>
+    </form>
+    <form id="optionsForm">
+      <div class="card">
+        <h1>Table Options</h1>
+        <div class="option-group">
+          <h2>Row Count</h2>
+          <input type="number" name="rowCount" value="2000" />
+        </div>
+        <div class="option-group">
+          <h2>Interactivity</h2>
+          <label>
+            <input type="checkbox" name="resizable" value="on" checked />
+            Resizable Columns
+          </label>
+          <label>
+            <input type="checkbox" name="sortable" value="on" checked />
+            Sortable Columns
+          </label>
+          <label>
+            <input type="checkbox" name="enableColumnReorder" value="on" checked />
+            Rearrangable Columns
+          </label>
+        </div>
+        <div class="option-group">
+          <h2>Search</h2>
+          <label>
+            <input type="checkbox" name="enableSearchTokenization" value="on" checked />
+            Tokenize Search
+          </label>
+          <label>
+            <input type="checkbox" name="enableSearchScoring" value="on" checked />
+            Search Scoring
+          </label>
+          <label>
+            <input type="checkbox" name="enableSearchHighlight" value="on" checked />
+            Highlight Results
+          </label>
+        </div>
+        <div class="option-group">
+          <h2>Misc</h2>
+          <label>
+            <input type="checkbox" name="enableFooter" value="on" checked />
+            Show Footer
+          </label>
+          <label>
+            <input type="checkbox" name="enableVirtualScroll" value="on" checked />
+            Virtual Scroll
+          </label>
+        </div>
+      </div>
+    </form>
+    <div class="card">
+      <h1>Render State</h1>
+      <div class="inline">
+        Rendered Rows: <span id="renderedRows">0</span>
+      </div>
+      <div class="inline">
+        Filtered Rows: <span id="filteredRows">0</span>
+      </div>
+      <div class="inline">Total Rows: <span id="totalRows">0</span></div>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <div class="toolbar">
+      <input id="searchInput" type="search" placeholder="Search" />
+      <div class="button-group">
+        <details class="dropdown" id="columnPicker">
+          <summary class="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
+            </svg>
+          </summary>
+          <div class="dropdown-menu" id="columnList"></div>
+        </details>
+        <button id="exportButton" class="button" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <yatl-table></yatl-table>
+    </div>
+  </div>
+  <script type="importmap">
+      {
+        "imports": {
+          "lit": "https://cdn.jsdelivr.net/npm/lit@3.1.2/+esm",
+          "lit/": "https://cdn.jsdelivr.net/npm/lit@3.1.2/",
+
+          "lit-html": "https://cdn.jsdelivr.net/npm/lit-html@3.1.2/+esm",
+          "lit-html/": "https://cdn.jsdelivr.net/npm/lit-html@3.1.2/",
+
+          "@lit/reactive-element": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/+esm",
+
+          "// NOTE": "This is the line that fixes your specific error:",
+          "@lit/reactive-element/": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/",
+
+          "@lit-labs/virtualizer": "https://cdn.jsdelivr.net/npm/@lit-labs/virtualizer@2.0.12/+esm",
+          "@lit-labs/virtualizer/": "https://cdn.jsdelivr.net/npm/@lit-labs/virtualizer@2.0.12/"
+        }
+      }
+    </script>
+  <script type="module" src="./advanced.js"></script>
+</body>
+
+</html>

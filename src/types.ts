@@ -1,4 +1,16 @@
-import { NestedKeyOf } from './utils';
+export type NestedKeyOf<ObjectType> = ObjectType extends object
+  ? {
+      [Key in keyof ObjectType & (string | number)]: NonNullable<
+        // Use NonNullable to include optional properties
+        ObjectType[Key]
+      > extends unknown[]
+        ? `${Key}`
+        : NonNullable<ObjectType[Key]> extends object
+          ? // Recurse with the non-nullable type
+            `${Key}` | `${Key}.${NestedKeyOf<NonNullable<ObjectType[Key]>>}`
+          : `${Key}`;
+    }[keyof ObjectType & (string | number)]
+  : never;
 
 /**
  * Default type for the table.
@@ -153,6 +165,17 @@ export interface BaseColumnOptions<T> {
   role?: ColumnRole;
 
   /**
+   * Whether the column is sortable.
+   */
+  sortable?: boolean;
+
+  /**
+   * A function to use for sorting the column.
+   * This overrides the default sorting behavior.
+   */
+  sorter?: SortValueCallback;
+
+  /**
    * Whether the column is searchable.
    */
   searchable?: boolean;
@@ -191,11 +214,6 @@ export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
   title?: string;
 
   /**
-   * Whether the column is sortable.
-   */
-  sortable?: boolean;
-
-  /**
    * Whether the column should be resizable.
    */
   resizable?: boolean;
@@ -215,18 +233,6 @@ export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
    * NOTE: Search highlighting will not work for this cell when used.
    */
   cellRenderer?: CellRenderCallback<T>;
-
-  /**
-   * A function to use for sorting the column.
-   * This overrides the default sorting behavior.
-   */
-  sorter?: ComparatorCallback;
-
-  /**
-   * A function to derive a comparable value from the cell's original value, specifically for sorting this column.
-   * This can be used to preprocess and cache values (e.g., convert to lowercase, extract numbers) before comparison.
-   */
-  sortValue?: SortValueCallback;
 }
 
 /**
@@ -240,8 +246,9 @@ export interface InternalColumnOptions<T> extends BaseColumnOptions<T> {
   display: 'internal';
 }
 
-export type ColumnOptions<T> = DisplayColumnOptions<T> | InternalColumnOptions<T>;
-
+export type ColumnOptions<T> =
+  | DisplayColumnOptions<T>
+  | InternalColumnOptions<T>;
 
 /**
  * Represents the current state of a column.
@@ -327,5 +334,3 @@ export type RestorableColumnState<T> = Partial<Omit<ColumnState<T>, 'field'>> &
 export type RestorableTableState<T> = Partial<
   Omit<TableState<T>, 'columns'>
 > & { columns?: RestorableColumnState<T>[] };
-
-export type { NestedKeyOf };

@@ -1,5 +1,4 @@
-import { SortOrder, TableState } from './types';
-import { NestedKeyOf } from './utils';
+import { NestedKeyOf, SortOrder, TableState } from './types';
 
 export class YatlEvent<T = unknown> extends CustomEvent<T> {
   constructor(name: string, detail: T, options: EventInit = {}) {

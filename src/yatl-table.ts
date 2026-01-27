@@ -1,13 +1,12 @@
 import type {
   ColumnFilterCallback,
   ColumnOptions,
-  ColumnRole,
   ColumnState,
   Compareable,
   DisplayColumnOptions,
   FilterCallback,
   Filters,
-  InternalColumnOptions,
+  NestedKeyOf,
   QueryToken,
   RestorableColumnState,
   RestorableTableState,
@@ -27,8 +26,6 @@ import {
   highlightText,
   isCompareable,
   isDisplayColumn,
-  isInternalColumn,
-  NestedKeyOf,
   toHumanReadable,
   whitespaceTokenizer,
   widthsToGridTemplates,
@@ -43,18 +40,18 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 
-import styles from './yatl-table.styles';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
 import {
   YatlChangeEvent,
   YatlColumnReorderEvent,
   YatlColumnResizeEvent,
-  YatlColumnToggleEvent as YatlColumnToggleEvent,
+  YatlColumnToggleEvent,
   YatlRowClickEvent,
   YatlSearchEvent,
   YatlSortEvent,
   YatlStateChangeEvent,
 } from './events';
+import styles from './yatl-table.styles';
 
 // #region --- Constants ---
 
@@ -110,7 +107,8 @@ export class YatlTable<
   private _enableSearchTokenization = false;
   private _enableSearchScoring = false;
   private _columns: ColumnOptions<T>[] = [];
-  private _columnStates: ColumnState<T>[] = [];
+  private _columnDefinitionMap = new Map<NestedKeyOf<T>, ColumnOptions<T>>();
+  private _columnStateMap = new Map<NestedKeyOf<T>, ColumnState<T>>();
   private _columnOrder: NestedKeyOf<T>[] = [];
   private _storageOptions: StorageOptions | null = null;
   private _data: T[] = [];
@@ -293,7 +291,16 @@ export class YatlTable<
     const oldValue = this._columns;
     this._columns = columns;
     this.filterDirty = true;
+    // Cache these in a map for faster lookups
+    this._columnDefinitionMap = new Map();
+    for (const column of this.columns) {
+      this._columnDefinitionMap.set(column.field, column);
+    }
     this.requestUpdate('columns', oldValue);
+  }
+
+  public get displayColumns() {
+    return this._columns.filter(isDisplayColumn);
   }
 
   /**
@@ -306,13 +313,13 @@ export class YatlTable<
     // from the normal column list.
     const finalOrder = new Set<NestedKeyOf<T>>();
     for (const field of this._columnOrder) {
-      const col = findColumn(field, this.getColumns('display'));
+      const col = this.getDisplayColumn(field);
       if (col) {
         finalOrder.add(field);
       }
     }
 
-    for (const col of this.getColumns('display')) {
+    for (const col of this.displayColumns) {
       if (!finalOrder.has(col.field)) {
         finalOrder.add(col.field);
       }
@@ -338,7 +345,7 @@ export class YatlTable<
   public get columnVisibility(): { field: NestedKeyOf<T>; visible: boolean }[] {
     return this.columnOrder.map(field => ({
       field,
-      visible: this.getColumnState(field).visible,
+      visible: this.getOrCreateColumnState(field).visible,
     }));
   }
 
@@ -347,8 +354,8 @@ export class YatlTable<
 
     let changed = false;
     for (const column of columns) {
-      const columnState = this.getColumnState(column.field);
-      if (columnState && columnState.visible !== column.visible) {
+      const columnState = this.getOrCreateColumnState(column.field);
+      if (columnState.visible !== column.visible) {
         changed = true;
         columnState.visible = column.visible;
       }
@@ -368,7 +375,7 @@ export class YatlTable<
   @property({ attribute: false })
   public get columnSort(): { field: NestedKeyOf<T>; sort: SortState | null }[] {
     return this.columnOrder.map(field => {
-      const sortState = this.getColumnState(field).sort;
+      const sortState = this.getOrCreateColumnState(field).sort;
       return {
         field,
         // We need to make a copy of sort state so
@@ -383,7 +390,7 @@ export class YatlTable<
 
     let changed = false;
     for (const column of columns) {
-      const columnState = this.getColumnState(column.field);
+      const columnState = this.getOrCreateColumnState(column.field);
       if (
         columnState &&
         (columnState.sort?.order !== column.sort?.order ||
@@ -410,7 +417,7 @@ export class YatlTable<
   public get columnWidths(): { field: NestedKeyOf<T>; width: number | null }[] {
     return this.columnOrder.map(field => ({
       field,
-      width: this.getColumnState(field).width,
+      width: this.getOrCreateColumnState(field).width,
     }));
   }
 
@@ -419,8 +426,8 @@ export class YatlTable<
 
     let changed = false;
     for (const column of columns) {
-      const columnState = this.getColumnState(column.field);
-      if (columnState && columnState.width !== column.width) {
+      const columnState = this.getOrCreateColumnState(column.field);
+      if (columnState.width !== column.width) {
         changed = true;
         columnState.width = column.width;
       }
@@ -569,6 +576,17 @@ export class YatlTable<
 
   // #region --- Public Methods ---
 
+  public getColumn(field: NestedKeyOf<T>) {
+    return this._columnDefinitionMap.get(field);
+  }
+
+  public getDisplayColumn(field: NestedKeyOf<T>) {
+    const column = this._columnDefinitionMap.get(field);
+    if (column && isDisplayColumn(column)) {
+      return column;
+    }
+  }
+
   /**
    * Gets a copy of the current state of the table.
    */
@@ -578,7 +596,7 @@ export class YatlTable<
       filters: this.filters,
       columnOrder: this.columnOrder,
       columns: this.columns.map(column => {
-        const state = this.getColumnState(column.field);
+        const state = this.getOrCreateColumnState(column.field);
         return {
           field: column.field,
           visible: state.visible,
@@ -607,14 +625,8 @@ export class YatlTable<
     }
 
     if ('columns' in state && state.columns !== undefined) {
-      const newColumnStates: ColumnState<T>[] = [];
-
       for (const newState of state.columns) {
-        // We don't check if this is a valid column becuase we
-        // could be restoring the state before the columns are loaded.
-        const currentState = this.getColumnState(newState.field);
-
-        newColumnStates.push(currentState);
+        const currentState = this.getOrCreateColumnState(newState.field);
 
         if (!newState) {
           continue;
@@ -632,7 +644,6 @@ export class YatlTable<
           currentState.width = newState.width;
         }
       }
-      this._columnStates = newColumnStates;
       this.requestUpdate();
     }
   }
@@ -713,7 +724,7 @@ export class YatlTable<
     }
 
     state.visible = visible;
-    this.columnVisibility = visibilityStates;
+    this.columnVisibility = [...visibilityStates];
   }
 
   /**
@@ -721,10 +732,10 @@ export class YatlTable<
    * @param field - The field name of the column to toggle.
    */
   public toggleColumnVisibility(field: NestedKeyOf<T>) {
-    const state = this.getColumnState(field);
+    const state = this.getOrCreateColumnState(field);
     // If state is null here becuase the column doesn't exist
     // setColumnVisibility will throw an error. We don't need to.
-    this.setColumnVisibility(field, !state);
+    this.setColumnVisibility(field, !state.visible);
   }
 
   /**
@@ -750,27 +761,23 @@ export class YatlTable<
    */
   public export(filename: string, all = false) {
     const data = all ? this.data : this.filteredData;
-    const rows = [...data.values()];
 
-    const columnData = this.getColumnData(this.getColumns('display'));
-
+    const columnData = this.displayColumns;
     const csvHeaders = columnData
-      .filter(
-        col => all || (isDisplayColumn(col.options) && col.state?.visible),
-      )
-      .map(col => `"${col.options.title}"`)
+      .filter(column => all || this.getOrCreateColumnState(column.field).visible)
+      .map(column => `"${column.title}"`)
       .join(',');
 
-    const csvRows = rows
+    const csvRows = data
       .map(row => {
         const list: string[] = [];
-        for (const col of columnData) {
-          let value = getNestedValue(row, col.field);
-          if (all || col.state.visible) {
-            if (typeof col.options.valueFormatter === 'function') {
-              value = col.options.valueFormatter(value, row);
+        for (const column of columnData) {
+          const state = this.getOrCreateColumnState(column.field);
+          let value = getNestedValue(row, column.field);
+          if (all || state.visible) {
+            if (typeof column.valueFormatter === 'function') {
+              value = column.valueFormatter(value, row);
             }
-
             value = String(value).replace('"', '""');
             list.push(`"${value}"`);
           }
@@ -960,9 +967,13 @@ export class YatlTable<
   }
 
   protected renderHeaderCell(field: NestedKeyOf<T>) {
-    const column = findColumn(field, this.getColumns('display'))!;
-    const state = this.getColumnState(column.field);
-    if (state.visible == false) {
+    const column = this.getDisplayColumn(field);
+    if (!column) {
+      return nothing;
+    }
+
+    const state = this.getOrCreateColumnState(field);
+    if (!state.visible) {
       return nothing;
     }
 
@@ -998,8 +1009,13 @@ export class YatlTable<
   }
 
   protected renderHeader() {
+    const classes = {
+      'header': true,
+      'row': true,
+      'reorderable': this.enableColumnReorder,
+    };
     return html`
-      <div part="header" class="header row">
+      <div part="header" class=${classMap(classes)}>
         ${this.columnOrder.map(field => this.renderHeaderCell(field))}
       </div>
     `;
@@ -1026,10 +1042,14 @@ export class YatlTable<
   }
 
   protected renderCell(field: NestedKeyOf<T>, row: T) {
-    const column = findColumn(field, this.getColumns('display'))!;
-    const state = this.getColumnState(column.field);
-    if (!state.visible) {
+    const column = this.getDisplayColumn(field);
+    if (!column) {
       return nothing;
+    }
+
+    const state = this.getOrCreateColumnState(field);
+    if (!state.visible) {
+      return;
     }
 
     let value = getNestedValue(row, column.field);
@@ -1388,8 +1408,8 @@ export class YatlTable<
           return false;
         }
       } else {
-        const col = findColumn(field, this.columns);
-        const filterCallback = col ? col.filter : undefined;
+        const column = this.getColumn(field as NestedKeyOf<T>);
+        const filterCallback = column ? column.filter : undefined;
         if (!this.filterField(value, filter, filterCallback)) {
           return false;
         }
@@ -1399,10 +1419,10 @@ export class YatlTable<
   }
 
   private filterRows() {
-    const columnData = this.getColumnData(this.columns);
+    const columnData = [...this.columns];
     const fields = columnData
-      .filter(col => col.options.searchable)
-      .map(c => c.field);
+      .filter(column => column.searchable)
+      .map(column => column.field);
 
     this._filteredData = this.data.filter((row, index) => {
       const metadata = this.rowMetadata.get(row)!;
@@ -1458,29 +1478,20 @@ export class YatlTable<
   private compareRows(a: T, b: T, field: NestedKeyOf<T>): number {
     let aValue, bValue;
 
-    const columnData = findColumn(
-      field,
-      this.getColumnData(this.getColumns('display')),
-    )!;
-
-    if (!columnData.state.sort) {
+    const state = this.getOrCreateColumnState(field);
+    if (!state.sort) {
       return 0;
     }
 
     const aMetadata = this.rowMetadata.get(a)!;
     const bMetadata = this.rowMetadata.get(b)!;
 
-    if (columnData.state.sort?.order === 'asc') {
-      aValue = aMetadata.sortValues[columnData.field];
-      bValue = bMetadata.sortValues[columnData.field];
+    if (state.sort?.order === 'asc') {
+      aValue = aMetadata.sortValues[field];
+      bValue = bMetadata.sortValues[field];
     } else {
-      aValue = bMetadata.sortValues[columnData.field];
-      bValue = aMetadata.sortValues[columnData.field];
-    }
-
-    if (typeof columnData.options.sorter === 'function') {
-      const ret = columnData.options.sorter(aValue, bValue);
-      if (ret !== 0) return ret;
+      aValue = bMetadata.sortValues[field];
+      bValue = aMetadata.sortValues[field];
     }
 
     const aIsNull = aValue == null;
@@ -1500,12 +1511,12 @@ export class YatlTable<
       return;
     }
 
-    const sortedColumns = this.getColumnData(this.columns)
+    const sortedStates = [...this._columnStateMap.values()]
       // Filter to visible columns with active sort states
-      .filter(col => col.state.visible && col.state.sort)
+      .filter(state => state.visible && state.sort)
       // Sort our columns by their sort priority.
       // This is how sorting by multiple columns is handled.
-      .sort((a, b) => b.state.sort!.priority - a.state.sort!.priority);
+      .sort((a, b) => b.sort!.priority - a.sort!.priority);
 
     this._filteredData = this._filteredData.toSorted((a, b) => {
       const aMetadata = this.rowMetadata.get(a)!;
@@ -1519,8 +1530,8 @@ export class YatlTable<
         if (aValue < bValue) return 1;
       }
 
-      for (const col of sortedColumns) {
-        const comp = this.compareRows(a, b, col.field);
+      for (const state of sortedStates) {
+        const comp = this.compareRows(a, b, state.field);
         if (comp !== 0) {
           return comp;
         }
@@ -1553,17 +1564,15 @@ export class YatlTable<
       for (const column of this.columns) {
         const value = getNestedValue(row, column.field);
 
-        if (isDisplayColumn(column)) {
-          // Cache precomputed values for sorting
-          if (typeof column.sortValue === 'function') {
-            metadata.sortValues[column.field] = column.sortValue(value);
-          } else if (typeof value === 'string') {
-            metadata.sortValues[column.field] = value.toLocaleLowerCase();
-          } else if (isCompareable(value)) {
-            metadata.sortValues[column.field] = value;
-          } else {
-            metadata.sortValues[column.field] = String(value);
-          }
+        // Cache precomputed values for sorting
+        if (typeof column.sorter === 'function') {
+          metadata.sortValues[column.field] = column.sorter(value);
+        } else if (typeof value === 'string') {
+          metadata.sortValues[column.field] = value.toLocaleLowerCase();
+        } else if (isCompareable(value)) {
+          metadata.sortValues[column.field] = value;
+        } else {
+          metadata.sortValues[column.field] = String(value);
         }
 
         // Cache precomputed lower-case values for search
@@ -1597,37 +1606,13 @@ export class YatlTable<
     }
   }
 
-  private getColumns(kind: 'display'): DisplayColumnOptions<T>[];
-  private getColumns(kind: 'internal'): InternalColumnOptions<T>[];
-  private getColumns(kind?: 'all'): ColumnOptions<T>[];
-  private getColumns(kind: ColumnRole | 'all' = 'all') {
-    switch (kind) {
-      case 'display':
-        return this.columns.filter(isDisplayColumn);
-      case 'internal':
-        return this.columns.filter(isInternalColumn);
-      case 'all':
-        return this.columns;
-    }
-  }
-
-  private getColumnData<TColumnType extends { field: NestedKeyOf<T> }>(
-    columns: TColumnType[],
-  ) {
-    return columns.map(column => ({
-      field: column.field,
-      options: column,
-      state: this.getColumnState(column.field),
-    }));
-  }
-
   /**
    * Gets the width of each column in the
    * order they will appear in the grid.
    */
   private getGridWidths() {
     return this.columnOrder
-      .map(field => this.getColumnState(field))
+      .map(field => this.getOrCreateColumnState(field))
       .filter(state => state.visible)
       .map(state => state.width);
   }
@@ -1640,16 +1625,20 @@ export class YatlTable<
     }, STATE_SAVE_DEBOUNCE);
   }
 
-  private getColumnState(field: NestedKeyOf<T>) {
-    let state = findColumn(field, this._columnStates);
+  /**
+   * Gets the column state associated with the given field.
+   * If the state doesn't exist, a default state will be created.
+   */
+  private getOrCreateColumnState(field: NestedKeyOf<T>) {
+    let state = this._columnStateMap.get(field);
     if (!state) {
       state = {
         field,
         visible: true,
-        sort: null,
         width: null,
+        sort: null,
       };
-      this._columnStates.push(state);
+      this._columnStateMap.set(field, state);
     }
     return state;
   }
@@ -1758,18 +1747,13 @@ export class YatlTable<
     event: MouseEvent,
     column: ColumnOptions<T>,
   ) => {
-    const target = event.target as HTMLElement;
-    const currentTarget = event.currentTarget as HTMLElement;
-
-    if (
-      !currentTarget.classList.contains('sortable') ||
-      target.classList.contains('resizer')
-    ) {
+    // Ignore header click events while resizing
+    if (this.resizeState) {
       return;
     }
 
     const multiSort = event.shiftKey;
-    const state = this.getColumnState(column.field);
+    const state = this.getOrCreateColumnState(column.field);
 
     if (!state?.sort) {
       this.sort(column.field, 'asc', !multiSort);
@@ -1813,7 +1797,7 @@ export class YatlTable<
       .forEach(element => {
         const field = element.dataset.field;
         if (field) {
-          const state = this.getColumnState(field as NestedKeyOf<T>);
+          const state = this.getOrCreateColumnState(field as NestedKeyOf<T>);
           if (state) {
             state.width = element.getBoundingClientRect().width;
           }
@@ -1856,12 +1840,14 @@ export class YatlTable<
     });
   };
 
-  private handleResizeMouseUp = (_event: MouseEvent) => {
+  private handleResizeMouseUp = (event: MouseEvent) => {
     window.removeEventListener('mousemove', this.handleResizeMouseMove);
     window.removeEventListener('mouseup', this.handleResizeMouseUp);
     document.body.style.cursor = '';
 
     if (this.resizeState?.active) {
+      event.preventDefault();
+      event.stopPropagation();
       // Calculate the final width based on the DOM's current style
       const finalWidth = parseFloat(
         this.resizeState.currentWidths[this.resizeState.columnIndex],
@@ -1877,7 +1863,11 @@ export class YatlTable<
       this.dispatchEvent(new YatlColumnResizeEvent(state.field, state.width));
     }
 
-    this.resizeState = null;
+    // This is a hacky workaround to prevent the header click event from firing
+    // if the user releases their mouse click outside of the resizer handle.
+    setTimeout(() => {
+      this.resizeState = null;
+    });
   };
 
   private handleDragColumnStart = (event: DragEvent, field: NestedKeyOf<T>) => {
@@ -1932,7 +1922,7 @@ export class YatlTable<
 
     if (dragIndex > -1 && dropIndex > -1) {
       const [draggedColumn] = newColumnOrder.splice(dragIndex, 1);
-      const droppedColumn = findColumn(field, this.columns);
+      const droppedColumn = this.getColumn(field);
       if (!droppedColumn) return;
 
       newColumnOrder.splice(dropIndex, 0, draggedColumn);
@@ -2045,4 +2035,5 @@ declare global {
   }
 }
 
-export { createRegexTokenizer, findColumn, whitespaceTokenizer };
+export { createRegexTokenizer, whitespaceTokenizer };
+

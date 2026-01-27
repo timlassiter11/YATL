@@ -1,19 +1,10 @@
 import { html, TemplateResult } from 'lit';
-import { ColumnOptions, ColumnState, Compareable, DisplayColumnOptions, InternalColumnOptions } from './types';
-
-export type NestedKeyOf<ObjectType> = ObjectType extends object
-  ? {
-      [Key in keyof ObjectType & (string | number)]: NonNullable<
-        // Use NonNullable to include optional properties
-        ObjectType[Key]
-      > extends unknown[]
-        ? `${Key}`
-        : NonNullable<ObjectType[Key]> extends object
-          ? // Recurse with the non-nullable type
-            `${Key}` | `${Key}.${NestedKeyOf<NonNullable<ObjectType[Key]>>}`
-          : `${Key}`;
-    }[keyof ObjectType & (string | number)]
-  : never;
+import {
+  ColumnOptions,
+  Compareable,
+  DisplayColumnOptions,
+  InternalColumnOptions,
+} from './types';
 
 /*
  * Converts a string to a human-readable format.
@@ -179,34 +170,6 @@ export function widthsToGridTemplates(
   return widths.map(width => (width ? `${width}px` : defaultWidth));
 }
 
-export function didSortStateChange<T>(
-  newState: ColumnState<T>[],
-  oldState?: ColumnState<T>[],
-) {
-  // If it is undefined it means this is the first render.
-  if (!oldState) {
-    return true;
-  }
-
-  const allKeys = new Set([
-    ...oldState.map(s => s.field),
-    ...newState.map(s => s.field),
-  ]) as Set<NestedKeyOf<T>>;
-
-  for (const key of allKeys) {
-    const oldSort = findColumn(key, oldState)?.sort;
-    const newSort = findColumn(key, newState)?.sort;
-
-    if (
-      oldSort?.order !== newSort?.order ||
-      oldSort?.priority !== newSort?.priority
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
 export function isCompareable(value: unknown): value is Compareable {
   return (
     typeof value === 'string' ||
@@ -216,10 +179,14 @@ export function isCompareable(value: unknown): value is Compareable {
   );
 }
 
-export function isInternalColumn<T>(col: ColumnOptions<T>): col is InternalColumnOptions<T> {
-  return col.role === 'internal';
+export function isInternalColumn<T>(
+  col: ColumnOptions<T> | undefined | null,
+): col is InternalColumnOptions<T> {
+  return col?.role === 'internal';
 }
 
-export function isDisplayColumn<T>(col: ColumnOptions<T>): col is DisplayColumnOptions<T> {
-  return col.role !== 'internal';
+export function isDisplayColumn<T>(
+  col: ColumnOptions<T> | undefined | null,
+): col is DisplayColumnOptions<T> {
+  return col?.role !== 'internal';
 }

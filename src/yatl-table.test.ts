@@ -156,11 +156,11 @@ describe('YatlTable', () => {
       );
       await elementUpdated(el);
 
-      const states = el.columnStates;
+      const states = el.columnSort;
 
       // Verify both are sorted
-      expect(findColumn('role', states)?.sortState).to.exist;
-      expect(findColumn('age', states)?.sortState).to.exist;
+      expect(findColumn('role', states)?.sort).to.exist;
+      expect(findColumn('age', states)?.sort).to.exist;
     });
 
     it('replaces sort when clicking without Shift', async () => {
@@ -176,9 +176,9 @@ describe('YatlTable', () => {
       ageHeader.click();
       await elementUpdated(el);
 
-      const states = el.columnStates;
-      expect(findColumn('role', states)!.sortState).to.be.undefined;
-      expect(findColumn('age', states)?.sortState?.order).to.equal('asc');
+      const states = el.columnSort;
+      expect(findColumn('role', states)!.sort).to.be.null;
+      expect(findColumn('age', states)?.sort?.order).to.equal('asc');
     });
   });
 
@@ -288,7 +288,7 @@ describe('YatlTable', () => {
       el = await createTable();
 
       // Move 'age' to the front
-      el.setColumnOrder(['age', 'id', 'name', 'role', 'email']);
+      el.columnOrder = ['age', 'id', 'name', 'role', 'email'];
       await elementUpdated(el);
 
       const headers = el.shadowRoot!.querySelectorAll('.header .cell');
@@ -325,7 +325,7 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       // Verify state updated
-      const colState = el.columnStates.find(c => c.field === 'id');
+      const colState = findColumn('id', el.columnWidths)
       // Note: Exact pixel match depends on test runner viewport,
       // usually we assert it is LARGER than initial.
       expect(colState!.width).to.be.greaterThan(initialWidth);
@@ -359,7 +359,7 @@ describe('YatlTable', () => {
         'role',
       ];
       // Trigger a change
-      el.setColumnOrder(newOrder);
+      el.columnOrder = newOrder;
       await elementUpdated(el);
 
       // Fast forward time past debounce (1000ms)
@@ -399,11 +399,11 @@ describe('YatlTable', () => {
 
   // --- Events ---
   describe('Events', () => {
-    it('dispatches dt.row.clicked with correct detail', async () => {
+    it('dispatches row click event with correct detail', async () => {
       el = await createTable();
 
       const listener = spy();
-      el.addEventListener('dt.row.clicked', listener);
+      el.addEventListener('yatl-row-click', listener);
 
       const firstRow = el.shadowRoot!.querySelector(
         '.row:not(.header)',
@@ -419,17 +419,17 @@ describe('YatlTable', () => {
       expect(event.detail.field).to.equal('name');
     });
 
-    it('dispatches dt.col.sort when sorting', async () => {
+    it('dispatches sort event when sorting', async () => {
       el = await createTable();
 
       const listener = spy();
-      el.addEventListener('dt.col.sort', listener);
+      el.addEventListener('yatl-sort', listener);
 
       el.sort('age', 'asc');
 
       expect(listener).to.have.been.calledOnce;
       expect(listener.firstCall.args[0].detail).to.deep.include({
-        column: 'age',
+        field: 'age',
         order: 'asc',
       });
     });

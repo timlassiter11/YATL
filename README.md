@@ -108,42 +108,52 @@ table.data = [
 ### Vanilla JS
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <title>YATL Demo</title>
-    <script src="yatl.min.global.js"></script>
-
+    <meta charset="utf-8" />
+    <title>Basic Example</title>
     <style>
-      yatl-table {
-        height: 500px;
-        display: block;
-        border: 1px solid #ddd;
+      body {
+        height: 100vh;
+        width: 100vw;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
       }
     </style>
   </head>
+
   <body>
-    <yatl-table id="my-table" enable-footer enable-column-reorder></yatl-table>
-
+    <yatl-table sortable resizable enable-footer></yatl-table>
+    <script src="../dist/yatl.min.global.js"></script>
     <script>
-      const table = document.getElementById('my-table');
+      window.addEventListener('load', () => {
+        const table = document.querySelector('yatl-table');
+        table.columns = [
+          {
+            field: 'index',
+            title: 'ID',
+          },
+          {
+            field: 'name',
+          },
+          {
+            field: 'value',
+          },
+        ];
 
-      // Define Columns
-      table.columns = [
-        { field: 'id', title: 'ID', width: 50 },
-        { field: 'firstName', title: 'First Name', sortable: true },
-        { field: 'lastName', title: 'Last Name', sortable: true },
-        { field: 'email', title: 'Email', width: 200 },
-      ];
+        // Generate random rows of data
+        table.data = new Array(100).fill(null).map((v, i) => ({
+          index: i,
+          name: `Row ${i}`,
+          value: Math.random() * 1000,
+        }));
 
-      // Load some data
-      table.data = Array.from({ length: 1000 }, (_, i) => ({
-        id: i + 1,
-        firstName: `User ${i}`,
-        lastName: `Doe`,
-        email: `user${i}@example.com`,
-      }));
+        table.addEventListener('yatl-row-click', event => {
+          console.log(event.detail);
+        });
+      });
     </script>
   </body>
 </html>

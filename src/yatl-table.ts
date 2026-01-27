@@ -1757,8 +1757,10 @@ export class YatlTable<T extends object> extends LitElement {
     column: ColumnOptions<T>,
   ) => {
     const target = event.target as HTMLElement;
+    const currentTarget = event.currentTarget as HTMLElement;
+    
     if (
-      !target.classList.contains('sortable') ||
+      !currentTarget.classList.contains('sortable') ||
       target.classList.contains('resizer')
     ) {
       return;

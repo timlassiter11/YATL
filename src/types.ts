@@ -221,12 +221,12 @@ export interface ColumnState<T> {
   /**
    * The current sort order of the column.
    */
-  sortState?: SortState | null;
+  sort: SortState | null;
 
   /**
    * The currently set width of the column in pixels.
    */
-  width?: number | null;
+  width: number | null;
 }
 
 /**

@@ -30,12 +30,14 @@ let table;
 
 
 window.addEventListener("load", () => {
+  table = document.querySelector("yatl-table");
+  const colList = document.getElementById("columnList");
+
   // Pull count from url param
   const url = new URL(location);
   let count = parseInt(url.searchParams.get("count"));
   count = isNaN(count) ? 100000 : count;
 
-  table = document.querySelector("yatl-table");
   table.enableVirtualScroll = true;
   table.enableSearchHighlight = true;
   table.enableSearchScoring = true;
@@ -138,8 +140,13 @@ window.addEventListener("load", () => {
     console.log("Row clicked:", event.detail);
   });
 
-  
-  const colList = document.getElementById("columnList");
+  // Update column dropdown order when columns are rearranged.
+  table.addEventListener('yatl-state-change', (event) => {
+    if (event.detail.triggers.includes('columnOrder')) {
+      refreshColumnPicker(colList);
+    }
+  })
+
   refreshColumnPicker(colList);
 
   const colPicker = document.getElementById('columnPicker');
@@ -183,8 +190,7 @@ function refreshColumnPicker(list) {
   // Clear existing
   list.innerHTML = '';
 
-  const states = table.getState().columns;
-  states.forEach(col => {
+  table.columnVisibility.forEach(col => {
     
     // Label wrapper
     const label = document.createElement('label');
@@ -196,11 +202,7 @@ function refreshColumnPicker(list) {
     checkbox.checked = col.visible;
 
     checkbox.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        table.showColumn(col.field);
-      } else {
-        table.hideColumn(col.field);
-      }
+      table.setColumnVisibility(col.field, e.target.checked);
     });
 
     // Text

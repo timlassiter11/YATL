@@ -194,8 +194,8 @@ export function didSortStateChange<T>(
   ]) as Set<NestedKeyOf<T>>;
 
   for (const key of allKeys) {
-    const oldSort = findColumn(key, oldState)?.sortState;
-    const newSort = findColumn(key, newState)?.sortState;
+    const oldSort = findColumn(key, oldState)?.sort;
+    const newSort = findColumn(key, newState)?.sort;
 
     if (
       oldSort?.order !== newSort?.order ||

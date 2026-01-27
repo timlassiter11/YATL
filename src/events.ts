@@ -1,4 +1,4 @@
-import { SortOrder } from './types';
+import { SortOrder, TableState } from './types';
 import { NestedKeyOf } from './utils';
 
 export class YatlEvent<T = unknown> extends CustomEvent<T> {
@@ -129,5 +129,19 @@ export class YatlSearchEvent extends YatlEvent<{ query: string }> {
 
   constructor(query: string) {
     super(YatlSearchEvent.EVENT_NAME, { query });
+  }
+}
+
+export class YatlStateChangeEvent<T> extends YatlEvent<{
+  state: TableState<T>;
+  triggers: string[];
+}> {
+  public static readonly EVENT_NAME = 'yatl-state-change';
+
+  constructor(
+    state: TableState<T>,
+    public triggers: string[],
+  ) {
+    super(YatlStateChangeEvent.EVENT_NAME, { state, triggers });
   }
 }

@@ -10,6 +10,7 @@ import type {
   RestorableTableState,
   RowPartsCallback,
   SortOrder,
+  SortState,
   StorageOptions,
   TableState,
   TokenizerCallback,
@@ -17,7 +18,6 @@ import type {
 
 import {
   createRegexTokenizer,
-  didSortStateChange,
   findColumn,
   getNestedValue,
   highlightText,
@@ -47,6 +47,7 @@ import {
   YatlRowClickEvent,
   YatlSearchEvent,
   YatlSortEvent,
+  YatlStateChangeEvent,
 } from './events';
 
 // #region --- Constants ---
@@ -66,10 +67,11 @@ const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
 const SAVE_TRIGGERS = new Set<keyof YatlTable<object>>([
   'searchQuery',
   'filters',
-  // Covers column order
   'columns',
-  // Covers sort, visibility, and width
-  'columnStates',
+  'columnSort',
+  'columnOrder',
+  'columnVisibility',
+  'columnWidths',
   'storageOptions',
 ]);
 
@@ -101,6 +103,7 @@ export class YatlTable<T extends object> extends LitElement {
   private _enableSearchScoring = false;
   private _columns: ColumnOptions<T>[] = [];
   private _columnStates: ColumnState<T>[] = [];
+  private _columnOrder: NestedKeyOf<T>[] = [];
   private _storageOptions: StorageOptions | null = null;
   private _data: T[] = [];
   private _searchQuery = '';
@@ -264,36 +267,124 @@ export class YatlTable<T extends object> extends LitElement {
 
     const oldValue = this._columns;
     this._columns = columns;
-    this.createColumnStates();
     this.filterDirty = true;
     this.requestUpdate('columns', oldValue);
   }
 
-  /**
-   * The current dynamic state of the columns (width, visibility, sort order).
-   * This property is updated automatically when users interact with the table.
-   */
   @property({ attribute: false })
-  public get columnStates(): ColumnState<T>[] {
-    return this._columnStates.map(state => ({
-      ...state,
-      sortState: state.sortState ? { ...state.sortState } : undefined,
-    }));
+  public get columnOrder() {
+    // Augment the column order with missing columns
+    // from the normal column list.
+    const finalOrder = new Set<NestedKeyOf<T>>();
+    for (const field of this._columnOrder) {
+      const col = findColumn(field, this.columns);
+      if (col) {
+        finalOrder.add(field);
+      }
+    }
+
+    for (const col of this.columns) {
+      if (!finalOrder.has(col.field)) {
+        finalOrder.add(col.field);
+      }
+    }
+    return [...finalOrder];
   }
 
-  public set columnStates(states) {
-    if (this._columnStates === states) {
+  public set columnOrder(columns) {
+    if (this._columnOrder === columns) {
       return;
     }
 
-    const oldValue = this._columnStates;
-    this._columnStates = states;
+    const oldValue = this._columnOrder;
+    this._columnOrder = [...columns];
+    this.requestUpdate('columnOrder', oldValue);
+  }
 
-    if (didSortStateChange(this._columnStates, oldValue)) {
-      this.sortDirty = true;
+  @property({ attribute: false })
+  public get columnVisibility(): { field: NestedKeyOf<T>; visible: boolean }[] {
+    return this.columnOrder.map(field => ({
+      field,
+      visible: this.getColumnState(field).visible,
+    }));
+  }
+
+  public set columnVisibility(columns) {
+    const oldValue = this.columnVisibility;
+
+    let changed = false;
+    for (const column of columns) {
+      const state = this.getColumnState(column.field);
+      if (state && state.visible !== column.visible) {
+        changed = true;
+        state.visible = column.visible;
+      }
     }
 
-    this.requestUpdate('columnStates', oldValue);
+    if (!changed) {
+      return;
+    }
+
+    this.requestUpdate('columnVisibility', oldValue);
+  }
+
+  @property({ attribute: false })
+  public get columnSort(): { field: NestedKeyOf<T>; sort: SortState | null }[] {
+    return this.columnOrder.map(field => ({
+      field,
+      sort: this.getColumnState(field).sort,
+    }));
+  }
+
+  public set columnSort(columns) {
+    const oldValue = this.columnSort;
+
+    let changed = false;
+    for (const column of columns) {
+      const state = this.getColumnState(column.field);
+      if (
+        state &&
+        (state.sort?.order !== column.sort?.order ||
+          state.sort?.priority !== column.sort?.priority)
+      ) {
+        changed = true;
+        state.sort = column.sort;
+      }
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    this.sortDirty = true;
+    this.requestUpdate('columnSort', oldValue);
+  }
+
+  @property({ attribute: false })
+  public get columnWidths(): { field: NestedKeyOf<T>; width: number | null }[] {
+    return this.columnOrder.map(field => ({
+      field,
+      width: this.getColumnState(field).width,
+    }));
+  }
+
+  public set columnWidths(columns) {
+    const oldValue = this.columnWidths;
+
+    let changed = false;
+    for (const column of columns) {
+      const state = this.getColumnState(column.field);
+      if (state && state.width !== column.width) {
+        changed = true;
+        state.width = column.width;
+      }
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    this.requestUpdate('columnWidths', oldValue);
   }
 
   /**
@@ -456,18 +547,17 @@ export class YatlTable<T extends object> extends LitElement {
    * Gets a copy of the current state of the table.
    */
   public getState(): TableState<T> {
-    const states = this.columnStates;
     return {
       searchQuery: this.searchQuery,
       filters: this.filters,
-      columnOrder: this.columns.map(column => column.field),
+      columnOrder: this.columnOrder,
       columns: this.columns.map(column => {
-        const columnState = findColumn(column.field, states);
+        const state = this.getColumnState(column.field);
         return {
           field: column.field,
-          visible: columnState?.visible ?? true,
-          sortState: columnState?.sortState,
-          width: columnState?.width,
+          visible: state.visible,
+          sort: state.sort,
+          width: state.width,
         };
       }),
     };
@@ -487,7 +577,7 @@ export class YatlTable<T extends object> extends LitElement {
     }
 
     if ('columnOrder' in state && state.columnOrder !== undefined) {
-      this.setColumnOrder(state.columnOrder);
+      this.columnOrder = state.columnOrder;
     }
 
     if ('columns' in state && state.columns !== undefined) {
@@ -496,10 +586,7 @@ export class YatlTable<T extends object> extends LitElement {
       for (const newState of state.columns) {
         // We don't check if this is a valid column becuase we
         // could be restoring the state before the columns are loaded.
-        const currentState = findColumn(newState.field, this._columnStates) ?? {
-          field: newState.field,
-          visible: true,
-        };
+        const currentState = this.getColumnState(newState.field);
 
         newColumnStates.push(currentState);
 
@@ -511,15 +598,16 @@ export class YatlTable<T extends object> extends LitElement {
           currentState.visible = newState.visible;
         }
 
-        if ('sortState' in newState && newState.sortState !== undefined) {
-          currentState.sortState = newState.sortState;
+        if ('sort' in newState && newState.sort !== undefined) {
+          currentState.sort = newState.sort;
         }
 
         if ('width' in newState && newState.width !== undefined) {
           currentState.width = newState.width;
         }
       }
-      this.columnStates = newColumnStates;
+      this._columnStates = newColumnStates;
+      this.requestUpdate();
     }
   }
 
@@ -535,14 +623,13 @@ export class YatlTable<T extends object> extends LitElement {
     order: SortOrder | null,
     clear: boolean = true,
   ) {
-    // Get a copy of the current column states.
-    const columnStates = this.columnStates;
-    const state = findColumn(field, columnStates);
+    const sortStates = this.columnSort;
+    const state = findColumn(field, sortStates);
     if (!state) {
       throw new Error(`Cannot get options for non-existent column "${field}"`);
     }
 
-    if (order === state.sortState?.order) {
+    if (order === state.sort?.order) {
       return;
     }
 
@@ -551,32 +638,32 @@ export class YatlTable<T extends object> extends LitElement {
     }
 
     // Column was unsorted, give it a new priority
-    if (order && !state.sortState) {
+    if (order && !state.sort) {
       // Create a list of current sort priorities
-      const priorities = columnStates
-        .map(col => col.sortState?.priority)
+      const priorities = sortStates
+        .map(col => col.sort?.priority)
         .filter(priority => priority !== undefined);
 
       const maxPriority = this.columns.length + 1;
       const priority = Math.min(maxPriority, ...priorities) - 1;
-      state.sortState = { order, priority };
-    } else if (order && state.sortState) {
+      state.sort = { order, priority };
+    } else if (order && state.sort) {
       // Column was sorted, just updated the order
-      state.sortState.order = order;
+      state.sort.order = order;
     } else {
-      state.sortState = null;
+      state.sort = null;
     }
 
     // Clear all other sorting
     if (clear) {
-      for (const state of columnStates) {
+      for (const state of sortStates) {
         if (state.field !== field) {
-          state.sortState = null;
+          state.sort = null;
         }
       }
     }
 
-    this.columnStates = columnStates;
+    this.columnSort = sortStates;
   }
 
   /**
@@ -585,8 +672,8 @@ export class YatlTable<T extends object> extends LitElement {
    * @param visible - `true` to show the column, `false` to hide it.
    */
   public setColumnVisibility(field: NestedKeyOf<T>, visible: boolean) {
-    const columnStates = this.columnStates;
-    const state = findColumn(field, columnStates);
+    const visibilityStates = this.columnVisibility;
+    const state = findColumn(field, visibilityStates);
     if (!state) {
       throw new Error(`Cannot get options for non-existent column "${field}"`);
     }
@@ -600,7 +687,7 @@ export class YatlTable<T extends object> extends LitElement {
     }
 
     state.visible = visible;
-    this.columnStates = columnStates;
+    this.columnVisibility = visibilityStates;
   }
 
   /**
@@ -608,7 +695,7 @@ export class YatlTable<T extends object> extends LitElement {
    * @param field - The field name of the column to toggle.
    */
   public toggleColumnVisibility(field: NestedKeyOf<T>) {
-    const state = findColumn(field, this._columnStates);
+    const state = this.getColumnState(field);
     // If state is null here becuase the column doesn't exist
     // setColumnVisibility will throw an error. We don't need to.
     this.setColumnVisibility(field, !state);
@@ -746,30 +833,6 @@ export class YatlTable<T extends object> extends LitElement {
   }
 
   /**
-   * Sets the display order of the columns in the table.
-   *
-   * @param fields - An array of field names representing the new order of columns. Columns not included in the array will be placed at the end.
-   * @throws {TypeError} If `fields` is not an array.
-   */
-  public setColumnOrder(fields: NestedKeyOf<T>[]) {
-    const newColumns: ColumnOptions<T>[] = [];
-    for (const field of fields) {
-      const col = findColumn(field, this.columns);
-      if (col) {
-        newColumns.push(col);
-      }
-    }
-
-    for (const col of this.columns) {
-      if (!findColumn(col.field, newColumns)) {
-        newColumns.push(col);
-      }
-    }
-
-    this.columns = [...newColumns];
-  }
-
-  /**
    * Finds the first row
    * @param field
    * @param value
@@ -846,8 +909,8 @@ export class YatlTable<T extends object> extends LitElement {
           part="header-sort-icon"
           class=${classMap({
             'sort-icon': true,
-            ascending: state.sortState?.order === 'asc',
-            descending: state.sortState?.order === 'desc',
+            ascending: state.sort?.order === 'asc',
+            descending: state.sort?.order === 'desc',
           })}
         ></div>`
       : nothing;
@@ -868,8 +931,9 @@ export class YatlTable<T extends object> extends LitElement {
       : nothing;
   }
 
-  protected renderHeaderCell(column: ColumnOptions<T>) {
-    const state = findColumn(column.field, this._columnStates)!;
+  protected renderHeaderCell(field: NestedKeyOf<T>) {
+    const column = findColumn(field, this.columns)!;
+    const state = this.getColumnState(column.field);
     if (state.visible == false) {
       return nothing;
     }
@@ -908,7 +972,7 @@ export class YatlTable<T extends object> extends LitElement {
   protected renderHeader() {
     return html`
       <div part="header" class="header row">
-        ${this.columns.map(column => this.renderHeaderCell(column))}
+        ${this.columnOrder.map(field => this.renderHeaderCell(field))}
       </div>
     `;
   }
@@ -933,9 +997,10 @@ export class YatlTable<T extends object> extends LitElement {
       : value;
   }
 
-  protected renderCell(column: ColumnOptions<T>, row: T) {
-    const state = findColumn(column.field, this._columnStates);
-    if (state?.visible == false) {
+  protected renderCell(field: NestedKeyOf<T>, row: T) {
+    const column = findColumn(field, this.columns)!;
+    const state = this.getColumnState(column.field);
+    if (!state.visible) {
       return nothing;
     }
 
@@ -981,7 +1046,7 @@ export class YatlTable<T extends object> extends LitElement {
         data-index=${metadata.index}
         data-filtered-index=${index}
       >
-        ${this.columns.map(column => this.renderCell(column, row))}
+        ${this.columnOrder.map(field => this.renderCell(field, row))}
       </div>
     `;
   }
@@ -1059,7 +1124,8 @@ export class YatlTable<T extends object> extends LitElement {
   }
 
   protected override render() {
-    const gridTemplate = widthsToGridTemplates(this.columnWidths).join(' ');
+    const gridWidths = this.getGridWidths();
+    const gridTemplate = widthsToGridTemplates(gridWidths).join(' ');
 
     return html`
       <div
@@ -1079,13 +1145,38 @@ export class YatlTable<T extends object> extends LitElement {
   protected override updated(changedProperties: PropertyValues<YatlTable<T>>) {
     super.updated(changedProperties);
 
-    if (!this.storageOptions?.key) return;
-    const shouldSave = Array.from(changedProperties.keys()).some(prop =>
-      SAVE_TRIGGERS.has(prop as keyof YatlTable<T>),
+    super.updated(changedProperties);
+
+    // We check if any of the properties that affect visual state were updated.
+    const stateProps: (keyof YatlTable<T>)[] = [
+      'columnOrder',
+      'columnVisibility',
+      'columnSort',
+      'columnWidths',
+      'searchQuery',
+      'filters',
+    ];
+
+    const changedStateProp = stateProps.filter(prop =>
+      changedProperties.has(prop),
     );
 
-    if (shouldSave) {
-      this.scheduleSave();
+    // 2. Dispatch the "After" event
+    if (changedStateProp.length) {
+      // We pass the new, fully resolved state
+      this.dispatchEvent(
+        new YatlStateChangeEvent(this.getState(), changedStateProp),
+      );
+    }
+
+    if (this.storageOptions?.key) {
+      const shouldSave = Array.from(changedProperties.keys()).some(prop =>
+        SAVE_TRIGGERS.has(prop as keyof YatlTable<T>),
+      );
+
+      if (shouldSave) {
+        this.scheduleSave();
+      }
     }
   }
 
@@ -1342,14 +1433,14 @@ export class YatlTable<T extends object> extends LitElement {
 
     const columnData = findColumn(field, this.columnData)!;
 
-    if (!columnData.state.sortState) {
+    if (!columnData.state.sort) {
       return 0;
     }
 
     const aMetadata = this.rowMetadata.get(a)!;
     const bMetadata = this.rowMetadata.get(b)!;
 
-    if (columnData.state.sortState?.order === 'asc') {
+    if (columnData.state.sort?.order === 'asc') {
       aValue = aMetadata.sortValues[columnData.field];
       bValue = bMetadata.sortValues[columnData.field];
     } else {
@@ -1381,12 +1472,10 @@ export class YatlTable<T extends object> extends LitElement {
 
     const sortedColumns = this.columnData
       // Filter to visible columns with active sort states
-      .filter(col => col.state.visible && col.state.sortState)
+      .filter(col => col.state.visible && col.state.sort)
       // Sort our columns by their sort priority.
       // This is how sorting by multiple columns is handled.
-      .sort(
-        (a, b) => b.state.sortState!.priority - a.state.sortState!.priority,
-      );
+      .sort((a, b) => b.state.sort!.priority - a.state.sort!.priority);
 
     this._filteredData = this._filteredData.toSorted((a, b) => {
       const aMetadata = this.rowMetadata.get(a)!;
@@ -1415,19 +1504,7 @@ export class YatlTable<T extends object> extends LitElement {
 
   // #endregion
 
-  // #region --- State Methods ---
-
-  private createColumnStates() {
-    this.columnStates = this.columns.map(column => {
-      const previousState = findColumn(column.field, this._columnStates);
-      return {
-        field: column.field,
-        visible: previousState?.visible ?? true,
-        sortState: previousState?.sortState,
-        width: previousState?.width,
-      };
-    });
-  }
+  // #region --- Utilities ---
 
   private createMetadata() {
     this.rowMetadata = new WeakMap();
@@ -1497,28 +1574,23 @@ export class YatlTable<T extends object> extends LitElement {
     }
   }
 
-  // #endregion
-
-  // #region --- Utilities ---
-
   private get columnData() {
     return this.columns.map(column => ({
       field: column.field,
       options: column,
-      state: findColumn(column.field, this._columnStates) ?? {
-        field: column.field,
-        visible: true,
-      },
+      state: this.getColumnState(column.field),
     }));
   }
 
-  private get columnWidths() {
-    // Search through the user defined columns (not the states just in case)
-    // Filter out any hidden columns (columns with no state are considered visible)
-    return this.columns
-      .map(col => findColumn(col.field, this._columnStates))
-      .filter(state => (state ? state.visible : true))
-      .map(state => state?.width ?? null);
+  /**
+   * Gets the width of each column in the
+   * order they will appear in the grid.
+   */
+  private getGridWidths() {
+    return this.columnOrder
+      .map(field => this.getColumnState(field))
+      .filter(state => state.visible)
+      .map(state => state.width);
   }
 
   private scheduleSave() {
@@ -1527,6 +1599,20 @@ export class YatlTable<T extends object> extends LitElement {
     this.saveTimer = window.setTimeout(() => {
       this.saveStateToStorage();
     }, STATE_SAVE_DEBOUNCE);
+  }
+
+  private getColumnState(field: NestedKeyOf<T>) {
+    let state = findColumn(field, this._columnStates);
+    if (!state) {
+      state = {
+        field,
+        visible: true,
+        sort: null,
+        width: null,
+      };
+      this._columnStates.push(state);
+    }
+    return state;
   }
 
   // #endregion
@@ -1554,7 +1640,7 @@ export class YatlTable<T extends object> extends LitElement {
       };
 
       if (options.saveColumnSortOrders) {
-        savedColumnState.sortState = columnState.sortState;
+        savedColumnState.sort = columnState.sort;
       }
 
       if (options.saveColumnVisibility) {
@@ -1612,7 +1698,7 @@ export class YatlTable<T extends object> extends LitElement {
           }
 
           if (options.saveColumnSortOrders) {
-            columnStateToRestore.sortState = savedColumnState.sortState;
+            columnStateToRestore.sort = savedColumnState.sort;
           }
           tableStateToRestore.columns.push(columnStateToRestore);
         }
@@ -1639,13 +1725,13 @@ export class YatlTable<T extends object> extends LitElement {
     }
 
     const multiSort = event.shiftKey;
-    const state = findColumn(column.field, this._columnStates);
+    const state = this.getColumnState(column.field);
 
-    if (!state?.sortState) {
+    if (!state?.sort) {
       this.sort(column.field, 'asc', !multiSort);
-    } else if (state.sortState.order === 'asc') {
+    } else if (state.sort.order === 'asc') {
       this.sort(column.field, 'desc', !multiSort);
-    } else if (state.sortState.order) {
+    } else if (state.sort.order) {
       this.sort(column.field, null, !multiSort);
     }
   };
@@ -1672,7 +1758,7 @@ export class YatlTable<T extends object> extends LitElement {
       return;
     }
 
-    const columnIndex = this.columns.findIndex(col => col.field === field);
+    const columnIndex = this.columnOrder.findIndex(col => col === field);
     if (columnIndex < 0) {
       return;
     }
@@ -1683,7 +1769,7 @@ export class YatlTable<T extends object> extends LitElement {
       .forEach(element => {
         const field = element.dataset.field;
         if (field) {
-          const state = findColumn(field, this._columnStates);
+          const state = this.getColumnState(field as NestedKeyOf<T>);
           if (state) {
             state.width = element.getBoundingClientRect().width;
           }
@@ -1696,7 +1782,7 @@ export class YatlTable<T extends object> extends LitElement {
       startWidth: header.getBoundingClientRect().width,
       columnIndex: columnIndex,
       columnField: field,
-      currentWidths: widthsToGridTemplates(this.columnWidths),
+      currentWidths: widthsToGridTemplates(this.getGridWidths()),
     };
 
     this.tableElement.style.setProperty(
@@ -1736,13 +1822,13 @@ export class YatlTable<T extends object> extends LitElement {
       const finalWidth = parseFloat(
         this.resizeState.currentWidths[this.resizeState.columnIndex],
       );
-      const columnStates = this.columnStates;
-      const state = findColumn(this.resizeState.columnField, columnStates)!;
+      const columnWidths = this.columnWidths;
+      const state = findColumn(this.resizeState.columnField, columnWidths)!;
       state.width = finalWidth;
       // We need to trigger a lifecycle update
       // to force any logic from updating the width.
       // Right now this is just the save state logic.
-      this.columnStates = columnStates;
+      this.columnWidths = columnWidths;
 
       this.dispatchEvent(new YatlColumnResizeEvent(state.field, state.width));
     }
@@ -1752,8 +1838,6 @@ export class YatlTable<T extends object> extends LitElement {
 
   private handleDragColumnStart = (event: DragEvent, field: NestedKeyOf<T>) => {
     const target = event.target as HTMLElement;
-    console.log('Starting drag event');
-    console.log(target);
 
     if (target?.classList.contains('resizer')) {
       event.preventDefault();
@@ -1798,19 +1882,18 @@ export class YatlTable<T extends object> extends LitElement {
     event.preventDefault();
     event.stopPropagation();
 
-    const columns = [...this.columns];
-    const dragIndex = columns.findIndex(col => col.field === this.dragColumn);
-    const dropIndex = columns.findIndex(col => col.field === field);
+    const newColumnOrder = [...this.columnOrder];
+    const dragIndex = newColumnOrder.findIndex(col => col === this.dragColumn);
+    const dropIndex = newColumnOrder.findIndex(col => col === field);
 
     if (dragIndex > -1 && dropIndex > -1) {
-      const [draggedColumn] = columns.splice(dragIndex, 1);
+      const [draggedColumn] = newColumnOrder.splice(dragIndex, 1);
       const droppedColumn = findColumn(field, this.columns);
       if (!droppedColumn) return;
 
-      columns.splice(dropIndex, 0, draggedColumn);
-      const newColumnOrder = columns.map(col => col.field);
+      newColumnOrder.splice(dropIndex, 0, draggedColumn);
       const reorderEvent = new YatlColumnReorderEvent(
-        draggedColumn.field,
+        draggedColumn,
         droppedColumn.field,
         newColumnOrder,
       );
@@ -1818,7 +1901,7 @@ export class YatlTable<T extends object> extends LitElement {
         return;
       }
 
-      this.setColumnOrder(newColumnOrder);
+      this.columnOrder = [...newColumnOrder];
     }
   };
 
@@ -1909,6 +1992,13 @@ interface EventMap<T> {
   'yatl-column-resize': YatlColumnResizeEvent<T>;
   'yatl-column-reorder': YatlColumnReorderEvent<T>;
   'yatl-search': YatlSearchEvent;
+  'yatl-state-change': YatlStateChangeEvent<T>;
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-table': YatlTable<object>;
+  }
 }
 
 export { createRegexTokenizer, findColumn, whitespaceTokenizer };

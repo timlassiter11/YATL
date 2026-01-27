@@ -103,7 +103,8 @@ export default css`
     border-bottom: none;
   }
 
-  .header .cell::after,
+  .header.reorderable .cell::after,
+  .header .cell.sortable::after,
   .row:not(.header)::after {
     content: '';
     position: absolute;

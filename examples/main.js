@@ -1,4 +1,4 @@
-import { YatlTable, findColumn } from '../dist/index.mjs';
+import { YatlTable } from '../dist/index.mjs';
 
 // Used for generating data and for filters
 const statuses = [
@@ -302,7 +302,7 @@ function refreshColumnPicker(listElement) {
     // Text
     const span = document.createElement('span');
     // Find the human-readable title from the original definitions
-    const def = findColumn(col.field, table.columns);
+    const def = table.getColumn(col.field);
     span.textContent = def?.title ? def.title : col.field;
 
     label.appendChild(checkbox);

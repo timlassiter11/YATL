@@ -314,10 +314,10 @@ export class YatlTable<T extends object> extends LitElement {
 
     let changed = false;
     for (const column of columns) {
-      const state = this.getColumnState(column.field);
-      if (state && state.visible !== column.visible) {
+      const columnState = this.getColumnState(column.field);
+      if (columnState && columnState.visible !== column.visible) {
         changed = true;
-        state.visible = column.visible;
+        columnState.visible = column.visible;
       }
     }
 
@@ -330,10 +330,15 @@ export class YatlTable<T extends object> extends LitElement {
 
   @property({ attribute: false })
   public get columnSort(): { field: NestedKeyOf<T>; sort: SortState | null }[] {
-    return this.columnOrder.map(field => ({
-      field,
-      sort: this.getColumnState(field).sort,
-    }));
+    return this.columnOrder.map(field => {
+      const sortState = this.getColumnState(field).sort;
+      return {
+        field,
+        // We need to make a copy of sort state so
+        // if the user changes it, it doesn't change our copy.
+        sort: sortState ? { ...sortState } : null,
+      };
+    });
   }
 
   public set columnSort(columns) {
@@ -341,14 +346,14 @@ export class YatlTable<T extends object> extends LitElement {
 
     let changed = false;
     for (const column of columns) {
-      const state = this.getColumnState(column.field);
+      const columnState = this.getColumnState(column.field);
       if (
-        state &&
-        (state.sort?.order !== column.sort?.order ||
-          state.sort?.priority !== column.sort?.priority)
+        columnState &&
+        (columnState.sort?.order !== column.sort?.order ||
+          columnState.sort?.priority !== column.sort?.priority)
       ) {
         changed = true;
-        state.sort = column.sort;
+        columnState.sort = column.sort;
       }
     }
 
@@ -373,10 +378,10 @@ export class YatlTable<T extends object> extends LitElement {
 
     let changed = false;
     for (const column of columns) {
-      const state = this.getColumnState(column.field);
-      if (state && state.width !== column.width) {
+      const columnState = this.getColumnState(column.field);
+      if (columnState && columnState.width !== column.width) {
         changed = true;
-        state.width = column.width;
+        columnState.width = column.width;
       }
     }
 
@@ -663,7 +668,7 @@ export class YatlTable<T extends object> extends LitElement {
       }
     }
 
-    this.columnSort = sortStates;
+    this.columnSort = [...sortStates];
   }
 
   /**

@@ -9,14 +9,14 @@
             "request": "launch",
             "name": "Chrome",
             "preLaunchTask": "npm: build",
-            "url": "http://127.0.0.1:3000/examples/index.html"
+            "url": "http://127.0.0.1:3000/examples/advanced.html"
         },
         {
             "type": "msedge",
             "request": "launch",
             "name": "Edge",
             "preLaunchTask": "npm: build",
-            "url": "http://127.0.0.1:3000/examples/index.html"
+            "url": "http://127.0.0.1:3000/examples/advanced.html"
         }
     ]
 }

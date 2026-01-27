@@ -1,6 +1,12 @@
 import { NestedKeyOf } from './utils';
 
 /**
+ * Default type for the table.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type UnspecifiedRecord = Record<string, any>;
+
+/**
  * Defines the possible sorting orders for columns.
  */
 export type SortOrder = 'asc' | 'desc';
@@ -129,24 +135,22 @@ export interface SortState {
   priority: number;
 }
 
+export type ColumnRole = 'display' | 'internal';
+
 /**
- * Column options for the table.
+ * Shared options between both internal and displayed columns.
  */
-export interface ColumnOptions<T> {
+export interface BaseColumnOptions<T> {
   /**
    * The field name in the data object.
    */
   field: NestedKeyOf<T>;
 
   /**
-   * The title to display in the header.
+   * Determines if a column is intended to be displayed,
+   * or just for searching and filtering.
    */
-  title?: string;
-
-  /**
-   * Whether the column is sortable.
-   */
-  sortable?: boolean;
+  role?: ColumnRole;
 
   /**
    * Whether the column is searchable.
@@ -159,15 +163,42 @@ export interface ColumnOptions<T> {
   tokenize?: boolean;
 
   /**
-   * Whether the column should be resizable.
-   */
-  resizable?: boolean;
-
-  /**
    * A function for tokenizing this column's data.
    * Fallback to the main table tokenizer if not provided.
    */
   searchTokenizer?: TokenizerCallback;
+
+  /**
+   * A custom function to determine if a cell's value in this column matches a given filter criterion.
+   * This is used when `DataTable.filter()` is called with an object-based filter that targets this column's field.
+   */
+  filter?: ColumnFilterCallback;
+}
+
+/**
+ * Column options for the table.
+ */
+export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
+  /**
+   * Determines if a column is intended to be displayed,
+   * or just for searching and filtering.
+   */
+  role?: 'display';
+
+  /**
+   * The title to display in the header.
+   */
+  title?: string;
+
+  /**
+   * Whether the column is sortable.
+   */
+  sortable?: boolean;
+
+  /**
+   * Whether the column should be resizable.
+   */
+  resizable?: boolean;
 
   /**
    * A function to format the value for display.
@@ -196,13 +227,21 @@ export interface ColumnOptions<T> {
    * This can be used to preprocess and cache values (e.g., convert to lowercase, extract numbers) before comparison.
    */
   sortValue?: SortValueCallback;
-
-  /**
-   * A custom function to determine if a cell's value in this column matches a given filter criterion.
-   * This is used when `DataTable.filter()` is called with an object-based filter that targets this column's field.
-   */
-  filter?: ColumnFilterCallback;
 }
+
+/**
+ * Internal column definition used for searching and filtering
+ */
+export interface InternalColumnOptions<T> extends BaseColumnOptions<T> {
+  /**
+   * Marks this column as internal-only.
+   * It will be indexed for search and filtering, but strictly excluded from the UI.
+   */
+  display: 'internal';
+}
+
+export type ColumnOptions<T> = DisplayColumnOptions<T> | InternalColumnOptions<T>;
+
 
 /**
  * Represents the current state of a column.

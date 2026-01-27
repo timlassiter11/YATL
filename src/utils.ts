@@ -1,5 +1,5 @@
 import { html, TemplateResult } from 'lit';
-import { ColumnState, Compareable } from './types';
+import { ColumnOptions, ColumnState, Compareable, DisplayColumnOptions, InternalColumnOptions } from './types';
 
 export type NestedKeyOf<ObjectType> = ObjectType extends object
   ? {
@@ -214,4 +214,12 @@ export function isCompareable(value: unknown): value is Compareable {
     typeof value === 'boolean' ||
     value instanceof Date
   );
+}
+
+export function isInternalColumn<T>(col: ColumnOptions<T>): col is InternalColumnOptions<T> {
+  return col.role === 'internal';
+}
+
+export function isDisplayColumn<T>(col: ColumnOptions<T>): col is DisplayColumnOptions<T> {
+  return col.role !== 'internal';
 }

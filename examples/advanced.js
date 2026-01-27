@@ -93,6 +93,7 @@ function initTable() {
     },
     {
       field: 'lastModified',
+      title: 'Modified',
       sortValue: value => value?.getTime(),
       // Custom filter logic just for this column
       filter: (value, filter) => {
@@ -116,6 +117,8 @@ function initTable() {
     },
     {
       field: 'tags',
+      role: 'internal',
+      searchable: true,
       tokenize: true,
       // Tokenize on commas
       searchTokenizer: value =>

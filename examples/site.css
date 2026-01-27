@@ -141,6 +141,9 @@ select option:hover {
   font-size: large;
   font-weight: 500;
   color: var(--text-hi);
+  /* Helps center the icons */
+  display: flex;
+  align-items: center;
 }
 
 .button:hover,
@@ -185,8 +188,6 @@ details[open] .button {
 .dropdown summary {
   box-sizing: border-box;
   /* Hides the dropdown arrow*/
-  display: flex;
-  align-items: center;
   list-style: none;
 }
 
@@ -204,7 +205,6 @@ details[open] .button {
 
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
 }
 
 .dropdown-item {
@@ -214,6 +214,7 @@ details[open] .button {
   color: var(--text-hi);
   padding: var(--spacing-sm);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .dropdown-item:hover {

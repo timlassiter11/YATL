@@ -1,10 +1,13 @@
 import type {
   ColumnFilterCallback,
   ColumnOptions,
+  ColumnRole,
   ColumnState,
   Compareable,
+  DisplayColumnOptions,
   FilterCallback,
   Filters,
+  InternalColumnOptions,
   QueryToken,
   RestorableColumnState,
   RestorableTableState,
@@ -14,6 +17,7 @@ import type {
   StorageOptions,
   TableState,
   TokenizerCallback,
+  UnspecifiedRecord,
 } from './types';
 
 import {
@@ -22,6 +26,8 @@ import {
   getNestedValue,
   highlightText,
   isCompareable,
+  isDisplayColumn,
+  isInternalColumn,
   NestedKeyOf,
   toHumanReadable,
   whitespaceTokenizer,
@@ -64,7 +70,7 @@ const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
 };
 
 // Properties that should trigger a save
-const SAVE_TRIGGERS = new Set<keyof YatlTable<object>>([
+const SAVE_TRIGGERS = new Set<keyof YatlTable>([
   'searchQuery',
   'filters',
   'columns',
@@ -88,7 +94,9 @@ const MATCH_WEIGHTS = {
  * column resizing, column rearranging, and virtual scrolling.
  */
 @customElement('yatl-table')
-export class YatlTable<T extends object> extends LitElement {
+export class YatlTable<
+  T extends object = UnspecifiedRecord,
+> extends LitElement {
   public static override styles = [styles];
 
   @query('.table')
@@ -107,7 +115,6 @@ export class YatlTable<T extends object> extends LitElement {
   private _storageOptions: StorageOptions | null = null;
   private _data: T[] = [];
   private _searchQuery = '';
-  private _searchIncludedFields: NestedKeyOf<T>[] = [];
   private _searchTokenizer: TokenizerCallback = whitespaceTokenizer;
   private _filters: Filters<T> | FilterCallback<T> | null = null;
 
@@ -291,7 +298,7 @@ export class YatlTable<T extends object> extends LitElement {
 
   /**
    * The current order of the columns.
-   * **This includes hidden columns**
+   * * **NOTE:** This includes hidden columns but not internal columns
    */
   @property({ attribute: false })
   public get columnOrder() {
@@ -299,13 +306,13 @@ export class YatlTable<T extends object> extends LitElement {
     // from the normal column list.
     const finalOrder = new Set<NestedKeyOf<T>>();
     for (const field of this._columnOrder) {
-      const col = findColumn(field, this.columns);
+      const col = findColumn(field, this.getColumns('display'));
       if (col) {
         finalOrder.add(field);
       }
     }
 
-    for (const col of this.columns) {
+    for (const col of this.getColumns('display')) {
       if (!finalOrder.has(col.field)) {
         finalOrder.add(col.field);
       }
@@ -445,26 +452,6 @@ export class YatlTable<T extends object> extends LitElement {
     this.updateInternalQuery();
     this.filterDirty = true;
     this.requestUpdate('searchQuery', oldValue);
-  }
-
-  /**
-   * A list of extra data fields to include in the search index, even if they are not
-   * displayed as visible columns. Useful for searching by ID, hidden keywords, or tags.
-   */
-  @property({ type: Array, attribute: 'search-included-fields' })
-  public get searchIncludedFields() {
-    return this._searchIncludedFields;
-  }
-
-  public set searchIncludedFields(fields) {
-    if (this._searchIncludedFields === fields) {
-      return;
-    }
-
-    const oldValue = this._searchIncludedFields;
-    this._searchIncludedFields = fields;
-    this.filterDirty = true;
-    this.requestUpdate('searchIncludedFields', oldValue);
   }
 
   /**
@@ -765,10 +752,12 @@ export class YatlTable<T extends object> extends LitElement {
     const data = all ? this.data : this.filteredData;
     const rows = [...data.values()];
 
-    const columnData = this.columnData;
+    const columnData = this.getColumnData(this.getColumns('display'));
 
     const csvHeaders = columnData
-      .filter(col => all || col.state?.visible)
+      .filter(
+        col => all || (isDisplayColumn(col.options) && col.state?.visible),
+      )
       .map(col => `"${col.options.title}"`)
       .join(',');
 
@@ -940,7 +929,7 @@ export class YatlTable<T extends object> extends LitElement {
   // #region --- Render Methods ---
 
   protected renderColumnSortIcon(
-    column: ColumnOptions<T>,
+    column: DisplayColumnOptions<T>,
     state: ColumnState<T>,
   ) {
     return (column.sortable ?? this.sortable)
@@ -956,7 +945,7 @@ export class YatlTable<T extends object> extends LitElement {
   }
 
   protected renderColumnResizer(
-    column: ColumnOptions<T>,
+    column: DisplayColumnOptions<T>,
     _state: ColumnState<T>,
   ) {
     return (column.resizable ?? this.resizable)
@@ -971,7 +960,7 @@ export class YatlTable<T extends object> extends LitElement {
   }
 
   protected renderHeaderCell(field: NestedKeyOf<T>) {
-    const column = findColumn(field, this.columns)!;
+    const column = findColumn(field, this.getColumns('display'))!;
     const state = this.getColumnState(column.field);
     if (state.visible == false) {
       return nothing;
@@ -1018,7 +1007,7 @@ export class YatlTable<T extends object> extends LitElement {
 
   protected renderCellContents(
     value: unknown,
-    column: ColumnOptions<T>,
+    column: DisplayColumnOptions<T>,
     row: T,
   ) {
     if (column.cellRenderer) {
@@ -1037,7 +1026,7 @@ export class YatlTable<T extends object> extends LitElement {
   }
 
   protected renderCell(field: NestedKeyOf<T>, row: T) {
-    const column = findColumn(field, this.columns)!;
+    const column = findColumn(field, this.getColumns('display'))!;
     const state = this.getColumnState(column.field);
     if (!state.visible) {
       return nothing;
@@ -1410,11 +1399,10 @@ export class YatlTable<T extends object> extends LitElement {
   }
 
   private filterRows() {
-    const searchableFields = [...this.columnData.values()]
+    const columnData = this.getColumnData(this.columns);
+    const fields = columnData
       .filter(col => col.options.searchable)
       .map(c => c.field);
-
-    const fields = [...searchableFields, ...this.searchIncludedFields];
 
     this._filteredData = this.data.filter((row, index) => {
       const metadata = this.rowMetadata.get(row)!;
@@ -1470,7 +1458,10 @@ export class YatlTable<T extends object> extends LitElement {
   private compareRows(a: T, b: T, field: NestedKeyOf<T>): number {
     let aValue, bValue;
 
-    const columnData = findColumn(field, this.columnData)!;
+    const columnData = findColumn(
+      field,
+      this.getColumnData(this.getColumns('display')),
+    )!;
 
     if (!columnData.state.sort) {
       return 0;
@@ -1509,7 +1500,7 @@ export class YatlTable<T extends object> extends LitElement {
       return;
     }
 
-    const sortedColumns = this.columnData
+    const sortedColumns = this.getColumnData(this.columns)
       // Filter to visible columns with active sort states
       .filter(col => col.state.visible && col.state.sort)
       // Sort our columns by their sort priority.
@@ -1562,15 +1553,17 @@ export class YatlTable<T extends object> extends LitElement {
       for (const column of this.columns) {
         const value = getNestedValue(row, column.field);
 
-        // Cache precomputed values for sorting
-        if (typeof column.sortValue === 'function') {
-          metadata.sortValues[column.field] = column.sortValue(value);
-        } else if (typeof value === 'string') {
-          metadata.sortValues[column.field] = value.toLocaleLowerCase();
-        } else if (isCompareable(value)) {
-          metadata.sortValues[column.field] = value;
-        } else {
-          metadata.sortValues[column.field] = String(value);
+        if (isDisplayColumn(column)) {
+          // Cache precomputed values for sorting
+          if (typeof column.sortValue === 'function') {
+            metadata.sortValues[column.field] = column.sortValue(value);
+          } else if (typeof value === 'string') {
+            metadata.sortValues[column.field] = value.toLocaleLowerCase();
+          } else if (isCompareable(value)) {
+            metadata.sortValues[column.field] = value;
+          } else {
+            metadata.sortValues[column.field] = String(value);
+          }
         }
 
         // Cache precomputed lower-case values for search
@@ -1584,15 +1577,6 @@ export class YatlTable<T extends object> extends LitElement {
           metadata.searchTokens[column.field] = tokenizer(String(value)).map(
             token => token.value,
           );
-        }
-      }
-
-      // Add any extra search fields
-      for (const field of this.searchIncludedFields) {
-        const value = getNestedValue(row, field);
-        // Cache precomputed lower-case values for search
-        if (typeof value === 'string') {
-          metadata.searchValues[field] = value.toLocaleLowerCase();
         }
       }
     }
@@ -1613,8 +1597,24 @@ export class YatlTable<T extends object> extends LitElement {
     }
   }
 
-  private get columnData() {
-    return this.columns.map(column => ({
+  private getColumns(kind: 'display'): DisplayColumnOptions<T>[];
+  private getColumns(kind: 'internal'): InternalColumnOptions<T>[];
+  private getColumns(kind?: 'all'): ColumnOptions<T>[];
+  private getColumns(kind: ColumnRole | 'all' = 'all') {
+    switch (kind) {
+      case 'display':
+        return this.columns.filter(isDisplayColumn);
+      case 'internal':
+        return this.columns.filter(isInternalColumn);
+      case 'all':
+        return this.columns;
+    }
+  }
+
+  private getColumnData<TColumnType extends { field: NestedKeyOf<T> }>(
+    columns: TColumnType[],
+  ) {
+    return columns.map(column => ({
       field: column.field,
       options: column,
       state: this.getColumnState(column.field),
@@ -1760,7 +1760,7 @@ export class YatlTable<T extends object> extends LitElement {
   ) => {
     const target = event.target as HTMLElement;
     const currentTarget = event.currentTarget as HTMLElement;
-    
+
     if (
       !currentTarget.classList.contains('sortable') ||
       target.classList.contains('resizer')
@@ -2041,7 +2041,7 @@ interface EventMap<T> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'yatl-table': YatlTable<object>;
+    'yatl-table': YatlTable;
   }
 }
 

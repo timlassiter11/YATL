@@ -7,8 +7,9 @@ import {
 } from '@open-wc/testing';
 import { stub, spy, useFakeTimers } from 'sinon';
 import './yatl-table';
-import { findColumn, type YatlTable } from './yatl-table';
+import { type YatlTable } from './yatl-table';
 import type { ColumnOptions, NestedKeyOf, RestorableTableState } from './types';
+import { findColumn } from './utils';
 
 // --- Mock Data ---
 interface User {

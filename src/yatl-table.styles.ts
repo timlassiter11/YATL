@@ -260,7 +260,7 @@ export default css`
     flex-shrink: 0;
 
     position: sticky;
-    bottom: 0;
+    inset: 0;
     z-index: var(--header-z-index);
   }
 

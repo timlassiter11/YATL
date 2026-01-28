@@ -9,7 +9,6 @@ import { stub, spy, useFakeTimers } from 'sinon';
 import './yatl-table';
 import { type YatlTable } from './yatl-table';
 import type { ColumnOptions, NestedKeyOf, RestorableTableState } from './types';
-import { findColumn } from './utils';
 
 // --- Mock Data ---
 interface User {
@@ -160,8 +159,8 @@ describe('YatlTable', () => {
       const states = el.columnSort;
 
       // Verify both are sorted
-      expect(findColumn('role', states)?.sort).to.exist;
-      expect(findColumn('age', states)?.sort).to.exist;
+      expect(states['role']).to.exist;
+      expect(states['age']).to.exist;
     });
 
     it('replaces sort when clicking without Shift', async () => {
@@ -178,8 +177,8 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       const states = el.columnSort;
-      expect(findColumn('role', states)!.sort).to.be.null;
-      expect(findColumn('age', states)?.sort?.order).to.equal('asc');
+      expect(states['role']).to.be.null;
+      expect(states['age']?.order).to.equal('asc');
     });
   });
 
@@ -326,10 +325,10 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       // Verify state updated
-      const colState = findColumn('id', el.columnWidths)
+      const colWidth = el.columnWidths['id'];
       // Note: Exact pixel match depends on test runner viewport,
       // usually we assert it is LARGER than initial.
-      expect(colState!.width).to.be.greaterThan(initialWidth);
+      expect(colWidth).to.be.greaterThan(initialWidth);
     });
   });
 

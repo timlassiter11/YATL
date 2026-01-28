@@ -1181,7 +1181,11 @@ export class YatlTable<
         class="table"
         style=${styleMap({ '--grid-template': gridTemplate })}
       >
-        ${this.renderHeader()} ${this.renderBody()} ${this.renderFooter()}
+        ${this.renderHeader()} 
+        <slot>
+          ${this.renderBody()}
+          ${this.renderFooter()}
+        </slot>
       </div>
     `;
   }

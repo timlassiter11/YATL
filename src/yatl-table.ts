@@ -1,6 +1,7 @@
 import type {
   ColumnFilterCallback,
   ColumnOptions,
+  ColumnPropertyRecord,
   ColumnState,
   Compareable,
   DisplayColumnOptions,
@@ -21,11 +22,11 @@ import type {
 
 import {
   createRegexTokenizer,
-  findColumn,
   getNestedValue,
   highlightText,
   isCompareable,
   isDisplayColumn,
+  isInternalColumn,
   toHumanReadable,
   whitespaceTokenizer,
   widthsToGridTemplates,
@@ -299,8 +300,14 @@ export class YatlTable<
     this.requestUpdate('columns', oldValue);
   }
 
+  /**
+   * Gets a list of columns with the display role
+   * **This will always be ordered by {@link YatlTable.columnOrder}**
+   */
   public get displayColumns() {
-    return this._columns.filter(isDisplayColumn);
+    return this.columnOrder
+      .map(field => this._columnDefinitionMap.get(field))
+      .filter(isDisplayColumn);
   }
 
   /**
@@ -319,8 +326,8 @@ export class YatlTable<
       }
     }
 
-    for (const col of this.displayColumns) {
-      if (!finalOrder.has(col.field)) {
+    for (const col of this.columns) {
+      if (isDisplayColumn(col) && !finalOrder.has(col.field)) {
         finalOrder.add(col.field);
       }
     }
@@ -342,22 +349,24 @@ export class YatlTable<
    * **This will always be ordered by {@link YatlTable.columnOrder}**
    */
   @property({ attribute: false })
-  public get columnVisibility(): { field: NestedKeyOf<T>; visible: boolean }[] {
-    return this.columnOrder.map(field => ({
-      field,
-      visible: this.getOrCreateColumnState(field).visible,
-    }));
+  public get columnVisibility() {
+    const data: ColumnPropertyRecord<T, boolean> = {};
+    for (const field of this.columnOrder) {
+      data[field] = this.getOrCreateColumnState(field).visible;
+    }
+    return data;
   }
 
   public set columnVisibility(columns) {
     const oldValue = this.columnVisibility;
 
     let changed = false;
-    for (const column of columns) {
-      const columnState = this.getOrCreateColumnState(column.field);
-      if (columnState.visible !== column.visible) {
+    const entries = Object.entries(columns) as [NestedKeyOf<T>, boolean][];
+    for (const [field, visible] of entries) {
+      const columnState = this.getOrCreateColumnState(field);
+      if (columnState.visible !== visible) {
         changed = true;
-        columnState.visible = column.visible;
+        columnState.visible = visible;
       }
     }
 
@@ -373,31 +382,30 @@ export class YatlTable<
    * **This will always be orderd by {@link YatlTable.columnOrder}**
    */
   @property({ attribute: false })
-  public get columnSort(): { field: NestedKeyOf<T>; sort: SortState | null }[] {
-    return this.columnOrder.map(field => {
+  public get columnSort() {
+    const data: ColumnPropertyRecord<T, SortState> = {};
+    for (const field of this.columnOrder) {
       const sortState = this.getOrCreateColumnState(field).sort;
-      return {
-        field,
-        // We need to make a copy of sort state so
-        // if the user changes it, it doesn't change our copy.
-        sort: sortState ? { ...sortState } : null,
-      };
-    });
+      // Always return a copy of the state so the user can't modify it
+      data[field] = sortState ? { ...sortState } : null;
+    }
+    return data;
   }
 
   public set columnSort(columns) {
     const oldValue = this.columnSort;
 
     let changed = false;
-    for (const column of columns) {
-      const columnState = this.getOrCreateColumnState(column.field);
+    const entries = Object.entries(columns) as [NestedKeyOf<T>, SortState][];
+    for (const [field, state] of entries) {
+      const columnState = this.getOrCreateColumnState(field);
       if (
         columnState &&
-        (columnState.sort?.order !== column.sort?.order ||
-          columnState.sort?.priority !== column.sort?.priority)
+        (columnState.sort?.order !== state?.order ||
+          columnState.sort?.priority !== state?.priority)
       ) {
         changed = true;
-        columnState.sort = column.sort;
+        columnState.sort = state;
       }
     }
 
@@ -414,22 +422,27 @@ export class YatlTable<
    * **This will always be ordered by {@link YatlTable.columnOrder}**
    */
   @property({ attribute: false })
-  public get columnWidths(): { field: NestedKeyOf<T>; width: number | null }[] {
-    return this.columnOrder.map(field => ({
-      field,
-      width: this.getOrCreateColumnState(field).width,
-    }));
+  public get columnWidths() {
+    const data: ColumnPropertyRecord<T, number | null> = {};
+    for (const field of this.columnOrder) {
+      data[field] = this.getOrCreateColumnState(field).width;
+    }
+    return data;
   }
 
   public set columnWidths(columns) {
     const oldValue = this.columnWidths;
 
     let changed = false;
-    for (const column of columns) {
-      const columnState = this.getOrCreateColumnState(column.field);
-      if (columnState.width !== column.width) {
+    const entries = Object.entries(columns) as [
+      NestedKeyOf<T>,
+      number | null,
+    ][];
+    for (const [field, width] of entries) {
+      const columnState = this.getOrCreateColumnState(field);
+      if (columnState.width !== width) {
         changed = true;
-        columnState.width = column.width;
+        columnState.width = width;
       }
     }
 
@@ -661,12 +674,12 @@ export class YatlTable<
     clear: boolean = true,
   ) {
     const sortStates = this.columnSort;
-    const state = findColumn(field, sortStates);
-    if (!state) {
+    let state = sortStates[field];
+    if (state === undefined) {
       throw new Error(`Cannot get options for non-existent column "${field}"`);
     }
 
-    if (order === state.sort?.order) {
+    if (order === state?.order) {
       return;
     }
 
@@ -675,32 +688,34 @@ export class YatlTable<
     }
 
     // Column was unsorted, give it a new priority
-    if (order && !state.sort) {
+    if (order && !state) {
       // Create a list of current sort priorities
-      const priorities = sortStates
-        .map(col => col.sort?.priority)
+      const priorities = [...this._columnStateMap.values()]
+        .map(state => state.sort?.priority)
         .filter(priority => priority !== undefined);
 
       const maxPriority = this.columns.length + 1;
       const priority = Math.min(maxPriority, ...priorities) - 1;
-      state.sort = { order, priority };
-    } else if (order && state.sort) {
+      state = { order, priority };
+    } else if (order && state) {
       // Column was sorted, just updated the order
-      state.sort.order = order;
+      state.order = order;
     } else {
-      state.sort = null;
+      state = null;
     }
+
+    sortStates[field] = state;
 
     // Clear all other sorting
     if (clear) {
-      for (const state of sortStates) {
-        if (state.field !== field) {
-          state.sort = null;
+      for (const otherField of this.columnOrder) {
+        if (otherField !== field) {
+          sortStates[otherField] = null;
         }
       }
     }
 
-    this.columnSort = [...sortStates];
+    this.columnSort = { ...sortStates };
   }
 
   /**
@@ -710,12 +725,12 @@ export class YatlTable<
    */
   public setColumnVisibility(field: NestedKeyOf<T>, visible: boolean) {
     const visibilityStates = this.columnVisibility;
-    const state = findColumn(field, visibilityStates);
-    if (!state) {
+    const currentVisibility = visibilityStates[field];
+    if (currentVisibility === undefined) {
       throw new Error(`Cannot get options for non-existent column "${field}"`);
     }
 
-    if (state.visible === visible) {
+    if (currentVisibility === visible) {
       return;
     }
 
@@ -723,8 +738,8 @@ export class YatlTable<
       return;
     }
 
-    state.visible = visible;
-    this.columnVisibility = [...visibilityStates];
+    visibilityStates[field] = visible;
+    this.columnVisibility = { ...visibilityStates };
   }
 
   /**
@@ -764,7 +779,9 @@ export class YatlTable<
 
     const columnData = this.displayColumns;
     const csvHeaders = columnData
-      .filter(column => all || this.getOrCreateColumnState(column.field).visible)
+      .filter(
+        column => all || this.getOrCreateColumnState(column.field).visible,
+      )
       .map(column => `"${column.title}"`)
       .join(',');
 
@@ -1010,9 +1027,9 @@ export class YatlTable<
 
   protected renderHeader() {
     const classes = {
-      'header': true,
-      'row': true,
-      'reorderable': this.enableColumnReorder,
+      header: true,
+      row: true,
+      reorderable: this.enableColumnReorder,
     };
     return html`
       <div part="header" class=${classMap(classes)}>
@@ -1100,7 +1117,7 @@ export class YatlTable<
   }
 
   protected renderBody() {
-    if (this.columnWidths.length === 0) {
+    if (!this.hasVisibleColumn()) {
       return html`
         <div part="message" class="message">No visible columns.</div>
       `;
@@ -1181,11 +1198,8 @@ export class YatlTable<
         class="table"
         style=${styleMap({ '--grid-template': gridTemplate })}
       >
-        ${this.renderHeader()} 
-        <slot>
-          ${this.renderBody()}
-          ${this.renderFooter()}
-        </slot>
+        ${this.renderHeader()}
+        <slot> ${this.renderBody()} ${this.renderFooter()} </slot>
       </div>
     `;
   }
@@ -1610,6 +1624,14 @@ export class YatlTable<
     }
   }
 
+  private hasVisibleColumn() {
+    return (
+      this.columnOrder
+        .map(field => this.getOrCreateColumnState(field))
+        .filter(state => state.visible).length > 0
+    );
+  }
+
   /**
    * Gets the width of each column in the
    * order they will appear in the grid.
@@ -1857,14 +1879,15 @@ export class YatlTable<
         this.resizeState.currentWidths[this.resizeState.columnIndex],
       );
       const columnWidths = this.columnWidths;
-      const state = findColumn(this.resizeState.columnField, columnWidths)!;
-      state.width = finalWidth;
+      columnWidths[this.resizeState.columnField] = finalWidth;
       // We need to trigger a lifecycle update
       // to force any logic from updating the width.
       // Right now this is just the save state logic.
-      this.columnWidths = columnWidths;
+      this.columnWidths = { ...columnWidths };
 
-      this.dispatchEvent(new YatlColumnResizeEvent(state.field, state.width));
+      this.dispatchEvent(
+        new YatlColumnResizeEvent(this.resizeState.columnField, finalWidth),
+      );
     }
 
     // This is a hacky workaround to prevent the header click event from firing
@@ -2035,9 +2058,14 @@ interface EventMap<T> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'yatl-table': YatlTable;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    'yatl-table': YatlTable<any>;
   }
 }
 
-export { createRegexTokenizer, whitespaceTokenizer };
-
+export {
+  createRegexTokenizer,
+  isDisplayColumn,
+  isInternalColumn,
+  whitespaceTokenizer,
+};

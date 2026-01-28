@@ -19,6 +19,13 @@ export type NestedKeyOf<ObjectType> = ObjectType extends object
 export type UnspecifiedRecord = Record<string, any>;
 
 /**
+ * Record that maps a column's field to arbitrary data.
+ */
+export type ColumnPropertyRecord<TData, TProp> = Partial<
+  Record<NestedKeyOf<TData>, TProp>
+>;
+
+/**
  * Defines the possible sorting orders for columns.
  */
 export type SortOrder = 'asc' | 'desc';
@@ -135,7 +142,7 @@ export type ColumnFilterCallback = (value: unknown, filter: unknown) => boolean;
 /**
  * Represents the current sort state
  */
-export interface SortState {
+export type SortState = {
   /**
    * The sort order
    */
@@ -145,7 +152,7 @@ export interface SortState {
    * Lower priority means
    */
   priority: number;
-}
+} | null;
 
 export type ColumnRole = 'display' | 'internal';
 

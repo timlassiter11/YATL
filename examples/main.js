@@ -199,6 +199,9 @@ function initFilterOptions() {
   }
 }
 
+/**
+ * Update table filters from the filters form inputs
+ */
 function updateTableFilters() {
   const lastModified = {};
   const filters = { lastModified };
@@ -224,6 +227,9 @@ function updateTableFilters() {
   table.filters = filters;
 }
 
+/**
+ * Update the table options from the options form inputs
+ */
 function updateTableOptions() {
   /** @type {HTMLInputElement[]} */
   const inputs = document.querySelectorAll('#optionsForm input[name]');
@@ -239,6 +245,23 @@ function updateTableOptions() {
     }
   }
 }
+
+/**
+ * Update the table state elements based on the current table state
+ */
+function updateTableState() {
+  const renderedRows = table.shadowRoot.querySelectorAll('.row').length - 1;
+  document.getElementById('renderedRows').textContent =
+    renderedRows.toLocaleString();
+
+  const filteredRows = table.filteredData.length;
+  document.getElementById('filteredRows').textContent =
+    filteredRows.toLocaleString();
+
+  const totalRows = table.data.length;
+  document.getElementById('totalRows').textContent = totalRows.toLocaleString();
+}
+
 
 /**
  * Gets a correctly typed value from the given input based on it's type
@@ -285,7 +308,8 @@ function refreshColumnPicker(listElement) {
   // Clear existing
   listElement.innerHTML = '';
 
-  table.columnVisibility.forEach(col => {
+  const states = table.columnVisibility;
+  for (const column of table.displayColumns) {
     // Label wrapper
     const label = document.createElement('label');
     label.className = 'dropdown-item';
@@ -293,22 +317,25 @@ function refreshColumnPicker(listElement) {
     // Checkbox
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.checked = col.visible;
+    checkbox.checked = states[column.field];
 
     checkbox.addEventListener('change', e => {
-      table.setColumnVisibility(col.field, e.target.checked);
+      //table.setColumnVisibility(column.field, e.target.checked);
+      const states = table.columnVisibility;
+      states[column.field] = e.target.checked;
+      table.columnVisibility = states;
     });
 
     // Text
     const span = document.createElement('span');
     // Find the human-readable title from the original definitions
-    const def = table.getColumn(col.field);
-    span.textContent = def?.title ? def.title : col.field;
+    const def = table.getColumn(column.field);
+    span.textContent = column?.title ? column.title : column.field;
 
     label.appendChild(checkbox);
     label.appendChild(span);
     listElement.appendChild(label);
-  });
+  }
 }
 
 /**
@@ -374,17 +401,4 @@ function generateMockData(count) {
     generatedData.push(dataRow);
   }
   return generatedData;
-}
-
-function updateTableState() {
-  const renderedRows = table.shadowRoot.querySelectorAll('.row').length - 1;
-  document.getElementById('renderedRows').textContent =
-    renderedRows.toLocaleString();
-
-  const filteredRows = table.filteredData.length;
-  document.getElementById('filteredRows').textContent =
-    filteredRows.toLocaleString();
-
-  const totalRows = table.data.length;
-  document.getElementById('totalRows').textContent = totalRows.toLocaleString();
 }

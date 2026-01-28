@@ -89,13 +89,6 @@ export function getNestedValue(obj: object, path: string): unknown {
   return current;
 }
 
-export function findColumn<T extends { field: string }>(
-  field: string,
-  columns: T[],
-) {
-  return columns.find(c => c.field === field);
-}
-
 /**
  * Highlights sections of a string based on index ranges.
  * @param text - The original string to render.

@@ -255,8 +255,6 @@ export default css`
     flex-shrink: 0;
     position: sticky;
     top: 0;
-    min-width: 100%;
-    width: fit-content;
   }
 
   .header-content {
@@ -344,6 +342,8 @@ export default css`
   .row {
     display: grid;
     grid-template-columns: var(--grid-template);
+    min-width: 100%;
+    width: fit-content;
   }
 
   .cell {

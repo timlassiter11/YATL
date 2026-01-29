@@ -36,7 +36,9 @@
     "start": "web-dev-server --node-resolve",
     "start:watch": "web-dev-server --node-resolve --watch",
     "test": "web-test-runner src/**/*.test.ts --node-resolve",
-    "test:watch": "web-test-runner src/**/*.test.ts --node-resolve --watch"
+    "test:watch": "web-test-runner src/**/*.test.ts --node-resolve --watch",
+    "preversion": "npm test",
+    "release": "npm version patch && git push origin main --follow-tags"
   },
   "repository": {
     "type": "git",

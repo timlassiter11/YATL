@@ -31,78 +31,70 @@ npm install @timlassiter11/yatl
 
 Alternatively you can manually download the source files from the [releases](https://github.com/timlassiter11/YATL/releases) section.
 
+## Examples
 ### Lit
+
 ```ts
 import { html, LitElement } from 'lit';
 
-import '@timlassiter11/yatl';
+import { ColumnOptions, YatlRowClickEvent } from '@timlassiter11/yatl';
+import { customElement, state } from 'lit/decorators.js';
 
-class MyComponent extends LitElement {
-   @state()
-   private _tableData: User[] = [];
+type User = { id: number; name: string; dateCreated: Date };
 
-   private _tableColums: ColumnOptions<User>[] = [
-      {
-         field: 'id',
-         title: 'ID',
-         resizeable: true,
-         sortable: true,
-         searchable: false,
-      },
-      {
-         field: 'name',
-         resizeable: true,
-         sortable: true,
-         searchable: true,
-         tokenize: true,
-      },
-      {
-         field: 'status',
-         resizeable: true,
-         sortable: true,
-         searchable: false,
-      }
-   ];
+@customElement('my-component')
+export class MyComponent extends LitElement {
+  private dateFormatter = Intl.DateTimeFormat(undefined, {
+    dateStyle: 'short',
+    timeStyle: undefined,
+  });
 
-   protected override render() {
-      return html`
-        <yatl-table 
-          .columns=${this._columns} 
-          .data=${this._tableData} 
-          enable-virtual-scroll 
-          @yatl-row-click=${this.handleRowClicked}>
-        </yatl-table>
-      `;
-   }
+  private colums: ColumnOptions<User>[] = [
+    {
+      field: 'id',
+      title: 'ID',
+      resizable: true,
+      sortable: true,
+      searchable: false,
+    },
+    {
+      field: 'name',
+      resizable: true,
+      sortable: true,
+      searchable: true,
+      tokenize: true,
+    },
+    {
+      field: 'dateCreated',
+      resizable: true,
+      sortable: true,
+      searchable: false,
+      valueFormatter: value => this.dateFormatter.format(value as Date),
+    },
+  ];
 
-   private handleRowClicked = (event) => {
-      console.log(event.detail)
-   }
+  @state()
+  private data: User[] = [
+    { id: 0, name: 'Bjarne Stroustrup', dateCreated: new Date(1968, 11, 30) },
+    { id: 1, name: 'Guido van Rossum', dateCreated: new Date(1974, 0, 31) },
+  ];
+
+  protected override render() {
+    return html`
+      <yatl-table
+        .columns=${this.colums}
+        .data=${this.data}
+        enable-virtual-scroll
+        @yatl-row-click=${this.handleRowClicked}
+      >
+      </yatl-table>
+    `;
+  }
+
+  private handleRowClicked = (event: YatlRowClickEvent<User>) => {
+    console.log(event.detail);
+  };
 }
-```
-
-### js
-
-```js
-const table = document.querySelector('yatl-table');
-
-table.columns = [
-  { field: 'id', title: 'ID', sortable: true, width: 60 },
-  { field: 'name', title: 'Name', sortable: true, searchable: true },
-  { field: 'role', title: 'Role', sortable: true },
-  {
-    field: 'status',
-    title: 'Status',
-    // Custom renderer example
-    cellRenderer: value => (value === 'Active' ? '🟢' : '🔴'),
-  },
-];
-
-table.data = [
-  { id: 1, name: 'Alice', role: 'Admin', status: 'Active' },
-  { id: 2, name: 'Bob', role: 'User', status: 'Inactive' },
-  // ... more data
-];
 ```
 
 ### Vanilla JS
@@ -159,53 +151,130 @@ table.data = [
 </html>
 ```
 
-## Styling
+## Styling Guide
 
-`yatl-table` uses the native Web Component Shadow DOM to encapsulate its styles. This prevents your global CSS from accidentally breaking the table, and prevents the table's styles from leaking out.
+YATL Table is built with extensive CSS Custom Properties (variables) to make theming easy. Styles are scoped to the shadow DOM, but you can control them from anywhere in your application (e.g., :root or a parent container) using the provided --yatl-table-\* variables.
 
-To customize the table, you use the standard CSS ::part() pseudo-element.
-### The Basics
+### Quick Start
 
-To style a specific part of the table, select the element and use ::part(name).
+You can apply styles directly to the component or inherit them globally.
 
 ```css
-/* Target the main table container */
-yatl-table::part(table) {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-family: 'Inter', sans-serif;
+/* Apply globally */
+:root {
+  --yatl-table-font-size: 1rem;
+  --yatl-table-bg-light: #fdfdfd;
 }
 
-/* Target the header row */
-yatl-table::part(header) {
-  background-color: #f8fafc;
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.75rem;
+/* Or scope to a specific class */
+.my-custom-table {
+  --yatl-table-border-color: #ccc;
+  --yatl-table-header-bg: #eee;
 }
 ```
 
+### CSS Variables Reference
 
-### Part Reference
+#### Typography
 
-Here is a list of all exposed parts you can target:
+| Variable                 | Description                      |
+| ------------------------ | -------------------------------- |
+| --yatl-table-font        | The font family stack.           |
+| --yatl-table-font-size   | Base font size for all text.     |
+| --yatl-table-line-height | Line height for text legibility. |
 
-| Part Name         | Description                                       |
-|-------------------|---------------------------------------------------|
-| table             | The main container grid.                          |
-| header            | The container for the header row.                 |
-| header-cell       | Individual header cells.                          |
-| header-title      | The text span inside a header cell.               |
-| header-sort-icon  | The sorting arrow icon.                           |
-| header-resizer    | The drag handle for resizing columns.             |
-| row               | The container for a data row.                     |
-| cell              | Targets all cells (both header and body).         |
-| body-cell         | Targets only data cells (not headers).            |
-| footer            | The footer container.                             |
-| message           | The empty state / no results message container.   |
+#### Spacing & Layout
+
+| Variable                    | Description                                       |
+| --------------------------- | ------------------------------------------------- |
+| --yatl-table-cell-padding   | Padding inside standard body cells.               |
+| --yatl-table-header-padding | Padding inside header cells.                      |
+| --yatl-table-resizer-width  | The width of the "grab" area for column resizing. |
+
+#### Color Variables
+
+| Variable                     | Description                                    |
+| ---------------------------- | ---------------------------------------------- |
+| --yatl-table-bg              | Main background color of the table.            |
+| --yatl-table-text            | Primary text color.                            |
+| --yatl-table-text-muted      | Secondary/footer text color.                   |
+| --yatl-table-border-color    | Border color for rows and the table container. |
+| --yatl-table-header-bg       | Background for the sticky header row.          |
+| --yatl-table-header-text     | Text color for the header row.                 |
+| --yatl-table-row-hover-bg    | Background color when hovering over a row.     |
+| --yatl-table-row-selected-bg | Background color for selected rows.            |
+
+**NOTE**: For each color variable, there is a dedicated `-light` and `-dark` variable. See [Color Scheme](#color-scheme) below for more info.
+
+### Color Scheme
+
+By default, this component adapts to the current `color-scheme` by utilizing the [light-dark()](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/color_value/light-dark) CSS function. This will automatically adjust to the system theme, but can be manually overridden. If you have a theme toggler, you should have it set the document `color-scheme`. Below is an example assuming you set a `light` or `dark` class on your document element.
+
+```css
+:root {
+  color-scheme: light dark;
+}
+
+:root.light {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+```
+
+To force a color regardless of the current color scheme, you can override the base variable.
+
+```css
+:root {
+  /* Always dark background */
+  --yatl-table-bg: #212121;
+}
+```
+
+If you want to update a color for one of the color schemes, use the specific theme variable instead.
+
+```css
+:root {
+  /* light background */
+  --yatl-table-bg-light: #e0e0e0;
+  /* dark background */
+  --yatl-table-bg-dark: #202020;
+}
+```
+
+### CSS Shadow Parts
+
+For deeper customization beyond color and spacing, you can target specific elements using the ::part pseudo-element.
+
+```css
+yatl-table::part(header) {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+```
+
+#### Parts Reference
+
+| Part Name        | Description                                     |
+| ---------------- | ----------------------------------------------- |
+| table            | The main container grid.                        |
+| header           | The container for the header row.               |
+| header-cell      | Individual header cells.                        |
+| header-title     | The text span inside a header cell.             |
+| header-sort-icon | The sorting arrow icon.                         |
+| header-resizer   | The drag handle for resizing columns.           |
+| row              | The container for a data row.                   |
+| cell             | Targets all cells (both header and body).       |
+| body-cell        | Targets only data cells (not headers).          |
+| footer           | The footer container.                           |
+| message          | The empty state / no results message container. |
 
 ### Common Recipes
+
 #### Zebra Striping
+
 You can use standard pseudo-classes like :nth-child combined with ::part.
 
 ```css
@@ -222,6 +291,7 @@ yatl-table::part(row):hover {
 ```
 
 #### Targeting Specific Columns
+
 Every cell automatically gets a part name based on its field property in the format cell-{field}.
 
 For example, if you have a column defined as `{ field: 'status' }`:
@@ -249,7 +319,7 @@ You can style rows based on their data using the rowParts property in JavaScript
 const table = document.querySelector('yatl-table');
 
 // Return a string (or array of strings) to add to the row's parts
-table.rowParts = (row) => {
+table.rowParts = row => {
   const parts = [];
   if (row.stock < 5) parts.push('low-stock');
   if (row.price > 1000) parts.push('expensive');
@@ -272,6 +342,7 @@ yatl-table::part(expensive) {
 ```
 
 #### Customizing the Footer
+
 ```css
 yatl-table::part(footer) {
   background-color: #1e293b;

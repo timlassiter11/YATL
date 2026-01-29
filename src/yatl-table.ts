@@ -32,15 +32,15 @@ import {
   widthsToGridTemplates,
 } from './utils';
 
-import { html, LitElement, nothing, PropertyValues } from 'lit';
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 
+import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
-import { virtualize } from '@lit-labs/virtualizer/virtualize.js';
 import {
   YatlChangeEvent,
   YatlColumnReorderEvent,
@@ -100,6 +100,10 @@ export class YatlTable<
   private tableElement!: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
+  @query('.header')
+  private headerElement!: HTMLElement;
+  @query('.scroller')
+  private scrollerElement!: HTMLElement;
 
   // #region --- State Data ---
 
@@ -1135,10 +1139,12 @@ export class YatlTable<
 
     if (this.enableVirtualScroll) {
       return html`
-        ${virtualize({
-          items: this.filteredData,
-          renderItem: (item, index) => this.renderRow(item, index),
-        })}
+        <lit-virtualizer
+          .items=${this.filteredData}
+          .renderItem=${(item: T, index: number) =>
+            this.renderRow(item, index) as TemplateResult}
+        >
+        </lit-virtualizer>
       `;
     }
 
@@ -1191,14 +1197,18 @@ export class YatlTable<
     const gridTemplate = widthsToGridTemplates(gridWidths).join(' ');
 
     return html`
-      <div
-        part="table"
-        class="table"
-        style=${styleMap({ '--grid-template': gridTemplate })}
-      >
-        ${this.renderHeader()}
-        <div class="body">
-          <slot> ${this.renderBodyContents()}</slot>
+      <div class="wrapper">
+        <div class="scroller">
+          <div
+            part="table"
+            class="table"
+            style=${styleMap({ '--grid-template': gridTemplate })}
+          >
+            ${this.renderHeader()}
+            <div class="body">
+              <slot>${this.renderBodyContents()}</slot>
+            </div>
+          </div>
         </div>
         ${this.renderFooter()}
       </div>
@@ -1818,6 +1828,8 @@ export class YatlTable<
       return;
     }
 
+    this.headerElement.classList.add('resizing');
+
     // Freeze the current widths as soon as the users starts resizing
     this.tableElement
       .querySelectorAll<HTMLElement>('.header .cell')
@@ -1847,7 +1859,6 @@ export class YatlTable<
 
     window.addEventListener('mousemove', this.handleResizeMouseMove);
     window.addEventListener('mouseup', this.handleResizeMouseUp);
-    document.body.style.cursor = 'col-resize';
   }
 
   private handleResizeMouseMove = (event: MouseEvent) => {
@@ -1870,11 +1881,13 @@ export class YatlTable<
   private handleResizeMouseUp = (event: MouseEvent) => {
     window.removeEventListener('mousemove', this.handleResizeMouseMove);
     window.removeEventListener('mouseup', this.handleResizeMouseUp);
-    document.body.style.cursor = '';
+
+    this.headerElement.classList.remove('resizing');
 
     if (this.resizeState?.active) {
       event.preventDefault();
       event.stopPropagation();
+
       // Calculate the final width based on the DOM's current style
       const finalWidth = parseFloat(
         this.resizeState.currentWidths[this.resizeState.columnIndex],

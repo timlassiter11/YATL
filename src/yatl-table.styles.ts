@@ -2,9 +2,9 @@ import { css } from 'lit';
 
 /**
  * we separate the CSS variable names between internal '--yatl' and external '--yatl-table'
- * so that way users can more easily customize the table. Instead of having to apply the 
+ * so that way users can more easily customize the table. Instead of having to apply the
  * overrides to the element itself, they can apply them to the root. So DON'T think this
- * is overly complicated and should be cleaned up by combining the --yatl-* and --yatl-table-* variables. 
+ * is overly complicated and should be cleaned up by combining the --yatl-* and --yatl-table-* variables.
  */
 export default css`
   /* Theme declarations */
@@ -127,12 +127,14 @@ export default css`
     font-family: var(--yatl-font-family);
     font-size: var(--yatl-font-size);
     color: var(--yatl-text);
+
+    border-radius: 6px;
+    overflow: hidden;
   }
 
-  .table {
-    background-color: var(--yatl-bg);
+  .scroller {
     border: 1px solid var(--yatl-border-color);
-    border-radius: 6px;
+    background-color: var(--yatl-bg);
   }
 
   .header.row {
@@ -165,7 +167,7 @@ export default css`
     z-index: 1;
   }
 
-  .header .cell:hover::after,
+  .header:not(.resizing) .cell:hover::after,
   .row:not(.header):hover::after {
     background-color: var(--yatl-row-hover-bg);
   }
@@ -173,6 +175,10 @@ export default css`
   .cell {
     align-items: center;
     padding: var(--yatl-cell-padding);
+  }
+
+  .header.resizing * {
+    cursor: col-resize !important;
   }
 
   .header .cell {
@@ -214,19 +220,34 @@ export default css`
   */
   :host {
     display: block;
+    width: 100%;
     height: 100%;
-    width: fit-content;
+  }
+
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .scroller {
+    box-sizing: border-box;
     overflow: auto;
+    width: 100%;
+    height: 100%;
   }
 
   .table {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    min-height: 0;
-    overflow: auto;
     box-sizing: border-box;
+  }
+
+  .body {
+    min-width: 100%;
+    width: fit-content;
+    min-height: 100%;
+    height: fit-content;
   }
 
   .header {
@@ -234,6 +255,8 @@ export default css`
     flex-shrink: 0;
     position: sticky;
     top: 0;
+    min-width: 100%;
+    width: fit-content;
   }
 
   .header-content {
@@ -311,7 +334,9 @@ export default css`
     flex-shrink: 0;
 
     position: sticky;
-    inset: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
     z-index: var(--header-z-index);
   }
 
@@ -319,8 +344,6 @@ export default css`
   .row {
     display: grid;
     grid-template-columns: var(--grid-template);
-    min-width: 100%;
-    width: fit-content;
   }
 
   .cell {
@@ -333,8 +356,8 @@ export default css`
   }
 
   .message {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    inset: 0;
     text-align: center;
     pointer-events: none;
     display: flex;
@@ -347,9 +370,5 @@ export default css`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .body {
-    height: 100%;
   }
 `;

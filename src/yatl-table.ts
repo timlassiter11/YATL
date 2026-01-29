@@ -1138,8 +1138,8 @@ export class YatlTable<
       return html`
         <lit-virtualizer
           .items=${this.filteredData}
-          .renderItem=${(item: T, index: number) =>
-            this.renderRow(item, index) as TemplateResult}
+          .renderItem=${(item: unknown, index: number) =>
+            this.renderRow(item as T, index) as TemplateResult}
         ></lit-virtualizer>
       `;
     }

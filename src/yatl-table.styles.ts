@@ -1,7 +1,13 @@
 import { css } from 'lit';
 
+/**
+ * we separate the CSS variable names between internal '--yatl' and external '--yatl-table'
+ * so that way users can more easily customize the table. Instead of having to apply the 
+ * overrides to the element itself, they can apply them to the root. So DON'T think this
+ * is overly complicated and should be cleaned up by combining the --yatl-* and --yatl-table-* variables. 
+ */
 export default css`
-  /* Style declarations */
+  /* Theme declarations */
   :host {
     /* Typography */
     --yatl-font-family: var(
@@ -23,60 +29,104 @@ export default css`
     --yatl-cell-padding: var(--yatl-table-cell-padding, 10px 16px);
     --yatl-header-padding: var(--yatl-table-header-padding, 12px 16px);
 
-    /* Colors */
-    --yatl-bg: var(--yatl-table-bg, #ffffff);
-    --yatl-text: var(--yatl-table-text, #0f172a);
-    --yatl-text-muted: var(--yatl-table-text-muted, #64748b);
-    --yatl-border-color: var(--yatl-table-border-color, #e2e8f0);
+    /* Light colors */
+    --yatl-bg-light: var(--yatl-table-bg-light, #ffffff);
+    --yatl-text-light: var(--yatl-table-text-light, #0f172a);
+    --yatl-text-muted-light: var(--yatl-table-text-muted-light, #64748b);
+    --yatl-border-color-light: var(--yatl-table-border-color-light, #e2e8f0);
+    --yatl-header-bg-light: var(
+      --yatl-table-header-bg-light,
+      color-mix(in srgb, black 5%, var(--yatl-bg))
+    );
+    --yatl-header-text-light: var(--yatl-table-header-text-light, #475569);
+    --yatl-header-drop-bg-light: var(
+      --yatl-table-drop-bg-light,
+      color-mix(in srgb, black 5%, transparent)
+    );
+    --yatl-row-hover-bg-light: var(
+      --yatl-table-row-hover-bg-light,
+      color-mix(in srgb, black 5%, transparent)
+    );
+    --yatl-row-selected-bg-light: var(
+      --yatl-table-row-selected-bg-light,
+      color-mix(in srgb, black 20%, transparent)
+    );
 
-    --yatl-header-bg: var(--yatl-table-header-bg, #f8fafc);
-    --yatl-header-text: var(--yatl-table-header-text, #475569);
+    /* Dark colors */
+    --yatl-bg-dark: var(--yatl-table-bg-dark, #101219);
+    --yatl-text-dark: var(--yatl-table-text-dark, #f1f5f9);
+    --yatl-text-muted-dark: var(--yatl-table-text-muted-dark, #94a3b8);
+    --yatl-border-color-dark: var(--yatl-table-border-color-dark, #1a1b1e);
+    --yatl-header-bg-dark: var(
+      --yatl-table-header-bg-dark,
+      color-mix(in srgb, white 5%, var(--yatl-bg))
+    );
+    --yatl-header-text-dark: var(--yatl-table-header-text-dark, #cbd5e1);
+    --yatl-header-drop-bg-dark: var(
+      --yatl-table-drop-bg-dark,
+      color-mix(in srgb, white 5%, transparent)
+    );
+    --yatl-row-hover-bg-dark: var(
+      --yatl-table-row-hover-bg-dark,
+      color-mix(in srgb, white 5%, transparent)
+    );
+    --yatl-row-selected-bg-dark: var(
+      --yatl-table-row-selected-bg-dark,
+      color-mix(in srgb, white 20%, transparent)
+    );
 
-    --yatl-row-hover-bg: var(--yatl-table-row-hover-bg, #f1f5f9);
-    --yatl-row-selected-bg: var(--yatl-table-row-selected-bg, #e0f2fe);
+    /* Applied colors */
+    --yatl-bg: var(
+      --yatl-table-bg,
+      light-dark(var(--yatl-bg-light), var(--yatl-bg-dark))
+    );
+    --yatl-text: var(
+      --yatl-table-text,
+      light-dark(var(--yatl-text-light), var(--yatl-text-dark))
+    );
+    --yatl-text-muted: var(
+      --yatl-table-text-muted,
+      light-dark(var(--yatl-text-muted-light), var(--yatl-text-muted-dark))
+    );
+    --yatl-border-color: var(
+      --yatl-table-border-color,
+      light-dark(var(--yatl-border-color-light), var(--yatl-border-color-dark))
+    );
+    --yatl-header-bg: var(
+      --yatl-table-header-bg,
+      light-dark(var(--yatl-header-bg-light), var(--yatl-header-bg-dark))
+    );
+    --yatl-header-text: var(
+      --yatl-table-header,
+      light-dark(var(--yatl-header-text-light), var(--yatl-header-text-dark))
+    );
+    --yatl-header-drop-bg: var(
+      --yatl-table-header-drop-bg,
+      light-dark(
+        var(--yatl-header-drop-bg-light),
+        var(--yatl-header-drop-bg-dark)
+      )
+    );
+    --yatl-row-hover-bg: var(
+      --yatl-table-row-hover-bg,
+      light-dark(var(--yatl-row-hover-bg-light), var(--yatl-row-hover-bg-dark))
+    );
+    --yatl-row-selected-bg: var(
+      --yatl-table-row-selected-bg,
+      light-dark(
+        var(--yatl-row-selected-bg-light),
+        var(--yatl-row-selected-bg-dark)
+      )
+    );
 
     /* Resize grab handle width */
-    --yatl-resizer-width: 10px;
+    --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
     /* z-index for the header */
     --header-z-index: 2;
-    /* Drop target background color */
-    --header-drop-color: rgba(255, 255, 255, 0.1);
 
     font-family: var(--yatl-font-family);
     font-size: var(--yatl-font-size);
     color: var(--yatl-text);
-  }
-
-  :host(.dark) {
-    --yatl-table-bg: #1e293b;
-    --yatl-table-text: #f1f5f9;
-    --yatl-table-text-muted: #94a3b8;
-    --yatl-table-border-color: #334155;
-
-    --yatl-table-header-bg: #0f172a;
-    --yatl-table-header-text: #cbd5e1;
-
-    --yatl-table-row-hover-bg: #334155;
-    --yatl-table-row-selected-bg: #1e3a8a;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :host {
-      --yatl-bg: var(--yatl-table-bg, #1e293b);
-      --yatl-text: var(--yatl-table-text, #f1f5f9);
-      --yatl-text-muted: var(--yatl-table-text-muted, #94a3b8);
-      --yatl-border-color: var(--yatl-table-border-color, #334155);
-
-      --yatl-header-bg: var(--yatl-table-header-bg, #0f172a);
-      --yatl-header-text: var(--yatl-table-header-text, #cbd5e1);
-
-      --yatl-row-hover-bg: var(--yatl-table-row-hover-bg, #334155);
-      --yatl-row-selected-bg: var(--yatl-table-row-selected-bg, #1e3a8a);
-    }
-  }
-
-  :host {
-    font-family: system-ui, sans-serif;
   }
 
   .table {
@@ -117,7 +167,7 @@ export default css`
 
   .header .cell:hover::after,
   .row:not(.header):hover::after {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--yatl-row-hover-bg);
   }
 
   .cell {
@@ -150,7 +200,7 @@ export default css`
   }
 
   .drop-indicator {
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--yatl-header-drop-bg);
   }
 
   .message {

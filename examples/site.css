@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light dark;
+
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 16px;
@@ -9,25 +11,37 @@
 
   --accent: #38bdf8;
 
-  --bg-screen: #f1f5f9;
-  --bg-surface: #ffffff;
-  --bg-subtle: #f8fafc;
-  --bg-hover: var(--accent);
-  --border: #e2e8f0;
-  --text-hi: #0f172a;
-  --text-lo: #64748b;
+  --bg-screen-light: #ffffff;
+  --bg-surface-light: #f1f5f9;
+  --bg-subtle-light: #f1f2f3;
+  --bg-hover-light: var(--accent);
+  --border-light: #e2e8f0;
+  --text-hi-light: #0f172a;
+  --text-lo-light: #64748b;
+
+  --bg-screen-dark: #101219;
+  --bg-surface-dark: #101219;
+  --bg-subtle-dark: #212429;
+  --bg-hover-dark: var(--accent);
+  --border-dark: #2f323f;
+  --text-hi-dark: #f8fafc;
+  --text-lo-dark: #94a3b8;
+
+  --bg-screen: light-dark(var(--bg-screen-light), var(--bg-screen-dark));
+  --bg-surface: light-dark(var(--bg-surface-light), var(--bg-surface-dark));
+  --bg-subtle: light-dark(var(--bg-subtle-light), var(--bg-subtle-dark));
+  --bg-hover: light-dark(var(--bg-hover-light), var(--bg-hover-dark));
+  --border: light-dark(var(--border-light), var(--border-dark));
+  --text-hi: light-dark(var(--text-hi-light), var(--text-hi-dark));
+  --text-lo: light-dark(var(--text-lo-light), var(--text-lo-dark));
+}
+
+:root.light {
+  color-scheme: light;
 }
 
 :root.dark {
   color-scheme: dark;
-
-  --bg-screen: #020617;
-  --bg-surface: #0f172a;
-  --bg-subtle: #1e293b;
-  --bg-hover: var(--accent);
-  --border: #334155;
-  --text-hi: #f8fafc;
-  --text-lo: #94a3b8;
 }
 
 body {
@@ -178,7 +192,7 @@ details[open] .button {
 .button-group details[open] .button {
   position: relative;
   z-index: 1;
-  border-color: var(--border)
+  border-color: var(--border);
 }
 
 .dropdown {

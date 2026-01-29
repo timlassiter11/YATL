@@ -97,7 +97,7 @@ export default css`
       light-dark(var(--yatl-header-bg-light), var(--yatl-header-bg-dark))
     );
     --yatl-header-text: var(
-      --yatl-table-headertext,
+      --yatl-table-header-text,
       light-dark(var(--yatl-header-text-light), var(--yatl-header-text-dark))
     );
     --yatl-header-drop-bg: var(

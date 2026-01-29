@@ -32,16 +32,15 @@ import {
   widthsToGridTemplates,
 } from './utils';
 
-import { html, LitElement, nothing, PropertyValues, TemplateResult } from 'lit';
+import { html, LitElement, nothing, PropertyValues } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 
-import '@lit-labs/virtualizer';
-
 import { LitVirtualizer } from '@lit-labs/virtualizer';
+import { virtualize } from '@lit-labs/virtualizer/virtualize.js';
 import {
   YatlChangeEvent,
   YatlColumnReorderEvent,
@@ -1116,7 +1115,7 @@ export class YatlTable<
     `;
   }
 
-  protected renderBody() {
+  protected renderBodyContents() {
     if (!this.hasVisibleColumn()) {
       return html`
         <div part="message" class="message">No visible columns.</div>
@@ -1124,23 +1123,22 @@ export class YatlTable<
     }
 
     if (this.data.length === 0) {
-      return html`<div part="message" class="message">
-        ${this.emptyMessage}
-      </div>`;
+      return html`
+        <div part="message" class="message">${this.emptyMessage}</div>
+      `;
     }
     if (this.filteredData.length === 0) {
-      return html`<div part="message" class="message">
-        ${this.noResultsMessage}
-      </div>`;
+      return html`
+        <div part="message" class="message">${this.noResultsMessage}</div>
+      `;
     }
 
     if (this.enableVirtualScroll) {
       return html`
-        <lit-virtualizer
-          .items=${this.filteredData}
-          .renderItem=${(item: unknown, index: number) =>
-            this.renderRow(item as T, index) as TemplateResult}
-        ></lit-virtualizer>
+        ${virtualize({
+          items: this.filteredData,
+          renderItem: (item, index) => this.renderRow(item, index),
+        })}
       `;
     }
 
@@ -1199,7 +1197,10 @@ export class YatlTable<
         style=${styleMap({ '--grid-template': gridTemplate })}
       >
         ${this.renderHeader()}
-        <slot> ${this.renderBody()} ${this.renderFooter()} </slot>
+        <div class="body">
+          <slot> ${this.renderBodyContents()}</slot>
+        </div>
+        ${this.renderFooter()}
       </div>
     `;
   }

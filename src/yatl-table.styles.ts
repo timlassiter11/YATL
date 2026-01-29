@@ -348,4 +348,8 @@ export default css`
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  .body {
+    height: 100%;
+  }
 `;

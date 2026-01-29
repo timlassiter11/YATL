@@ -321,6 +321,9 @@ export interface StorageOptions {
    */
   storage?: 'local' | 'session';
 
+  /** Save the current search query */
+  saveSearchQuery?: boolean;
+
   /** Save the current column sorting */
   saveColumnSortOrders?: boolean;
 

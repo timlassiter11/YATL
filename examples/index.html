@@ -22,7 +22,7 @@
 
 <body>
   <div class="sidebar">
-    <form id="filtersForm">
+    <form id="filtersForm" onsubmit="event.preventDefault();">
       <div class="card">
         <h1>Filters</h1>
         <div class="option-group">
@@ -42,7 +42,7 @@
         </div>
       </div>
     </form>
-    <form id="optionsForm">
+    <form id="optionsForm" onsubmit="event.preventDefault();">
       <div class="card">
         <h1>Table Options</h1>
         <div class="option-group">

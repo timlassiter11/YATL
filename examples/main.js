@@ -67,6 +67,7 @@ function initTable() {
 
   table.storageOptions = {
     key: 'advanced-example-v1',
+    saveSearchQuery: true,
     saveColumnOrder: true,
     saveColumnVisibility: true,
     saveColumnSortOrders: true,
@@ -183,6 +184,8 @@ function initTableToolbar() {
 
   // Handle search
   const searchInput = document.getElementById('searchInput');
+  // Set the table's restored query if it exists.
+  searchInput.value = table.searchQuery;
   searchInput.addEventListener('input', event => {
     table.searchQuery = searchInput.value;
   });

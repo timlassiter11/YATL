@@ -1695,6 +1695,10 @@ export class YatlTable<
     };
     const tableState = this.getState();
 
+    if (options.saveSearchQuery) {
+      savedTableState.searchQuery = tableState.searchQuery;
+    }
+
     if (options.saveColumnOrder) {
       savedTableState.columnOrder = tableState.columnOrder;
     }
@@ -1742,6 +1746,10 @@ export class YatlTable<
     try {
       const savedTableState = JSON.parse(json) as RestorableTableState<T>;
       const tableStateToRestore: RestorableTableState<T> = {};
+
+      if (options.saveSearchQuery) {
+        tableStateToRestore.searchQuery = savedTableState.searchQuery;
+      }
 
       if (options.saveColumnOrder) {
         tableStateToRestore.columnOrder = savedTableState.columnOrder;

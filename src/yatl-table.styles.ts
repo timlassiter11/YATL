@@ -119,7 +119,8 @@ export default css`
       )
     );
 
-    --yatl-selection-column-wdith: var(--yatl-table-selection-column-width, 48px);
+    --yatl-index-column-width: var(--yatl-table-index-column-width, 48px);
+    --yatl-selector-column-width: var(--yatl-table-selector-column-width, 48px);
 
     /* Resize grab handle width */
     --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
@@ -157,6 +158,7 @@ export default css`
     border-bottom: none;
   }
 
+  /* Use after element for row and header hover */
   .header.reorderable .cell::after,
   .header .cell.sortable::after,
   .row:not(.header)::after {
@@ -209,6 +211,10 @@ export default css`
   .resizer:hover::after {
     background-color: currentColor;
     width: 2px;
+  }
+
+  .row-index-cell {
+    background-color: var(--yatl-header-bg);
   }
 
   .drop-indicator {
@@ -361,7 +367,14 @@ export default css`
     align-items: center;
   }
 
-  .cell-selection {
+  .row-index-cell {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .row-selector-cell {
     display: flex;
     flex-direction: row;
     align-items: center;

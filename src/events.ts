@@ -131,6 +131,21 @@ export class YatlSearchEvent extends YatlEvent<{ query: string }> {
   }
 }
 
+export class YatlRowSelectEvent<T> extends YatlEvent<{
+  row: T;
+  selectedIndexes: number[];
+}> {
+  public static readonly EVENT_NAME = 'yatl-row-select';
+
+  constructor(row: T, selectedIndexes: number[]) {
+    super(
+      YatlRowSelectEvent.EVENT_NAME,
+      { row, selectedIndexes },
+      { cancelable: true },
+    );
+  }
+}
+
 export class YatlStateChangeEvent<T> extends YatlEvent<{
   state: TableState<T>;
   triggers: string[];

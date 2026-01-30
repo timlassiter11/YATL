@@ -47,6 +47,7 @@ import {
   YatlColumnResizeEvent,
   YatlColumnToggleEvent,
   YatlRowClickEvent,
+  YatlRowSelectEvent,
   YatlSearchEvent,
   YatlSortEvent,
   YatlStateChangeEvent,
@@ -102,8 +103,6 @@ export class YatlTable<
   private virtualizer?: LitVirtualizer;
   @query('.header')
   private headerElement!: HTMLElement;
-  @query('.header-cell.cell-index')
-  private headerIndexCellElement?: HTMLElement;
 
   // #region --- State Data ---
 
@@ -116,6 +115,8 @@ export class YatlTable<
   private _columnDefinitionMap = new Map<NestedKeyOf<T>, ColumnOptions<T>>();
   private _columnStateMap = new Map<NestedKeyOf<T>, ColumnState<T>>();
   private _columnOrder: NestedKeyOf<T>[] = [];
+  private _rowSelectionMethod: RowSelectionMethod = null;
+  private _selectedRowIndexes = new Set<number>();
   private _storageOptions: StorageOptions | null = null;
   private _data: T[] = [];
   private _searchQuery = '';
@@ -251,6 +252,12 @@ export class YatlTable<
   public enableColumnReorder = true;
 
   /**
+   * Shows a column to the left of each row with its row number.
+   */
+  @property({ type: Boolean })
+  public enableRowNumberColumn = false;
+
+  /**
    * Shows the built-in footer row which displays the current record count.
    * The footer content can be customized using the `slot="footer"` element.
    * @default false
@@ -355,11 +362,11 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get columnVisibility() {
-    const data: ColumnPropertyRecord<T, boolean> = {};
+    const visibilityStates: ColumnPropertyRecord<T, boolean> = {};
     for (const field of this.columnOrder) {
-      data[field] = this.getOrCreateColumnState(field).visible;
+      visibilityStates[field] = this.getOrCreateColumnState(field).visible;
     }
-    return data;
+    return visibilityStates;
   }
 
   public set columnVisibility(columns) {
@@ -388,13 +395,13 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get columnSort() {
-    const data: ColumnPropertyRecord<T, SortState> = {};
+    const sortStates: ColumnPropertyRecord<T, SortState> = {};
     for (const field of this.columnOrder) {
       const sortState = this.getOrCreateColumnState(field).sort;
       // Always return a copy of the state so the user can't modify it
-      data[field] = sortState ? { ...sortState } : null;
+      sortStates[field] = sortState ? { ...sortState } : null;
     }
-    return data;
+    return sortStates;
   }
 
   public set columnSort(columns) {
@@ -428,11 +435,11 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get columnWidths() {
-    const data: ColumnPropertyRecord<T, number | null> = {};
+    const widthStates: ColumnPropertyRecord<T, number | null> = {};
     for (const field of this.columnOrder) {
-      data[field] = this.getOrCreateColumnState(field).width;
+      widthStates[field] = this.getOrCreateColumnState(field).width;
     }
-    return data;
+    return widthStates;
   }
 
   public set columnWidths(columns) {
@@ -539,12 +546,57 @@ export class YatlTable<
 
   /**
    * The row selection method to use.
+   * * single - Only a single row can be selected at a time
+   * * multi - Multiple rows can be selected at a time
+   * * null - Disable row selection
    */
   @property({ type: String })
-  public rowSelection: RowSelectionMethod = null;
+  public get rowSelectionMethod() {
+    return this._rowSelectionMethod;
+  }
+  public set rowSelectionMethod(selection) {
+    if (this._rowSelectionMethod === selection) {
+      return;
+    }
 
-  @property({ type: Boolean })
-  public showIndexColumn = false;
+    const oldValue = this._rowSelectionMethod;
+    this._rowSelectionMethod = selection;
+    if (selection === 'single') {
+      this.selectedRows = this.selectedRows.slice(0, 1);
+    } else if (!selection) {
+      this.selectedRows = [];
+    }
+    this.requestUpdate('rowSelection', oldValue);
+  }
+
+  /**
+   * List of currently selected row indexes.
+   * * **NOTE**: These indexes are based off the of
+   * the original data array index, *not* the filtered data.
+   */
+  @property({ attribute: false })
+  public get selectedRows() {
+    return [...this._selectedRowIndexes];
+  }
+
+  public set selectedRows(rows) {
+    if (
+      rows.length === this._selectedRowIndexes.size &&
+      rows.every(a => this._selectedRowIndexes.has(a))
+    ) {
+      return;
+    }
+
+    if (this.rowSelectionMethod === 'single') {
+      rows = rows.slice(0, 1);
+    } else if (!this.rowSelectionMethod) {
+      rows = [];
+    }
+
+    const oldValue = this.selectedRows;
+    this._selectedRowIndexes = new Set(rows);
+    this.requestUpdate('selectedRows', oldValue);
+  }
 
   /**
    * Configuration options for automatically saving and restoring table state
@@ -581,6 +633,7 @@ export class YatlTable<
     const oldValue = this._data;
     this._data = value;
     this.dataLastUpdate = new Date();
+    this.selectedRows = [];
     this.createMetadata();
     this.filterDirty = true;
     this.requestUpdate('data', oldValue);
@@ -974,10 +1027,10 @@ export class YatlTable<
       ? html`<div
           part="header-sort-icon"
           class=${classMap({
-        'sort-icon': true,
-        ascending: state.sort?.order === 'asc',
-        descending: state.sort?.order === 'desc',
-      })}
+            'sort-icon': true,
+            ascending: state.sort?.order === 'asc',
+            descending: state.sort?.order === 'desc',
+          })}
         ></div>`
       : nothing;
   }
@@ -988,14 +1041,15 @@ export class YatlTable<
   ) {
     return (column.resizable ?? this.resizable)
       ? html`
-        <div
-          part="header-resizer"
-          class="resizer"
-          @click=${(event: MouseEvent) => event.stopPropagation()}
-          @mousedown=${(event: MouseEvent) =>
-          this.handleResizeMouseDown(event, column.field)}
-        ></div>
-      ` : nothing;
+          <div
+            part="header-resizer"
+            class="resizer"
+            @click=${(event: MouseEvent) => event.stopPropagation()}
+            @mousedown=${(event: MouseEvent) =>
+              this.handleResizeMouseDown(event, column.field)}
+          ></div>
+        `
+      : nothing;
   }
 
   protected renderHeaderCell(field: NestedKeyOf<T>) {
@@ -1021,12 +1075,12 @@ export class YatlTable<
         draggable=${ifDefined(this.enableColumnReorder ? true : undefined)}
         data-field=${column.field}
         @dragstart=${(event: DragEvent) =>
-        this.handleDragColumnStart(event, column.field)}
+          this.handleDragColumnStart(event, column.field)}
         @dragenter=${this.handleDragColumnEnter}
         @dragleave=${this.handleDragColumnLeave}
         @dragover=${this.handleDragColumnOver}
         @drop=${(event: DragEvent) =>
-        this.handleDragColumnDrop(event, column.field)}
+          this.handleDragColumnDrop(event, column.field)}
         @dragend=${this.handleDragColumnEnd}
         @click=${(event: MouseEvent) => this.handleHeaderClicked(event, column)}
       >
@@ -1042,10 +1096,12 @@ export class YatlTable<
     `;
   }
 
+  protected renderColumnIndexHeader() {
+    return html` <div part="cell-index" class="cell-index"></div> `;
+  }
+
   protected renderSelectionHeader() {
-    return this.isIndexColumnVisible()
-      ? html`<div part="cell header-cell" class="cell header-cell cell-index"></div>`
-      : nothing;
+    return html` <div part="cell-selector" class="cell-selector"></div> `;
   }
 
   protected renderHeader() {
@@ -1056,7 +1112,8 @@ export class YatlTable<
     };
     return html`
       <div part="header" class=${classMap(classes)}>
-        ${this.renderSelectionHeader()}
+        ${this.enableRowNumberColumn ? this.renderColumnIndexHeader() : nothing}
+        ${this.rowSelectionMethod ? this.renderSelectionHeader() : nothing}
         ${this.columnOrder.map(field => this.renderHeaderCell(field))}
       </div>
     `;
@@ -1112,7 +1169,7 @@ export class YatlTable<
         class="cell"
         title=${ifDefined(value ? String(value) : undefined)}
         @click=${(event: MouseEvent) =>
-        this.handleCellClick(event, row, column.field)}
+          this.handleCellClick(event, row, column.field)}
       >
         <span class="truncate">
           ${this.renderCellContents(value, column, row)}
@@ -1121,52 +1178,59 @@ export class YatlTable<
     `;
   }
 
-  protected renderSelectionInput(metadata: RowMetadata) {
-    if (!this.rowSelection) {
-      return nothing;
-    }
-
-    return html`<input 
-      part="row-checkbox" 
-      class="row-checkbox" 
-      type="checkbox" 
-      ?checked=${metadata.selected} 
-      @change=${(event: Event) =>
-        this.handleRowSelectionClicked(event, metadata)}
-      />
+  protected renderRowSelectorCell(row: T, selected: boolean) {
+    return html`
+      <div
+        part="cell body-cell row-selector-cell"
+        class="cell body-cell row-selector-cell"
+      >
+        <input
+          part="row-checkbox"
+          class="row-checkbox"
+          type="checkbox"
+          .checked=${selected}
+          @change=${(event: Event) =>
+            this.handleRowSelectionClicked(event, row)}
+        />
+      </div>
     `;
   }
 
-  protected renderIndexCell(index: number, metadata: RowMetadata) {
-    if (!this.isIndexColumnVisible()) {
-      return nothing;
-    }
-
+  protected renderColumnIndexCell(filteredIndex: number) {
     return html`
-      <div 
-        part="cell body-cell cell-selection" 
-        class="cell body-cell cell-selection">
-          ${this.showIndexColumn ? index : nothing}
-          ${this.renderSelectionInput(metadata)}
+      <div
+        part="cell body-cell row-index-cell"
+        class="cell body-cell row-index-cell"
+      >
+        ${filteredIndex + 1}
       </div>
-    `
+    `;
   }
 
-  protected renderRow(row: T, index: number) {
+  protected renderRow(row: T, filteredIndex: number) {
     const metadata = this.rowMetadata.get(row)!;
+    const dataIndex = metadata.index;
+    const selected = this.selectedRows.includes(dataIndex);
     let userParts = this.rowParts?.(row) ?? '';
     if (Array.isArray(userParts)) {
       userParts = userParts.join(' ');
     }
 
+    const classes = { row: true, selected };
+
     return html`
       <div
         part=${'row ' + userParts}
-        class="row"
-        data-index=${metadata.index}
-        data-filtered-index=${index}
+        class=${classMap(classes)}
+        data-index=${dataIndex}
+        data-filtered-index=${filteredIndex}
       >
-        ${this.renderIndexCell(index, metadata)}
+        ${this.enableRowNumberColumn
+          ? this.renderColumnIndexCell(filteredIndex)
+          : nothing}
+        ${this.rowSelectionMethod
+          ? this.renderRowSelectorCell(row, selected)
+          : nothing}
         ${this.columnOrder.map(field => this.renderCell(field, row))}
       </div>
     `;
@@ -1195,7 +1259,7 @@ export class YatlTable<
         <lit-virtualizer
           .items=${this.filteredData}
           .renderItem=${(item: T, index: number) =>
-          this.renderRow(item, index) as TemplateResult}
+            this.renderRow(item, index) as TemplateResult}
         >
         </lit-virtualizer>
       `;
@@ -1203,10 +1267,10 @@ export class YatlTable<
 
     return html`
       ${repeat(
-      this.filteredData,
-      item => this.rowMetadata.get(item)!.index,
-      (item, index) => this.renderRow(item, index),
-    )}
+        this.filteredData,
+        item => this.rowMetadata.get(item)!.index,
+        (item, index) => this.renderRow(item, index),
+      )}
     `;
   }
 
@@ -1688,10 +1752,6 @@ export class YatlTable<
     }
   }
 
-  private isIndexColumnVisible() {
-    return this.rowSelection || this.showIndexColumn;
-  }
-
   private hasVisibleColumn() {
     return (
       this.columnOrder
@@ -1707,8 +1767,12 @@ export class YatlTable<
   private getGridWidths() {
     const widths: string[] = [];
 
-    if (this.isIndexColumnVisible()) {
-      widths.push('var(--yatl-selection-column-width, 48px)');
+    if (this.enableRowNumberColumn) {
+      widths.push('var(--yatl-index-column-width, 48px)');
+    }
+
+    if (this.rowSelectionMethod) {
+      widths.push('var(--yatl-selector-column-width, 48px)');
     }
 
     for (const field of this.columnOrder) {
@@ -1863,8 +1927,9 @@ export class YatlTable<
     event: MouseEvent,
     column: ColumnOptions<T>,
   ) => {
+    const cell = event.currentTarget as HTMLElement;
     // Ignore header click events while resizing
-    if (this.resizeState) {
+    if (!cell.classList.contains('sortable') || this.resizeState) {
       return;
     }
 
@@ -1907,7 +1972,10 @@ export class YatlTable<
       return;
     }
 
-    if (this.isIndexColumnVisible()) {
+    if (this.enableRowNumberColumn) {
+      columnIndex++;
+    }
+    if (this.rowSelectionMethod) {
       columnIndex++;
     }
 
@@ -1926,18 +1994,19 @@ export class YatlTable<
         }
       });
 
+    const gridWidths = this.getGridWidths();
     this.resizeState = {
       active: true,
       startX: event.pageX,
       startWidth: header.getBoundingClientRect().width,
       columnIndex: columnIndex,
       columnField: field,
-      currentWidths: this.getGridWidths(),
+      currentWidths: gridWidths,
     };
 
     this.tableElement.style.setProperty(
       '--grid-template',
-      this.resizeState.currentWidths.join(' '),
+      gridWidths.join(' '),
     );
 
     window.addEventListener('mousemove', this.handleResizeMouseMove);
@@ -2071,12 +2140,31 @@ export class YatlTable<
       .forEach(element => element.classList.remove('active'));
   };
 
-  private handleRowSelectionClicked = (event: Event, metadata: RowMetadata) => {
-    const input = event.currentTarget as HTMLInputElement;
-    const row = input.closest('.row') as HTMLElement;
-    row.classList.toggle('selected', input.checked)
-    metadata.selected = input.checked;
-  }
+  private handleRowSelectionClicked = (event: Event, row: T) => {
+    const inputElement = event.currentTarget as HTMLInputElement;
+    const selected = inputElement.checked;
+
+    const index = this.rowMetadata.get(row)!.index;
+
+    const selectedRows = new Set(this._selectedRowIndexes);
+    if (this.rowSelectionMethod === 'single') {
+      selectedRows.clear();
+    }
+
+    if (selected) {
+      selectedRows.add(index);
+    } else {
+      selectedRows.delete(index);
+    }
+    const selectEvent = new YatlRowSelectEvent(row, [...selectedRows]);
+    if (!this.dispatchEvent(selectEvent)) {
+      // Revert the change
+      inputElement.checked = !selected;
+      return;
+    }
+
+    this.selectedRows = [...selectedRows];
+  };
 
   // #endregion
 
@@ -2158,6 +2246,7 @@ interface EventMap<T> {
   'yatl-column-resize': YatlColumnResizeEvent<T>;
   'yatl-column-reorder': YatlColumnReorderEvent<T>;
   'yatl-search': YatlSearchEvent;
+  'yatl-row-select': YatlRowSelectEvent<T>;
   'yatl-state-change': YatlStateChangeEvent<T>;
 }
 

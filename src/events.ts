@@ -1,4 +1,4 @@
-import { NestedKeyOf, SortOrder, TableState } from './types';
+import { NestedKeyOf, RowId, SortOrder, TableState } from './types';
 
 export class YatlEvent<T = unknown> extends CustomEvent<T> {
   constructor(name: string, detail: T, options: EventInit = {}) {
@@ -14,6 +14,7 @@ export class YatlEvent<T = unknown> extends CustomEvent<T> {
 
 export class YatlRowClickEvent<T> extends YatlEvent<{
   row: T;
+  id: RowId;
   index: number;
   field: NestedKeyOf<T>;
   originalEvent: MouseEvent;
@@ -22,12 +23,14 @@ export class YatlRowClickEvent<T> extends YatlEvent<{
 
   constructor(
     row: T,
+    id: RowId,
     index: number,
     field: NestedKeyOf<T>,
     originalEvent: MouseEvent,
   ) {
     super(YatlRowClickEvent.EVENT_NAME, {
       row,
+      id,
       index,
       field,
       originalEvent,
@@ -128,6 +131,21 @@ export class YatlSearchEvent extends YatlEvent<{ query: string }> {
 
   constructor(query: string) {
     super(YatlSearchEvent.EVENT_NAME, { query });
+  }
+}
+
+export class YatlRowSelectEvent<T> extends YatlEvent<{
+  row: T;
+  selectedIds: RowId[];
+}> {
+  public static readonly EVENT_NAME = 'yatl-row-select';
+
+  constructor(row: T, selectedIds: RowId[]) {
+    super(
+      YatlRowSelectEvent.EVENT_NAME,
+      { row, selectedIds },
+      { cancelable: true },
+    );
   }
 }
 

@@ -25,26 +25,40 @@ const possibleTags = [
 
 /** @type {YatlTable} */
 let table;
+/** @type {HTMLFormElement} */
+let filtersForm;
+/** @type {HTMLFormElement} */
+let optionsForm;
 
 window.addEventListener('load', () => {
   table = document.querySelector('yatl-table');
+  filtersForm = document.getElementById('filtersForm');
+  optionsForm = document.getElementById('optionsForm');
   // Initialize the table columns and default options
   initTable();
   // Setup event handlers for table toolbar UI
   initTableToolbar();
   initFilterOptions();
 
-  // Update table filters when any of the filter inputs change
-  const filtersForm = document.getElementById('filtersForm');
+  // Sync filter controls and table filters
   filtersForm.addEventListener('change', updateTableFilters);
+  // Update table fitlers AFTER form reset
   filtersForm.addEventListener('reset', () => setTimeout(updateTableFilters, 0));
   updateTableFilters();
 
-
-  // Update table options when any of the table options change
-  const optionsForm = document.getElementById('optionsForm');
+  // Sync option controls and table options
   optionsForm.addEventListener('change', updateTableOptions);
   updateTableOptions();
+
+  /* --- Table Events --- */
+
+  // Just to show how to hook into some events
+  table.addEventListener('yatl-row-click', event => {
+    console.log('Row clicked:', event.detail);
+  });
+  table.addEventListener('yatl-row-select', event => {
+    console.log('Row selected:', event.detail);
+  });
 });
 
 /**
@@ -142,11 +156,6 @@ function initTable() {
     },
   ];
 
-  // Just to show how to hook into row click events
-  table.addEventListener('yatl-row-click', event => {
-    console.log('Row clicked:', event.detail);
-  });
-
   // Watch for changes in the table to update the number of rendered rows.
   const observer = new MutationObserver(mutations => {
     for (const mutation of mutations) {
@@ -194,7 +203,7 @@ function initTableToolbar() {
 }
 
 function initFilterOptions() {
-  const statusOptions = document.querySelector('#filtersForm select[name="status"]');
+  const statusOptions = filtersForm.querySelector('select[name="status"]');
   statusOptions.size = statuses.length;
   for (const status of statuses) {
     const option = document.createElement('option');
@@ -210,14 +219,11 @@ function initFilterOptions() {
 function updateTableFilters() {
   const lastModified = {};
   const filters = { lastModified };
-
-  /** @type {HTMLElement[]} */
-  const inputs = document.querySelectorAll('#filtersForm [name]');
-  for (const input of inputs) {
-    const value = getValueFromInput(input);
-    if (input.name === 'startDate') {
+  const formData = getTypedFormData(filtersForm);
+  for (const [name, value] of Object.entries(formData)) {
+    if (name === 'startDate') {
       lastModified.startDate = value;
-    } else if (input.name === 'endDate') {
+    } else if (name === 'endDate') {
       // We want our end date to be inclusive
       // So increment it by a day and we'll check
       // for < in the filter callback.
@@ -226,7 +232,7 @@ function updateTableFilters() {
       }
       lastModified.endDate = value;
     } else {
-      filters[input.name] = value;
+      filters[name] = value;
     }
   }
   table.filters = filters;
@@ -236,17 +242,15 @@ function updateTableFilters() {
  * Update the table options from the options form inputs
  */
 function updateTableOptions() {
-  /** @type {HTMLInputElement[]} */
-  const inputs = document.querySelectorAll('#optionsForm input[name]');
-  for (const input of inputs) {
-    const value = getValueFromInput(input);
-    if (input.name === 'rowCount') {
+  const options = getTypedFormData(optionsForm);
+  for (const [name, value] of Object.entries(options)) {
+    if (name === 'rowCount') {
       // Prevent the data from changing when toggling other settings
       if (table.data.length !== value) {
         table.data = generateMockData(value);
       }
-    } else if (input.name in table) {
-      table[input.name] = value;
+    } else if (name in table) {
+      table[name] = value;
     }
   }
 }
@@ -267,6 +271,58 @@ function updateTableState() {
   document.getElementById('totalRows').textContent = totalRows.toLocaleString();
 }
 
+/**
+ * 
+ * @param {HTMLFormElement} form 
+ */
+function getTypedFormData(form) {
+  const formData = new FormData(form);
+  const typedData = {};
+  for (const [name, value] of formData.entries()) {
+    const element = form.querySelector(`[name="${name}"]`);
+    if (element instanceof HTMLInputElement) {
+      switch (element.type) {
+        case 'radio':
+        case 'checkbox':
+          if (value === 'null') typedData[name] = null;
+          else typedData[name] = value;
+          break;
+        case 'number':
+          typedData[name] = parseFloat(value);
+          break;
+        case 'date':
+          typedData[name] = dateFromIsoString(value);
+          break;
+        case 'datetime':
+        case 'datetime-local':
+          typedData[name] = new Date(value);
+          break;
+        case 'text':
+        default:
+          typedData[name] = value;
+      }
+    } else if (element instanceof HTMLSelectElement && element.multiple) {
+      if (!Array.isArray(typedData[name])) {
+        typedData[name] = [value]
+      } else {
+        typedData[name].push(value);
+      }
+    } else {
+      typedData[name] = value;
+    }
+  }
+
+  // Manually add checkboxes as true / false since form data ignores unchecked.
+  const checkboxes = form.querySelectorAll('input[type="checkbox"]')
+  for (const checkbox of checkboxes) {
+    if (checkbox.name && checkbox.value === 'on') {
+      typedData[checkbox.name] = checkbox.checked;
+    }
+  }
+
+  return typedData;
+}
+
 
 /**
  * Gets a correctly typed value from the given input based on it's type
@@ -283,7 +339,9 @@ function getValueFromInput(input) {
   switch (input.type) {
     case 'radio':
     case 'checkbox':
-      return input.value === 'on' ? input.checked : input.checked ? input.value : undefined;
+      if (input.value === 'on') return input.checked;
+      if (input.value === 'null') return null;
+      return input.checked ? input.value : undefined;
     case 'number':
       return parseFloat(input.value);
     case 'date':
@@ -374,18 +432,18 @@ function generateMockData(count) {
 
   const generatedData = [];
 
-  // --- Helper function to get a random element from an array ---
+  // Helper function to get a random element from an array
   const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
 
   for (let i = 1; i <= count; i++) {
-    // --- 1. Generate a random date (+- 1 year from now) ---
+    // Generate a random date (+- 1 year from now)
     const today = new Date();
     const oneYearInMillis = 365 * 24 * 60 * 60 * 1000;
     const randomTimeOffset =
       Math.random() * 2 * oneYearInMillis - oneYearInMillis;
     const randomDate = new Date(today.getTime() + randomTimeOffset);
 
-    // --- 2. Generate a tokenizable string of tags ---
+    // Generate a tokenizable string of tags
     // Shuffle tags and pick a random number of them (2 to 5)
     const shuffledTags = [...possibleTags].sort(() => 0.5 - Math.random());
     const tagCount = Math.floor(Math.random() * 4) + 2; // Get 2, 3, 4, or 5 tags
@@ -393,7 +451,7 @@ function generateMockData(count) {
     const issueCount = Math.floor(Math.random() * 100); // Random number of issues
     const tagsString = selectedTags.join(','); // Join with a comma for easy tokenizing
 
-    // --- 3. Assemble the final data object for the row ---
+    // Assemble the final data object for the row
     const dataRow = {
       id: i,
       name: `${getRandom(itemModifiers)} ${getRandom(itemNouns)}`,

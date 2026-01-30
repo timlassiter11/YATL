@@ -4,11 +4,13 @@ import {
   expect,
   elementUpdated,
   nextFrame,
+  oneEvent,
 } from '@open-wc/testing';
 import { stub, spy, useFakeTimers } from 'sinon';
 import './yatl-table';
 import { type YatlTable } from './yatl-table';
 import type { ColumnOptions, NestedKeyOf, RestorableTableState } from './types';
+import { YatlRowSelectEvent } from './events';
 
 // --- Mock Data ---
 interface User {
@@ -112,6 +114,16 @@ describe('YatlTable', () => {
       const emailCell = rows[2].querySelectorAll('.cell')[4];
 
       expect(emailCell.textContent).to.contain('-');
+    });
+    
+    it('renders the row number column when enabled', async () => {
+      el = await createTable(DATA, COLUMNS, { enableRowNumberColumn: true });
+      const indexHeader = el.shadowRoot!.querySelector('.cell-index');
+      expect(indexHeader).to.exist;
+
+      const firstRowIndex = el.shadowRoot!.querySelector('.row-index-cell');
+      expect(firstRowIndex).to.exist;
+      expect(firstRowIndex!.textContent).to.contain('1');
     });
   });
 
@@ -231,6 +243,122 @@ describe('YatlTable', () => {
     });
   });
 
+  // --- Row Selection (New) ---
+  describe('Row Selection', () => {
+    it('renders checkboxes when selection mode is enabled', async () => {
+      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
+      const checkboxes = el.shadowRoot!.querySelectorAll('.row-checkbox');
+      expect(checkboxes.length).to.equal(4);
+    });
+
+    it('allows selecting a single row in "single" mode', async () => {
+      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'single' });
+      
+      // Select first row (Alice)
+      el.selectedRowIds = [1];
+      await elementUpdated(el);
+      
+      const rows = el.shadowRoot!.querySelectorAll('.row-checkbox') as NodeListOf<HTMLInputElement>;
+      expect(rows[0].checked).to.be.true;
+      expect(rows[1].checked).to.be.false;
+
+      // Select second row (Bob)
+      el.selectedRowIds = [2];
+      await elementUpdated(el);
+
+      expect(rows[0].checked).to.be.false; // Alice deselected
+      expect(rows[1].checked).to.be.true;  // Bob selected
+    });
+
+    it('enforces single selection if multiple IDs passed in "single" mode', async () => {
+      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'single' });
+      
+      // Try to select Alice AND Bob
+      el.selectedRowIds = [1, 2];
+      await elementUpdated(el);
+
+      // Should have truncated to just the first one (Alice)
+      expect(el.selectedRowIds).to.deep.equal([1]);
+    });
+
+    it('allows selecting multiple rows in "multi" mode', async () => {
+      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
+      
+      el.selectedRowIds = [1, 3]; // Alice and Charlie
+      await elementUpdated(el);
+
+      const rows = el.shadowRoot!.querySelectorAll('.row-checkbox') as NodeListOf<HTMLInputElement>;
+      expect(rows[0].checked).to.be.true; // Alice
+      expect(rows[1].checked).to.be.false; // Bob
+      expect(rows[2].checked).to.be.true; // Charlie
+    });
+
+    it('clears selection when data updates', async () => {
+      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
+      el.selectedRowIds = [1];
+      await elementUpdated(el);
+
+      // New Data (even if identical content, new reference)
+      el.data = [...DATA]; 
+      await elementUpdated(el);
+
+      expect(el.selectedRowIds.length).to.equal(0);
+    });
+
+    it('updates selection when clicking a checkbox', async () => {
+      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
+      const firstCheckbox = el.shadowRoot!.querySelector('.row-checkbox') as HTMLInputElement;
+
+      // Simulate User Click
+      setTimeout(() => firstCheckbox.click());
+      
+      const event = await oneEvent(el, 'yatl-row-select');
+      const detail = (event as YatlRowSelectEvent<User>).detail;
+      
+      expect(detail.selectedIds).to.have.length(1);
+      expect(detail.selectedIds[0]).to.equal(1); 
+      expect(el.selectedRowIds).to.include(1);
+    });
+  });
+
+  // --- ID Handling & Fallbacks ---
+  describe('ID Handling', () => {
+    it('uses custom rowIdCallback', async () => {
+      el = await createTable(DATA, COLUMNS, {
+        rowSelectionMethod: 'single',
+        rowIdCallback: (row) => `user_${row.id}`
+      });
+      
+      el.selectedRowIds = ['user_1'];
+      // Make sure selected ids is correct before and after an update.
+      expect(el.selectedRowIds).to.contain('user_1');
+      await elementUpdated(el);
+      expect(el.selectedRowIds).to.contain('user_1');
+    });
+
+    it('warns when duplicate IDs are detected', async () => {
+      const warnSpy = spy(console, 'warn');
+      const BAD_DATA = [
+        { id: 1, name: 'A', role: '', age: 1, email: '' },
+        { id: 1, name: 'B', role: '', age: 1, email: '' } // Duplicate ID
+      ];
+
+      el = await createTable(BAD_DATA);
+      
+      expect(warnSpy).to.have.been.called;
+      warnSpy.restore();
+    });
+  });
+
+  // --- Virtualization ---
+  describe('Virtualization', () => {
+    it('renders lit-virtualizer when enabled', async () => {
+      el = await createTable(DATA, COLUMNS, { enableVirtualScroll: true });
+      const virtualizer = el.shadowRoot!.querySelector('lit-virtualizer');
+      expect(virtualizer).to.exist;
+    });
+  });
+
   // --- Row Operations ---
   describe('Row Manipulation', () => {
     it('finds original index correctly', async () => {
@@ -246,7 +374,7 @@ describe('YatlTable', () => {
     it('updates a row and refreshes the view', async () => {
       el = await createTable();
 
-      el.updateRow(0, { name: 'Alice Updated' });
+      el.updateRow(1, { name: 'Alice Updated' });
       await elementUpdated(el);
 
       const firstCell = el.shadowRoot!.querySelector(
@@ -259,7 +387,7 @@ describe('YatlTable', () => {
       el = await createTable();
       const initialLen = el.data.length;
 
-      el.deleteRow(0);
+      el.deleteRow(1);
       await elementUpdated(el);
 
       expect(el.data.length).to.equal(initialLen - 1);
@@ -302,19 +430,21 @@ describe('YatlTable', () => {
         .shadowRoot!.querySelectorAll('.header .cell')[0]
         .getBoundingClientRect().width;
 
+      const startX = 100;
+      const deltaX = 50;
       // Mouse Down
       resizer.dispatchEvent(
         new MouseEvent('mousedown', {
           bubbles: true,
           composed: true,
-          clientX: 100,
+          clientX: startX,
         }),
       );
 
       // Mouse Move (global window)
       window.dispatchEvent(
         new MouseEvent('mousemove', {
-          clientX: 150, // +50px
+          clientX: startX + deltaX,
         }),
       );
 
@@ -326,9 +456,7 @@ describe('YatlTable', () => {
 
       // Verify state updated
       const colWidth = el.columnWidths['id'];
-      // Note: Exact pixel match depends on test runner viewport,
-      // usually we assert it is LARGER than initial.
-      expect(colWidth).to.be.greaterThan(initialWidth);
+      expect(colWidth).to.be.closeTo(initialWidth + deltaX, 0.001);
     });
   });
 

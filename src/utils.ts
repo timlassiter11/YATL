@@ -4,6 +4,8 @@ import {
   Compareable,
   DisplayColumnOptions,
   InternalColumnOptions,
+  RowId,
+  RowSelectionMethod,
 } from './types';
 
 /*
@@ -156,13 +158,6 @@ export function highlightText(
   return html`${result}`;
 }
 
-export function widthsToGridTemplates(
-  widths: Array<number | null>,
-  defaultWidth = '1fr',
-) {
-  return widths.map(width => (width ? `${width}px` : defaultWidth));
-}
-
 export function isCompareable(value: unknown): value is Compareable {
   return (
     typeof value === 'string' ||
@@ -182,4 +177,12 @@ export function isDisplayColumn<T>(
   col: ColumnOptions<T> | undefined | null,
 ): col is DisplayColumnOptions<T> {
   return col?.role !== 'internal';
+}
+
+export function isRowIdType(value: unknown): value is RowId {
+  return typeof value === 'string' || typeof value === 'number';
+}
+
+export function isRowSelectionMethod(value: string | null): value is RowSelectionMethod {
+  return (value === null || value === 'multi' || value === 'single');
 }

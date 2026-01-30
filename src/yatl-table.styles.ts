@@ -119,6 +119,9 @@ export default css`
       )
     );
 
+    --yatl-index-column-width: var(--yatl-table-index-column-width, 48px);
+    --yatl-selector-column-width: var(--yatl-table-selector-column-width, 48px);
+
     /* Resize grab handle width */
     --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
     /* z-index for the header */
@@ -155,6 +158,7 @@ export default css`
     border-bottom: none;
   }
 
+  /* Use after element for row and header hover */
   .header.reorderable .cell::after,
   .header .cell.sortable::after,
   .row:not(.header)::after {
@@ -170,6 +174,10 @@ export default css`
   .header:not(.resizing) .cell:hover::after,
   .row:not(.header):hover::after {
     background-color: var(--yatl-row-hover-bg);
+  }
+
+  .row:not(.header).selected::after {
+    background-color: var(--yatl-row-selected-bg);
   }
 
   .cell {
@@ -203,6 +211,10 @@ export default css`
   .resizer:hover::after {
     background-color: currentColor;
     width: 2px;
+  }
+
+  .row-index-cell {
+    background-color: var(--yatl-header-bg);
   }
 
   .drop-indicator {
@@ -353,6 +365,20 @@ export default css`
     position: relative;
     display: flex;
     align-items: center;
+  }
+
+  .row-index-cell {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .row-selector-cell {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
   }
 
   .message {

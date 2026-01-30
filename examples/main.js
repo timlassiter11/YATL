@@ -432,18 +432,18 @@ function generateMockData(count) {
 
   const generatedData = [];
 
-  // --- Helper function to get a random element from an array ---
+  // Helper function to get a random element from an array
   const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
 
   for (let i = 1; i <= count; i++) {
-    // --- 1. Generate a random date (+- 1 year from now) ---
+    // Generate a random date (+- 1 year from now)
     const today = new Date();
     const oneYearInMillis = 365 * 24 * 60 * 60 * 1000;
     const randomTimeOffset =
       Math.random() * 2 * oneYearInMillis - oneYearInMillis;
     const randomDate = new Date(today.getTime() + randomTimeOffset);
 
-    // --- 2. Generate a tokenizable string of tags ---
+    // Generate a tokenizable string of tags
     // Shuffle tags and pick a random number of them (2 to 5)
     const shuffledTags = [...possibleTags].sort(() => 0.5 - Math.random());
     const tagCount = Math.floor(Math.random() * 4) + 2; // Get 2, 3, 4, or 5 tags
@@ -451,7 +451,7 @@ function generateMockData(count) {
     const issueCount = Math.floor(Math.random() * 100); // Random number of issues
     const tagsString = selectedTags.join(','); // Join with a comma for easy tokenizing
 
-    // --- 3. Assemble the final data object for the row ---
+    // Assemble the final data object for the row
     const dataRow = {
       id: i,
       name: `${getRandom(itemModifiers)} ${getRandom(itemNouns)}`,

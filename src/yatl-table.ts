@@ -7,10 +7,12 @@ import type {
   DisplayColumnOptions,
   FilterCallback,
   Filters,
+  RowIdCallback,
   NestedKeyOf,
   QueryToken,
   RestorableColumnState,
   RestorableTableState,
+  RowId,
   RowPartsCallback,
   RowSelectionMethod,
   SortOrder,
@@ -28,6 +30,8 @@ import {
   isCompareable,
   isDisplayColumn,
   isInternalColumn,
+  isRowIdType,
+  isRowSelectionMethod,
   toHumanReadable,
   whitespaceTokenizer,
 } from './utils';
@@ -116,8 +120,15 @@ export class YatlTable<
   private _columnStateMap = new Map<NestedKeyOf<T>, ColumnState<T>>();
   private _columnOrder: NestedKeyOf<T>[] = [];
   private _rowSelectionMethod: RowSelectionMethod = null;
-  private _selectedRowIndexes = new Set<number>();
+  private _selectedRowIds = new Set<RowId>();
   private _storageOptions: StorageOptions | null = null;
+  private _rowIdCallback: RowIdCallback<T> = (row, index) => {
+    if ('id' in row && isRowIdType(row.id)) return row.id;
+    if ('key' in row && isRowIdType(row.key)) return row.key;
+    if ('_id' in row && isRowIdType(row._id)) return row._id;
+    warnMissingId();
+    return index;
+  };
   private _data: T[] = [];
   private _searchQuery = '';
   private _searchTokenizer: TokenizerCallback = whitespaceTokenizer;
@@ -143,6 +154,8 @@ export class YatlTable<
 
   // Maps rows to their metadata
   private rowMetadata = new WeakMap<T, RowMetadata>();
+  // Map row ids to their rows for faster lookup
+  private idToRowMap = new Map<RowId, T>();
   // List of tokens created from the current query
   private queryTokens: QueryToken[] | null = null;
   // Column resize state
@@ -555,18 +568,21 @@ export class YatlTable<
     return this._rowSelectionMethod;
   }
   public set rowSelectionMethod(selection) {
-    if (this._rowSelectionMethod === selection) {
+    if (
+      this._rowSelectionMethod === selection ||
+      !isRowSelectionMethod(selection)
+    ) {
       return;
     }
 
     const oldValue = this._rowSelectionMethod;
     this._rowSelectionMethod = selection;
     if (selection === 'single') {
-      this.selectedRows = this.selectedRows.slice(0, 1);
+      this.selectedRowIds = this.selectedRowIds.slice(0, 1);
     } else if (!selection) {
-      this.selectedRows = [];
+      this.selectedRowIds = [];
     }
-    this.requestUpdate('rowSelection', oldValue);
+    this.requestUpdate('rowSelectionMethod', oldValue);
   }
 
   /**
@@ -575,14 +591,14 @@ export class YatlTable<
    * the original data array index, *not* the filtered data.
    */
   @property({ attribute: false })
-  public get selectedRows() {
-    return [...this._selectedRowIndexes];
+  public get selectedRowIds() {
+    return [...this._selectedRowIds];
   }
 
-  public set selectedRows(rows) {
+  public set selectedRowIds(rows) {
     if (
-      rows.length === this._selectedRowIndexes.size &&
-      rows.every(a => this._selectedRowIndexes.has(a))
+      rows.length === this._selectedRowIds.size &&
+      rows.every(a => this._selectedRowIds.has(a))
     ) {
       return;
     }
@@ -593,9 +609,9 @@ export class YatlTable<
       rows = [];
     }
 
-    const oldValue = this.selectedRows;
-    this._selectedRowIndexes = new Set(rows);
-    this.requestUpdate('selectedRows', oldValue);
+    const oldValue = this.selectedRowIds;
+    this._selectedRowIds = new Set(rows);
+    this.requestUpdate('selectedRowIds', oldValue);
   }
 
   /**
@@ -620,6 +636,26 @@ export class YatlTable<
     this.requestUpdate('storageOptions', oldValue);
   }
 
+  @property({ attribute: false })
+  public get rowIdCallback() {
+    return this._rowIdCallback;
+  }
+
+  public set rowIdCallback(callback) {
+    if (this._rowIdCallback === callback) {
+      return;
+    }
+
+    const oldValue = this._rowIdCallback;
+    this._rowIdCallback = callback;
+    // Update IDs in metadata for existing data.
+    for (let i = 0; i < this.data.length; ++i) {
+      const row = this.data[i];
+      this.rowMetadata.get(row)!.id = this._rowIdCallback(row, i);
+    }
+    this.requestUpdate('rowIdCallback', oldValue);
+  }
+
   /**
    * The array of data objects to be displayed.
    * Objects must satisfy the `WeakKey` constraint (objects only, no primitives).
@@ -633,7 +669,7 @@ export class YatlTable<
     const oldValue = this._data;
     this._data = value;
     this.dataLastUpdate = new Date();
-    this.selectedRows = [];
+    this.selectedRowIds = [];
     this.createMetadata();
     this.filterDirty = true;
     this.requestUpdate('data', oldValue);
@@ -952,10 +988,19 @@ export class YatlTable<
   }
 
   /**
-   * Finds the first row
-   * @param field
-   * @param value
+   * Gets the row associated with the provided ID.
+   * @param id - The ID of the row to get
    * @returns
+   */
+  public getRow(id: RowId) {
+    return this.idToRowMap.get(id);
+  }
+
+  /**
+   * Finds the first row where {@link field} matches {@link value}
+   * @param field - The field name within the row data to search.
+   * @param value - The value to match against the field's content.
+   * @returns The found row, or undefined if no match is found.
    */
   public findRow(field: NestedKeyOf<T>, value: unknown) {
     return this.data.find(row => {
@@ -986,6 +1031,14 @@ export class YatlTable<
     return -1;
   }
 
+  public updateRow(rowId: RowId, data: Partial<T>) {
+    const row = this.idToRowMap.get(rowId);
+    if (row) {
+      Object.assign(row, data);
+      this.requestUpdate('data');
+    }
+  }
+
   /**
    * Updates the data of a row at a specific original index.
    * @param index - The original index of the row to update.
@@ -999,11 +1052,23 @@ export class YatlTable<
    * }
    * ```
    */
-  public updateRow(index: number, data: Partial<T>) {
-    const current_row = this.data[index];
-    if (current_row) {
-      Object.assign(current_row, data);
+  public updateRowAtIndex(index: number, data: Partial<T>) {
+    const row = this.data[index];
+    if (row) {
+      Object.assign(row, data);
       this.requestUpdate('data');
+    }
+  }
+
+  /**
+   * Deletes the row with the matching ID.
+   * @param id - The ID of the row to delete
+   */
+  public deleteRow(rowId: RowId) {
+    const row = this.idToRowMap.get(rowId);
+    if (row) {
+      const metadata = this.rowMetadata.get(row)!;
+      this.deleteRowAtIndex(metadata.index);
     }
   }
 
@@ -1011,8 +1076,14 @@ export class YatlTable<
    * Deletes a row at a specific original index from the table.
    * @param index - The original index of the row to delete.
    */
-  public deleteRow(index: number) {
-    this.data = this.data.toSpliced(index, 1);
+  public deleteRowAtIndex(index: number) {
+    const row = this.data[index];
+    if (row) {
+      const metadata = this.rowMetadata.get(row)!;
+      this.idToRowMap.delete(metadata.id);
+      this.rowMetadata.delete(row);
+      this.data = this.data.toSpliced(index, 1);
+    }
   }
 
   // #endregion
@@ -1196,21 +1267,20 @@ export class YatlTable<
     `;
   }
 
-  protected renderColumnIndexCell(filteredIndex: number) {
+  protected renderRowNumberCell(rowNumber: number) {
     return html`
       <div
         part="cell body-cell row-index-cell"
         class="cell body-cell row-index-cell"
       >
-        ${filteredIndex + 1}
+        ${rowNumber}
       </div>
     `;
   }
 
-  protected renderRow(row: T, filteredIndex: number) {
+  protected renderRow(row: T, renderIndex: number) {
     const metadata = this.rowMetadata.get(row)!;
-    const dataIndex = metadata.index;
-    const selected = this.selectedRows.includes(dataIndex);
+    const selected = this._selectedRowIds.has(metadata.id);
     let userParts = this.rowParts?.(row) ?? '';
     if (Array.isArray(userParts)) {
       userParts = userParts.join(' ');
@@ -1219,14 +1289,9 @@ export class YatlTable<
     const classes = { row: true, selected };
 
     return html`
-      <div
-        part=${'row ' + userParts}
-        class=${classMap(classes)}
-        data-index=${dataIndex}
-        data-filtered-index=${filteredIndex}
-      >
+      <div part=${'row ' + userParts} class=${classMap(classes)}>
         ${this.enableRowNumberColumn
-          ? this.renderColumnIndexCell(filteredIndex)
+          ? this.renderRowNumberCell(renderIndex + 1)
           : nothing}
         ${this.rowSelectionMethod
           ? this.renderRowSelectorCell(row, selected)
@@ -1268,7 +1333,7 @@ export class YatlTable<
     return html`
       ${repeat(
         this.filteredData,
-        item => this.rowMetadata.get(item)!.index,
+        item => this.rowMetadata.get(item)!.id,
         (item, index) => this.renderRow(item, index),
       )}
     `;
@@ -1693,12 +1758,22 @@ export class YatlTable<
   // #region --- Utilities ---
 
   private createMetadata() {
+    this.idToRowMap = new Map();
     this.rowMetadata = new WeakMap();
 
     let index = 0;
     for (const row of this.data) {
+      let rowId = this._rowIdCallback(row, index);
+      // If the user screws
+      if (rowId == null || this.idToRowMap.has(rowId)) {
+        warnInvalidIdFunction(index, rowId, row);
+        rowId = `__yatl_fallback_id_${index}`;
+      }
+
+      this.idToRowMap.set(rowId, row);
       // Add the index
       const metadata: RowMetadata = {
+        id: rowId,
         index: index++,
         searchTokens: {},
         searchValues: {},
@@ -1953,8 +2028,10 @@ export class YatlTable<
     // Ignore events if the user is highlighting text
     if (window.getSelection()?.toString()) return;
 
-    const rowIndex = this.rowMetadata.get(row)!.index;
-    this.dispatchEvent(new YatlRowClickEvent(row, rowIndex, field, event));
+    const metadata = this.rowMetadata.get(row)!;
+    this.dispatchEvent(
+      new YatlRowClickEvent(row, metadata.id, metadata.index, field, event),
+    );
   };
 
   private handleResizeMouseDown(event: MouseEvent, field: NestedKeyOf<T>) {
@@ -2141,20 +2218,21 @@ export class YatlTable<
   };
 
   private handleRowSelectionClicked = (event: Event, row: T) => {
+    event.stopPropagation();
     const inputElement = event.currentTarget as HTMLInputElement;
     const selected = inputElement.checked;
 
-    const index = this.rowMetadata.get(row)!.index;
+    const rowId = this.rowMetadata.get(row)!.id;
 
-    const selectedRows = new Set(this._selectedRowIndexes);
+    const selectedRows = new Set(this._selectedRowIds);
     if (this.rowSelectionMethod === 'single') {
       selectedRows.clear();
     }
 
     if (selected) {
-      selectedRows.add(index);
+      selectedRows.add(rowId);
     } else {
-      selectedRows.delete(index);
+      selectedRows.delete(rowId);
     }
     const selectEvent = new YatlRowSelectEvent(row, [...selectedRows]);
     if (!this.dispatchEvent(selectEvent)) {
@@ -2163,7 +2241,7 @@ export class YatlTable<
       return;
     }
 
-    this.selectedRows = [...selectedRows];
+    this.selectedRowIds = [...selectedRows];
   };
 
   // #endregion
@@ -2218,6 +2296,7 @@ export class YatlTable<
 }
 
 interface RowMetadata {
+  id: RowId;
   index: number;
   searchScore?: number;
   /** Precomputed search tokens */
@@ -2255,6 +2334,33 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     'yatl-table': YatlTable<any>;
   }
+}
+
+let _hasWarnedMissingId = false;
+function warnMissingId() {
+  if (_hasWarnedMissingId) return;
+  _hasWarnedMissingId = true;
+
+  console.warn(
+    `[yatl-table] Data rows are missing a unique 'id' or 'key' property.
+     Falling back to array index.
+     Selection and sorting may behave unexpectedly.
+     Please provide a unique ID via the 'rowIdCallback' property.
+    `,
+  );
+}
+
+let _hasWarnedInvalidIdFunction = false;
+function warnInvalidIdFunction<T>(index: number, rowId: RowId, row: T) {
+  if (_hasWarnedInvalidIdFunction) return;
+  _hasWarnedInvalidIdFunction = true;
+  console.warn(
+    `[yatl-table] rowIdCallback returned non-unique id (${rowId}) for data at index ${index}.
+    Falling back to array index.
+    Selection and sorting may behave unexpectedly.
+  `,
+  );
+  console.debug(row);
 }
 
 export {

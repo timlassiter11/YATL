@@ -25,6 +25,9 @@ export type ColumnPropertyRecord<TData, TProp> = Partial<
   Record<NestedKeyOf<TData>, TProp>
 >;
 
+export type RowId = string | number;
+export type RowIdCallback<T> = (row: T, index: number) => RowId;
+
 /**
  * The method used for selecting rows.
  * * single - Only a single row can be selected at a time

@@ -156,13 +156,6 @@ export function highlightText(
   return html`${result}`;
 }
 
-export function widthsToGridTemplates(
-  widths: Array<number | null>,
-  defaultWidth = '1fr',
-) {
-  return widths.map(width => (width ? `${width}px` : defaultWidth));
-}
-
 export function isCompareable(value: unknown): value is Compareable {
   return (
     typeof value === 'string' ||

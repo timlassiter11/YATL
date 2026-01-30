@@ -119,6 +119,8 @@ export default css`
       )
     );
 
+    --yatl-selection-column-wdith: var(--yatl-table-selection-column-width, 48px);
+
     /* Resize grab handle width */
     --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
     /* z-index for the header */
@@ -170,6 +172,10 @@ export default css`
   .header:not(.resizing) .cell:hover::after,
   .row:not(.header):hover::after {
     background-color: var(--yatl-row-hover-bg);
+  }
+
+  .row:not(.header).selected::after {
+    background-color: var(--yatl-row-selected-bg);
   }
 
   .cell {
@@ -353,6 +359,13 @@ export default css`
     position: relative;
     display: flex;
     align-items: center;
+  }
+
+  .cell-selection {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
   }
 
   .message {

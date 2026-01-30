@@ -26,6 +26,14 @@ export type ColumnPropertyRecord<TData, TProp> = Partial<
 >;
 
 /**
+ * The method used for selecting rows.
+ * * single - Only a single row can be selected at a time
+ * * multi - Multiple rows can be selected at a time
+ * * null - Disable row selection
+ */
+export type RowSelectionMethod = 'single' | 'multi' | null;
+
+/**
  * Defines the possible sorting orders for columns.
  */
 export type SortOrder = 'asc' | 'desc';

@@ -246,7 +246,7 @@ describe('YatlTable', () => {
     it('updates a row and refreshes the view', async () => {
       el = await createTable();
 
-      el.updateRow(0, { name: 'Alice Updated' });
+      el.updateRow(1, { name: 'Alice Updated' });
       await elementUpdated(el);
 
       const firstCell = el.shadowRoot!.querySelector(
@@ -259,7 +259,7 @@ describe('YatlTable', () => {
       el = await createTable();
       const initialLen = el.data.length;
 
-      el.deleteRow(0);
+      el.deleteRow(1);
       await elementUpdated(el);
 
       expect(el.data.length).to.equal(initialLen - 1);

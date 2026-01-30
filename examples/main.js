@@ -37,7 +37,9 @@ window.addEventListener('load', () => {
   // Update table filters when any of the filter inputs change
   const filtersForm = document.getElementById('filtersForm');
   filtersForm.addEventListener('change', updateTableFilters);
+  filtersForm.addEventListener('reset', () => setTimeout(updateTableFilters, 0));
   updateTableFilters();
+
 
   // Update table options when any of the table options change
   const optionsForm = document.getElementById('optionsForm');

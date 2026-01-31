@@ -105,8 +105,6 @@ export class YatlTable<
   private tableElement!: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
-  @query('.header')
-  private headerElement!: HTMLElement;
 
   // #region --- State Data ---
 
@@ -2055,7 +2053,7 @@ export class YatlTable<
       columnIndex++;
     }
 
-    this.headerElement.classList.add('resizing');
+    this.tableElement.classList.add('resizing');
 
     // Freeze the current widths as soon as the users starts resizing
     this.tableElement
@@ -2110,7 +2108,7 @@ export class YatlTable<
     window.removeEventListener('mousemove', this.handleResizeMouseMove);
     window.removeEventListener('mouseup', this.handleResizeMouseUp);
 
-    this.headerElement.classList.remove('resizing');
+    this.tableElement.classList.remove('resizing');
 
     if (this.resizeState?.active) {
       event.preventDefault();

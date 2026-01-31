@@ -29,7 +29,7 @@ export default css`
     --yatl-cell-padding: var(--yatl-table-cell-padding, 10px 16px);
     --yatl-header-padding: var(--yatl-table-header-padding, 12px 16px);
 
-    --yatl-brand-color: var(--yatl-table-brand-light, #7531AE);
+    --yatl-brand-color: var(--yatl-table-brand-light, #7531ae);
 
     /* Light colors */
     --yatl-bg-light: var(--yatl-table-bg-light, #ffffff);
@@ -121,9 +121,18 @@ export default css`
       )
     );
 
-    --yatl-row-number-column-width: var(--yatl-table-row-number-column-width, 48px);
-    --yatl-row-selector-column-width: var(--yatl-table-row-selector-column-width, 48px);
-    --yatl-column-visibility-transition: var(--yatl-table-column-visibility-transition, 100ms);
+    --yatl-row-number-column-width: var(
+      --yatl-table-row-number-column-width,
+      48px
+    );
+    --yatl-row-selector-column-width: var(
+      --yatl-table-row-selector-column-width,
+      48px
+    );
+    --yatl-column-visibility-transition: var(
+      --yatl-table-column-visibility-transition,
+      100ms
+    );
 
     /* Resize grab handle width */
     --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
@@ -154,8 +163,11 @@ export default css`
     background-color: var(--yatl-bg);
     border-bottom: 1px solid var(--yatl-border-color);
     transition: background-color 50ms;
-    transition: grid-template-columns var(--yatl-column-visibility-transition);
     position: relative;
+  }
+
+  .table:not(.resizing) .row {
+    transition: grid-template-columns var(--yatl-column-visibility-transition);
   }
 
   .row:last-child {
@@ -175,7 +187,7 @@ export default css`
     z-index: 1;
   }
 
-  .header:not(.resizing) .cell:hover::after,
+  .table:not(.resizing):not .cell:hover::after,
   .row:not(.header):hover::after {
     background-color: var(--yatl-row-hover-bg);
   }
@@ -189,7 +201,7 @@ export default css`
     padding: var(--yatl-cell-padding);
   }
 
-  .header.resizing * {
+  .table.resizing * {
     cursor: col-resize !important;
   }
 
@@ -224,9 +236,9 @@ export default css`
   .row-checkbox {
     width: 1.125rem;
     height: 1.125rem;
-    
+
     cursor: pointer;
-    margin: 0; 
+    margin: 0;
 
     accent-color: var(--yatl-brand-color, var(--yatl-text));
 
@@ -390,6 +402,7 @@ export default css`
     position: relative;
     display: flex;
     align-items: center;
+    height: 100%;
   }
 
   /* Add the padding to the child */

@@ -1064,11 +1064,13 @@ export class YatlTable<
    * Deletes the row with the matching ID.
    * @param id - The ID of the row to delete
    */
-  public deleteRow(rowId: RowId) {
-    const row = this.idToRowMap.get(rowId);
-    if (row) {
-      const metadata = this.rowMetadata.get(row)!;
-      this.deleteRowAtIndex(metadata.index);
+  public deleteRow(...rowIds: RowId[]) {
+    for (const rowId of rowIds) {
+      const row = this.idToRowMap.get(rowId);
+      if (row) {
+        const metadata = this.rowMetadata.get(row)!;
+        this.deleteRowAtIndex(metadata.index);
+      }
     }
   }
 
@@ -1082,6 +1084,8 @@ export class YatlTable<
       const metadata = this.rowMetadata.get(row)!;
       this.idToRowMap.delete(metadata.id);
       this.rowMetadata.delete(row);
+      this._selectedRowIds.delete(metadata.id);
+      this.selectedRowIds = [...this._selectedRowIds];
       this.data = this.data.toSpliced(index, 1);
     }
   }

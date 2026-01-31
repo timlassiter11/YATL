@@ -61,6 +61,9 @@ window.addEventListener('load', () => {
   });
   table.addEventListener('yatl-row-select', event => {
     console.log('Row selected:', event.detail);
+    // Disable the delete button when no rows are selected.
+    const deleteRowsButton = document.getElementById('deleteRowsButton');
+    deleteRowsButton.disabled = event.detail.selectedIds.length === 0;
   });
 });
 
@@ -194,6 +197,12 @@ function initTableToolbar() {
   const exportButton = document.getElementById('exportButton');
   exportButton.addEventListener('click', () => {
     table.export('yatl-export');
+  });
+
+  const deleteRowsButton = document.getElementById('deleteRowsButton');
+  deleteRowsButton.addEventListener('click', () => {
+    table.deleteRow(...table.selectedRowIds);
+    deleteRowsButton.disabled = true;
   });
 
   // Handle search

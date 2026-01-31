@@ -29,7 +29,7 @@ export default css`
     --yatl-cell-padding: var(--yatl-table-cell-padding, 10px 16px);
     --yatl-header-padding: var(--yatl-table-header-padding, 12px 16px);
 
-    --yatl-brand-color: var(--yatl-table-brand-light, #2e2070);
+    --yatl-brand-color: var(--yatl-table-brand-light, #7531AE);
 
     /* Light colors */
     --yatl-bg-light: var(--yatl-table-bg-light, #ffffff);

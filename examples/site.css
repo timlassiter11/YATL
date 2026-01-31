@@ -266,9 +266,17 @@ select option:hover {
   align-items: center;
 }
 
-.button:hover,
+.button:not([disabled]):hover,
 details[open] .button {
   background: var(--bg-hover);
+}
+
+.button:disabled,
+.button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(100%);
+  pointer-events: none; 
 }
 
 .button-group {

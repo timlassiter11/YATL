@@ -378,6 +378,12 @@ export default css`
     width: fit-content;
   }
 
+  .cell-wrapper {
+    padding: 0;
+    overflow: hidden;
+    min-width: 0;
+  }
+
   .cell {
     white-space: nowrap;
     overflow: hidden;

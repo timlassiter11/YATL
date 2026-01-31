@@ -1130,16 +1130,13 @@ export class YatlTable<
     }
 
     const state = this.getOrCreateColumnState(field);
-    if (!state.visible) {
-      return nothing;
-    }
 
     const classes = {
       cell: true,
       sortable: column.sortable ?? this.sortable,
     };
 
-    return html`
+    return this.renderCellWrapper(html`
       <div
         part="cell header-cell"
         class=${classMap(classes)}
@@ -1164,15 +1161,19 @@ export class YatlTable<
         ${this.renderColumnResizer(column, state)}
         <div part="drop-indicator" class="drop-indicator"></div>
       </div>
-    `;
+    `);
   }
 
   protected renderRowNumberHeader() {
-    return html` <div part="cell-index" class="cell-index"></div> `;
+    return this.renderCellWrapper(
+      html`<div part="cell-index" class="cell-index"></div>`,
+    );
   }
 
   protected renderSelectionHeader() {
-    return html` <div part="cell-selector" class="cell-selector"></div> `;
+    return this.renderCellWrapper(
+      html`<div part="cell-selector" class="cell-selector"></div>`,
+    );
   }
 
   protected renderHeader() {
@@ -1215,11 +1216,6 @@ export class YatlTable<
       return nothing;
     }
 
-    const state = this.getOrCreateColumnState(field);
-    if (!state.visible) {
-      return;
-    }
-
     let value = getNestedValue(row, column.field);
     // Get the user parts from the raw value
     // before we call the value formatter.
@@ -1232,7 +1228,7 @@ export class YatlTable<
       value = column.valueFormatter(value, row);
     }
 
-    return html`
+    return this.renderCellWrapper(html`
       <div
         part="cell body-cell cell-${column.field} ${userParts}"
         data-field=${column.field}
@@ -1245,11 +1241,11 @@ export class YatlTable<
           ${this.renderCellContents(value, column, row)}
         </span>
       </div>
-    `;
+    `);
   }
 
   protected renderRowSelectorCell(row: T, selected: boolean) {
-    return html`
+    return this.renderCellWrapper(html`
       <div part="cell body-cell" class="cell body-cell">
         <div part="row-selector-cell" class="row-selector-cell">
           <input
@@ -1262,15 +1258,15 @@ export class YatlTable<
           />
         </div>
       </div>
-    `;
+    `);
   }
 
   protected renderRowNumberCell(rowNumber: number) {
-    return html`
+    return this.renderCellWrapper(html`
       <div part="cell body-cell" class="cell body-cell">
         <div part="row-number-cell" class="row-number-cell">${rowNumber}</div>
       </div>
-    `;
+    `);
   }
 
   protected renderRow(row: T, renderIndex: number) {
@@ -1369,12 +1365,6 @@ export class YatlTable<
     const gridTemplate = this.getGridWidths().join(' ');
     const style = {
       '--grid-template': gridTemplate,
-      '--yatl-row-number-column-width': this.enableRowNumberColumn
-        ? undefined
-        : '0',
-      '--yatl-row-selector-column-width': this.rowSelectionMethod
-        ? undefined
-        : '0',
     };
 
     return html`
@@ -1390,6 +1380,10 @@ export class YatlTable<
         ${this.renderFooter()}
       </div>
     `;
+  }
+
+  private renderCellWrapper(content: TemplateResult | typeof nothing) {
+    return html` <div class="cell-wrapper">${content}</div> `;
   }
 
   // #endregion
@@ -1838,8 +1832,17 @@ export class YatlTable<
   private getGridWidths() {
     const widths: string[] = [];
 
-    widths.push('var(--yatl-row-number-column-width, 48px)');
-    widths.push('var(--yatl-row-selector-column-width, 48px)');
+    if (this.enableRowNumberColumn) {
+      widths.push('var(--yatl-row-number-column-width, 48px)');
+    } else {
+      widths.push('0');
+    }
+
+    if (this.rowSelectionMethod) {
+      widths.push('var(--yatl-row-selector-column-width, 48px)');
+    } else {
+      widths.push('0');
+    }
     for (const field of this.columnOrder) {
       const state = this.getOrCreateColumnState(field);
       if (state.visible) {
@@ -1848,6 +1851,8 @@ export class YatlTable<
         } else {
           widths.push('1fr');
         }
+      } else {
+        widths.push('0');
       }
     }
 

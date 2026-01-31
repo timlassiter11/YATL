@@ -121,8 +121,9 @@ export default css`
       )
     );
 
-    --yatl-index-column-width: var(--yatl-table-index-column-width, 48px);
-    --yatl-selector-column-width: var(--yatl-table-selector-column-width, 48px);
+    --yatl-row-number-column-width: var(--yatl-table-row-number-column-width, 48px);
+    --yatl-row-selector-column-width: var(--yatl-table-row-selector-column-width, 48px);
+    --yatl-column-visibility-transition: var(--yatl-table-column-visibility-transition, 100ms);
 
     /* Resize grab handle width */
     --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
@@ -153,6 +154,7 @@ export default css`
     background-color: var(--yatl-bg);
     border-bottom: 1px solid var(--yatl-border-color);
     transition: background-color 50ms;
+    transition: grid-template-columns var(--yatl-column-visibility-transition);
     position: relative;
   }
 
@@ -215,7 +217,7 @@ export default css`
     width: 2px;
   }
 
-  .row-index-cell {
+  .row-number-cell {
     background-color: var(--yatl-header-bg);
   }
 
@@ -379,24 +381,26 @@ export default css`
   .cell {
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
     position: relative;
     display: flex;
     align-items: center;
   }
 
-  .row-index-cell {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
+  /* Add the padding to the child */
+  .cell:has(.row-number-cell),
+  .cell:has(.row-selector-cell) {
+    padding: 0;
   }
 
+  .row-number-cell,
   .row-selector-cell {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
+    padding: var(--yatl-cell-padding);
+    height: 100%;
+    width: 100%;
   }
 
   .message {

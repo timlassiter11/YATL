@@ -1183,8 +1183,7 @@ export class YatlTable<
     };
     return html`
       <div part="header" class=${classMap(classes)}>
-        ${this.enableRowNumberColumn ? this.renderRowNumberHeader() : nothing}
-        ${this.rowSelectionMethod ? this.renderSelectionHeader() : nothing}
+        ${this.renderRowNumberHeader()} ${this.renderSelectionHeader()}
         ${this.columnOrder.map(field => this.renderHeaderCell(field))}
       </div>
     `;
@@ -1251,29 +1250,25 @@ export class YatlTable<
 
   protected renderRowSelectorCell(row: T, selected: boolean) {
     return html`
-      <div
-        part="cell body-cell row-selector-cell"
-        class="cell body-cell row-selector-cell"
-      >
-        <input
-          part="row-checkbox"
-          class="row-checkbox"
-          type="checkbox"
-          .checked=${selected}
-          @change=${(event: Event) =>
-            this.handleRowSelectionClicked(event, row)}
-        />
+      <div part="cell body-cell" class="cell body-cell">
+        <div part="row-selector-cell" class="row-selector-cell">
+          <input
+            part="row-checkbox"
+            class="row-checkbox"
+            type="checkbox"
+            .checked=${selected}
+            @change=${(event: Event) =>
+              this.handleRowSelectionClicked(event, row)}
+          />
+        </div>
       </div>
     `;
   }
 
   protected renderRowNumberCell(rowNumber: number) {
     return html`
-      <div
-        part="cell body-cell row-index-cell"
-        class="cell body-cell row-index-cell"
-      >
-        ${rowNumber}
+      <div part="cell body-cell" class="cell body-cell">
+        <div part="row-number-cell" class="row-number-cell">${rowNumber}</div>
       </div>
     `;
   }
@@ -1290,12 +1285,8 @@ export class YatlTable<
 
     return html`
       <div part=${'row ' + userParts} class=${classMap(classes)}>
-        ${this.enableRowNumberColumn
-          ? this.renderRowNumberCell(renderIndex + 1)
-          : nothing}
-        ${this.rowSelectionMethod
-          ? this.renderRowSelectorCell(row, selected)
-          : nothing}
+        ${this.renderRowNumberCell(renderIndex + 1)}
+        ${this.renderRowSelectorCell(row, selected)}
         ${this.columnOrder.map(field => this.renderCell(field, row))}
       </div>
     `;
@@ -1376,15 +1367,20 @@ export class YatlTable<
 
   protected override render() {
     const gridTemplate = this.getGridWidths().join(' ');
+    const style = {
+      '--grid-template': gridTemplate,
+      '--yatl-row-number-column-width': this.enableRowNumberColumn
+        ? undefined
+        : '0',
+      '--yatl-row-selector-column-width': this.rowSelectionMethod
+        ? undefined
+        : '0',
+    };
 
     return html`
       <div class="wrapper">
         <div class="scroller">
-          <div
-            part="table"
-            class="table"
-            style=${styleMap({ '--grid-template': gridTemplate })}
-          >
+          <div part="table" class="table" style=${styleMap(style)}>
             ${this.renderHeader()}
             <div class="body">
               <slot>${this.renderBodyContents()}</slot>
@@ -1842,14 +1838,8 @@ export class YatlTable<
   private getGridWidths() {
     const widths: string[] = [];
 
-    if (this.enableRowNumberColumn) {
-      widths.push('var(--yatl-index-column-width, 48px)');
-    }
-
-    if (this.rowSelectionMethod) {
-      widths.push('var(--yatl-selector-column-width, 48px)');
-    }
-
+    widths.push('var(--yatl-row-number-column-width, 48px)');
+    widths.push('var(--yatl-row-selector-column-width, 48px)');
     for (const field of this.columnOrder) {
       const state = this.getOrCreateColumnState(field);
       if (state.visible) {

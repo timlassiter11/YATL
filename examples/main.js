@@ -31,6 +31,9 @@ let filtersForm;
 let optionsForm;
 
 window.addEventListener('load', () => {
+  // Stuff for the page, not about YATL.
+  initExtras();
+
   table = document.querySelector('yatl-table');
   filtersForm = document.getElementById('filtersForm');
   optionsForm = document.getElementById('optionsForm');
@@ -464,4 +467,13 @@ function generateMockData(count) {
     generatedData.push(dataRow);
   }
   return generatedData;
+}
+
+function initExtras() {
+  const themeButton = document.getElementById('themeToggle');
+  themeButton.addEventListener('click', () => {
+    
+    document.documentElement.classList.toggle('dark');
+    document.documentElement.classList.toggle('light');
+  });
 }

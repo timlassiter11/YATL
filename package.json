@@ -38,7 +38,10 @@
     "test": "web-test-runner src/**/*.test.ts --node-resolve",
     "test:watch": "web-test-runner src/**/*.test.ts --node-resolve --watch",
     "preversion": "npm test",
-    "release": "npm version patch && git push origin main --follow-tags"
+    "release": "npm version patch && git push origin main --follow-tags",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "repository": {
     "type": "git",
@@ -70,7 +73,8 @@
     "tsup": "^8.4.0",
     "typedoc": "^0.28.13",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.33.1"
+    "typescript-eslint": "^8.33.1",
+    "vitepress": "^2.0.0-alpha.15"
   },
   "dependencies": {
     "@lit-labs/virtualizer": "^2.1.1",

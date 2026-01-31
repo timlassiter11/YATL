@@ -29,6 +29,8 @@ export default css`
     --yatl-cell-padding: var(--yatl-table-cell-padding, 10px 16px);
     --yatl-header-padding: var(--yatl-table-header-padding, 12px 16px);
 
+    --yatl-brand-color: var(--yatl-table-brand-light, #2e2070);
+
     /* Light colors */
     --yatl-bg-light: var(--yatl-table-bg-light, #ffffff);
     --yatl-text-light: var(--yatl-table-text-light, #0f172a);
@@ -49,7 +51,7 @@ export default css`
     );
     --yatl-row-selected-bg-light: var(
       --yatl-table-row-selected-bg-light,
-      color-mix(in srgb, black 20%, transparent)
+      color-mix(in srgb, var(--yatl-brand-color) 20%, transparent)
     );
 
     /* Dark colors */
@@ -72,7 +74,7 @@ export default css`
     );
     --yatl-row-selected-bg-dark: var(
       --yatl-table-row-selected-bg-dark,
-      color-mix(in srgb, white 20%, transparent)
+      color-mix(in srgb, var(--yatl-brand-color) 20%, transparent)
     );
 
     /* Applied colors */
@@ -215,6 +217,22 @@ export default css`
 
   .row-index-cell {
     background-color: var(--yatl-header-bg);
+  }
+
+  .row-checkbox {
+    width: 1.125rem;
+    height: 1.125rem;
+    
+    cursor: pointer;
+    margin: 0; 
+
+    accent-color: var(--yatl-brand-color, var(--yatl-text));
+
+    transition: transform 0.1s ease-in-out;
+  }
+
+  .row-checkbox:active {
+    transform: scale(0.9);
   }
 
   .drop-indicator {

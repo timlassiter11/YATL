@@ -1167,7 +1167,7 @@ export class YatlTable<
     `;
   }
 
-  protected renderColumnIndexHeader() {
+  protected renderRowNumberHeader() {
     return html` <div part="cell-index" class="cell-index"></div> `;
   }
 
@@ -1183,7 +1183,7 @@ export class YatlTable<
     };
     return html`
       <div part="header" class=${classMap(classes)}>
-        ${this.enableRowNumberColumn ? this.renderColumnIndexHeader() : nothing}
+        ${this.enableRowNumberColumn ? this.renderRowNumberHeader() : nothing}
         ${this.rowSelectionMethod ? this.renderSelectionHeader() : nothing}
         ${this.columnOrder.map(field => this.renderHeaderCell(field))}
       </div>

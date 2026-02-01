@@ -403,6 +403,7 @@ export default css`
     display: flex;
     align-items: center;
     height: 100%;
+    box-sizing: border-box;
   }
 
   /* Add the padding to the child */
@@ -420,6 +421,7 @@ export default css`
     padding: var(--yatl-cell-padding);
     height: 100%;
     width: 100%;
+    box-sizing: border-box;
   }
 
   .message {

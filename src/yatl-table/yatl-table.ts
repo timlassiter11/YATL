@@ -1769,16 +1769,25 @@ export class YatlTable<
     } else {
       widths.push('0');
     }
+
     for (const field of this.columnOrder) {
       const state = this.getOrCreateColumnState(field);
+
+      // Check if we have a fixed pixel width (User resized it)
+      const hasPixelWidth = state.width != null;
+
       if (state.visible) {
-        if (state.width != null) {
+        if (hasPixelWidth) {
           widths.push(`${state.width}px`);
         } else {
-          widths.push('1fr');
+          widths.push('minmax(0, 1fr)');
         }
       } else {
-        widths.push('0');
+        if (hasPixelWidth) {
+          widths.push('0px');
+        } else {
+          widths.push('minmax(0, 0fr)');
+        }
       }
     }
 

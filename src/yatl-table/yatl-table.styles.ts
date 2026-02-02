@@ -282,6 +282,7 @@ export default css`
     align-items: center;
     height: 100%;
     box-sizing: border-box;
+    min-width: 0;
   }
 
   /* Add the padding to the child */

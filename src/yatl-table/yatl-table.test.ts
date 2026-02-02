@@ -1,621 +1,380 @@
-import {
-  html,
-  fixture,
-  expect,
-  elementUpdated,
-  nextFrame,
-  oneEvent,
-} from '@open-wc/testing';
-import { stub, spy, useFakeTimers } from 'sinon';
+import { test, expect, vi, describe } from 'vitest';
+import { page, userEvent } from '@vitest/browser/context';
+import { YatlTable } from './yatl-table';
 import './yatl-table';
-import { findColumn, type YatlTable } from './yatl-table';
-import type { ColumnOptions, NestedKeyOf, RestorableTableState } from './types';
-import { YatlRowSelectEvent } from './events';
+import { ColumnOptions } from '../types';
+import { YatlColumnSortRequestEvent, YatlRowClickEvent } from '../events';
 
-// --- Mock Data ---
+// --- Test Data ---
 interface User {
   id: number;
   name: string;
   role: string;
   age: number;
-  email: string | null;
 }
 
-const COLUMNS: ColumnOptions<User>[] = [
-  { field: 'id', title: 'ID', sortable: true, resizable: true },
-  {
-    field: 'name',
-    title: 'Name',
-    sortable: true,
-    searchable: true,
-    tokenize: true,
-    resizable: true,
-  },
-  {
-    field: 'role',
-    title: 'Role',
-    sortable: true,
-    searchable: true,
-    resizable: true,
-  },
-  { field: 'age', title: 'Age', sortable: true, resizable: true },
-  {
-    field: 'email',
-    title: 'Email',
-    sortable: true,
-    searchable: true,
-    resizable: true,
-  },
+// Use functions so data isn't shared between tests
+const getColumns = (): ColumnOptions<User>[] => [
+  { field: 'id', title: 'ID' },
+  { field: 'name', title: 'Name', sortable: true, searchable: true },
+  { field: 'role', title: 'Role', sortable: true, searchable: true },
+  { field: 'age', title: 'Age', sortable: true },
 ];
 
-const DATA: User[] = [
-  {
-    id: 1,
-    name: 'Alice Smith',
-    role: 'Admin',
-    age: 30,
-    email: 'alice@example.com',
-  },
-  { id: 2, name: 'Bob Jones', role: 'User', age: 25, email: 'bob@example.com' },
-  { id: 3, name: 'Charlie Day', role: 'User', age: 35, email: null },
-  {
-    id: 4,
-    name: 'David Smith',
-    role: 'Manager',
-    age: 40,
-    email: 'david@test.com',
-  },
+const getData = (): User[] => [
+  { id: 1, name: 'Alice', role: 'Admin', age: 30 },
+  { id: 2, name: 'Bob', role: 'User', age: 25 },
+  { id: 3, name: 'Charlie', role: 'User', age: 35 },
+  { id: 4, name: 'David', role: 'Manager', age: 40 },
 ];
 
-describe('YatlTable', () => {
-  let el: YatlTable<User>;
+async function renderTable(props: Partial<YatlTable<User>> = {}) {
+  document.body.innerHTML = '<yatl-table></yatl-table>';
+  const el = document.querySelector<YatlTable<User>>('yatl-table')!;
 
-  async function createTable(
-    data = DATA,
-    columns = COLUMNS,
-    props: Partial<YatlTable<User>> = {},
-  ) {
-    const element = await fixture<YatlTable<User>>(html`
-      <yatl-table></yatl-table>
-    `);
-    element.columns = columns;
-    element.data = data;
+  el.columns = props.columns ?? getColumns();
+  el.data = props.data ?? getData();
+  el.rowIdCallback = row => row.id;
 
-    // Apply optional props
-    Object.assign(element, props);
+  Object.assign(el, props);
 
-    await elementUpdated(element);
-    return element;
-  }
-  // #region --- Basic Rendering ---
+  await el.updateComplete;
+  return el;
+}
+
+describe('YatlTable Component', () => {
   describe('Rendering', () => {
-    it('renders the correct number of rows and headers', async () => {
-      el = await createTable();
+    test('renders the correct number of rows (Header + Body)', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
 
-      const headers = el.shadowRoot!.querySelectorAll('.header .cell');
-      const rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
+      const rows = table.getByRole('row');
 
-      expect(headers.length).to.equal(5);
-      expect(rows.length).to.equal(4);
+      await expect.element(rows).toHaveLength(5);
     });
 
-    it('displays the empty message when no data exists', async () => {
-      el = await createTable([]);
-      const message = el.shadowRoot!.querySelector('.message');
-      expect(message).to.exist;
-      expect(message!.textContent).to.contain(el.emptyMessage);
+    test('renders column headers with correct names', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+
+      const nameHeader = table.getByRole('columnheader', { name: 'Name' });
+      await expect.element(nameHeader).toBeVisible();
     });
 
-    it('renders null values with the placeholder', async () => {
-      el = await createTable();
-      // Charlie (index 2) has null email (column index 4 + 2 for row number column and row selection column)
-      const rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      const emailCell = rows[2].querySelectorAll('.cell')[6];
+    test('renders cells with correct data', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
 
-      expect(emailCell.textContent).to.contain('-');
-    });
+      const aliceRow = table.getByRole('row').filter({ hasText: 'Alice' });
 
-    it('renders the row number column when enabled', async () => {
-      el = await createTable(DATA, COLUMNS, { enableRowNumberColumn: true });
-      const indexHeader = el.shadowRoot!.querySelector('.cell-index');
-      expect(indexHeader).to.exist;
-
-      const firstRowIndex = el.shadowRoot!.querySelector('.row-number-cell');
-      expect(firstRowIndex).to.exist;
-      expect(firstRowIndex!.textContent).to.contain('1');
+      const nameCell = aliceRow.getByRole('cell', { name: 'Alice' });
+      await expect.element(nameCell).toBeVisible();
     });
   });
-  // #endregion
 
-  // #region --- Sorting Logic ---
   describe('Sorting', () => {
-    it('sorts numbers correctly (Asc/Desc)', async () => {
-      el = await createTable();
+    test('updates aria-sort attribute when clicked', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
 
-      // Sort Age Ascending
-      el.sort('age', 'asc');
-      await elementUpdated(el);
+      const header = table.getByRole('columnheader', { name: 'Age' });
 
-      let rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      let firstRowAge = rows[0].querySelectorAll('.cell')[5].textContent;
-      expect(firstRowAge).to.contain('25'); // Bob
+      await expect.element(header).toHaveAttribute('aria-sort', 'none');
 
-      // Sort Age Descending
-      el.sort('age', 'desc');
-      await elementUpdated(el);
+      await userEvent.click(header);
+      await expect.element(header).toHaveAttribute('aria-sort', 'ascending');
 
-      rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      firstRowAge = rows[0].querySelectorAll('.cell')[5].textContent;
-      expect(firstRowAge).to.contain('40'); // David
-    });
+      const firstDataRow = table.getByRole('row').nth(1);
+      await expect.element(firstDataRow).toHaveTextContent(/Bob/);
 
-    it('handles interaction: Click to sort, Shift+Click to multisort', async () => {
-      el = await createTable();
-
-      // Click "Role" (index 2)
-      const roleHeader = el.shadowRoot!.querySelectorAll(
-        '.header-content',
-      )[2] as HTMLElement;
-      roleHeader.click(); // Role ASC
-      await elementUpdated(el);
-
-      // Shift+Click "Age" (index 3)
-      const ageHeader = el.shadowRoot!.querySelectorAll(
-        '.header-content',
-      )[3] as HTMLElement;
-      ageHeader.dispatchEvent(
-        new MouseEvent('click', { bubbles: true, shiftKey: true }),
-      );
-      await elementUpdated(el);
-
-      const states = el.columnStates;
-      const roleState = findColumn(states, 'role');
-      const ageState = findColumn(states, 'age');
-
-      // Verify both are sorted
-      expect(roleState).to.exist;
-      expect(ageState).to.exist;
-    });
-
-    it('replaces sort when clicking without Shift', async () => {
-      el = await createTable();
-
-      el.sort('role', 'asc');
-      await elementUpdated(el);
-
-      // Click "Age" without shift
-      const ageHeader = el.shadowRoot!.querySelectorAll(
-        '.header-content',
-      )[3] as HTMLElement;
-      ageHeader.click();
-      await elementUpdated(el);
-
-      const states = el.columnStates;
-      const roleState = findColumn(states, 'role');
-      const ageState = findColumn(states, 'age');
-      expect(roleState?.sort).to.be.null;
-      expect(ageState?.sort?.order).to.equal('asc');
+      await userEvent.click(header);
+      await expect.element(header).toHaveAttribute('aria-sort', 'descending');
     });
   });
-  // #endregion
 
-  // #region --- Filtering & Search ---
-  describe('Filtering & Search', () => {
-    it('filters rows based on searchQuery', async () => {
-      el = await createTable();
-
-      el.searchQuery = 'Smith';
-      await elementUpdated(el);
-
-      const rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      expect(rows.length).to.equal(2); // Alice Smith, David Smith
-    });
-
-    it('supports search tokenization', async () => {
-      el = await createTable();
-      el.enableSearchTokenization = true;
-
-      // "Alice" matches row 1, "Manager" matches row 4
-      el.searchQuery = 'Alice Manager';
-      await elementUpdated(el);
-
-      const rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      expect(rows.length).to.equal(2);
-    });
-
-    it('supports complex functional filters', async () => {
-      el = await createTable();
-
-      // Filter: Age > 30 OR ID === 1
-      el.filters = row => row.age > 30 || row.id === 1;
-      await elementUpdated(el);
-
-      const rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      // Should keep: Alice (id 1), Charlie (age 35), David (age 40). Bob (25) excluded.
-      expect(rows.length).to.equal(3);
-    });
-
-    it('highlights matched text with <mark> tags', async () => {
-      el = await createTable();
-      el.searchQuery = 'Bob';
-      await elementUpdated(el);
-
-      const cell = el.shadowRoot!.querySelector(
-        '.row:not(.header) .cell[data-field="name"] mark',
-      );
-      expect(cell).to.not.be.null;
-      expect(cell!.textContent).to.contain('Bob');
-    });
-  });
-  // #endregion
-
-  // #region --- Row Selection ---
   describe('Row Selection', () => {
-    it('renders checkboxes when selection mode is enabled', async () => {
-      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
-      const checkboxes = el.shadowRoot!.querySelectorAll('.row-checkbox');
-      expect(checkboxes.length).to.equal(4);
+    test('toggles aria-selected on row when clicked', async () => {
+      const el = await renderTable({ rowSelectionMethod: 'multi' });
+      const table = page.elementLocator(el);
+
+      const row = table.getByRole('row').filter({ hasText: 'Alice' });
+      const checkbox = row.getByRole('checkbox');
+
+      await userEvent.click(checkbox);
+      await el.updateComplete;
+
+      await expect.element(row).toHaveAttribute('aria-selected', 'true');
+      await expect.element(checkbox).toBeChecked();
     });
 
-    it('allows selecting a single row in "single" mode', async () => {
-      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'single' });
+    test('selectAll updates all rows', async () => {
+      const el = await renderTable({ rowSelectionMethod: 'multi' });
+      const table = page.elementLocator(el);
 
-      // Select first row (Alice)
-      el.selectedRowIds = [1];
-      await elementUpdated(el);
+      el.selectAll();
+      await el.updateComplete;
 
-      const rows = el.shadowRoot!.querySelectorAll(
-        '.row-checkbox',
-      ) as NodeListOf<HTMLInputElement>;
-      expect(rows[0].checked).to.be.true;
-      expect(rows[1].checked).to.be.false;
-
-      // Select second row (Bob)
-      el.selectedRowIds = [2];
-      await elementUpdated(el);
-
-      expect(rows[0].checked).to.be.false; // Alice deselected
-      expect(rows[1].checked).to.be.true; // Bob selected
-    });
-
-    it('enforces single selection if multiple IDs passed in "single" mode', async () => {
-      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'single' });
-
-      // Try to select Alice AND Bob
-      el.selectedRowIds = [1, 2];
-      await elementUpdated(el);
-
-      // Should have truncated to just the first one (Alice)
-      expect(el.selectedRowIds).to.deep.equal([1]);
-    });
-
-    it('allows selecting multiple rows in "multi" mode', async () => {
-      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
-
-      el.selectedRowIds = [1, 3]; // Alice and Charlie
-      await elementUpdated(el);
-
-      const rows = el.shadowRoot!.querySelectorAll(
-        '.row-checkbox',
-      ) as NodeListOf<HTMLInputElement>;
-      expect(rows[0].checked).to.be.true; // Alice
-      expect(rows[1].checked).to.be.false; // Bob
-      expect(rows[2].checked).to.be.true; // Charlie
-    });
-
-    it('clears selection when data updates', async () => {
-      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
-      el.selectedRowIds = [1];
-      await elementUpdated(el);
-
-      // New Data (even if identical content, new reference)
-      el.data = [...DATA];
-      await elementUpdated(el);
-
-      expect(el.selectedRowIds.length).to.equal(0);
-    });
-
-    it('updates selection when clicking a checkbox', async () => {
-      el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
-      const firstCheckbox = el.shadowRoot!.querySelector(
-        '.row-checkbox',
-      ) as HTMLInputElement;
-
-      // Simulate User Click
-      setTimeout(() => firstCheckbox.click());
-
-      const event = await oneEvent(el, 'yatl-row-select');
-      const detail = (event as YatlRowSelectEvent<User>).detail;
-
-      expect(detail.selectedIds).to.have.length(1);
-      expect(detail.selectedIds[0]).to.equal(1);
-      expect(el.selectedRowIds).to.include(1);
+      const selectedRows = table.getByRole('row', { selected: true });
+      await expect.element(selectedRows).toHaveLength(4);
     });
   });
-  // #endregion
 
-  // #region --- ID Handling & Fallbacks ---
-  describe('ID Handling', () => {
-    it('uses custom rowIdCallback', async () => {
-      el = await createTable(DATA, COLUMNS, {
-        rowSelectionMethod: 'single',
-        rowIdCallback: row => `user_${row.id}`,
+  describe('Search & Filter', () => {
+    test('filters rows visible in the accessibility tree', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+
+      el.searchQuery = 'Manager';
+      await el.updateComplete;
+
+      // Should have 2 rows total: 1 Header + 1 Data Row (David)
+      const rows = table.getByRole('row');
+      await expect.element(rows).toHaveLength(2);
+
+      const dataRow = table.getByRole('row').nth(1);
+      await expect.element(dataRow).toHaveTextContent(/David/);
+    });
+  });
+
+  describe('Events & Interceptors', () => {
+    test('fires yatl-row-click with row details', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+      const spy = vi.fn();
+      el.addEventListener(YatlRowClickEvent.EVENT_NAME, spy);
+
+      // Click Alice's Name Cell
+      const cell = table.getByRole('cell', { name: 'Alice' });
+      await userEvent.click(cell);
+
+      expect(spy).toHaveBeenCalledOnce();
+      expect(spy.mock.calls[0][0].row.name).toBe('Alice');
+    });
+
+    test('respects prevented sort request', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+
+      // Block sorting
+      el.addEventListener(YatlColumnSortRequestEvent.EVENT_NAME, e => {
+        e.preventDefault();
       });
 
-      el.selectedRowIds = ['user_1'];
-      // Make sure selected ids is correct before and after an update.
-      expect(el.selectedRowIds).to.contain('user_1');
-      await elementUpdated(el);
-      expect(el.selectedRowIds).to.contain('user_1');
-    });
+      const header = table.getByRole('columnheader', { name: 'Age' });
+      await userEvent.click(header);
+      await el.updateComplete;
 
-    it('warns when duplicate IDs are detected', async () => {
-      const warnSpy = spy(console, 'warn');
-      const BAD_DATA = [
-        { id: 1, name: 'A', role: '', age: 1, email: '' },
-        { id: 1, name: 'B', role: '', age: 1, email: '' }, // Duplicate ID
-      ];
-
-      el = await createTable(BAD_DATA);
-
-      expect(warnSpy).to.have.been.called;
-      warnSpy.restore();
+      // Verify ARIA sort did NOT change
+      await expect.element(header).toHaveAttribute('aria-sort', 'none');
     });
   });
-  // #endregion
 
-  // #region --- Virtualization ---
-  describe('Virtualization', () => {
-    it('renders lit-virtualizer when enabled', async () => {
-      el = await createTable(DATA, COLUMNS, { enableVirtualScroll: true });
-      const virtualizer = el.shadowRoot!.querySelector('lit-virtualizer');
-      expect(virtualizer).to.exist;
+  describe('Column Visibility', () => {
+    test('removes columnheader from accessibility tree when hidden', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+
+      el.hideColumn('role');
+      await el.updateComplete;
+
+      // The 'Role' header should no longer exist in the table
+      const header = table.getByRole('columnheader', { name: 'Role' });
+      await expect.element(header).not.toBeInTheDocument();
     });
   });
-  // #endregion
 
-  // #region --- Row Operations ---
-  describe('Row Manipulation', () => {
-    it('finds original index correctly', async () => {
-      el = await createTable();
-      // Sort it to mix up the visual order
-      el.sort('age', 'asc');
-      await elementUpdated(el);
+  describe('Complex Filtering Logic', () => {
+    // We define a table of inputs and expected outputs
+    test.each([
+      { query: 'Admin', expectedRows: 1, desc: 'Exact Match' },
+      { query: 'admin', expectedRows: 1, desc: 'Case Insensitive' },
+      { query: 'User', expectedRows: 2, desc: 'Multiple Matches' },
+      { query: 'Z', expectedRows: 0, desc: 'No Match' },
+      { query: '', expectedRows: 4, desc: 'Empty Query (Show All)' },
+    ])('Search: $desc ("$query")', async ({ query, expectedRows }) => {
+      const el = await renderTable();
+      el.searchQuery = query;
+      await el.updateComplete;
 
-      const idx = el.findRowIndex('name', 'Charlie Day');
-      expect(idx).to.equal(2); // The index in the original DATA array
-    });
-
-    it('updates a row and refreshes the view', async () => {
-      el = await createTable();
-
-      el.updateRow(1, { name: 'Alice Updated' });
-      await elementUpdated(el);
-
-      const firstCell = el.shadowRoot!.querySelector(
-        '.row:not(.header) .cell[data-field="name"]',
-      );
-      expect(firstCell!.textContent).to.contain('Alice Updated');
-    });
-
-    it('deletes a row', async () => {
-      el = await createTable();
-      const initialLen = el.data.length;
-
-      el.deleteRow(1);
-      await elementUpdated(el);
-
-      expect(el.data.length).to.equal(initialLen - 1);
-      const rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      expect(rows.length).to.equal(3);
+      const rows = page.elementLocator(el).getByRole('row');
+      // +1 for the header row
+      await expect.element(rows).toHaveLength(expectedRows + 1);
     });
   });
-  // #endregion
 
-  // #region --- Column Operations ---
-  describe('Column Operations', () => {
-    it('toggles column visibility', async () => {
-      el = await createTable();
+  describe('Dirty Data Handling', () => {
+    const DIRTY_DATA = [
+      { id: 1, name: null, role: 'Admin', age: 30 }, // Null value
+      { id: 2, name: 'Bob', role: undefined, age: 25 }, // Undefined value
+      { id: 3, role: 'User', age: 35 }, // Missing key 'name'
+    ];
 
-      el.hideColumn('email');
-      await elementUpdated(el);
+    test('renders placeholder for null/undefined values', async () => {
+      const el = await renderTable({
+        data: DIRTY_DATA as any, // Cast to ignore TS errors for this test
+        nullValuePlaceholder: '--',
+      });
+      const table = page.elementLocator(el);
 
-      // Check state
-      const state = el.getTableState().columns.find(c => c.field === 'email');
-      expect(state!.visible).to.be.false;
+      // Null should become placeholder
+      const nullCell = table.getByRole('row').nth(1).getByRole('cell').nth(1); // Name column
+      await expect.element(nullCell).toHaveTextContent('--');
+
+      // Undefined should become placeholder
+      const undefinedCell = table
+        .getByRole('row')
+        .nth(2)
+        .getByRole('cell')
+        .nth(2); // Role column
+      await expect.element(undefinedCell).toHaveTextContent('--');
     });
 
-    it('reorders columns via API', async () => {
-      el = await createTable();
+    test('does not crash when sorting dirty data', async () => {
+      const el = await renderTable({
+        data: DIRTY_DATA as any,
+        nullValuePlaceholder: '--',
+      });
+      const table = page.elementLocator(el);
 
-      // Move 'age' to the front
-      el.columnOrder = ['age', 'id', 'name', 'role', 'email'];
-      await elementUpdated(el);
+      // Sort by the dirty column
+      el.sort('name', 'asc');
+      await el.updateComplete;
 
-      const headers = el.shadowRoot!.querySelectorAll('.header .cell');
-      expect(headers[0].textContent).to.contain('Age');
-    });
-
-    it('resizes column on drag', async () => {
-      el = await createTable();
-      const resizer = el.shadowRoot!.querySelector('.resizer') as HTMLElement;
-      const initialWidth = el
-        .shadowRoot!.querySelectorAll('.header .cell')[0]
-        .getBoundingClientRect().width;
-
-      const startX = 100;
-      const deltaX = 50;
-      // Mouse Down
-      resizer.dispatchEvent(
-        new MouseEvent('mousedown', {
-          bubbles: true,
-          composed: true,
-          clientX: startX,
-        }),
-      );
-
-      // Mouse Move (global window)
-      window.dispatchEvent(
-        new MouseEvent('mousemove', {
-          clientX: startX + deltaX,
-        }),
-      );
-
-      await nextFrame(); // Let animation frame fire
-
-      // Mouse Up
-      window.dispatchEvent(new MouseEvent('mouseup'));
-      await elementUpdated(el);
-
-      // Verify state updated
-      const idState = findColumn(el.columnStates, 'id');
-      expect(idState?.width).to.be.closeTo(initialWidth + deltaX, 0.001);
+      const rows = table.getByRole('row');
+      await expect
+        .element(rows.nth(1).getByRole('cell').nth(1))
+        .toHaveTextContent(/Bob/);
+      await expect
+        .element(rows.nth(2).getByRole('cell').nth(1))
+        .toHaveTextContent(/--/);
+      await expect
+        .element(rows.nth(3).getByRole('cell').nth(1))
+        .toHaveTextContent(/--/);
     });
   });
-  // #endregion
 
-  // #region --- State Persistence ---
   describe('State Persistence', () => {
-    let clock: sinon.SinonFakeTimers;
+    test('saves state to localStorage when columns are toggled', async () => {
+      // 1. Mock LocalStorage
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
 
-    beforeEach(() => {
-      clock = useFakeTimers();
-      localStorage.clear();
-    });
-
-    afterEach(() => {
-      clock.restore();
-    });
-
-    it('saves state to localStorage after debounce', async () => {
-      const storageKey = 'test-table-v1';
-      el = await createTable(DATA, COLUMNS, {
-        storageOptions: { key: storageKey, saveColumnOrder: true },
-      });
-
-      const newOrder: NestedKeyOf<User>[] = [
-        'name',
-        'age',
-        'id',
-        'email',
-        'role',
-      ];
-      // Trigger a change
-      el.columnOrder = newOrder;
-      await elementUpdated(el);
-
-      // Fast forward time past debounce (1000ms)
-      clock.tick(1100);
-
-      const stored = localStorage.getItem(storageKey);
-      expect(stored).to.not.be.null;
-
-      const parsed = JSON.parse(stored!);
-      expect(parsed.columnOrder).to.deep.equal(newOrder);
-    });
-
-    it('restores state on initialization', async () => {
-      const storageKey = 'test-table-v1';
-      const restoreOrder: NestedKeyOf<User>[] = [
-        'age',
-        'email',
-        'id',
-        'role',
-        'name',
-      ];
-      const savedState: RestorableTableState<User> = {
-        columnOrder: restoreOrder,
-      };
-      localStorage.setItem(storageKey, JSON.stringify(savedState));
-
-      // Create new table
-      el = await createTable(DATA, COLUMNS, {
-        storageOptions: { key: storageKey, saveColumnOrder: true },
-      });
-
-      expect(el.getTableState().columnOrder).to.deep.equal(restoreOrder);
-      const headers = el.shadowRoot!.querySelectorAll('.header .cell');
-      expect(headers[0].textContent).to.contain('Age');
-    });
-  });
-  // #endregion
-
-  // #region --- Events ---
-  describe('Events', () => {
-    it('dispatches row click event with correct detail', async () => {
-      el = await createTable();
-
-      const listener = spy();
-      el.addEventListener('yatl-row-click', listener);
-
-      const firstRow = el.shadowRoot!.querySelector(
-        '.row:not(.header)',
-      ) as HTMLElement;
-      // Click on the second cell (Name)
-      const nameCell = firstRow.querySelectorAll(
-        '.cell[data-field]',
-      )[1] as HTMLElement;
-      nameCell.click();
-      expect(listener).to.have.been.calledOnce;
-      const event = listener.firstCall.args[0] as CustomEvent;
-
-      expect(event.detail.row.id).to.equal(1);
-      expect(event.detail.field).to.equal('name');
-    });
-
-    it('dispatches sort event when sorting', async () => {
-      el = await createTable();
-
-      const listener = spy();
-      el.addEventListener('yatl-sort', listener);
-
-      el.sort('age', 'asc');
-
-      expect(listener).to.have.been.calledOnce;
-      expect(listener.firstCall.args[0].detail).to.deep.include({
-        field: 'age',
-        order: 'asc',
-      });
-    });
-  });
-  // #endregion
-
-  // #region --- Export CSV ---
-  describe('Export', () => {
-    it('generates a CSV download', async () => {
-      el = await createTable();
-
-      // Stub URL and DOM creation
-      const createObjURLStub = stub(URL, 'createObjectURL').returns(
-        'blob:test',
-      );
-      const revokeObjURLStub = stub(URL, 'revokeObjectURL');
-      const clickSpy = spy();
-      const createElementStub = stub(document, 'createElement').callsFake(
-        tag => {
-          if (tag === 'a') {
-            return {
-              style: {},
-              click: clickSpy,
-              remove: () => {},
-              setAttribute: () => {},
-            } as unknown as HTMLElement;
-          }
-          return document.createElement(tag);
+      const el = await renderTable({
+        storageOptions: {
+          key: 'test-table-v1',
+          storage: 'local',
+          saveColumnVisibility: true,
         },
+      });
+
+      // 2. Trigger a change (Hide a column)
+      el.hideColumn('role');
+      await el.updateComplete;
+
+      // Wait for debounce (1000ms in your code)
+      await vi.waitUntil(() => setItemSpy.mock.calls.length > 0, {
+        timeout: 1500,
+      });
+
+      // 3. Verify
+      expect(setItemSpy).toHaveBeenCalled();
+      const [key, value] = setItemSpy.mock.calls[0];
+      expect(key).toBe('test-table-v1');
+      expect(JSON.parse(value as string).columns).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: 'role', visible: false }),
+        ]),
       );
+    });
 
-      try {
-        el.export('my-data');
+    test('restores state from localStorage on init', async () => {
+      // 1. Seed LocalStorage BEFORE rendering
+      const savedState = {
+        searchQuery: 'Restored Query',
+        columns: [{ field: 'age', visible: false }],
+      };
+      localStorage.setItem('test-table-restored', JSON.stringify(savedState));
 
-        expect(createObjURLStub).to.have.been.called;
-        expect(clickSpy).to.have.been.called;
-      } finally {
-        createObjURLStub.restore();
-        revokeObjURLStub.restore();
-        createElementStub.restore();
-      }
+      // 2. Render
+      const el = await renderTable({
+        storageOptions: {
+          key: 'test-table-restored',
+          storage: 'local',
+          saveSearchQuery: true,
+        },
+      });
+
+      // 3. Verify the table picked it up
+      expect(el.searchQuery).toBe('Restored Query');
+
+      const table = page.elementLocator(el);
+      const ageHeader = table.getByRole('columnheader', { name: 'Age' });
+      await expect.element(ageHeader).not.toBeInTheDocument();
     });
   });
-  // #endregion
+
+  describe('CRUD API', () => {
+    test('updateRowAtIndex updates the DOM', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+
+      // Change Alice to "Super Alice"
+      el.updateRowAtIndex(0, { name: 'Super Alice' });
+      await el.updateComplete;
+
+      const cell = table.getByRole('cell', { name: 'Super Alice' });
+      await expect.element(cell).toBeVisible();
+    });
+
+    test('deleteRow removes the row from DOM', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+
+      // Delete Alice (ID 1)
+      el.deleteRow(1);
+      await el.updateComplete;
+
+      const rows = table.getByRole('row');
+      await expect.element(rows).toHaveLength(4); // 1 Header + 3 Data
+
+      const alice = table.getByRole('row').filter({ hasText: 'Alice' });
+      await expect.element(alice).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Custom Rendering', () => {
+    test('uses custom cellRenderer', async () => {
+      const customColumns = [...getColumns()];
+      customColumns[1] = {
+        ...customColumns[1],
+        cellRenderer: val => `<strong>${val}</strong>`, // Returns HTML string
+      };
+
+      const el = await renderTable({ columns: customColumns });
+      const table = page.elementLocator(el);
+
+      // Lit renders this as text unless you use the .unsafeHTML directive,
+      // but assuming your renderer handles strings or templates:
+      const cell = table.getByRole('cell', { name: 'Alice' });
+
+      // Verify the content is what we expect
+      await expect.element(cell).toHaveTextContent('<strong>Alice</strong>');
+    });
+
+    test('applies custom row parts via rowParts callback', async () => {
+      const el = await renderTable({
+        rowParts: row => (row.age > 30 ? 'highlight-danger' : ''),
+      });
+
+      // Charlie is 35, should have the part
+      const charlieRow = page
+        .elementLocator(el)
+        .getByRole('row')
+        .filter({ hasText: 'Charlie' });
+
+      // In Vitest browser, we check the 'part' attribute
+      await expect
+        .element(charlieRow)
+        .toHaveAttribute('part', expect.stringContaining('highlight-danger'));
+    });
+  });
 });

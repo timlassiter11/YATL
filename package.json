@@ -36,9 +36,10 @@
     "build": "tsup",
     "start": "web-dev-server --node-resolve",
     "start:watch": "web-dev-server --node-resolve --watch",
-    "test": "web-test-runner src/**/*.test.ts --node-resolve",
-    "test:watch": "web-test-runner src/**/*.test.ts --node-resolve --watch",
-    "preversion": "npm test",
+    "test": "vitest run", 
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "preversion": "npm run format && npm test",
     "release": "npm version patch && git push origin main --follow-tags"
   },
   "repository": {
@@ -58,20 +59,17 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
-    "@open-wc/testing": "^4.0.0",
-    "@types/mocha": "^10.0.10",
     "@types/node": "^22.15.17",
+    "@vitest/browser-playwright": "^4.0.18",
     "@web/dev-server": "^0.4.6",
-    "@web/dev-server-esbuild": "^1.0.4",
-    "@web/test-runner": "^0.20.2",
     "esbuild": "^0.25.4",
     "eslint": "^9.28.0",
     "prettier": "^3.5.3",
-    "sinon": "^21.0.1",
     "tsup": "^8.4.0",
     "typedoc": "^0.28.13",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.33.1"
+    "typescript-eslint": "^8.33.1",
+    "vitest-browser-lit": "^1.0.1"
   },
   "dependencies": {
     "@lit-labs/virtualizer": "^2.1.1",

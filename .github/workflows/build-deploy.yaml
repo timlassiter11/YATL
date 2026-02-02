@@ -1,11 +1,9 @@
 name: Build test and deploy
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: [ main ]
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -37,6 +35,20 @@ jobs:
 
     - name: Install dependencies
       run: npm ci
+
+    - name: Lint & Format
+      run: |
+        npm run lint
+        npm run format:check
+
+    - name: Type Check
+      run: npx tsc --noEmit
+
+    - name: Install Playwright Browsers
+      run: npx playwright install chromium --with-deps
+
+    - name: Test
+      run: npm test
 
     - name: Build library
       run: npm run build

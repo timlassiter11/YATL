@@ -1,9 +1,11 @@
 import { html, TemplateResult } from 'lit';
 import {
   ColumnOptions,
+  ColumnState,
   Compareable,
   DisplayColumnOptions,
   InternalColumnOptions,
+  NestedKeyOf,
   RowId,
   RowSelectionMethod,
 } from './types';
@@ -48,19 +50,6 @@ export const createRegexTokenizer = (exp: string = '\\S+') => {
 };
 
 export const whitespaceTokenizer = createRegexTokenizer();
-
-// Source - https://stackoverflow.com/a
-// Posted by Emma
-// Retrieved 2026-01-26, License - CC BY-SA 4.0
-export function isStringRecord(obj: unknown): obj is Record<string, unknown> {
-  if (typeof obj !== 'object') return false;
-
-  if (Array.isArray(obj)) return false;
-
-  if (Object.getOwnPropertySymbols(obj).length > 0) return false;
-
-  return true;
-}
 
 function isValidKey<K extends string>(
   key: string,
@@ -158,6 +147,56 @@ export function highlightText(
   return html`${result}`;
 }
 
+export function createState<T>(
+  field: NestedKeyOf<T>,
+  defaults?: Partial<ColumnState<T>>,
+): ColumnState<T> {
+  return {
+    field,
+    title: defaults?.title ?? field,
+    visible: defaults?.visible ?? true,
+    width: defaults?.width ?? null,
+    sort: defaults?.sort ? { ...defaults.sort } : null,
+  };
+}
+
+export function getStateChanges<T>(
+  oldState: ColumnState<T>,
+  newState: ColumnState<T>,
+): (keyof ColumnState<T>)[] {
+  if (oldState.field !== newState.field) {
+    throw Error(
+      `attempting to compare states for different fields: ${oldState.field}, ${newState.field}`,
+    );
+  }
+
+  const changes: (keyof ColumnState<T>)[] = [];
+  if (oldState.visible !== newState.visible) {
+    changes.push('visible');
+  }
+
+  if (oldState.width !== newState.width) {
+    changes.push('width');
+  }
+
+  if (
+    oldState.sort !== newState.sort ||
+    oldState.sort?.order !== newState.sort?.order ||
+    oldState.sort?.priority !== newState.sort?.priority
+  ) {
+    changes.push('sort');
+  }
+
+  return changes;
+}
+
+export function findColumn<
+  TData extends Record<string, unknown>,
+  TCol extends { field: NestedKeyOf<TData> },
+>(columns: TCol[], field: NestedKeyOf<TData>) {
+  return columns.find(c => c.field === field);
+}
+
 export function isCompareable(value: unknown): value is Compareable {
   return (
     typeof value === 'string' ||
@@ -183,6 +222,8 @@ export function isRowIdType(value: unknown): value is RowId {
   return typeof value === 'string' || typeof value === 'number';
 }
 
-export function isRowSelectionMethod(value: string | null): value is RowSelectionMethod {
-  return (value === null || value === 'multi' || value === 'single');
+export function isRowSelectionMethod(
+  value: string | null,
+): value is RowSelectionMethod {
+  return value === null || value === 'multi' || value === 'single';
 }

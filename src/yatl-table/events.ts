@@ -66,15 +66,15 @@ export class YatlSortEvent<T> extends YatlEvent<{
   }
 }
 
-export class YatlColumnToggleEvent<T> extends YatlEvent<{
+export class YatlColumnVisibilityChangeEvent<T> extends YatlEvent<{
   field: NestedKeyOf<T>;
   visible: boolean;
 }> {
-  public static readonly EVENT_NAME = 'yatl-column-toggle';
+  public static readonly EVENT_NAME = 'yatl-column-visibility-change';
 
   constructor(field: NestedKeyOf<T>, visible: boolean) {
     super(
-      YatlColumnToggleEvent.EVENT_NAME,
+      YatlColumnVisibilityChangeEvent.EVENT_NAME,
       {
         field,
         visible,

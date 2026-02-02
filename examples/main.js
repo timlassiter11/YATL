@@ -1,4 +1,4 @@
-import { YatlTable } from '../dist/index.mjs';
+import { YatlTableUi } from '../dist/index.mjs';
 
 // Used for generating data and for filters
 const statuses = [
@@ -23,7 +23,7 @@ const possibleTags = [
   'refactor',
 ];
 
-/** @type {YatlTable} */
+/** @type {YatlTableUi} */
 let table;
 /** @type {HTMLFormElement} */
 let filtersForm;
@@ -34,13 +34,11 @@ window.addEventListener('load', () => {
   // Stuff for the page, not about YATL.
   initExtras();
 
-  table = document.querySelector('yatl-table');
+  table = document.querySelector('yatl-table-ui');
   filtersForm = document.getElementById('filtersForm');
   optionsForm = document.getElementById('optionsForm');
   // Initialize the table columns and default options
   initTable();
-  // Setup event handlers for table toolbar UI
-  initTableToolbar();
   initFilterOptions();
 
   // Sync filter controls and table filters
@@ -53,6 +51,12 @@ window.addEventListener('load', () => {
   optionsForm.addEventListener('change', updateTableOptions);
   updateTableOptions();
 
+  const deleteRowsButton = document.getElementById('deleteRowsButton');
+  deleteRowsButton.addEventListener('click', () => {
+    table.deleteRow(...table.selectedRowIds);
+    deleteRowsButton.disabled = true;
+  });
+
   /* --- Table Events --- */
 
   // Just to show how to hook into some events
@@ -62,7 +66,6 @@ window.addEventListener('load', () => {
   table.addEventListener('yatl-row-select', event => {
     console.log('Row selected:', event.detail);
     // Disable the delete button when no rows are selected.
-    const deleteRowsButton = document.getElementById('deleteRowsButton');
     deleteRowsButton.disabled = event.detail.selectedIds.length === 0;
   });
 });
@@ -174,44 +177,6 @@ function initTable() {
   observer.observe(table.shadowRoot, { childList: true, subtree: true });
 
   return table;
-}
-
-function initTableToolbar() {
-  const colList = document.getElementById('columnList');
-  refreshColumnPicker(colList, table);
-  // Update column dropdown order when columns are rearranged.
-  table.addEventListener('yatl-state-change', event => {
-    if (event.detail.triggers.includes('columnOrder')) {
-      refreshColumnPicker(colList);
-    }
-  });
-
-  const colPicker = document.getElementById('columnPicker');
-  document.addEventListener('click', e => {
-    if (!colPicker.contains(e.target)) {
-      colPicker.removeAttribute('open');
-    }
-  });
-
-  // Handle export
-  const exportButton = document.getElementById('exportButton');
-  exportButton.addEventListener('click', () => {
-    table.export('yatl-export');
-  });
-
-  const deleteRowsButton = document.getElementById('deleteRowsButton');
-  deleteRowsButton.addEventListener('click', () => {
-    table.deleteRow(...table.selectedRowIds);
-    deleteRowsButton.disabled = true;
-  });
-
-  // Handle search
-  const searchInput = document.getElementById('searchInput');
-  // Set the table's restored query if it exists.
-  searchInput.value = table.searchQuery;
-  searchInput.addEventListener('input', event => {
-    table.searchQuery = searchInput.value;
-  });
 }
 
 function initFilterOptions() {
@@ -335,82 +300,10 @@ function getTypedFormData(form) {
   return typedData;
 }
 
-
-/**
- * Gets a correctly typed value from the given input based on it's type
- * @param {HTMLInputElement | HTMLSelectElement} input
- */
-function getValueFromInput(input) {
-  if (input instanceof HTMLSelectElement) {
-    if (input.multiple) {
-      return [...input.selectedOptions].map(opt => opt.value);
-    }
-    return input.value;
-  }
-
-  switch (input.type) {
-    case 'radio':
-    case 'checkbox':
-      if (input.value === 'on') return input.checked;
-      if (input.value === 'null') return null;
-      return input.checked ? input.value : undefined;
-    case 'number':
-      return parseFloat(input.value);
-    case 'date':
-      return dateFromIsoString(input.value);
-    case 'datetime':
-    case 'datetime-local':
-      return new Date(input.value);
-    case 'text':
-    default:
-      return input.value;
-  }
-}
-
 function dateFromIsoString(value) {
   // Date only strings are parsed as UTC timezone but datetime strings are parsed as local time.
   // Make sure this is parsed as local time to match our generated dates.
   return value !== '' ? new Date(value + 'T00:00:00') : null;
-}
-
-/**
- * Updates the column picker dropdown to match
- * the current table columns and states.
- *
- * @param {HTMLElement} listElement
- */
-function refreshColumnPicker(listElement) {
-  // Clear existing
-  listElement.innerHTML = '';
-
-  const states = table.columnVisibility;
-  for (const column of table.displayColumns) {
-    // Label wrapper
-    const label = document.createElement('label');
-    label.className = 'dropdown-item';
-
-    // Checkbox
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = states[column.field];
-
-    checkbox.addEventListener('change', e => {
-      //table.setColumnVisibility(column.field, e.target.checked);
-      const states = table.columnVisibility;
-      states[column.field] = e.target.checked;
-      table.columnVisibility = states;
-    });
-
-    // Text
-    const span = document.createElement('span');
-    // Find the human-readable title from the original definitions
-    const def = table.getColumn(column.field);
-    span.textContent = column?.title ? column.title : column.field;
-
-    label.appendChild(checkbox);
-    label.appendChild(span);
-    listElement.appendChild(label);
-  }
 }
 
 /**

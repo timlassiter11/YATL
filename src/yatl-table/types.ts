@@ -1,3 +1,5 @@
+export type Constructor<T> = new (...args: any[]) => T;
+
 export type NestedKeyOf<ObjectType> = ObjectType extends object
   ? {
       [Key in keyof ObjectType & (string | number)]: NonNullable<
@@ -18,13 +20,6 @@ export type NestedKeyOf<ObjectType> = ObjectType extends object
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type UnspecifiedRecord = Record<string, any>;
 
-/**
- * Record that maps a column's field to arbitrary data.
- */
-export type ColumnPropertyRecord<TData, TProp> = Partial<
-  Record<NestedKeyOf<TData>, TProp>
->;
-
 export type RowId = string | number;
 export type RowIdCallback<T> = (row: T, index: number) => RowId;
 
@@ -34,7 +29,7 @@ export type RowIdCallback<T> = (row: T, index: number) => RowId;
  * * multi - Multiple rows can be selected at a time
  * * null - Disable row selection
  */
-export type RowSelectionMethod = 'single' | 'multi' | null;
+export type RowSelectionMethod = 'single' | 'multi';
 
 /**
  * Defines the possible sorting orders for columns.
@@ -276,6 +271,11 @@ export interface ColumnState<T> {
    * The unique field name of the column.
    */
   field: NestedKeyOf<T>;
+
+  /**
+   * The display title of the column
+   */
+  title: string;
 
   /**
    * The current visibility of the column.

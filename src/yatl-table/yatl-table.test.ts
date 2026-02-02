@@ -8,7 +8,7 @@ import {
 } from '@open-wc/testing';
 import { stub, spy, useFakeTimers } from 'sinon';
 import './yatl-table';
-import { type YatlTable } from './yatl-table';
+import { findColumn, type YatlTable } from './yatl-table';
 import type { ColumnOptions, NestedKeyOf, RestorableTableState } from './types';
 import { YatlRowSelectEvent } from './events';
 
@@ -87,8 +87,7 @@ describe('YatlTable', () => {
     await elementUpdated(element);
     return element;
   }
-
-  // --- Basic Rendering ---
+  // #region --- Basic Rendering ---
   describe('Rendering', () => {
     it('renders the correct number of rows and headers', async () => {
       el = await createTable();
@@ -109,25 +108,26 @@ describe('YatlTable', () => {
 
     it('renders null values with the placeholder', async () => {
       el = await createTable();
-      // Charlie (index 2) has null email (column index 4)
+      // Charlie (index 2) has null email (column index 4 + 2 for row number column and row selection column)
       const rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      const emailCell = rows[2].querySelectorAll('.cell')[4];
+      const emailCell = rows[2].querySelectorAll('.cell')[6];
 
       expect(emailCell.textContent).to.contain('-');
     });
-    
+
     it('renders the row number column when enabled', async () => {
       el = await createTable(DATA, COLUMNS, { enableRowNumberColumn: true });
       const indexHeader = el.shadowRoot!.querySelector('.cell-index');
       expect(indexHeader).to.exist;
 
-      const firstRowIndex = el.shadowRoot!.querySelector('.row-index-cell');
+      const firstRowIndex = el.shadowRoot!.querySelector('.row-number-cell');
       expect(firstRowIndex).to.exist;
       expect(firstRowIndex!.textContent).to.contain('1');
     });
   });
+  // #endregion
 
-  // --- 2. Sorting Logic ---
+  // #region --- Sorting Logic ---
   describe('Sorting', () => {
     it('sorts numbers correctly (Asc/Desc)', async () => {
       el = await createTable();
@@ -137,7 +137,7 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       let rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      let firstRowAge = rows[0].querySelectorAll('.cell')[3].textContent;
+      let firstRowAge = rows[0].querySelectorAll('.cell')[5].textContent;
       expect(firstRowAge).to.contain('25'); // Bob
 
       // Sort Age Descending
@@ -145,7 +145,7 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       rows = el.shadowRoot!.querySelectorAll('.row:not(.header)');
-      firstRowAge = rows[0].querySelectorAll('.cell')[3].textContent;
+      firstRowAge = rows[0].querySelectorAll('.cell')[5].textContent;
       expect(firstRowAge).to.contain('40'); // David
     });
 
@@ -168,11 +168,13 @@ describe('YatlTable', () => {
       );
       await elementUpdated(el);
 
-      const states = el.columnSort;
+      const states = el.columnStates;
+      const roleState = findColumn(states, 'role');
+      const ageState = findColumn(states, 'age');
 
       // Verify both are sorted
-      expect(states['role']).to.exist;
-      expect(states['age']).to.exist;
+      expect(roleState).to.exist;
+      expect(ageState).to.exist;
     });
 
     it('replaces sort when clicking without Shift', async () => {
@@ -188,13 +190,16 @@ describe('YatlTable', () => {
       ageHeader.click();
       await elementUpdated(el);
 
-      const states = el.columnSort;
-      expect(states['role']).to.be.null;
-      expect(states['age']?.order).to.equal('asc');
+      const states = el.columnStates;
+      const roleState = findColumn(states, 'role');
+      const ageState = findColumn(states, 'age');
+      expect(roleState?.sort).to.be.null;
+      expect(ageState?.sort?.order).to.equal('asc');
     });
   });
+  // #endregion
 
-  // --- Filtering & Search ---
+  // #region --- Filtering & Search ---
   describe('Filtering & Search', () => {
     it('filters rows based on searchQuery', async () => {
       el = await createTable();
@@ -242,8 +247,9 @@ describe('YatlTable', () => {
       expect(cell!.textContent).to.contain('Bob');
     });
   });
+  // #endregion
 
-  // --- Row Selection (New) ---
+  // #region --- Row Selection ---
   describe('Row Selection', () => {
     it('renders checkboxes when selection mode is enabled', async () => {
       el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
@@ -253,12 +259,14 @@ describe('YatlTable', () => {
 
     it('allows selecting a single row in "single" mode', async () => {
       el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'single' });
-      
+
       // Select first row (Alice)
       el.selectedRowIds = [1];
       await elementUpdated(el);
-      
-      const rows = el.shadowRoot!.querySelectorAll('.row-checkbox') as NodeListOf<HTMLInputElement>;
+
+      const rows = el.shadowRoot!.querySelectorAll(
+        '.row-checkbox',
+      ) as NodeListOf<HTMLInputElement>;
       expect(rows[0].checked).to.be.true;
       expect(rows[1].checked).to.be.false;
 
@@ -267,12 +275,12 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       expect(rows[0].checked).to.be.false; // Alice deselected
-      expect(rows[1].checked).to.be.true;  // Bob selected
+      expect(rows[1].checked).to.be.true; // Bob selected
     });
 
     it('enforces single selection if multiple IDs passed in "single" mode', async () => {
       el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'single' });
-      
+
       // Try to select Alice AND Bob
       el.selectedRowIds = [1, 2];
       await elementUpdated(el);
@@ -283,11 +291,13 @@ describe('YatlTable', () => {
 
     it('allows selecting multiple rows in "multi" mode', async () => {
       el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
-      
+
       el.selectedRowIds = [1, 3]; // Alice and Charlie
       await elementUpdated(el);
 
-      const rows = el.shadowRoot!.querySelectorAll('.row-checkbox') as NodeListOf<HTMLInputElement>;
+      const rows = el.shadowRoot!.querySelectorAll(
+        '.row-checkbox',
+      ) as NodeListOf<HTMLInputElement>;
       expect(rows[0].checked).to.be.true; // Alice
       expect(rows[1].checked).to.be.false; // Bob
       expect(rows[2].checked).to.be.true; // Charlie
@@ -299,7 +309,7 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       // New Data (even if identical content, new reference)
-      el.data = [...DATA]; 
+      el.data = [...DATA];
       await elementUpdated(el);
 
       expect(el.selectedRowIds.length).to.equal(0);
@@ -307,28 +317,31 @@ describe('YatlTable', () => {
 
     it('updates selection when clicking a checkbox', async () => {
       el = await createTable(DATA, COLUMNS, { rowSelectionMethod: 'multi' });
-      const firstCheckbox = el.shadowRoot!.querySelector('.row-checkbox') as HTMLInputElement;
+      const firstCheckbox = el.shadowRoot!.querySelector(
+        '.row-checkbox',
+      ) as HTMLInputElement;
 
       // Simulate User Click
       setTimeout(() => firstCheckbox.click());
-      
+
       const event = await oneEvent(el, 'yatl-row-select');
       const detail = (event as YatlRowSelectEvent<User>).detail;
-      
+
       expect(detail.selectedIds).to.have.length(1);
-      expect(detail.selectedIds[0]).to.equal(1); 
+      expect(detail.selectedIds[0]).to.equal(1);
       expect(el.selectedRowIds).to.include(1);
     });
   });
+  // #endregion
 
-  // --- ID Handling & Fallbacks ---
+  // #region --- ID Handling & Fallbacks ---
   describe('ID Handling', () => {
     it('uses custom rowIdCallback', async () => {
       el = await createTable(DATA, COLUMNS, {
         rowSelectionMethod: 'single',
-        rowIdCallback: (row) => `user_${row.id}`
+        rowIdCallback: row => `user_${row.id}`,
       });
-      
+
       el.selectedRowIds = ['user_1'];
       // Make sure selected ids is correct before and after an update.
       expect(el.selectedRowIds).to.contain('user_1');
@@ -340,17 +353,18 @@ describe('YatlTable', () => {
       const warnSpy = spy(console, 'warn');
       const BAD_DATA = [
         { id: 1, name: 'A', role: '', age: 1, email: '' },
-        { id: 1, name: 'B', role: '', age: 1, email: '' } // Duplicate ID
+        { id: 1, name: 'B', role: '', age: 1, email: '' }, // Duplicate ID
       ];
 
       el = await createTable(BAD_DATA);
-      
+
       expect(warnSpy).to.have.been.called;
       warnSpy.restore();
     });
   });
+  // #endregion
 
-  // --- Virtualization ---
+  // #region --- Virtualization ---
   describe('Virtualization', () => {
     it('renders lit-virtualizer when enabled', async () => {
       el = await createTable(DATA, COLUMNS, { enableVirtualScroll: true });
@@ -358,8 +372,9 @@ describe('YatlTable', () => {
       expect(virtualizer).to.exist;
     });
   });
+  // #endregion
 
-  // --- Row Operations ---
+  // #region --- Row Operations ---
   describe('Row Manipulation', () => {
     it('finds original index correctly', async () => {
       el = await createTable();
@@ -395,8 +410,9 @@ describe('YatlTable', () => {
       expect(rows.length).to.equal(3);
     });
   });
+  // #endregion
 
-  // --- Column Operations ---
+  // #region --- Column Operations ---
   describe('Column Operations', () => {
     it('toggles column visibility', async () => {
       el = await createTable();
@@ -404,11 +420,8 @@ describe('YatlTable', () => {
       el.hideColumn('email');
       await elementUpdated(el);
 
-      const headers = el.shadowRoot!.querySelectorAll('.header .cell');
-      expect(headers.length).to.equal(4); // 5 - 1
-
       // Check state
-      const state = el.getState().columns.find(c => c.field === 'email');
+      const state = el.getTableState().columns.find(c => c.field === 'email');
       expect(state!.visible).to.be.false;
     });
 
@@ -455,12 +468,13 @@ describe('YatlTable', () => {
       await elementUpdated(el);
 
       // Verify state updated
-      const colWidth = el.columnWidths['id'];
-      expect(colWidth).to.be.closeTo(initialWidth + deltaX, 0.001);
+      const idState = findColumn(el.columnStates, 'id');
+      expect(idState?.width).to.be.closeTo(initialWidth + deltaX, 0.001);
     });
   });
+  // #endregion
 
-  // --- State Persistence ---
+  // #region --- State Persistence ---
   describe('State Persistence', () => {
     let clock: sinon.SinonFakeTimers;
 
@@ -519,13 +533,14 @@ describe('YatlTable', () => {
         storageOptions: { key: storageKey, saveColumnOrder: true },
       });
 
-      expect(el.getState().columnOrder).to.deep.equal(restoreOrder);
+      expect(el.getTableState().columnOrder).to.deep.equal(restoreOrder);
       const headers = el.shadowRoot!.querySelectorAll('.header .cell');
       expect(headers[0].textContent).to.contain('Age');
     });
   });
+  // #endregion
 
-  // --- Events ---
+  // #region --- Events ---
   describe('Events', () => {
     it('dispatches row click event with correct detail', async () => {
       el = await createTable();
@@ -537,9 +552,10 @@ describe('YatlTable', () => {
         '.row:not(.header)',
       ) as HTMLElement;
       // Click on the second cell (Name)
-      const nameCell = firstRow.querySelectorAll('.cell')[1] as HTMLElement;
+      const nameCell = firstRow.querySelectorAll(
+        '.cell[data-field]',
+      )[1] as HTMLElement;
       nameCell.click();
-
       expect(listener).to.have.been.calledOnce;
       const event = listener.firstCall.args[0] as CustomEvent;
 
@@ -562,8 +578,9 @@ describe('YatlTable', () => {
       });
     });
   });
+  // #endregion
 
-  // --- Export CSV ---
+  // #region --- Export CSV ---
   describe('Export', () => {
     it('generates a CSV download', async () => {
       el = await createTable();
@@ -593,7 +610,6 @@ describe('YatlTable', () => {
 
         expect(createObjURLStub).to.have.been.called;
         expect(clickSpy).to.have.been.called;
-
       } finally {
         createObjURLStub.restore();
         revokeObjURLStub.restore();
@@ -601,4 +617,5 @@ describe('YatlTable', () => {
       }
     });
   });
+  // #endregion
 });

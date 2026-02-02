@@ -165,6 +165,10 @@ nav {
   display: none;
 }
 
+label:has(input[type="radio"], input[type="checkbox"]) {
+  user-select: none;
+}
+
 input[type='text'],
 input[type='number'],
 input[type='search'],

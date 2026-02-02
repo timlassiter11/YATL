@@ -1,43 +1,28 @@
-import { css, html } from 'lit';
+import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import {
   isDisplayColumn,
   NestedKeyOf,
   UnspecifiedRecord,
+  YatlColumnToggleRequestEvent,
   YatlTable,
+  YatlToolbarSearchInput,
 } from '../yatl-table';
 import { ColumnVisibilityToggleState } from '../yatl-toolbar';
+
+import styles from './yatl-table-ui.styles';
 
 @customElement('yatl-table-ui')
 export class YatlTableUi<
   T extends object = UnspecifiedRecord,
 > extends YatlTable<T> {
-  public static override styles = [
-    ...YatlTable.styles,
-    css`
-      :host {
-        border-radius: 0;
-      }
+  public static override styles = [...YatlTable.styles, styles];
 
-      .ui-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: var(--yatl-spacing-m);
-        height: 100%;
-        width: 100%;
-      }
-
-      .wrapper {
-        border-radius: var(--yatl-table-radius);
-      }
-    `,
-  ];
-
-  @property({type: Boolean})
+  @property({ type: Boolean })
   public showColumnPicker = true;
 
-  @property({type: Boolean})
+  @property({ type: Boolean })
   public showExportButton = true;
 
   protected override render() {
@@ -50,7 +35,7 @@ export class YatlTableUi<
         visible: state?.visible ?? true,
       });
     }
-    // FIXME: If search query is saved, this doesn't restore the input value.
+
     return html`
       <div class="ui-wrapper">
         <yatl-toolbar
@@ -58,9 +43,9 @@ export class YatlTableUi<
           ?showExportButton=${this.showExportButton}
           .searchQuery=${this.searchQuery}
           .columnVisibilityStates=${columnToggleStates}
-          @yatl-column-toggle=${this.handleColumnToggled}
-          @yatl-export=${this.handleTableExportClicked}
-          @yatl-search-input=${this.handleSearchInput}
+          @yatl-column-toggle-request=${this.handleColumnToggled}
+          @yatl-toolbar-export-click=${this.handleTableExportClicked}
+          @yatl-toolbar-search-input=${this.handleSearchInput}
           ><slot name="toolbar-buttons"></slot
         ></yatl-toolbar>
         ${super.render()}
@@ -68,12 +53,10 @@ export class YatlTableUi<
     `;
   }
 
-  private handleColumnToggled = (
-    event: CustomEvent<{ field: string; visible: boolean }>,
-  ) => {
-    this.setColumnVisibility(
-      event.detail.field as NestedKeyOf<T>,
-      event.detail.visible,
+  private handleColumnToggled = (event: YatlColumnToggleRequestEvent) => {
+    this.toggleColumnVisibility(
+      event.field as NestedKeyOf<T>,
+      event.visibility,
     );
   };
 
@@ -81,7 +64,7 @@ export class YatlTableUi<
     this.export(document.title);
   };
 
-  private handleSearchInput = (event: CustomEvent<{ value: string }>) => {
-    this.searchQuery = event.detail.value;
+  private handleSearchInput = (event: YatlToolbarSearchInput) => {
+    this.searchQuery = event.value;
   };
 }

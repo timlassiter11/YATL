@@ -15,8 +15,8 @@ export default css`
     font-weight: 500;
     color: var(--yatl-text);
   }
-  
-  .button{
+
+  .button {
     box-sizing: border-box;
     width: 100%;
     height: 100%;

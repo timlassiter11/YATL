@@ -5,3 +5,7 @@ export * from './yatl-dropdown-item';
 export * from './yatl-table';
 export * from './yatl-table-ui';
 export * from './yatl-toolbar';
+
+// Export some lit stuff for vanilla JS users
+export { html, svg, nothing, noChange } from 'lit';
+export { unsafeHTML } from 'lit/directives/unsafe-html.js';

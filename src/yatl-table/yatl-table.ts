@@ -2,16 +2,15 @@ import type {
   ColumnFilterCallback,
   ColumnOptions,
   ColumnState,
-  Compareable,
   DisplayColumnOptions,
   FilterCallback,
   Filters,
-  RowIdCallback,
   NestedKeyOf,
   QueryToken,
   RestorableColumnState,
   RestorableTableState,
   RowId,
+  RowIdCallback,
   RowPartsCallback,
   RowSelectionMethod,
   SortOrder,
@@ -19,22 +18,24 @@ import type {
   TableState,
   TokenizerCallback,
   UnspecifiedRecord,
-} from './types';
+} from '../types';
 
 import {
   createRegexTokenizer,
   createState,
   findColumn,
-  getStateChanges,
-  getNestedValue,
-  highlightText,
-  isCompareable,
   isDisplayColumn,
   isInternalColumn,
   isRowIdType,
   isRowSelectionMethod,
-  toHumanReadable,
   whitespaceTokenizer,
+} from '../utils';
+
+import {
+  getNestedValue,
+  getColumnStateChanges,
+  highlightText,
+  createRankMap,
 } from './utils';
 
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from 'lit';
@@ -47,16 +48,20 @@ import { styleMap } from 'lit/directives/style-map.js';
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
 import {
-  YatlChangeEvent,
   YatlColumnReorderEvent,
+  YatlColumnReorderRequestEvent,
   YatlColumnResizeEvent,
-  YatlColumnVisibilityChangeEvent,
+  YatlColumnSortEvent,
+  YatlColumnSortRequestEvent,
+  YatlColumnToggleEvent,
+  YatlColumnToggleEvent as YatlColumnToggleRequestEvent,
   YatlRowClickEvent,
   YatlRowSelectEvent,
-  YatlSearchEvent,
-  YatlSortEvent,
-  YatlStateChangeEvent,
-} from './events';
+  YatlRowSelectRequestEvent,
+  YatlTableSearchEvent,
+  YatlTableStateChangeEvent,
+  YatlTableViewChangeEvent,
+} from '../events';
 import theme from '../theme';
 import styles from './yatl-table.styles';
 
@@ -92,8 +97,24 @@ const MATCH_WEIGHTS = {
 // #endregion
 
 /**
- * Represents a dynamic and interactive table with features like sorting, searching, filtering,
- * column resizing, column rearranging, and virtual scrolling.
+ * A virtualized data table capable of handling complex sorting, filtering, and tokenized searching.
+ *
+ * @element yatl-table
+ * @summary A high-performance grid engine for rugged environments.
+ *
+ * @fires yatl-row-click - Fired when a user clicks a row.
+ * @fires yatl-row-select-request - Fired before the row selection changes. Cancellable
+ * @fires yatl-row-select - Fired when the row selection changes.
+ * @fires yatl-column-sort-request - Fired before a column sort order changes. Cancellable.
+ * @fires yatl-column-sort - Fired when a column sort order changes.
+ * @fires yatl-column-toggle-request - Fired before a column's visibility changes. Cancellable.
+ * @fires yatl-column-toggle - Fired when a column's visibility changes.
+ * @fires yatl-column-resize - Fired after a column has been resized by the user.
+ * @fires yatl-column-reorder-request - Fired when the user drops a column into a new position. Cancellable.
+ * @fires yatl-column-reorder - Fired after the column order changes.
+ * @fires yatl-table-search - Fired when the search query is updated.
+ * @fires yatl-table-view-change - Fired when the visible slice of data changes due to sorting, filtering, or data updates. Payload contains the processed rows.
+ * @fires yatl-table-state-change - Fired when any persistable state (width, order, sort, query) changes. Used for syncing with local storage.
  */
 @customElement('yatl-table')
 export class YatlTable<
@@ -383,7 +404,7 @@ export class YatlTable<
     let changed = false;
     for (const state of states) {
       const oldState = this.getColumnState(state.field);
-      const stateChanges = getStateChanges(oldState, state);
+      const stateChanges = getColumnStateChanges(oldState, state);
       if (stateChanges.length) {
         changed = true;
         if (stateChanges.includes('sort')) {
@@ -702,7 +723,8 @@ export class YatlTable<
       return;
     }
 
-    if (!this.dispatchEvent(new YatlSortEvent(field, order))) {
+    const requestEvent = new YatlColumnSortRequestEvent(field, order);
+    if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
@@ -739,39 +761,25 @@ export class YatlTable<
   }
 
   /**
-   * Sets the visibility of a specified column.
-   * @param field - The field name of the column.
-   * @param visible - `true` to show the column, `false` to hide it.
-   */
-  public setColumnVisibility(field: NestedKeyOf<T>, visible: boolean) {
-    if (!this._columnStateMap.has(field)) {
-      throw new Error(`Cannot get options for non-existent column "${field}"`);
-    }
-
-    const state = this.getColumnState(field);
-    if (state.visible === visible) {
-      return;
-    }
-
-    if (
-      !this.dispatchEvent(new YatlColumnVisibilityChangeEvent(field, visible))
-    ) {
-      return;
-    }
-
-    state.visible = visible;
-    this.columnStates = [state];
-  }
-
-  /**
    * Toggles the visibility of hte specified column
    * @param field - The field name of the column to toggle.
+   * @param visible - Optionally force the visibility state.
    */
-  public toggleColumnVisibility(field: NestedKeyOf<T>) {
-    const state = this.getOrCreateColumnState(field);
-    // If state is null here becuase the column doesn't exist
-    // setColumnVisibility will throw an error. We don't need to.
-    this.setColumnVisibility(field, !state.visible);
+  public toggleColumnVisibility(field: NestedKeyOf<T>, visible?: boolean) {
+    const state = this.getColumnState(field);
+    const newVisibility = visible !== undefined ? visible : !state.visible;
+
+    if (newVisibility === state.visible) {
+      return;
+    }
+
+    const requestEvent = new YatlColumnToggleRequestEvent(field, newVisibility);
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
+    state.visible = newVisibility;
+    this.columnStates = [state];
   }
 
   /**
@@ -779,7 +787,7 @@ export class YatlTable<
    * @param field - The field name of the column to show.
    */
   public showColumn(field: NestedKeyOf<T>) {
-    this.setColumnVisibility(field, true);
+    this.toggleColumnVisibility(field, true);
   }
 
   /**
@@ -787,7 +795,124 @@ export class YatlTable<
    * @param field - The field name of the column to hide.
    */
   public hideColumn(field: NestedKeyOf<T>) {
-    this.setColumnVisibility(field, false);
+    this.toggleColumnVisibility(field, false);
+  }
+
+  /**
+   * Moves a column to a new position
+   * @param field - The column to move
+   * @param newPosition The index or field of the column to move it to.
+   * @returns
+   */
+  public moveColumn(
+    field: NestedKeyOf<T>,
+    newPosition: number | NestedKeyOf<T>,
+  ) {
+    const newColumnOrder = this.columnOrder;
+    const dragIndex = newColumnOrder.findIndex(col => col === this.dragColumn);
+    const dropIndex =
+      typeof newPosition === 'number'
+        ? newPosition
+        : newColumnOrder.findIndex(col => col === field);
+
+    if (dragIndex > -1 && dropIndex > -1) {
+      const [draggedColumn] = newColumnOrder.splice(dragIndex, 1);
+      const droppedColumn = this.getColumn(field);
+      if (!droppedColumn) return;
+
+      newColumnOrder.splice(dropIndex, 0, draggedColumn);
+      const requestEvent = new YatlColumnReorderRequestEvent(
+        draggedColumn,
+        droppedColumn.field,
+        newColumnOrder,
+      );
+      if (!this.dispatchEvent(requestEvent)) {
+        return;
+      }
+
+      this.columnOrder = newColumnOrder;
+    }
+  }
+
+  public isRowSelected(row: T) {
+    const rowId = this.getRowId(row);
+    return this.selectedRowIds.includes(rowId);
+  }
+
+  /**
+   * Toggles the selection state of a specific row.
+   */
+  public toggleRowSelection(row: T, state?: boolean) {
+    const rowId = this.getRowId(row);
+
+    const isSelected = this.isRowSelected(row);
+    const newSelectionState = state !== undefined ? state : isSelected;
+
+    if (newSelectionState === isSelected) {
+      return;
+    }
+
+    let newSelection: RowId[];
+    if (newSelectionState) {
+      newSelection =
+        this.rowSelectionMethod === 'single'
+          ? [rowId]
+          : [...this.selectedRowIds, rowId];
+    } else {
+      newSelection = this.selectedRowIds.filter(
+        existingId => existingId !== rowId,
+      );
+    }
+
+    const requestEvent = new YatlRowSelectRequestEvent(newSelection);
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
+    this.selectedRowIds = newSelection;
+  }
+
+  /**
+   * Selects a specific row.
+   */
+  public selectRow(row: T) {
+    this.toggleRowSelection(row, true);
+  }
+
+  /**
+   * Deselects a specific row.
+   */
+  public deselectRow(row: T) {
+    this.toggleRowSelection(row, false);
+  }
+
+  /**
+   * Selects all currently visible rows (for "Select All" checkbox).
+   */
+  public selectAll() {
+    if (this.rowSelectionMethod === 'single') return;
+
+    // Use visible rows (filtered) or all rows depending on your UX preference
+    const allIds = this.filteredData.map(row => this.getRowId(row));
+
+    const requestEvent = new YatlRowSelectRequestEvent(allIds);
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
+    this.selectedRowIds = allIds;
+  }
+
+  /**
+   * Clears all selection.
+   */
+  public deselectAll() {
+    const requestEvent = new YatlRowSelectRequestEvent([]);
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
+    this.selectedRowIds = [];
   }
 
   /**
@@ -1052,6 +1177,14 @@ export class YatlTable<
     }
 
     const state = this.getOrCreateColumnState(field);
+    const title = state.title;
+
+    let ariaSort: 'none' | 'ascending' | 'descending' = 'none';
+    if (state.sort?.order === 'asc') ariaSort = 'ascending';
+    if (state.sort?.order === 'desc') ariaSort = 'descending';
+
+    const role = state.visible ? 'columnheader' : undefined;
+    const hidden = state.visible ? false : undefined;
 
     const classes = {
       cell: true,
@@ -1060,6 +1193,10 @@ export class YatlTable<
 
     return this.renderCellWrapper(html`
       <div
+        role=${ifDefined(role)}
+        aria-hidden=${ifDefined(hidden)}
+        aria-sort=${ariaSort}
+        aria-label=${title}
         part="cell header-cell"
         class=${classMap(classes)}
         draggable=${ifDefined(this.enableColumnReorder ? true : undefined)}
@@ -1076,7 +1213,7 @@ export class YatlTable<
       >
         <div class="header-content">
           <span class="header-title truncate" part="header-title">
-            ${column.title ?? toHumanReadable(column.field)}
+            ${title}
           </span>
           ${this.renderColumnSortIcon(column, state)}
         </div>
@@ -1101,13 +1238,14 @@ export class YatlTable<
   protected renderHeader() {
     const classes = {
       header: true,
-      row: true,
       reorderable: this.enableColumnReorder,
     };
     return html`
-      <div part="header" class=${classMap(classes)}>
-        ${this.renderRowNumberHeader()} ${this.renderSelectionHeader()}
-        ${this.columnOrder.map(field => this.renderHeaderCell(field))}
+      <div role="rowgroup" part="header" class=${classMap(classes)}>
+        <div role="row" class="row header-row" part="row header-row">
+          ${this.renderRowNumberHeader()} ${this.renderSelectionHeader()}
+          ${this.columnOrder.map(field => this.renderHeaderCell(field))}
+        </div>
       </div>
     `;
   }
@@ -1152,6 +1290,7 @@ export class YatlTable<
 
     return this.renderCellWrapper(html`
       <div
+        role="cell"
         part="cell body-cell cell-${column.field} ${userParts}"
         data-field=${column.field}
         class="cell"
@@ -1202,10 +1341,17 @@ export class YatlTable<
     }
 
     const classes = { row: true, selected };
+    const rowIndex = renderIndex + 1;
 
     return html`
-      <div part=${'row ' + userParts} class=${classMap(classes)}>
-        ${this.renderRowNumberCell(renderIndex + 1)}
+      <div
+        role="row"
+        aria-rowindex=${rowIndex}
+        aria-selected=${selected ? 'true' : 'false'}
+        part=${'row ' + userParts}
+        class=${classMap(classes)}
+      >
+        ${this.renderRowNumberCell(rowIndex)}
         ${this.renderRowSelectorCell(row, selected)}
         ${this.columnOrder.map(field => this.renderCell(field, row))}
       </div>
@@ -1298,9 +1444,16 @@ export class YatlTable<
     return html`
       <div class="wrapper">
         <div class="scroller">
-          <div part="table" class="table" style=${styleMap(style)}>
+          <div
+            role="table"
+            aria-label="Data Table"
+            aria-rowcount=${this.filteredData.length}
+            part="table"
+            class="table"
+            style=${styleMap(style)}
+          >
             ${this.renderHeader()}
-            <div class="body">
+            <div class="body" role="rowgroup">
               <slot name="body">${this.renderBodyContents()}</slot>
             </div>
           </div>
@@ -1321,7 +1474,49 @@ export class YatlTable<
   protected override updated(changedProperties: PropertyValues<YatlTable<T>>) {
     super.updated(changedProperties);
 
-    super.updated(changedProperties);
+    // Dispatch all of the change notification events here.
+    if (changedProperties.has('searchQuery')) {
+      this.dispatchEvent(new YatlTableSearchEvent(this.searchQuery));
+    }
+
+    if (changedProperties.has('selectedRowIds')) {
+      this.dispatchEvent(new YatlRowSelectEvent(this.selectedRowIds));
+    }
+
+    if (changedProperties.has('columnOrder')) {
+      this.dispatchEvent(new YatlColumnReorderEvent(this.columnOrder));
+    }
+
+    if (changedProperties.has('columnStates')) {
+      const oldValue = changedProperties.get('columnStates');
+      for (const newState of this.columnStates) {
+        const oldState = oldValue
+          ? findColumn(oldValue, newState.field)
+          : undefined;
+        const changes = getColumnStateChanges(oldState, newState);
+        if (changes.includes('sort')) {
+          const event = new YatlColumnSortEvent(
+            newState.field,
+            newState.sort?.order ?? null,
+          );
+          this.dispatchEvent(event);
+        }
+        if (changes.includes('visible')) {
+          const event = new YatlColumnToggleEvent(
+            newState.field,
+            newState.visible,
+          );
+          this.dispatchEvent(event);
+        }
+        if (changes.includes('width')) {
+          const event = new YatlColumnResizeEvent(
+            newState.field,
+            newState.width,
+          );
+          this.dispatchEvent(event);
+        }
+      }
+    }
 
     // We check if any of the properties that affect visual state were updated.
     const stateProps: (keyof YatlTable<T>)[] = [
@@ -1335,11 +1530,9 @@ export class YatlTable<
       changedProperties.has(prop),
     );
 
-    // 2. Dispatch the "After" event
     if (changedStateProp.length) {
-      // We pass the new, fully resolved state
       this.dispatchEvent(
-        new YatlStateChangeEvent(this.getTableState(), changedStateProp),
+        new YatlTableStateChangeEvent(this.getTableState(), changedStateProp),
       );
     }
 
@@ -1594,7 +1787,7 @@ export class YatlTable<
     this.filterDirty = false;
 
     this.sortRows();
-    this.dispatchEvent(new YatlChangeEvent(this.data));
+    this.dispatchEvent(new YatlTableViewChangeEvent(this.data));
   }
 
   // #endregion
@@ -1620,11 +1813,8 @@ export class YatlTable<
       bValue = aMetadata.sortValues[field];
     }
 
-    const aIsNull = aValue == null;
-    const bIsNull = bValue == null;
-
-    if (aIsNull && !bIsNull) return -1;
-    if (bIsNull && !aIsNull) return 1;
+    aValue ??= Number.MIN_SAFE_INTEGER;
+    bValue ??= Number.MIN_SAFE_INTEGER;
 
     if (aValue < bValue) return -1;
     if (aValue > bValue) return 1;
@@ -1677,6 +1867,20 @@ export class YatlTable<
     this.idToRowMap = new Map();
     this.rowMetadata = new WeakMap();
 
+    const rankMaps = new Map<string, Map<unknown, number>>();
+    // TODO: We only need rank maps for sortable columns
+    // but the user could enable sorting later. It's easiest
+    // to just compute them all know regardless.
+    for (const column of this.columns) {
+      // Collect all raw values for this column
+      const rawValues = this.data.map(row => {
+        const originalValue = getNestedValue(row, column.field);
+        const modifiedValue = column.sorter?.(originalValue) ?? originalValue;
+        return [originalValue, modifiedValue] as [unknown, unknown];
+      });
+      rankMaps.set(column.field, createRankMap(rawValues));
+    }
+
     let index = 0;
     for (const row of this.data) {
       let rowId = this._rowIdCallback(row, index);
@@ -1700,17 +1904,8 @@ export class YatlTable<
 
       for (const column of this.columns) {
         const value = getNestedValue(row, column.field);
-
-        // Cache precomputed values for sorting
-        if (typeof column.sorter === 'function') {
-          metadata.sortValues[column.field] = column.sorter(value);
-        } else if (typeof value === 'string') {
-          metadata.sortValues[column.field] = value.toLocaleLowerCase();
-        } else if (isCompareable(value)) {
-          metadata.sortValues[column.field] = value;
-        } else {
-          metadata.sortValues[column.field] = String(value);
-        }
+        const rankMap = rankMaps.get(column.field)!;
+        metadata.sortValues[column.field] = rankMap.get(value) ?? null;
 
         // Cache precomputed lower-case values for search
         if (typeof value === 'string') {
@@ -1814,6 +2009,14 @@ export class YatlTable<
     }
 
     return this._columnStateMap.get(field)!;
+  }
+
+  private getRowId(row: T) {
+    const metadata = this.rowMetadata.get(row);
+    if (!metadata) {
+      throw new Error('The provided row does not exist in the current dataset');
+    }
+    return metadata.id;
   }
 
   // #endregion
@@ -2051,10 +2254,6 @@ export class YatlTable<
       const columnState = this.getColumnState(this.resizeState.columnField);
       columnState.width = finalWidth;
       this.columnStates = [columnState];
-
-      this.dispatchEvent(
-        new YatlColumnResizeEvent(this.resizeState.columnField, finalWidth),
-      );
     }
 
     // This is a hacky workaround to prevent the header click event from firing
@@ -2106,31 +2305,9 @@ export class YatlTable<
     if (!this.dragColumn || this.dragColumn === field) {
       return;
     }
-
     event.preventDefault();
     event.stopPropagation();
-
-    const newColumnOrder = [...this.columnOrder];
-    const dragIndex = newColumnOrder.findIndex(col => col === this.dragColumn);
-    const dropIndex = newColumnOrder.findIndex(col => col === field);
-
-    if (dragIndex > -1 && dropIndex > -1) {
-      const [draggedColumn] = newColumnOrder.splice(dragIndex, 1);
-      const droppedColumn = this.getColumn(field);
-      if (!droppedColumn) return;
-
-      newColumnOrder.splice(dropIndex, 0, draggedColumn);
-      const reorderEvent = new YatlColumnReorderEvent(
-        draggedColumn,
-        droppedColumn.field,
-        newColumnOrder,
-      );
-      if (!this.dispatchEvent(reorderEvent)) {
-        return;
-      }
-
-      this.columnOrder = [...newColumnOrder];
-    }
+    this.moveColumn(this.dragColumn, field);
   };
 
   private handleDragColumnEnd = () => {
@@ -2145,76 +2322,8 @@ export class YatlTable<
     event.stopPropagation();
     const inputElement = event.currentTarget as HTMLInputElement;
     const selected = inputElement.checked;
-
-    const rowId = this.rowMetadata.get(row)!.id;
-
-    const selectedRows = new Set(this._selectedRowIds);
-    if (this.rowSelectionMethod === 'single') {
-      selectedRows.clear();
-    }
-
-    if (selected) {
-      selectedRows.add(rowId);
-    } else {
-      selectedRows.delete(rowId);
-    }
-    const selectEvent = new YatlRowSelectEvent(row, [...selectedRows]);
-    if (!this.dispatchEvent(selectEvent)) {
-      // Revert the change
-      inputElement.checked = !selected;
-      return;
-    }
-
-    this.selectedRowIds = [...selectedRows];
+    this.toggleRowSelection(row, selected);
   };
-
-  // #endregion
-
-  // #region --- Event Target ---
-
-  public override addEventListener<K extends keyof EventMap<T>>(
-    type: K,
-    listener: (this: EventMap<T>, ev: EventMap<T>[K]) => void,
-    options?: boolean | AddEventListenerOptions,
-  ): void;
-
-  public override addEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions,
-  ): void;
-
-  public override addEventListener(
-    type: string,
-    listener: unknown,
-    options?: boolean | AddEventListenerOptions,
-  ) {
-    super.addEventListener(
-      type,
-      listener as EventListenerOrEventListenerObject,
-      options,
-    );
-  }
-
-  public override removeEventListener<K extends keyof EventMap<T>>(
-    type: K,
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | EventListenerOptions,
-  ): void;
-
-  public override removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | EventListenerOptions,
-  ): void {
-    super.removeEventListener(type, listener, options);
-  }
-
-  public override dispatchEvent<K extends keyof EventMap<T>>(
-    event: EventMap<T>[K],
-  ): boolean {
-    return super.dispatchEvent(event);
-  }
 
   // #endregion
 }
@@ -2228,7 +2337,7 @@ interface RowMetadata {
   /** Precomputed search values */
   searchValues: Record<string, string>;
   /** Precomputed sort values */
-  sortValues: Record<string, Compareable>;
+  sortValues: Record<string, number | null>;
   highlightIndices?: Record<string, [number, number][]>;
   selected: boolean;
 }
@@ -2238,25 +2347,9 @@ interface SearchResult {
   ranges: [number, number][]; // Array of [start, end] tuples
 }
 
-/**
- * Defines the mapping between event names and their detail object types.
- */
-interface EventMap<T> {
-  'yatl-row-click': YatlRowClickEvent<T>;
-  'yatl-change': YatlChangeEvent<T>;
-  'yatl-sort': YatlSortEvent<T>;
-  'yatl-column-visibility-change': YatlColumnVisibilityChangeEvent<T>;
-  'yatl-column-resize': YatlColumnResizeEvent<T>;
-  'yatl-column-reorder': YatlColumnReorderEvent<T>;
-  'yatl-search': YatlSearchEvent;
-  'yatl-row-select': YatlRowSelectEvent<T>;
-  'yatl-state-change': YatlStateChangeEvent<T>;
-}
-
 declare global {
   interface HTMLElementTagNameMap {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    'yatl-table': YatlTable<any>;
+    'yatl-table': YatlTable;
   }
 }
 

@@ -15,7 +15,7 @@ export default css`
       --yatl-table-dropdown-menu-border,
       var(--yatl-border-color)
     );
-    
+
     overflow: visible !important;
   }
 

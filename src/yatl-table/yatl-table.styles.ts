@@ -12,7 +12,7 @@ export default css`
     --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
     /* z-index for the header */
     --header-z-index: 2;
-    
+
     overflow: hidden;
     border-radius: 6px;
   }
@@ -22,7 +22,7 @@ export default css`
     background-color: var(--yatl-header-bg);
   }
 
-  .header.row {
+  .header-row {
     background-color: var(--yatl-header-bg);
     border-bottom: 1px solid var(--yatl-border-color);
     font-weight: 600;
@@ -201,11 +201,11 @@ export default css`
     position: absolute;
   }
 
-  .sort-icon.descending::after {
+  .sort-icon.ascending::after {
     content: '\\2191';
   }
 
-  .sort-icon.ascending::after {
+  .sort-icon.descending::after {
     content: '\\2193';
   }
 

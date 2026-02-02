@@ -1,3 +1,3 @@
-export * from './events';
-export * from './types';
+export * from '../events';
+export * from '../types';
 export * from './yatl-table';

@@ -2,7 +2,11 @@ import { html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import styles from './yatl-dropdown-item.styles';
+import { YatlDropdownToggleEvent } from '../events';
 
+/**
+ * @fires yatl-dropdown-toggle - Fired when a dropdown item's checked state changes
+ */
 @customElement('yatl-dropdown-item')
 export class YatlDropdownItem extends LitElement {
   public static override styles = [styles];
@@ -37,19 +41,6 @@ export class YatlDropdownItem extends LitElement {
   private handleCheckboxChanged = (event: Event) => {
     const input = event.target as HTMLInputElement;
     this.checked = input.checked;
-    this.dispatchEvent(
-      new CustomEvent<YatlDropdownToggleDetail>('yatl-dropdown-toggle', {
-        composed: true,
-        bubbles: true,
-        detail: { value: this.value, checked: this.checked },
-      }),
-    );
+    this.dispatchEvent(new YatlDropdownToggleEvent(input.value, input.checked));
   };
 }
-
-interface YatlDropdownToggleDetail {
-  value: string;
-  checked: boolean;
-}
-
-export type YatlDropdownToggleEvent = CustomEvent<YatlDropdownToggleDetail>;

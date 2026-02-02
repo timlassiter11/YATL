@@ -44,7 +44,9 @@ window.addEventListener('load', () => {
   // Sync filter controls and table filters
   filtersForm.addEventListener('change', updateTableFilters);
   // Update table fitlers AFTER form reset
-  filtersForm.addEventListener('reset', () => setTimeout(updateTableFilters, 0));
+  filtersForm.addEventListener('reset', () =>
+    setTimeout(updateTableFilters, 0),
+  );
   updateTableFilters();
 
   // Sync option controls and table options
@@ -61,12 +63,16 @@ window.addEventListener('load', () => {
 
   // Just to show how to hook into some events
   table.addEventListener('yatl-row-click', event => {
-    console.log('Row clicked:', event.detail);
+    console.log('Row clicked:', {
+      rowId: event.rowId,
+      field: event.field,
+      row: event.row,
+    });
   });
   table.addEventListener('yatl-row-select', event => {
-    console.log('Row selected:', event.detail);
+    console.log('Row selected:', event.selectedIds);
     // Disable the delete button when no rows are selected.
-    deleteRowsButton.disabled = event.detail.selectedIds.length === 0;
+    deleteRowsButton.disabled = event.selectedIds.length === 0;
   });
 });
 
@@ -249,8 +255,8 @@ function updateTableState() {
 }
 
 /**
- * 
- * @param {HTMLFormElement} form 
+ *
+ * @param {HTMLFormElement} form
  */
 function getTypedFormData(form) {
   const formData = new FormData(form);
@@ -280,7 +286,7 @@ function getTypedFormData(form) {
       }
     } else if (element instanceof HTMLSelectElement && element.multiple) {
       if (!Array.isArray(typedData[name])) {
-        typedData[name] = [value]
+        typedData[name] = [value];
       } else {
         typedData[name].push(value);
       }
@@ -290,7 +296,7 @@ function getTypedFormData(form) {
   }
 
   // Manually add checkboxes as true / false since form data ignores unchecked.
-  const checkboxes = form.querySelectorAll('input[type="checkbox"]')
+  const checkboxes = form.querySelectorAll('input[type="checkbox"]');
   for (const checkbox of checkboxes) {
     if (checkbox.name && checkbox.value === 'on') {
       typedData[checkbox.name] = checkbox.checked;
@@ -362,7 +368,7 @@ function generateMockData(count) {
       name: `${getRandom(itemModifiers)} ${getRandom(itemNouns)}`,
       status: getRandom(statuses),
       lastModified: randomDate,
-      issueCount: issueCount,
+      issueCount: issueCount % 17 === 0 ? null : issueCount, // Add some null values in there.
       tags: tagsString,
     };
 
@@ -374,7 +380,6 @@ function generateMockData(count) {
 function initExtras() {
   const themeButton = document.getElementById('themeToggle');
   themeButton.addEventListener('click', () => {
-    
     document.documentElement.classList.toggle('dark');
     document.documentElement.classList.toggle('light');
   });

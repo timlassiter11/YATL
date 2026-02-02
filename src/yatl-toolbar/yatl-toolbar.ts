@@ -1,9 +1,17 @@
-import { css, html, LitElement, nothing } from 'lit';
+import { html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import theme from '../theme';
-import { YatlDropdownToggleEvent } from '../yatl-dropdown-item';
 import { repeat } from 'lit/directives/repeat.js';
+
+import theme from '../theme';
+import styles from './yatl-toolbar.styles';
+import {
+  YatlColumnToggleRequestEvent,
+  YatlDropdownToggleEvent,
+  YatlToolbarExportClick,
+  YatlToolbarSearchChange,
+  YatlToolbarSearchInput,
+} from '../events';
 
 export interface ColumnVisibilityToggleState {
   field: string;
@@ -11,42 +19,25 @@ export interface ColumnVisibilityToggleState {
   visible: boolean;
 }
 
+/**
+ * A table toolbar component with a search input, column picker, and export button.
+ *
+ * @element yatl-toolbar
+ * @summary Provides a cohesive set of controls for searching, exporting, and managing column visibility,
+ * along with a flexible slot for custom actions.
+ *
+ * @slot - The default slot for adding custom action buttons (e.g., "Add Record", "Refresh").
+ * Items placed here are automatically styled to match the toolbar's button group layout.
+ *
+ * @fires yatl-toolbar-search-input - Fired synchronously as the user types in the search box. Useful for real-time highlighting or suggestions.
+ * @fires yatl-toolbar-search-change - Fired when the user commits a search query (e.g., on 'Enter' or blur). Use this for triggering the actual table filter.
+ * @fires yatl-toolbar-export-click - Fired when the export button is clicked. Payload indicates the requested format.
+ * @fires yatl-column-toggle-request - Fired when a column's visibility is toggled in the dropdown. The consumer must handle this by updating the table state.
+ *
+ */
 @customElement('yatl-toolbar')
 export class YatlToolbar extends LitElement {
-  public static override styles = [
-    theme,
-    css`
-      :host {
-        box-sizing: border-box;
-      }
-
-      .toolbar {
-        display: flex;
-        flex-direction: row;
-        gap: 10px;
-      }
-
-      .search {
-        flex-grow: 1;
-        border-radius: var(--yatl-input-radius);
-        background-color: var(--bg-subtle);
-        line-height: 1;
-        border: none;
-        font-size: large;
-        padding: var(--yatl-input-padding);
-      }
-
-      .search:focus,
-      .search:focus-visible {
-        outline: 3px solid var(--yatl-brand-color);
-        outline-offset: -3px;
-      }
-
-      yatl-button-group yatl-button {
-        height: 100%;
-      }
-    `,
-  ];
+  public static override styles = [theme, styles];
 
   @property({ type: Boolean })
   public showColumnPicker = true;
@@ -83,8 +74,15 @@ export class YatlToolbar extends LitElement {
 
   protected renderColumnPicker() {
     return html`
-      <yatl-dropdown @yatl-dropdown-toggle=${this.handleDropdownToggle}>
-        <yatl-button slot="trigger" title="Show/hide columns">
+      <yatl-dropdown
+        part="column-picker"
+        @yatl-dropdown-toggle=${this.handleDropdownToggle}
+      >
+        <yatl-button
+          part="column-picker-trigger"
+          slot="trigger"
+          title="Show/hide columns"
+        >
           <svg
             width="20"
             height="20"
@@ -109,7 +107,10 @@ export class YatlToolbar extends LitElement {
 
   protected renderColumnVisibilityToggle(state: ColumnVisibilityToggleState) {
     return html`
-      <yatl-dropdown-item .checked=${state.visible} .value=${state.field}
+      <yatl-dropdown-item
+        part="column-picker-item"
+        .checked=${state.visible}
+        .value=${state.field}
         >${state.title}</yatl-dropdown-item
       >
     `;
@@ -117,14 +118,7 @@ export class YatlToolbar extends LitElement {
 
   private handleDropdownToggle = (event: YatlDropdownToggleEvent) => {
     this.dispatchEvent(
-      new CustomEvent<YatlColumnToggleDetail>('yatl-column-toggle', {
-        composed: true,
-        bubbles: true,
-        detail: {
-          field: event.detail.value,
-          visible: event.detail.checked,
-        },
-      }),
+      new YatlColumnToggleRequestEvent(event.value, event.checked),
     );
   };
 
@@ -152,43 +146,15 @@ export class YatlToolbar extends LitElement {
 
   private onSearchInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
-    this.dispatchEvent(
-      new CustomEvent('yatl-search-input', {
-        composed: true,
-        bubbles: true,
-        detail: {
-          value: input.value,
-        },
-      }),
-    );
+    this.dispatchEvent(new YatlToolbarSearchInput(input.value));
   };
 
   private onSearchChange = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
-    this.dispatchEvent(
-      new CustomEvent('yatl-search-change', {
-        composed: true,
-        bubbles: true,
-        detail: {
-          value: input.value,
-        },
-      }),
-    );
+    this.dispatchEvent(new YatlToolbarSearchChange(input.value));
   };
 
-  private onExportClick = (event: Event) => {
-    this.dispatchEvent(
-      new CustomEvent('yatl-export', {
-        composed: true,
-        bubbles: true,
-      }),
-    );
+  private onExportClick = (_event: Event) => {
+    this.dispatchEvent(new YatlToolbarExportClick());
   };
 }
-
-interface YatlColumnToggleDetail {
-  field: string;
-  visible: boolean;
-}
-
-export type YatlColumnToggleEvent = CustomEvent<YatlColumnToggleDetail>;

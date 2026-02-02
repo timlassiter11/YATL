@@ -8,10 +8,10 @@ import styles from './yatl-button.styles';
 export class YatlButton extends LitElement {
   public static override styles = [theme, styles];
 
-  @property({ type: Boolean, reflect: true }) 
+  @property({ type: Boolean, reflect: true })
   disabled = false;
 
-  @property({ type: String, reflect: true }) 
+  @property({ type: String, reflect: true })
   type: 'button' | 'submit' | 'reset' = 'button';
 
   render() {

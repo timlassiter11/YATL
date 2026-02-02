@@ -813,7 +813,7 @@ export class YatlTable<
     const dropIndex =
       typeof newPosition === 'number'
         ? newPosition
-        : newColumnOrder.findIndex(col => col === field);
+        : newColumnOrder.findIndex(col => col === newPosition);
 
     if (dragIndex > -1 && dropIndex > -1) {
       const [draggedColumn] = newColumnOrder.splice(dragIndex, 1);

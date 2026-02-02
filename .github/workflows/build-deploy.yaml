@@ -42,7 +42,7 @@ jobs:
       run: npm run build
 
     - name: Generate Docs
-      run: npx typedoc src/yatl-table.ts --out docs
+      run: npx typedoc src/yatl-table/yatl-table.ts --out docs
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

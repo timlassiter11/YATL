@@ -656,7 +656,7 @@ export class YatlTable<
       searchQuery: this.searchQuery,
       filters: this.filters,
       columnOrder: this.columnOrder,
-      columns: this.columns.map(column => {
+      columns: this.displayColumns.map(column => {
         const state = this.getOrCreateColumnState(column.field);
         // Always return a copy so the user can't modify it
         return createState(column.field, state);

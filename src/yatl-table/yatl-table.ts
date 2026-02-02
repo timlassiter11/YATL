@@ -1177,7 +1177,7 @@ export class YatlTable<
     }
 
     const state = this.getOrCreateColumnState(field);
-    const title = state.title;
+    const title = column.title ?? column.field;
 
     let ariaSort: 'none' | 'ascending' | 'descending' = 'none';
     if (state.sort?.order === 'asc') ariaSort = 'ascending';

@@ -1,5 +1,6 @@
-import { ColumnState, RestorableColumnState } from './columns';
+import { ColumnOptions, ColumnState, RestorableColumnState } from './columns';
 import { RowId } from './common';
+import { TokenizerCallback } from './filters';
 
 export type RowIdCallback<T> = (row: T, index: number) => RowId;
 
@@ -79,4 +80,15 @@ export interface ExportOptions {
   includeAllRows?: boolean;
   includeHiddenColumns?: boolean;
   includeInternalColumns?: boolean;
+}
+
+export interface TableControllerOptions<T extends object> {
+  enableSearchTokenization?: boolean;
+  enableSearchScoring?: boolean;
+  searchTokenizer?: TokenizerCallback;
+  rowIdCallback?: RowIdCallback<T>;
+  rowSelectionMethod?: RowSelectionMethod | null;
+  storageOptions?: StorageOptions;
+  columns?: ColumnOptions<T>[];
+  data?: T[];
 }

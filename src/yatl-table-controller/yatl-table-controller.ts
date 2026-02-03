@@ -14,6 +14,7 @@ import type {
   RowSelectionMethod,
   SortOrder,
   StorageOptions,
+  TableControllerOptions,
   TableState,
   TokenizerCallback,
   UnspecifiedRecord,
@@ -402,9 +403,29 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Public Methods
 
-  constructor(host: ReactiveControllerHost) {
+  constructor(
+    host?: ReactiveControllerHost,
+    options?: TableControllerOptions<T>,
+  ) {
     if (host) {
       this.attach(host);
+    }
+
+    if (options) {
+      if (options.enableSearchScoring !== undefined)
+        this.enableSearchScoring = options.enableSearchScoring;
+      if (options.enableSearchTokenization !== undefined)
+        this.enableSearchTokenization = options.enableSearchTokenization;
+      if (options.searchTokenizer !== undefined)
+        this.searchTokenizer = options.searchTokenizer;
+      if (options.rowIdCallback !== undefined)
+        this.rowIdCallback = options.rowIdCallback;
+      if (options.rowSelectionMethod !== undefined)
+        this.rowSelectionMethod = options.rowSelectionMethod;
+      if (options.storageOptions !== undefined)
+        this.storageOptions = options.storageOptions;
+      if (options.columns !== undefined) this.columns = options.columns;
+      if (options.data !== undefined) this.data = options.data;
     }
   }
 

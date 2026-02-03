@@ -7,6 +7,16 @@ export * from './yatl-table-controller';
 export * from './yatl-table-ui';
 export * from './yatl-toolbar';
 
+export {
+  createRegexTokenizer,
+  createState,
+  findColumn,
+  isDisplayColumn,
+  isInternalColumn,
+  whitespaceTokenizer,
+} from './utils';
+
 // Export some lit stuff for vanilla JS users
-export { html, svg, nothing, noChange } from 'lit';
+export { html, noChange, nothing, svg } from 'lit';
 export { unsafeHTML } from 'lit/directives/unsafe-html.js';
+

@@ -3,6 +3,11 @@ import { css } from 'lit';
 export default css`
   :host {
     box-sizing: border-box;
+    --toolbar-search-radius: var(--yatl-toolbar-search-radius, var(--yatl-radius-m));
+    --toolbar-search-padding: var(--yatl-toolbar-search-padding,  var(--yatl-spacing-m));
+    --toolbar-search-bg: var(--yatl-toolbar-search-bg, var(--yatl-surface-2));
+    --toolbar-search-outline-color: var(--yatl-toolbar-search-outline-color, var(--yatl-color-brand));
+    --toolbar-search-outline-width: var(--yatl-toolbar-search-outline-width, 3px);
   }
 
   .toolbar {
@@ -13,18 +18,18 @@ export default css`
 
   .search {
     flex-grow: 1;
-    border-radius: var(--yatl-input-radius);
-    background-color: var(--bg-subtle);
+    border-radius: var(--toolbar-search-radius);
+    background-color: var(--toolbar-search-bg);
     line-height: 1;
     border: none;
     font-size: large;
-    padding: var(--yatl-input-padding);
+    padding: var(--toolbar-search-padding);
   }
 
   .search:focus,
   .search:focus-visible {
-    outline: 3px solid var(--yatl-brand-color);
-    outline-offset: -3px;
+    outline: var(--toolbar-search-outline-width) solid var(--toolbar-search-outline-color);
+    outline-offset: calc(var(--toolbar-search-outline-width) * -1);
   }
 
   yatl-button-group yatl-button {

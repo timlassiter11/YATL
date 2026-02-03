@@ -41,7 +41,7 @@ export class YatlTableUi<
   protected override render() {
     return html`
       <div class="ui-wrapper">
-        <yatl-toolbar
+        <yatl-toolbar exportparts="search, "
           ?showColumnPicker=${this.showColumnPicker}
           ?showExportButton=${this.showExportButton}
           .controller=${this.controller}

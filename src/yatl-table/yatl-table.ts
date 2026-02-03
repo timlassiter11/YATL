@@ -115,6 +115,9 @@ export class YatlTable<
     controller.attach(this);
   }
 
+  @property({ type: Boolean, reflect: true })
+  public striped = true;
+
   /**
    * Default sortability for all columns.
    * Can be overridden by setting `sortable` on the specific column definition.

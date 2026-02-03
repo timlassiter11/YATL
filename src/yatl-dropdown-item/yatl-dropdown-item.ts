@@ -5,7 +5,7 @@ import styles from './yatl-dropdown-item.styles';
 import { YatlDropdownToggleEvent } from '../events';
 
 /**
- * @fires yatl-dropdown-toggle - Fired when a dropdown item's checked state changes
+ * @emits yatl-dropdown-toggle - Fired when a dropdown item's checked state changes
  */
 @customElement('yatl-dropdown-item')
 export class YatlDropdownItem extends LitElement {

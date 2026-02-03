@@ -1,13 +1,15 @@
 import { LitElement, html } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import { YatlDropdown } from '../yatl-dropdown';
 
+import theme from '../theme';
 import styles from './yatl-button-group.styles';
+import { YatlButton } from '../yatl-button/yatl-button';
+import { YatlDropdown } from '../yatl-dropdown';
+import { getEffectiveChildren } from '../utils';
 
 @customElement('yatl-button-group')
 export class YatlButtonGroup extends LitElement {
-  // FIXME: The column picker can't get the border radius
-  static styles = [styles];
+  static styles = [theme, styles];
 
   render() {
     return html`
@@ -17,26 +19,28 @@ export class YatlButtonGroup extends LitElement {
     `;
   }
 
-  private getFlattenedElements(slot: HTMLSlotElement) {
-    const elements = slot
-      .assignedNodes({ flatten: true })
-      .filter(node => node.nodeType === Node.ELEMENT_NODE) as HTMLElement[];
-
-    return elements.filter(
-      element => getComputedStyle(element as HTMLElement).display !== 'none',
-    );
-  }
-
   private handleSlotChange(event: Event) {
     const slot = event.target as HTMLSlotElement;
-    const elements = this.getFlattenedElements(slot);
-
+    const elements = getEffectiveChildren(slot);
+    console.log(elements);
+    const count = elements.length;
     elements.forEach((element, index) => {
+      // This is annoying but it handles when dropdowns are in the button group.
+      // Kinda important since the toolbar has the column picker in here...
       if (element instanceof YatlDropdown) {
-        element = element.querySelector('[slot="trigger"]') ?? element;
+        const trigger = element.querySelector('[slot="trigger"]');
+        if (trigger) {
+          const children = getEffectiveChildren(trigger);
+          element = children.find(c => c instanceof YatlButton) ?? element;
+        }
       }
-      element.classList.toggle('is-first', index === 0);
-      element.classList.toggle('is-last', index === elements.length - 1);
+
+      let position = 'middle';
+      if (count === 1) position = 'single';
+      else if (index === 0) position = 'first';
+      else if (index === count - 1) position = 'last';
+      element.setAttribute('data-group-position', position);
+
     });
   }
 }

@@ -2,32 +2,35 @@ import { css } from 'lit';
 
 export default css`
   :host {
-    --yatl-dropdown-item-padding: var(
-      --yatl-table-dropdown-item-padding,
-      0.5em 1em
-    );
-    --yatl-dropdown-item-font-size: var(
-      --yatl-table-dropdown-item-font-size,
-      16px
-    );
+    --dropdown-item-text: var(--yatl-dropdown-item-text, var(--yatl-text-1));
+    --dropdown-item-font-size: var(--yatl-dropdown-item-font-size, 16px);
+    --dropdown-item-bg: var(--yatl-dropdown-item-bg, transparent);
+    --dropdown-item-hover-bg: var(--yatl-dropdown-item-hover-bg, var(--yatl-color-brand));
+    --dropdown-item-padding: var(--yatl-dropdown-item-padding, var(--yatl-spacing-s) var(--yatl-spacing-m));
+    --dropdown-item-gap: var(--yatl-dropdown-item-gap, var(--yatl-spacing-xs));
+    --dropdown-item-radius: var(--yatl-dropdown-item-radius, var(--yatl-radius-s));
+    --dropdown-item-focus-border: var(--yatl-dropdown-item-focus-border, var(--yatl-color-brand));
   }
 
   .dropdown-item {
     display: flex;
     align-items: center;
-    gap: var(--yatl-spacing-xs);
-    color: var(--yatl-text);
-    padding: var(--yatl-dropdown-item-padding);
     cursor: pointer;
     white-space: nowrap;
-    font-size: var(--yatl-dropdown-item-font-size);
     user-select: none;
+
+    color: var(--dropdown-item-text);
+    font-size: var(--dropdown-item-font-size);
+    background-color: var(--dropdown-item-bg);
+    gap: var(--dropdown-item-gap);
+    padding: var(--dropdown-item-padding);
+    
     transition: background 0.1s ease;
   }
 
   .dropdown-item:hover {
-    background-color: var(--yatl-brand-color);
-    border-radius: 4px;
+    background-color: var(--dropdown-item-hover-bg);
+    border-radius: var(--dropdown-item-radius);
   }
 
   .dropdown-item input {
@@ -57,7 +60,7 @@ export default css`
   .check-icon {
     width: 14px;
     height: 14px;
-    fill: var(--yatl-text);
+    fill: var(--dropdown-item-text);
     opacity: 0;
     transform: scale(0.5);
     transition: all 0.2s cubic-bezier(0.12, 0.4, 0.29, 1.46);
@@ -69,12 +72,12 @@ export default css`
   }
 
   input:focus-visible ~ .check-container {
-    border-color: var(--yatl-brand-color);
+    border-color: var(--dropdown-item-focus-border);
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
   }
 
   .label-text {
     font-size: 14px;
-    color: var(--yatl-text);
+    color: var(--dropdown-item-text);
   }
 `;

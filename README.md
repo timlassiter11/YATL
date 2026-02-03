@@ -1,11 +1,12 @@
 # YATL (Yet Another Table Library)
 
 [![NPM Version](https://img.shields.io/npm/v/@timlassiter11/yatl)](https://www.npmjs.com/package/@timlassiter11/yatl)
-[![API Docs](https://img.shields.io/badge/docs-typedoc-blue)](https://timlassiter11.github.io/YATL/docs/index.html)
-[![Live Demo](https://img.shields.io/badge/demo-online-green)](https://timlassiter11.github.io/YATL/examples/index.html)
 [![License](https://img.shields.io/npm/l/@timlassiter11/yatl)](LICENSE)
 
 YATL is a powerful, feature-rich, and lightweight Web Component data table built with Lit. It handles large datasets with ease using virtual scrolling, offers advanced fuzzy search capabilities, supports state persistence, and works in any framework (React, Vue, Angular, or Vanilla JS).
+
+### [Try the Live Demo](https://timlassiter11.github.io/YATL/examples/index.html) 
+### [Check out the Docs](https://timlassiter11.github.io/YATL/docs/index.html)
 
 ## Why?!?
 

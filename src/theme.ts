@@ -11,7 +11,7 @@ export default css`
   :host {
     /* Typography */
     --yatl-font-family: var(
-      --yatl-table-font,
+      --yatl-theme-font,
       -apple-system,
       BlinkMacSystemFont,
       'Segoe UI',
@@ -22,138 +22,60 @@ export default css`
       'Apple Color Emoji',
       'Segoe UI Emoji'
     );
-    --yatl-font-size: var(--yatl-table-font-size, 0.875rem);
-    --yatl-line-height: var(--yatl-table-line-height, 1.25rem);
+    --yatl-font-size: var(--yatl-theme-font-size, 0.875rem);
+    --yatl-line-height: var(--yatl-theme-line-height, 1.25rem);
 
     /* Spacing */
-    --yatl-spacing-xs: var(--yatl-table-spacing-xs, 4px);
-    --yatl-spacing-s: var(--yatl-table-spacing-s, 8px);
-    --yatl-spacing-m: var(--yatl-table-spacing-m, 12px);
-    --yatl-spacing-l: var(--yatl-table-spacing-l, 16px);
+    --yatl-spacing-xs: var(--yatl-theme-spacing-xs, 4px);
+    --yatl-spacing-s: var(--yatl-theme-spacing-s, 8px);
+    --yatl-spacing-m: var(--yatl-theme-spacing-m, 12px);
+    --yatl-spacing-l: var(--yatl-theme-spacing-l, 16px);
 
-    --yatl-cell-padding: var(
-      --yatl-table-cell-padding,
-      var(--yatl-spacing-m) var(--yatl-spacing-m)
-    );
-    --yatl-header-padding: var(
-      --yatl-table-header-padding,
-      var(--yatl-spacing-m) var(--yatl-spacing-l)
-    );
+    /* Radius */
+    --yatl-radius-xs: var(--yatl-theme-radius-xs, 2px);
+    --yatl-radius-s: var(--yatl-theme-radius-s, 4px);
+    --yatl-radius-m: var(--yatl-theme-radius-m, 8px);
+    --yatl-radius-l: var(--yatl-theme-radius-l, 12px);
 
-    --yatl-brand-color: var(--yatl-table-brand-light, #7531ae);
+    /* Border */
+    --yatl-border-color-light: var(--yatl-theme-border-color-light, #e2e8f0);
+    --yatl-border-color-dark: var(--yatl-theme-border-color-dark, #2e2e2e);
+    --yatl-border-color: light-dark(var(--yatl-border-color-light), var(--yatl-border-color-dark));
 
-    /* Light colors */
-    --yatl-bg-light: var(--yatl-table-bg-light, #ffffff);
-    --yatl-text-light: var(--yatl-table-text-light, #0f172a);
-    --yatl-text-muted-light: var(--yatl-table-text-muted-light, #64748b);
-    --yatl-border-color-light: var(--yatl-table-border-color-light, #e2e8f0);
-    --yatl-header-bg-light: var(
-      --yatl-table-header-bg-light,
-      color-mix(in srgb, black 5%, var(--yatl-bg))
-    );
-    --yatl-header-text-light: var(--yatl-table-header-text-light, #475569);
-    --yatl-header-drop-bg-light: var(
-      --yatl-table-drop-bg-light,
-      color-mix(in srgb, black 5%, transparent)
-    );
-    --yatl-row-hover-bg-light: var(
-      --yatl-table-row-hover-bg-light,
-      color-mix(in srgb, black 5%, transparent)
-    );
-    --yatl-row-selected-bg-light: var(
-      --yatl-table-row-selected-bg-light,
-      color-mix(in srgb, var(--yatl-brand-color) 20%, transparent)
-    );
+    --yatl-color-brand: var(--yatl-theme-brand, #7531ae);
+    --yatl-color-danger: var(--yatl-theme-danger, #EF4444);
 
-    /* Dark colors */
-    --yatl-bg-dark: var(--yatl-table-bg-dark, #101219);
-    --yatl-text-dark: var(--yatl-table-text-dark, #f1f5f9);
-    --yatl-text-muted-dark: var(--yatl-table-text-muted-dark, #94a3b8);
-    --yatl-border-color-dark: var(--yatl-table-border-color-dark, #1a1b1e);
-    --yatl-header-bg-dark: var(
-      --yatl-table-header-bg-dark,
-      color-mix(in srgb, white 5%, var(--yatl-bg))
-    );
-    --yatl-header-text-dark: var(--yatl-table-header-text-dark, #cbd5e1);
-    --yatl-header-drop-bg-dark: var(
-      --yatl-table-drop-bg-dark,
-      color-mix(in srgb, white 5%, transparent)
-    );
-    --yatl-row-hover-bg-dark: var(
-      --yatl-table-row-hover-bg-dark,
-      color-mix(in srgb, white 5%, transparent)
-    );
-    --yatl-row-selected-bg-dark: var(
-      --yatl-table-row-selected-bg-dark,
-      color-mix(in srgb, var(--yatl-brand-color) 20%, transparent)
-    );
+    --yatl-surface-1-light: #ffffff;
+    --yatl-surface-1-dark: #101219;
+    --yatl-surface-1: light-dark(var(--yatl-surface-1-light), var(--yatl-surface-1-dark));
 
-    /* Applied colors */
-    --yatl-bg: var(
-      --yatl-table-bg,
-      light-dark(var(--yatl-bg-light), var(--yatl-bg-dark))
-    );
-    --yatl-text: var(
-      --yatl-table-text,
-      light-dark(var(--yatl-text-light), var(--yatl-text-dark))
-    );
-    --yatl-text-muted: var(
-      --yatl-table-text-muted,
-      light-dark(var(--yatl-text-muted-light), var(--yatl-text-muted-dark))
-    );
-    --yatl-border-color: var(
-      --yatl-table-border-color,
-      light-dark(var(--yatl-border-color-light), var(--yatl-border-color-dark))
-    );
-    --yatl-header-bg: var(
-      --yatl-table-header-bg,
-      light-dark(var(--yatl-header-bg-light), var(--yatl-header-bg-dark))
-    );
-    --yatl-header-text: var(
-      --yatl-table-header-text,
-      light-dark(var(--yatl-header-text-light), var(--yatl-header-text-dark))
-    );
-    --yatl-header-drop-bg: var(
-      --yatl-table-header-drop-bg,
-      light-dark(
-        var(--yatl-header-drop-bg-light),
-        var(--yatl-header-drop-bg-dark)
-      )
-    );
-    --yatl-row-hover-bg: var(
-      --yatl-table-row-hover-bg,
-      light-dark(var(--yatl-row-hover-bg-light), var(--yatl-row-hover-bg-dark))
-    );
-    --yatl-row-selected-bg: var(
-      --yatl-table-row-selected-bg,
-      light-dark(
-        var(--yatl-row-selected-bg-light),
-        var(--yatl-row-selected-bg-dark)
-      )
-    );
+    --yatl-surface-2-light: #f8fafc;
+    --yatl-surface-2-dark: #1a1b1e;
+    --yatl-surface-2: light-dark(var(--yatl-surface-2-light), var(--yatl-surface-2-dark));
 
-    --yatl-row-number-column-width: var(
-      --yatl-table-row-number-column-width,
-      48px
-    );
-    --yatl-row-selector-column-width: var(
-      --yatl-table-row-selector-column-width,
-      48px
-    );
-    --yatl-column-visibility-transition: var(
-      --yatl-table-column-visibility-transition,
-      100ms
-    );
+    --yatl-surface-3-light: #f1f5f9;
+    --yatl-surface-3-dark: #27272a;
+    --yatl-surface-3: light-dark(var(--yatl-surface-3-light), var(--yatl-surface-3-dark));
 
-    --yatl-table-radius: var(--yatl-table-table-radius, 8px);
-    --yatl-input-radius: var(--yatl-table-input-radius, 8px);
-    --yatl-button-radius: var(--yatl-table-button-radius, 8px);
-    --yatl-button-group-radius: var(--yatl-table-button-group-radius, 8px);
-    --yatl-input-padding: var(
-      --yatl-table-input-padding,
-      var(--yatl-spacing-m)
-    );
+    --yatl-surface-4-light: #e2e8f0;
+    --yatl-surface-4-dark: #3f3f46;
+    --yatl-surface-4: light-dark(var(--yatl-surface-4-light), var(--yatl-surface-4-dark));
 
+    --yatl-text-1-light: #0f172a;
+    --yatl-text-1-dark: #f1f5f9;
+    --yatl-text-1: light-dark(var(--yatl-text-1-light), var(--yatl-text-1-dark));
+
+    --yatl-text-2-light: #475569;
+    --yatl-text-2-dark: #cbd5e1;
+    --yatl-text-2: light-dark(var(--yatl-text-2-light), var(--yatl-text-2-dark));
+
+    --yatl-text-3-light: #94a3b8;
+    --yatl-text-3-dark: #64748b;
+    --yatl-text-3: light-dark(var(--yatl-text-3-light), var(--yatl-text-3-dark));
+
+    --yatl-text-inverse: #ffffff;
+    --yatl-mix-color: light-dark(black, white);
+    
     font-family: var(--yatl-font-family);
     font-size: var(--yatl-font-size);
     color: var(--yatl-text);

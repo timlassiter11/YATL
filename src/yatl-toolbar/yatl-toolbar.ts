@@ -24,6 +24,9 @@ import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
  *
  * @slot - Adds contents to the right of the toolbar button group
  * @slot toolbar-button-group - Adds content into the toolbar button group.
+ * @slot column-picker-trigger - Replaces the button used to trigger the column picker.
+ * @slot column-picker-icon - Replaces the icon for the column picker button.
+ * @slot export-button-icon - Replaces the icon for the export button.
  *
  * @fires yatl-toolbar-search-input - Fired synchronously as the user types in the search box. Useful for real-time highlighting or suggestions.
  * @fires yatl-toolbar-search-change - Fired when the user commits a search query (e.g., on 'Enter' or blur). Use this for triggering the actual table filter.
@@ -86,22 +89,24 @@ export class YatlToolbar<
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <yatl-button
-          part="column-picker-trigger"
           slot="trigger"
+          part="column-picker-trigger"
           title="Show/hide columns"
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"
-            />
-          </svg>
+          <slot name="column-picker-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"
+              />
+            </svg>
+          </slot>
         </yatl-button>
         ${repeat(
           this.controller?.displayColumns ?? [],
@@ -134,21 +139,23 @@ export class YatlToolbar<
   protected renderExportButton() {
     return html`
       <yatl-button type="button" @click=${this.onExportClick}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
+        <slot name="export-button-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </slot>
       </yatl-button>
     `;
   }

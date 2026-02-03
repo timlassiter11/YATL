@@ -7,124 +7,192 @@ import { css } from 'lit';
  * is overly complicated and should be cleaned up by combining the --yatl-* and --yatl-table-* variables.
  */
 export default css`
+  @layer base, striped, hover, selected;
+
   :host {
+    --table-cell-padding: var(
+      --yatl-table-cell-padding,
+      var(--yatl-spacing-m) var(--yatl-spacing-m)
+    );
+    --table-header-padding: var(
+      --yatl-table-header-padding,
+      var(--yatl-spacing-m) var(--yatl-spacing-l)
+    );
+
+    --table-text: var(--yatl-table-text, var(--yatl-text-1));
+    --table-bg: var(--yatl-table-bg, var(--yatl-surface-1));
+    --table-radius: var(--yatl-table-radius, var(--yatl-radius-m));
+    --table-border-width: var(--yatl-table-border-width, 1px);
+    --table-border-color: var(
+      --yatl-table-border-color,
+      var(--yatl-border-color)
+    );
+
+    --table-header-text: var(--yatl-table-header-text, var(--yatl-text-1));
+    --table-header-bg: var(--yatl-table-header-bg, var(--yatl-surface-3));
+    --table-header-hover-bg: var(
+      --yatl-table-header-hover-bg,
+      color-mix(in srgb, var(--table-header-bg), var(--yatl-mix-color) 5%)
+    );
+    --table-header-drop-bg: var(
+      --yatl-table-header-drop-bg,
+      color-mix(in srgb, var(--table-header-bg), var(--yatl-mix-color) 5%)
+    );
+
+    --table-row-text: var(--yatl-table-row-text, var(--yatl-text-1));
+    --table-row-bg: var(--yatl-table-row-bg, var(--yatl-surface-2));
+    --table-row-hover-bg: var(
+      --yatl-table-row-hover-bg,
+      color-mix(in srgb, var(--table-row-bg), var(--yatl-mix-color) 5%)
+    );
+    --table-row-stripe-bg: var(
+      --yatl-table-row-stripe-bg,
+      var(--yatl-surface-1)
+    );
+    --table-row-selected-bg: var(
+      --yatl-table-row-selected-bg,
+      color-mix(in srgb, var(--yatl-color-brand) 10%, transparent)
+    );
+    --table-footer-text: var(--yatl-table-footer-text, var(--yatl-tex-3));
+    --table-selector-color: var(--yatl-table-selector-color, color-mix(
+      in srgb,
+      var(--table-row-bg),
+      var(--yatl-color-brand, black) 5%
+    ));
+
+    --table-row-number-column-width: var(--yatl-table-row-number-column-width, 48px);
+    --table-row-selector-column-width: var(--yatl-table-row-selector-column-width, 48px);
+    --table-column-visibility-transition: var(--yatl-table-column-visibility-transition, 100ms);
+
     /* Resize grab handle width */
-    --yatl-resizer-width: var(--yatl-table-resizer-width, 10px);
+    --resizer-width: var(--yatl-table-column-resizer-width, 10px);
     /* z-index for the header */
     --header-z-index: 2;
-
-    overflow: hidden;
-    border-radius: 6px;
   }
 
-  .scroller {
-    border: 1px solid var(--yatl-border-color);
-    background-color: var(--yatl-header-bg);
+  @layer base {
+    .wrapper {
+      overflow: hidden;
+      border-radius: var(--table-radius);
+    }
+
+    .scroller {
+      border: var(--table-border-width) solid
+        var(--table-border-color);
+      background-color: var(--table-header-bg);
+    }
+
+    .row {
+      position: relative;
+      background-color: var(--table-bg);
+      border-bottom: 1px solid var(--table-border-color);
+      transition: background-color 50ms;
+    }
+
+    .row.header-row {
+      background-color: var(--table-header-bg);
+      border-bottom: 1px solid var(--table-border-color);
+      font-weight: 600;
+      color: var(--table-header-text);
+    }
+
+    .table:not(.resizing) .row {
+      transition: grid-template-columns
+        var(--table-column-visibility-transition);
+    }
+
+    .body .row {
+      background-color: var(--table-row-bg);
+    }
+
+    .row:last-child {
+      border-bottom: none;
+    }
+
+    .cell {
+      align-items: center;
+      padding: var(--table-cell-padding);
+    }
+
+    .table.resizing * {
+      cursor: col-resize !important;
+    }
+
+    .header .cell {
+      padding: var(--table-header-padding);
+    }
+
+    .footer {
+      padding: 8px 12px;
+      background-color: var(--table-header-bg);
+      border-top: 1px solid var(--table-border-color);
+      color: var(--table-footer-text);
+      font-size: 0.8em;
+    }
+
+    .resizer::after {
+      height: 60%;
+      width: 1px;
+      background-color: color-mix(in srgb, currentColor 30%, transparent);
+      transition: background-color 0.2s;
+    }
+
+    .row-number-cell {
+      background-color: var(--table-header-bg);
+    }
+
+    .row-checkbox {
+      width: 1.125rem;
+      height: 1.125rem;
+
+      cursor: pointer;
+      margin: 0;
+
+      accent-color: var(--table-selector-color);
+      transition: transform 0.1s ease-in-out;
+    }
+
+    .row-checkbox:active {
+      transform: scale(0.9);
+    }
+    .message {
+      font-size: large;
+    }
   }
 
-  .row {
-    background-color: var(--yatl-bg);
-    border-bottom: 1px solid var(--yatl-border-color);
-    transition: background-color 50ms;
-    position: relative;
+  @layer striped {
+    :host([striped]) .body .row:nth-child(even) {
+      background-color: var(--table-row-stripe-bg);
+    }
   }
 
-  .row.header-row {
-    background-color: var(--yatl-header-bg);
-    border-bottom: 1px solid var(--yatl-border-color);
-    font-weight: 600;
-    color: var(--yatl-header-text);
+  @layer hover {
+    .table:not(.resizing) .header .cell:hover {
+      background-color: var(--table-header-hover-bg);
+    }
+    .body .row:hover {
+      background-color: var(--table-row-hover-bg);
+    }
+    .resizer:hover::after {
+      background-color: currentColor;
+      width: 2px;
+    }
+    .drop-indicator {
+      background: var(--table-header-drop-bg);
+    }
   }
 
-  .table:not(.resizing) .row {
-    transition: grid-template-columns var(--yatl-column-visibility-transition);
-  }
-
-  .row:last-child {
-    border-bottom: none;
-  }
-
-  /* Use after element for row and header hover */
-  .header.reorderable .cell::after,
-  .header .cell.sortable::after,
-  .row:not(.header-row)::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-color: transparent;
-    transition: background-color 50ms;
-    z-index: 1;
-  }
-
-  .table:not(.resizing) .header .cell:hover::after,
-  .row:not(.header):hover::after {
-    background-color: var(--yatl-row-hover-bg);
-  }
-
-  .row:not(.header).selected::after {
-    background-color: var(--yatl-row-selected-bg);
-  }
-
-  .cell {
-    align-items: center;
-    padding: var(--yatl-cell-padding);
-  }
-
-  .table.resizing * {
-    cursor: col-resize !important;
-  }
-
-  .header .cell {
-    padding: var(--yatl-header-padding);
-  }
-
-  .footer {
-    padding: 8px 12px;
-    background-color: var(--yatl-header-bg);
-    border-top: 1px solid var(--yatl-border-color);
-    color: var(--yatl-text-muted);
-    font-size: 0.8em;
-  }
-
-  .resizer::after {
-    height: 60%;
-    width: 1px;
-    background-color: color-mix(in srgb, currentColor 30%, transparent);
-    transition: background-color 0.2s;
-  }
-
-  .resizer:hover::after {
-    background-color: currentColor;
-    width: 2px;
-  }
-
-  .row-number-cell {
-    background-color: var(--yatl-header-bg);
-  }
-
-  .row-checkbox {
-    width: 1.125rem;
-    height: 1.125rem;
-
-    cursor: pointer;
-    margin: 0;
-
-    accent-color: var(--yatl-brand-color, var(--yatl-text));
-
-    transition: transform 0.1s ease-in-out;
-  }
-
-  .row-checkbox:active {
-    transform: scale(0.9);
-  }
-
-  .drop-indicator {
-    background: var(--yatl-header-drop-bg);
-  }
-
-  .message {
-    font-size: large;
+  @layer selected {
+    /* Use after element to blend selection color */
+    .body .row.selected::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      transition: background-color 50ms;
+      z-index: 1;
+      background-color: var(--table-row-selected-bg);
+    }
   }
 
   /* Layout stuff
@@ -214,7 +282,7 @@ export default css`
     top: 0;
     bottom: 0;
     right: 0;
-    width: var(--yatl-resizer-width);
+    width: var(--resizer-width);
     cursor: col-resize;
     display: flex;
     justify-content: center;
@@ -298,7 +366,7 @@ export default css`
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding: var(--yatl-cell-padding);
+    padding: var(--table-cell-padding);
     height: 100%;
     width: 100%;
     box-sizing: border-box;

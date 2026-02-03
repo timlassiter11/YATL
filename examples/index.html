@@ -29,10 +29,6 @@
       yatl-table-ui {
         width: 100%;
       }
-
-      yatl-table-ui::part(urgent) {
-        background-color: color-mix(in srgb, red 10%, transparent);
-      }
     </style>
   </head>
 
@@ -205,6 +201,10 @@
             </div>
             <div class="option-group">
               <h2>Misc</h2>
+              <label>
+                <input type="checkbox" name="striped" checked />
+                Striped
+              </label>
               <label>
                 <input type="checkbox" name="enableFooter" checked />
                 Show Footer

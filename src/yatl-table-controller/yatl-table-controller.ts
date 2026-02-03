@@ -28,20 +28,16 @@ import {
   whitespaceTokenizer,
 } from '../utils';
 
-import { createRankMap, getColumnStateChanges, toHumanReadable } from './utils';
+import { createRankMap, getColumnStateChanges } from './utils';
 
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 
 import {
   YatlColumnReorderEvent,
-  YatlColumnReorderRequestEvent,
   YatlColumnResizeEvent,
   YatlColumnSortEvent,
-  YatlColumnSortRequestEvent,
   YatlColumnToggleEvent,
-  YatlColumnToggleEvent as YatlColumnToggleRequestEvent,
   YatlRowSelectEvent,
-  YatlRowSelectRequestEvent,
   YatlTableSearchEvent,
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
@@ -174,17 +170,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   public set columns(columns) {
-    if (this._columns === columns) {
-      return;
-    }
-
-    for (const column of columns) {
-      if (isDisplayColumn(column) && column.title === undefined) {
-        column.title = toHumanReadable(column.field);
-      }
-    }
-
-    this._columns = columns;
+    this._columns = [...columns];
     this.filterDirty = true;
     // Cache these in a map for faster lookups
     this._columnDefinitionMap = new Map();
@@ -351,7 +337,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    * (column width, order, visibility, etc.) to browser storage.
    */
   public get storageOptions() {
-    return this._storageOptions;
+    return this._storageOptions ? { ...this._storageOptions } : null;
   }
 
   public set storageOptions(options) {
@@ -359,7 +345,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return;
     }
 
-    this._storageOptions = options;
+    this._storageOptions = options ? { ...options } : null;
     if (!this.hasRestoredState) {
       this.loadStateFromStorage();
       this.requestUpdate('storageOptions');
@@ -389,11 +375,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    * Objects must satisfy the `WeakKey` constraint (objects only, no primitives).
    */
   public get data() {
-    return this._data;
+    return [...this._data];
   }
 
-  public set data(value: T[]) {
-    this._data = value;
+  public set data(data: T[]) {
+    this._data = [...data];
     this.createMetadata();
     this.filterDirty = true;
     this.requestUpdate('data');
@@ -416,10 +402,21 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Public Methods
 
-  constructor(table?: YatlTable<T>) {
-    if (table) {
-      this.attach(table);
+  constructor(host: ReactiveControllerHost) {
+    if (host) {
+      this.attach(host);
     }
+  }
+
+  public attach(host: ReactiveControllerHost) {
+    this.hosts.add(host);
+    host.addController(this);
+    host.requestUpdate();
+  }
+
+  public detach(host: ReactiveControllerHost) {
+    host.removeController(this);
+    this.hosts.delete(host);
   }
 
   public getColumn(field: NestedKeyOf<T>) {
@@ -515,11 +512,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return;
     }
 
-    const requestEvent = new YatlColumnSortRequestEvent(field, order);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
     // Column was unsorted, give it a new priority
     if (order && !state.sort) {
       // Create a list of current sort priorities
@@ -551,7 +543,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
     this.columnStates = newStates;
 
-    const event = new YatlColumnSortEvent(field, order);
+    const event = new YatlColumnSortEvent(field, order, !clear);
     this.dispatchEvent(event);
   }
 
@@ -565,11 +557,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     const newVisibility = visible !== undefined ? visible : !state.visible;
 
     if (newVisibility === state.visible) {
-      return;
-    }
-
-    const requestEvent = new YatlColumnToggleRequestEvent(field, newVisibility);
-    if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
@@ -616,16 +603,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     if (originalIndex > -1 && newIndex > -1) {
       const [movedColumn] = newColumns.splice(originalIndex, 1);
       newColumns.splice(newIndex, 0, movedColumn);
-      const requestEvent = new YatlColumnReorderRequestEvent(
-        movedColumn.field,
-        originalIndex,
-        newIndex,
-        newColumns.map(c => c.field),
-      );
-      if (!this.dispatchEvent(requestEvent)) {
-        return;
-      }
-
       this.columns = newColumns;
       const event = new YatlColumnReorderEvent(newColumns.map(c => c.field));
       this.dispatchEvent(event);
@@ -669,14 +646,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       );
     }
 
-    const requestEvent = new YatlRowSelectRequestEvent(newSelection);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
+    const previousSelection = this.selectedRowIds;
     this.selectedRowIds = newSelection;
 
-    const event = new YatlRowSelectEvent(newSelection);
+    const event = new YatlRowSelectEvent(newSelection, previousSelection);
     this.dispatchEvent(event);
   }
 
@@ -702,12 +675,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
     // Use visible rows (filtered) or all rows depending on your UX preference
     const allIds = this.filteredData.map(row => this.getRowId(row));
-
-    const requestEvent = new YatlRowSelectRequestEvent(allIds);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
     this.selectedRowIds = allIds;
   }
 
@@ -715,11 +682,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    * Clears all selection.
    */
   public deselectAll() {
-    const requestEvent = new YatlRowSelectRequestEvent([]);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
     this.selectedRowIds = [];
   }
 
@@ -915,27 +877,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   private dispatchEvent(event: Event) {
     for (const host of this.hosts) {
+      // Dispatch table events on any attached tables
       if (host instanceof YatlTable) {
-        if (!host.dispatchEvent(event)) {
-          return false;
-        }
+        host.dispatchEvent(event);
       }
     }
-    return true;
   }
 
   // #region Lifecycle Methods
-  public attach(host: ReactiveControllerHost) {
-    this.hosts.add(host);
-    host.addController(this);
-    host.requestUpdate();
-  }
-
-  public detach(host: ReactiveControllerHost) {
-    host.removeController(this);
-    this.hosts.delete(host);
-  }
-
   public hostConnected(): void {}
 
   public hostDisconnected(): void {}

@@ -13,7 +13,7 @@ import {
 } from '../events';
 import { YatlTableController } from '../yatl-table-controller';
 import { ifDefined } from 'lit/directives/if-defined.js';
-import { ColumnState, DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
+import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
 
 /**
  * A table toolbar component with a search input, column picker, and export button.
@@ -32,7 +32,9 @@ import { ColumnState, DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } fro
  *
  */
 @customElement('yatl-toolbar')
-export class YatlToolbar<T extends object = UnspecifiedRecord> extends LitElement {
+export class YatlToolbar<
+  T extends object = UnspecifiedRecord,
+> extends LitElement {
   public static override styles = [theme, styles];
 
   private _controller?: YatlTableController<T>;
@@ -122,7 +124,10 @@ export class YatlToolbar<T extends object = UnspecifiedRecord> extends LitElemen
   }
 
   private handleDropdownToggle = (event: YatlDropdownToggleEvent) => {
-    this.controller?.toggleColumnVisibility(event.value as NestedKeyOf<T>, event.checked);
+    this.controller?.toggleColumnVisibility(
+      event.value as NestedKeyOf<T>,
+      event.checked,
+    );
   };
 
   protected renderExportButton() {
@@ -156,7 +161,7 @@ export class YatlToolbar<T extends object = UnspecifiedRecord> extends LitElemen
   private onSearchChange = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
     this.dispatchEvent(new YatlToolbarSearchChange(input.value));
-  }
+  };
 
   private onExportClick = (_event: Event) => {
     this.dispatchEvent(new YatlToolbarExportClick());

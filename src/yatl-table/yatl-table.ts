@@ -14,11 +14,19 @@ import type {
 } from '../types';
 
 import {
+  getColumnStateChanges,
   getNestedValue,
   isDisplayColumn,
 } from '../utils';
 
-import { highlightText } from './utils';
+import { highlightText, toHumanReadable } from './utils';
+
+import {
+  YatlRowClickEvent,
+  YatlRowSelectRequestEvent,
+  YatlColumnSortRequestEvent,
+  YatlColumnReorderRequestEvent,
+} from '../events';
 
 import { html, LitElement, nothing, TemplateResult } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
@@ -29,7 +37,6 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
-import { YatlRowClickEvent } from '../events';
 import theme from '../theme';
 import { YatlTableController } from '../yatl-table-controller/yatl-table-controller';
 import styles from './yatl-table.styles';
@@ -156,7 +163,13 @@ export class YatlTable<
   }
 
   public set enableSearchTokenization(enable) {
+    const oldValue = this.enableSearchTokenization;
+    if (oldValue === enable) {
+      return;
+    }
+
     this.controller.enableSearchTokenization = enable;
+    this.requestUpdate('enableSearchTokenization', oldValue);
   }
 
   /**
@@ -171,7 +184,13 @@ export class YatlTable<
   }
 
   public set enableSearchScoring(enable) {
+    const oldValue = this.enableSearchScoring;
+    if (oldValue === enable) {
+      return;
+    }
+
     this.controller.enableSearchScoring = enable;
+    this.requestUpdate('enableSearchScoring', oldValue);
   }
 
   /**
@@ -227,7 +246,19 @@ export class YatlTable<
   }
 
   public set columns(columns) {
+    const oldValue = this.columns;
+    if (oldValue === columns) {
+      return;
+    }
+
+    for (const column of columns) {
+      if (isDisplayColumn(column) && column.title === undefined) {
+        column.title = toHumanReadable(column.field);
+      }
+    }
+
     this.controller.columns = columns;
+    this.requestUpdate('columns', oldValue);
   }
 
   /**
@@ -235,7 +266,7 @@ export class YatlTable<
    * **This will always be ordered the same as the visual column order**
    */
   public get displayColumns() {
-    return this.columns.filter(isDisplayColumn);
+    return this.controller.displayColumns;
   }
 
   @property({ attribute: false })
@@ -244,7 +275,24 @@ export class YatlTable<
   }
 
   public set columnStates(states) {
+    const oldValue = this.columnStates;
+
+    let changed = false;
+    for (const state of states) {
+      const oldState = this.getColumnState(state.field);
+      const stateChanges = getColumnStateChanges(oldState, state);
+      if (stateChanges.length) {
+        changed = true;
+        break;
+      }
+    }
+
+    if (!changed) {
+      return;
+    }
+
     this.controller.columnStates = states;
+    this.requestUpdate('columnStates', oldValue);
   }
 
   /**
@@ -257,7 +305,13 @@ export class YatlTable<
   }
 
   public set searchQuery(query) {
+    const oldValue = this.searchQuery;
+    if (oldValue === query) {
+      return;
+    }
+
     this.controller.searchQuery = query;
+    this.requestUpdate('searchQuery', oldValue);
   }
 
   /**
@@ -271,7 +325,13 @@ export class YatlTable<
   }
 
   public set searchTokenizer(tokenizer) {
+    const oldValue = this.searchTokenizer;
+    if (oldValue === tokenizer) {
+      return;
+    }
+
     this.controller.searchTokenizer = tokenizer;
+    this.requestUpdate('searchTokenizer', oldValue);
   }
 
   /**
@@ -295,7 +355,13 @@ export class YatlTable<
   }
 
   public set filters(filters) {
+    const oldValue = this.filters;
+    if (oldValue === filters) {
+      return;
+    }
+
     this.controller.filters = filters;
+    this.requestUpdate('filters', oldValue);
   }
 
   /**
@@ -316,7 +382,13 @@ export class YatlTable<
   }
 
   public set rowSelectionMethod(selection) {
+    const oldValue = this.rowSelectionMethod;
+    if (oldValue === selection) {
+      return;
+    }
+
     this.controller.rowSelectionMethod = selection;
+    this.requestUpdate('rowSelectionMethod', oldValue);
   }
 
   /**
@@ -330,7 +402,13 @@ export class YatlTable<
   }
 
   public set selectedRowIds(rows) {
+    const oldValue = new Set(this.selectedRowIds);
+    if (oldValue.size === rows.length && rows.every(r => oldValue.has(r))) {
+      return;
+    }
+
     this.controller.selectedRowIds = rows;
+    this.requestUpdate('selectedRows', [...oldValue]);
   }
 
   /**
@@ -343,7 +421,10 @@ export class YatlTable<
   }
 
   public set storageOptions(options) {
+    const oldValue = this.storageOptions;
+    // TODO: Check if anything changed
     this.controller.storageOptions = options;
+    this.requestUpdate('storageOptions', oldValue);
   }
 
   @property({ attribute: false })
@@ -352,7 +433,13 @@ export class YatlTable<
   }
 
   public set rowIdCallback(callback) {
+    const oldValue = this.rowIdCallback;
+    if (oldValue === callback) {
+      return;
+    }
+
     this.controller.rowIdCallback = callback;
+    this.requestUpdate('rowIdCallback', oldValue);
   }
 
   /**
@@ -365,7 +452,10 @@ export class YatlTable<
   }
 
   public set data(value: T[]) {
+    const oldValue = this.data;
     this.controller.data = value;
+    this.dataLastUpdate = new Date();
+    this.requestUpdate('data', oldValue);
   }
 
   get filteredData() {
@@ -674,7 +764,7 @@ export class YatlTable<
 
   // #endregion
 
-  // #region --- Render Methods ---
+  // #region Render Methods
 
   protected renderColumnSortIcon(
     column: DisplayColumnOptions<T>,
@@ -1011,6 +1101,8 @@ export class YatlTable<
 
   // #endregion
 
+  // #region Utilities
+
   private hasVisibleColumn() {
     return (
       this.displayColumns
@@ -1078,14 +1170,23 @@ export class YatlTable<
 
     const multiSort = event.shiftKey;
     const state = this.getColumnState(column.field);
-
+    let sortOrder: SortOrder | null = null;
     if (!state?.sort) {
-      this.sort(column.field, 'asc', !multiSort);
+      sortOrder = 'asc';
     } else if (state.sort.order === 'asc') {
-      this.sort(column.field, 'desc', !multiSort);
-    } else if (state.sort.order) {
-      this.sort(column.field, null, !multiSort);
+      sortOrder = 'desc';
     }
+
+    const requestEvent = new YatlColumnSortRequestEvent(
+      column.field,
+      sortOrder,
+      multiSort,
+    );
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
+    this.sort(column.field, sortOrder, !multiSort);
   };
 
   private handleCellClick = (
@@ -1247,6 +1348,22 @@ export class YatlTable<
     }
     event.preventDefault();
     event.stopPropagation();
+
+    const newColumns = this.displayColumns;
+    const originalIndex = newColumns.findIndex(
+      col => col.field === this.dragColumn,
+    );
+    const newIndex = newColumns.findIndex(col => col.field === field);
+
+    const requestEvent = new YatlColumnReorderRequestEvent(
+      this.dragColumn,
+      originalIndex,
+      newIndex,
+    );
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
     this.moveColumn(this.dragColumn, field);
   };
 
@@ -1262,29 +1379,22 @@ export class YatlTable<
     event.stopPropagation();
     const inputElement = event.currentTarget as HTMLInputElement;
     const selected = inputElement.checked;
+
+    const rowId = this.controller.getRowId(row);
+    const selectedRows = this.selectedRowIds;
+    const requestEvent = new YatlRowSelectRequestEvent(
+      rowId,
+      selected,
+      selectedRows,
+    );
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
     this.toggleRowSelection(row, selected);
   };
 
   // #endregion
-}
-
-interface RowMetadata {
-  id: RowId;
-  index: number;
-  searchScore?: number;
-  /** Precomputed search tokens */
-  searchTokens: Record<string, string[]>;
-  /** Precomputed search values */
-  searchValues: Record<string, string>;
-  /** Precomputed sort values */
-  sortValues: Record<string, number | null>;
-  highlightIndices?: Record<string, [number, number][]>;
-  selected: boolean;
-}
-
-interface SearchResult {
-  score: number;
-  ranges: [number, number][]; // Array of [start, end] tuples
 }
 
 declare global {
@@ -1292,4 +1402,3 @@ declare global {
     'yatl-table': YatlTable;
   }
 }
-

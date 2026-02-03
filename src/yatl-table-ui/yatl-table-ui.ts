@@ -1,11 +1,6 @@
 import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-
-import {
-  YatlColumnToggleRequestEvent,
-  YatlToolbarSearchInput,
-} from '../events';
-import { NestedKeyOf, UnspecifiedRecord } from '../types';
+import { UnspecifiedRecord } from '../types';
 import { YatlTable } from '../yatl-table/yatl-table';
 
 import styles from './yatl-table-ui.styles';

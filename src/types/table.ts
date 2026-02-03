@@ -1,7 +1,5 @@
-import { FilterCallback } from '../types';
 import { ColumnState, RestorableColumnState } from './columns';
-import { NestedKeyOf, RowId } from './common';
-import { Filters } from './filters';
+import { RowId } from './common';
 
 export type RowIdCallback<T> = (row: T, index: number) => RowId;
 

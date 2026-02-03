@@ -110,6 +110,11 @@ export class YatlTable<
     if (this._controller === controller) {
       return;
     }
+
+    if (this._controller) {
+      this._controller.detach(this);
+    }
+
     this._controller = controller;
     controller.attach(this);
   }

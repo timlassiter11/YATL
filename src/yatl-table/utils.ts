@@ -1,34 +1,4 @@
 import { html, TemplateResult } from 'lit';
-import { ColumnState, Compareable } from '../types';
-
-function isValidKey<K extends string>(
-  key: string,
-  obj: Record<K, unknown>,
-): key is K {
-  return key in obj;
-}
-
-/**
- * Get a value from an object based on a path.
- * @param obj - The object to get the value from
- * @param path - The path of the value
- * @returns The value found at the given path
- */
-export function getNestedValue(obj: object, path: string): unknown {
-  const keys = path.split('.');
-
-  let current = obj;
-
-  for (const key of keys) {
-    if (current && isValidKey(key, current)) {
-      current = current[key];
-    } else {
-      return undefined; // Or handle the error as needed
-    }
-  }
-
-  return current;
-}
 
 /**
  * Highlights sections of a string based on index ranges.
@@ -97,92 +67,23 @@ export function highlightText(
   return html`${result}`;
 }
 
-export function getColumnStateChanges<T>(
-  oldState: ColumnState<T> | undefined,
-  newState: ColumnState<T>,
-): (keyof ColumnState<T>)[] {
-  if (oldState && oldState.field !== newState.field) {
-    throw Error(
-      `attempting to compare states for different fields: ${oldState.field}, ${newState.field}`,
-    );
-  }
-
-  const changes: (keyof ColumnState<T>)[] = [];
-  if (oldState?.visible !== newState.visible) {
-    changes.push('visible');
-  }
-
-  if (oldState?.width !== newState.width) {
-    changes.push('width');
-  }
-
-  if (
-    oldState?.sort !== newState.sort ||
-    oldState.sort?.order !== newState.sort?.order ||
-    oldState.sort?.priority !== newState.sort?.priority
-  ) {
-    changes.push('sort');
-  }
-
-  return changes;
-}
-
-export function isCompareable(value: unknown): value is Compareable {
-  return (
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    value instanceof Date
-  );
-}
-
-export function getCompareableValue(value: unknown) {
-  if (
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'bigint'
-  ) {
-    return value;
-  } else if (typeof value === 'boolean') {
-    return Number(value);
-  } else if (value instanceof Date) {
-    return value.getTime();
-  } else {
-    return String(value);
-  }
-}
-
-/**
- * Creates a mapping of values to their sorted rank (0-based index).
- * Handles locale comparison correctly during the setup phase.
+/*
+ * Converts a string to a human-readable format.
+ * - Replaces underscores with spaces
+ * - Inserts spaces before uppercase letters (for camelCase)
+ * - Capitalizes the first letter of each word
+ *
+ * @param {string} str - The input string to convert.
+ * @returns {string} - The converted human-readable string.
  */
-export function createRankMap(
-  values: [unknown, unknown][],
-  locale?: string,
-): Map<unknown, number> {
-  const unique = Array.from(new Set(values));
-  // Use Intl.Collator for high-performance, correct locale sorting
-  const collator = new Intl.Collator(locale, {
-    numeric: true,
-    sensitivity: 'base',
-  });
-
-  unique.sort(([_aOrig, aMod], [_bOrig, bMod]) => {
-    if (aMod == null && bMod == null) return 0;
-    if (aMod == null) return -1;
-    if (aMod == null) return 1;
-    const aValue = getCompareableValue(aMod);
-    const bValue = getCompareableValue(bMod);
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return collator.compare(String(aValue), String(bValue));
-    }
-
-    if (aValue < bValue) return -1;
-    if (bValue < aValue) return 1;
-    return 0;
-  });
-
-  const rankMap = new Map<unknown, number>();
-  unique.forEach(([orig, _mod], index) => rankMap.set(orig, index));
-  return rankMap;
-}
+export const toHumanReadable = (str: string) => {
+  return (
+    str
+      // Replace underscores with spaces
+      .replace(/_/g, ' ')
+      // Insert spaces before uppercase letters (for camelCase)
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      // Capitalize the first letter of each word
+      .replace(/\b\w/g, char => char.toUpperCase())
+  );
+};

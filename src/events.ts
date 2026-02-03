@@ -20,7 +20,7 @@ export class YatlEvent extends Event {
   }
 }
 
-// #region --- Table Events ---
+// #region Table Events
 
 export class YatlRowClickEvent<
   T extends object = UnspecifiedRecord,
@@ -41,7 +41,11 @@ export class YatlRowClickEvent<
 export class YatlRowSelectRequestEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-row-select-request';
 
-  constructor(public readonly selectedIds: RowId[]) {
+  constructor(
+    public readonly rowId: RowId,
+    public readonly selected: boolean,
+    public readonly currentlySelectedRows: RowId[],
+  ) {
     super(YatlRowSelectRequestEvent.EVENT_NAME, { cancelable: true });
   }
 }
@@ -49,7 +53,10 @@ export class YatlRowSelectRequestEvent extends YatlEvent {
 export class YatlRowSelectEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-row-select';
 
-  constructor(public readonly selectedIds: RowId[]) {
+  constructor(
+    public readonly selectedIds: RowId[],
+    public readonly previouslySelectedRows: RowId[],
+  ) {
     super(YatlRowSelectEvent.EVENT_NAME);
   }
 }
@@ -62,6 +69,7 @@ export class YatlColumnSortRequestEvent<
   constructor(
     public readonly field: NestedKeyOf<T>,
     public readonly order: SortOrder | null,
+    public readonly multisort: boolean,
   ) {
     super(YatlColumnSortRequestEvent.EVENT_NAME, { cancelable: true });
   }
@@ -75,6 +83,7 @@ export class YatlColumnSortEvent<
   constructor(
     public readonly field: NestedKeyOf<T>,
     public readonly order: SortOrder | null,
+    public readonly multisort: boolean,
   ) {
     super(YatlColumnSortEvent.EVENT_NAME);
   }
@@ -122,9 +131,9 @@ export class YatlColumnReorderRequestEvent<
   public static readonly EVENT_NAME = 'yatl-column-reorder-request';
 
   constructor(
-    public readonly draggedColumn: NestedKeyOf<T>,
-    public readonlydroppedColumn: NestedKeyOf<T>,
-    public readonly order: NestedKeyOf<T>[],
+    public readonly movedColumn: NestedKeyOf<T>,
+    public readonly originalIndex: number,
+    public readonly newIndex: number,
   ) {
     super(YatlColumnReorderRequestEvent.EVENT_NAME, { cancelable: true });
   }
@@ -231,5 +240,8 @@ declare global {
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
 
     [YatlDropdownToggleEvent.EVENT_NAME]: YatlDropdownToggleEvent;
+    [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
+    [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;
+    [YatlToolbarExportClick.EVENT_NAME]: YatlToolbarExportClick;
   }
 }

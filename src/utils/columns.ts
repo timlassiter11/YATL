@@ -31,9 +31,38 @@ export function createState<T>(
 ): ColumnState<T> {
   return {
     field,
-    title: defaults?.title ?? field,
     visible: defaults?.visible ?? true,
     width: defaults?.width ?? null,
     sort: defaults?.sort ? { ...defaults.sort } : null,
   };
+}
+
+export function getColumnStateChanges<T>(
+  oldState: ColumnState<T> | undefined,
+  newState: ColumnState<T>,
+): (keyof ColumnState<T>)[] {
+  if (oldState && oldState.field !== newState.field) {
+    throw Error(
+      `attempting to compare states for different fields: ${oldState.field}, ${newState.field}`,
+    );
+  }
+
+  const changes: (keyof ColumnState<T>)[] = [];
+  if (oldState?.visible !== newState.visible) {
+    changes.push('visible');
+  }
+
+  if (oldState?.width !== newState.width) {
+    changes.push('width');
+  }
+
+  if (
+    oldState?.sort !== newState.sort ||
+    oldState.sort?.order !== newState.sort?.order ||
+    oldState.sort?.priority !== newState.sort?.priority
+  ) {
+    changes.push('sort');
+  }
+
+  return changes;
 }

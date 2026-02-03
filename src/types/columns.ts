@@ -177,11 +177,6 @@ export interface ColumnState<T> {
   field: NestedKeyOf<T>;
 
   /**
-   * The display title of the column
-   */
-  title: string;
-
-  /**
    * The current visibility of the column.
    */
   visible: boolean;

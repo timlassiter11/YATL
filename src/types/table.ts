@@ -1,7 +1,5 @@
-import { FilterCallback } from '../types';
 import { ColumnState, RestorableColumnState } from './columns';
-import { NestedKeyOf, RowId } from './common';
-import { Filters } from './filters';
+import { RowId } from './common';
 
 export type RowIdCallback<T> = (row: T, index: number) => RowId;
 
@@ -48,6 +46,9 @@ export interface StorageOptions {
 
   /** Save the current order of columns */
   saveColumnOrder?: boolean;
+
+  /** Save the currently selected rows */
+  saveSelectedRows?: boolean;
 }
 
 /**
@@ -65,16 +66,17 @@ export interface TableState<T> {
   searchQuery: string;
 
   /**
-   * The current filters applied to the table or null if no filters are applied.
+   * Currently selected row IDs.
    */
-  filters: Filters<T> | FilterCallback<T> | null;
-
-  /**
-   * The current column order represented as a list of their fields from left to right.
-   */
-  columnOrder: NestedKeyOf<T>[];
+  selectedRows: RowId[];
 }
 
 export type RestorableTableState<T> = Partial<
   Omit<TableState<T>, 'columns'>
 > & { columns?: RestorableColumnState<T>[] };
+
+export interface ExportOptions {
+  includeAllRows?: boolean;
+  includeHiddenColumns?: boolean;
+  includeInternalColumns?: boolean;
+}

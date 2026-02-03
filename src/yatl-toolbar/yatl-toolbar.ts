@@ -6,18 +6,14 @@ import { repeat } from 'lit/directives/repeat.js';
 import theme from '../theme';
 import styles from './yatl-toolbar.styles';
 import {
-  YatlColumnToggleRequestEvent,
   YatlDropdownToggleEvent,
   YatlToolbarExportClick,
   YatlToolbarSearchChange,
   YatlToolbarSearchInput,
 } from '../events';
-
-export interface ColumnVisibilityToggleState {
-  field: string;
-  title: string;
-  visible: boolean;
-}
+import { YatlTableController } from '../yatl-table-controller';
+import { ifDefined } from 'lit/directives/if-defined.js';
+import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
 
 /**
  * A table toolbar component with a search input, column picker, and export button.
@@ -36,20 +32,30 @@ export interface ColumnVisibilityToggleState {
  *
  */
 @customElement('yatl-toolbar')
-export class YatlToolbar extends LitElement {
+export class YatlToolbar<
+  T extends object = UnspecifiedRecord,
+> extends LitElement {
   public static override styles = [theme, styles];
+
+  private _controller?: YatlTableController<T>;
+  @property({ attribute: false })
+  public get controller() {
+    return this._controller;
+  }
+  public set controller(controller) {
+    if (this._controller === controller) {
+      return;
+    }
+
+    this._controller = controller;
+    controller?.attach(this);
+  }
 
   @property({ type: Boolean })
   public showColumnPicker = true;
 
   @property({ type: Boolean })
   public showExportButton = true;
-
-  @property({ attribute: false })
-  public columnVisibilityStates: ColumnVisibilityToggleState[] = [];
-
-  @property({ type: String })
-  public searchQuery = '';
 
   protected override render() {
     return html`
@@ -59,7 +65,7 @@ export class YatlToolbar extends LitElement {
           class="search"
           type="search"
           placeholder="Search"
-          value=${this.searchQuery}
+          value=${ifDefined(this.controller?.searchQuery)}
           @input=${this.onSearchInput}
           @change=${this.onSearchChange}
         />
@@ -97,7 +103,7 @@ export class YatlToolbar extends LitElement {
           </svg>
         </yatl-button>
         ${repeat(
-          this.columnVisibilityStates,
+          this.controller?.displayColumns ?? [],
           s => s.field,
           s => this.renderColumnVisibilityToggle(s),
         )}
@@ -105,20 +111,22 @@ export class YatlToolbar extends LitElement {
     `;
   }
 
-  protected renderColumnVisibilityToggle(state: ColumnVisibilityToggleState) {
+  protected renderColumnVisibilityToggle(column: DisplayColumnOptions<T>) {
+    const state = this.controller!.getColumnState(column.field);
     return html`
       <yatl-dropdown-item
         part="column-picker-item"
         .checked=${state.visible}
         .value=${state.field}
-        >${state.title}</yatl-dropdown-item
+        >${column.title}</yatl-dropdown-item
       >
     `;
   }
 
   private handleDropdownToggle = (event: YatlDropdownToggleEvent) => {
-    this.dispatchEvent(
-      new YatlColumnToggleRequestEvent(event.value, event.checked),
+    this.controller?.toggleColumnVisibility(
+      event.value as NestedKeyOf<T>,
+      event.checked,
     );
   };
 
@@ -146,6 +154,7 @@ export class YatlToolbar extends LitElement {
 
   private onSearchInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
+    this.controller?.search(input.value);
     this.dispatchEvent(new YatlToolbarSearchInput(input.value));
   };
 

@@ -1,45 +1,35 @@
 import type {
-  ColumnFilterCallback,
   ColumnOptions,
   ColumnState,
   DisplayColumnOptions,
-  FilterCallback,
-  Filters,
+  ExportOptions,
   NestedKeyOf,
-  QueryToken,
   RestorableColumnState,
   RestorableTableState,
   RowId,
-  RowIdCallback,
   RowPartsCallback,
-  RowSelectionMethod,
   SortOrder,
-  StorageOptions,
   TableState,
-  TokenizerCallback,
   UnspecifiedRecord,
 } from '../types';
 
 import {
-  createRegexTokenizer,
-  createState,
-  findColumn,
+  getColumnStateChanges,
+  getNestedValue,
   isDisplayColumn,
-  isInternalColumn,
-  isRowIdType,
-  isRowSelectionMethod,
-  whitespaceTokenizer,
 } from '../utils';
 
-import {
-  getNestedValue,
-  getColumnStateChanges,
-  highlightText,
-  createRankMap,
-} from './utils';
+import { highlightText, toHumanReadable } from './utils';
 
-import { html, LitElement, nothing, PropertyValues, TemplateResult } from 'lit';
-import { customElement, property, query, state } from 'lit/decorators.js';
+import {
+  YatlRowClickEvent,
+  YatlRowSelectRequestEvent,
+  YatlColumnSortRequestEvent,
+  YatlColumnReorderRequestEvent,
+} from '../events';
+
+import { html, LitElement, nothing, TemplateResult } from 'lit';
+import { customElement, property, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -47,52 +37,11 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
-import {
-  YatlColumnReorderEvent,
-  YatlColumnReorderRequestEvent,
-  YatlColumnResizeEvent,
-  YatlColumnSortEvent,
-  YatlColumnSortRequestEvent,
-  YatlColumnToggleEvent,
-  YatlColumnToggleEvent as YatlColumnToggleRequestEvent,
-  YatlRowClickEvent,
-  YatlRowSelectEvent,
-  YatlRowSelectRequestEvent,
-  YatlTableSearchEvent,
-  YatlTableStateChangeEvent,
-  YatlTableViewChangeEvent,
-} from '../events';
 import theme from '../theme';
+import { YatlTableController } from '../yatl-table-controller/yatl-table-controller';
 import styles from './yatl-table.styles';
 
 // #region --- Constants ---
-
-// Debounce between state saves
-const STATE_SAVE_DEBOUNCE = 1000;
-
-const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
-  storage: 'local',
-  saveColumnSortOrders: true,
-  saveColumnVisibility: true,
-  saveColumnWidths: true,
-  saveColumnOrder: true,
-};
-
-// Properties that should trigger a save
-const SAVE_TRIGGERS = new Set<keyof YatlTable>([
-  'searchQuery',
-  'filters',
-  'columns',
-  'columnOrder',
-  'columnStates',
-  'storageOptions',
-]);
-
-const MATCH_WEIGHTS = {
-  EXACT: 100,
-  PREFIX: 50,
-  SUBSTRING: 10,
-};
 
 // #endregion
 
@@ -130,54 +79,11 @@ export class YatlTable<
   // #region --- State Data ---
 
   // Property data
-  private _enableSearchTokenization = false;
-  private _enableSearchScoring = false;
-  // Original options passed by the user
-  private _columns: ColumnOptions<T>[] = [];
-  // Options mapped by field for faster lookup
-  private _columnDefinitionMap = new Map<NestedKeyOf<T>, ColumnOptions<T>>();
-  private _columnStateMap = new Map<NestedKeyOf<T>, Readonly<ColumnState<T>>>();
-  private _columnOrder: NestedKeyOf<T>[] = [];
-  private _rowSelectionMethod: RowSelectionMethod | null = null;
-  private _selectedRowIds = new Set<RowId>();
-  private _storageOptions: StorageOptions | null = null;
-  private _rowIdCallback: RowIdCallback<T> = (row, index) => {
-    if ('id' in row && isRowIdType(row.id)) return row.id;
-    if ('key' in row && isRowIdType(row.key)) return row.key;
-    if ('_id' in row && isRowIdType(row._id)) return row._id;
-    warnMissingId();
-    return index;
-  };
-  private _data: T[] = [];
-  private _searchQuery = '';
-  private _searchTokenizer: TokenizerCallback = whitespaceTokenizer;
-  private _filters: Filters<T> | FilterCallback<T> | null = null;
-
-  @state()
-  private _filteredData: T[] = [];
-
-  // Flag if we have already restored the state or not.
-  private hasRestoredState = false;
-
-  // save state debounce timer
-  private saveTimer = 0;
-
-  // Flags set when something changes that
-  // requires the filter or sort logic to re-run.
-  private filterDirty = false;
-  private sortDirty = false;
 
   // The last time the data was updated.
   // For displaying in the footer only.
   private dataLastUpdate: Date | null = null;
 
-  // Maps rows to their metadata
-  private rowMetadata = new WeakMap<T, RowMetadata>();
-  // Map row ids to their rows for faster lookup
-  private idToRowMap = new Map<RowId, T>();
-  // List of tokens created from the current query
-  private queryTokens: QueryToken[] | null = null;
-  // Column resize state
   private resizeState: {
     active: boolean;
     startX: number;
@@ -193,6 +99,20 @@ export class YatlTable<
   // #endregion
 
   // #region --- Properties ---
+
+  private _controller = new YatlTableController<T>(this);
+  @property({ attribute: false })
+  public get controller() {
+    return this._controller;
+  }
+
+  public set controller(controller) {
+    if (this._controller === controller) {
+      return;
+    }
+    this._controller = controller;
+    controller.attach(this);
+  }
 
   /**
    * Default sortability for all columns.
@@ -239,18 +159,16 @@ export class YatlTable<
    */
   @property({ type: Boolean, attribute: 'enable-search-tokenization' })
   public get enableSearchTokenization() {
-    return this._enableSearchTokenization;
+    return this.controller.enableSearchTokenization;
   }
 
   public set enableSearchTokenization(enable) {
-    if (this._enableSearchTokenization === enable) {
+    const oldValue = this.enableSearchTokenization;
+    if (oldValue === enable) {
       return;
     }
 
-    const oldValue = this._enableSearchTokenization;
-    this._enableSearchTokenization = enable;
-    this.updateInternalQuery();
-    this.filterDirty = true;
+    this.controller.enableSearchTokenization = enable;
     this.requestUpdate('enableSearchTokenization', oldValue);
   }
 
@@ -262,17 +180,16 @@ export class YatlTable<
    */
   @property({ type: Boolean, attribute: 'enable-search-scoring' })
   public get enableSearchScoring() {
-    return this._enableSearchScoring;
+    return this.controller.enableSearchScoring;
   }
 
   public set enableSearchScoring(enable) {
-    if (this._enableSearchScoring === enable) {
+    const oldValue = this.enableSearchScoring;
+    if (oldValue === enable) {
       return;
     }
 
-    const oldValue = this._enableSearchScoring;
-    this._enableSearchScoring = enable;
-    this.filterDirty = true;
+    this.controller.enableSearchScoring = enable;
     this.requestUpdate('enableSearchScoring', oldValue);
   }
 
@@ -325,77 +242,36 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get columns() {
-    return this._columns;
+    return this.controller.columns;
   }
 
   public set columns(columns) {
-    if (this._columns === columns) {
+    const oldValue = this.columns;
+    if (oldValue === columns) {
       return;
     }
 
-    const oldValue = this._columns;
-    this._columns = columns;
-    this.filterDirty = true;
-    // Cache these in a map for faster lookups
-    this._columnDefinitionMap = new Map();
     for (const column of columns) {
-      this._columnDefinitionMap.set(column.field, column);
+      if (isDisplayColumn(column) && column.title === undefined) {
+        column.title = toHumanReadable(column.field);
+      }
     }
+
+    this.controller.columns = columns;
     this.requestUpdate('columns', oldValue);
   }
 
   /**
    * Gets a list of columns with the display role
-   * **This will always be ordered by {@link YatlTable.columnOrder}**
+   * **This will always be ordered the same as the visual column order**
    */
   public get displayColumns() {
-    return this.columnOrder
-      .map(field => this._columnDefinitionMap.get(field))
-      .filter(isDisplayColumn);
-  }
-
-  /**
-   * The current order of the columns.
-   * * **NOTE:** This includes hidden columns but not internal columns
-   */
-  @property({ attribute: false })
-  public get columnOrder() {
-    // Augment the column order with missing columns
-    // from the normal column list.
-    const finalOrder = new Set<NestedKeyOf<T>>();
-    for (const field of this._columnOrder) {
-      const col = this.getDisplayColumn(field);
-      if (col) {
-        finalOrder.add(field);
-      }
-    }
-
-    for (const col of this.columns) {
-      if (isDisplayColumn(col) && !finalOrder.has(col.field)) {
-        finalOrder.add(col.field);
-      }
-    }
-    return [...finalOrder];
-  }
-
-  public set columnOrder(columns) {
-    if (this._columnOrder === columns) {
-      return;
-    }
-
-    const oldValue = this._columnOrder;
-    this._columnOrder = [...columns];
-    this.requestUpdate('columnOrder', oldValue);
+    return this.controller.displayColumns;
   }
 
   @property({ attribute: false })
   public get columnStates() {
-    return this.columnOrder.map(field => {
-      const column = this.getDisplayColumn(field);
-      const state = this.getOrCreateColumnState(field);
-      // Always return a copy so the user can't modify it.
-      return createState(field, { ...state, title: column?.title });
-    });
+    return this.controller.columnStates;
   }
 
   public set columnStates(states) {
@@ -407,12 +283,7 @@ export class YatlTable<
       const stateChanges = getColumnStateChanges(oldState, state);
       if (stateChanges.length) {
         changed = true;
-        if (stateChanges.includes('sort')) {
-          this.sortDirty = true;
-        }
-
-        const newState = createState(state.field, state);
-        this._columnStateMap.set(state.field, newState);
+        break;
       }
     }
 
@@ -420,6 +291,7 @@ export class YatlTable<
       return;
     }
 
+    this.controller.columnStates = states;
     this.requestUpdate('columnStates', oldValue);
   }
 
@@ -429,18 +301,16 @@ export class YatlTable<
    */
   @property({ type: String, attribute: 'search-query' })
   public get searchQuery() {
-    return this._searchQuery;
+    return this.controller.searchQuery;
   }
 
   public set searchQuery(query) {
-    if (this._searchQuery === query) {
+    const oldValue = this.searchQuery;
+    if (oldValue === query) {
       return;
     }
 
-    const oldValue = this._searchQuery;
-    this._searchQuery = query;
-    this.updateInternalQuery();
-    this.filterDirty = true;
+    this.controller.searchQuery = query;
     this.requestUpdate('searchQuery', oldValue);
   }
 
@@ -451,17 +321,16 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get searchTokenizer() {
-    return this._searchTokenizer;
+    return this.controller.searchTokenizer;
   }
 
   public set searchTokenizer(tokenizer) {
-    if (this._searchTokenizer === tokenizer) {
+    const oldValue = this.searchTokenizer;
+    if (oldValue === tokenizer) {
       return;
     }
 
-    const oldValue = this._searchTokenizer;
-    this._searchTokenizer = tokenizer;
-    this.filterDirty = true;
+    this.controller.searchTokenizer = tokenizer;
     this.requestUpdate('searchTokenizer', oldValue);
   }
 
@@ -482,17 +351,16 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get filters() {
-    return this._filters;
+    return this.controller.filters;
   }
 
   public set filters(filters) {
-    if (this._filters === filters) {
+    const oldValue = this.filters;
+    if (oldValue === filters) {
       return;
     }
 
-    const oldValue = this._filters;
-    this._filters = filters;
-    this.filterDirty = true;
+    this.controller.filters = filters;
     this.requestUpdate('filters', oldValue);
   }
 
@@ -510,23 +378,16 @@ export class YatlTable<
    */
   @property({ type: String })
   public get rowSelectionMethod() {
-    return this._rowSelectionMethod;
+    return this.controller.rowSelectionMethod;
   }
+
   public set rowSelectionMethod(selection) {
-    if (
-      this._rowSelectionMethod === selection ||
-      !isRowSelectionMethod(selection)
-    ) {
+    const oldValue = this.rowSelectionMethod;
+    if (oldValue === selection) {
       return;
     }
 
-    const oldValue = this._rowSelectionMethod;
-    this._rowSelectionMethod = selection;
-    if (selection === 'single') {
-      this.selectedRowIds = this.selectedRowIds.slice(0, 1);
-    } else if (!selection) {
-      this.selectedRowIds = [];
-    }
+    this.controller.rowSelectionMethod = selection;
     this.requestUpdate('rowSelectionMethod', oldValue);
   }
 
@@ -537,26 +398,17 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get selectedRowIds() {
-    return [...this._selectedRowIds];
+    return this.controller.selectedRowIds;
   }
 
   public set selectedRowIds(rows) {
-    if (
-      rows.length === this._selectedRowIds.size &&
-      rows.every(a => this._selectedRowIds.has(a))
-    ) {
+    const oldValue = new Set(this.selectedRowIds);
+    if (oldValue.size === rows.length && rows.every(r => oldValue.has(r))) {
       return;
     }
 
-    if (this.rowSelectionMethod === 'single') {
-      rows = rows.slice(0, 1);
-    } else if (!this.rowSelectionMethod) {
-      rows = [];
-    }
-
-    const oldValue = this.selectedRowIds;
-    this._selectedRowIds = new Set(rows);
-    this.requestUpdate('selectedRowIds', oldValue);
+    this.controller.selectedRowIds = rows;
+    this.requestUpdate('selectedRows', [...oldValue]);
   }
 
   /**
@@ -565,39 +417,28 @@ export class YatlTable<
    */
   @property({ type: Object, attribute: 'storage-options' })
   public get storageOptions() {
-    return this._storageOptions;
+    return this.controller.storageOptions;
   }
 
   public set storageOptions(options) {
-    if (this._storageOptions === options) {
-      return;
-    }
-
-    const oldValue = this._storageOptions;
-    this._storageOptions = options;
-    if (!this.hasRestoredState) {
-      this.loadStateFromStorage();
-    }
+    const oldValue = this.storageOptions;
+    // TODO: Check if anything changed
+    this.controller.storageOptions = options;
     this.requestUpdate('storageOptions', oldValue);
   }
 
   @property({ attribute: false })
   public get rowIdCallback() {
-    return this._rowIdCallback;
+    return this.controller.rowIdCallback;
   }
 
   public set rowIdCallback(callback) {
-    if (this._rowIdCallback === callback) {
+    const oldValue = this.rowIdCallback;
+    if (oldValue === callback) {
       return;
     }
 
-    const oldValue = this._rowIdCallback;
-    this._rowIdCallback = callback;
-    // Update IDs in metadata for existing data.
-    for (let i = 0; i < this.data.length; ++i) {
-      const row = this.data[i];
-      this.rowMetadata.get(row)!.id = this._rowIdCallback(row, i);
-    }
+    this.controller.rowIdCallback = callback;
     this.requestUpdate('rowIdCallback', oldValue);
   }
 
@@ -607,30 +448,18 @@ export class YatlTable<
    */
   @property({ attribute: false })
   public get data() {
-    return this._data;
+    return this.controller.data;
   }
 
   public set data(value: T[]) {
-    const oldValue = this._data;
-    this._data = value;
+    const oldValue = this.data;
+    this.controller.data = value;
     this.dataLastUpdate = new Date();
-    this.selectedRowIds = [];
-    this.createMetadata();
-    this.filterDirty = true;
     this.requestUpdate('data', oldValue);
   }
 
   get filteredData() {
-    if (this.filterDirty) {
-      this.filterRows();
-    } else if (this.sortDirty) {
-      this.sortRows();
-    }
-
-    this.filterDirty = false;
-    this.sortDirty = false;
-
-    return [...this._filteredData];
+    return this.controller.filteredData;
   }
 
   // #endregion
@@ -638,11 +467,11 @@ export class YatlTable<
   // #region --- Public Methods ---
 
   public getColumn(field: NestedKeyOf<T>) {
-    return this._columnDefinitionMap.get(field);
+    return this.controller.getColumn(field);
   }
 
   public getDisplayColumn(field: NestedKeyOf<T>) {
-    const column = this._columnDefinitionMap.get(field);
+    const column = this.getColumn(field);
     if (column && isDisplayColumn(column)) {
       return column;
     }
@@ -652,16 +481,7 @@ export class YatlTable<
    * Gets a copy of the current state of the table.
    */
   public getTableState(): TableState<T> {
-    return {
-      searchQuery: this.searchQuery,
-      filters: this.filters,
-      columnOrder: this.columnOrder,
-      columns: this.displayColumns.map(column => {
-        const state = this.getOrCreateColumnState(column.field);
-        // Always return a copy so the user can't modify it
-        return createState(column.field, state);
-      }),
-    };
+    return this.controller.getTableState();
   }
 
   /**
@@ -669,37 +489,18 @@ export class YatlTable<
    * @param state - The state to restore the table to.
    */
   public updateTableState(state: RestorableTableState<T>) {
-    if ('searchQuery' in state && state.searchQuery !== undefined) {
-      this.searchQuery = state.searchQuery;
-    }
-
-    if ('filters' in state && state.filters !== undefined) {
-      this.filters = state.filters;
-    }
-
-    if ('columnOrder' in state && state.columnOrder !== undefined) {
-      this.columnOrder = state.columnOrder;
-    }
-
-    if ('columns' in state && state.columns !== undefined) {
-      for (const newState of state.columns) {
-        this.updateColumnState(newState.field, newState);
-      }
-      this.requestUpdate();
-    }
+    return this.controller.updateTableState(state);
   }
 
   public getColumnState(field: NestedKeyOf<T>) {
-    return createState(field, this._columnStateMap.get(field));
+    return this.controller.getColumnState(field);
   }
 
   public updateColumnState(
     field: NestedKeyOf<T>,
     state: RestorableColumnState<T>,
   ) {
-    const currentState = this._columnStateMap.get(field);
-    const newState = createState(field, { ...currentState, ...state });
-    this.columnStates = [newState];
+    return this.controller.updateColumnState(field, state);
   }
 
   /**
@@ -714,50 +515,7 @@ export class YatlTable<
     order: SortOrder | null,
     clear: boolean = true,
   ) {
-    const state = this.getColumnState(field);
-    if (state === undefined) {
-      throw new Error(`Cannot get options for non-existent column "${field}"`);
-    }
-
-    if (order === state?.sort?.order) {
-      return;
-    }
-
-    const requestEvent = new YatlColumnSortRequestEvent(field, order);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
-    // Column was unsorted, give it a new priority
-    if (order && !state.sort) {
-      // Create a list of current sort priorities
-      const priorities = [...this._columnStateMap.values()]
-        .map(state => state.sort?.priority)
-        .filter(priority => priority !== undefined);
-
-      const maxPriority = this.columns.length + 1;
-      const priority = Math.min(maxPriority, ...priorities) - 1;
-      state.sort = { order, priority };
-    } else if (order && state.sort) {
-      // Column was sorted, just updated the order
-      state.sort.order = order;
-    } else {
-      state.sort = null;
-    }
-
-    const newStates = [state];
-    // Clear all other sorting
-    if (clear) {
-      for (const otherField of this.columnOrder) {
-        if (otherField !== field) {
-          const otherState = this.getColumnState(otherField);
-          otherState.sort = null;
-          newStates.push(otherState);
-        }
-      }
-    }
-
-    this.columnStates = newStates;
+    return this.controller.sort(field, order, clear);
   }
 
   /**
@@ -766,20 +524,7 @@ export class YatlTable<
    * @param visible - Optionally force the visibility state.
    */
   public toggleColumnVisibility(field: NestedKeyOf<T>, visible?: boolean) {
-    const state = this.getColumnState(field);
-    const newVisibility = visible !== undefined ? visible : !state.visible;
-
-    if (newVisibility === state.visible) {
-      return;
-    }
-
-    const requestEvent = new YatlColumnToggleRequestEvent(field, newVisibility);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
-    state.visible = newVisibility;
-    this.columnStates = [state];
+    return this.controller.toggleColumnVisibility(field, visible);
   }
 
   /**
@@ -787,7 +532,7 @@ export class YatlTable<
    * @param field - The field name of the column to show.
    */
   public showColumn(field: NestedKeyOf<T>) {
-    this.toggleColumnVisibility(field, true);
+    return this.controller.showColumn(field);
   }
 
   /**
@@ -795,7 +540,7 @@ export class YatlTable<
    * @param field - The field name of the column to hide.
    */
   public hideColumn(field: NestedKeyOf<T>) {
-    this.toggleColumnVisibility(field, false);
+    return this.controller.hideColumn(field);
   }
 
   /**
@@ -808,111 +553,46 @@ export class YatlTable<
     field: NestedKeyOf<T>,
     newPosition: number | NestedKeyOf<T>,
   ) {
-    const newColumnOrder = this.columnOrder;
-    const dragIndex = newColumnOrder.findIndex(col => col === this.dragColumn);
-    const dropIndex =
-      typeof newPosition === 'number'
-        ? newPosition
-        : newColumnOrder.findIndex(col => col === newPosition);
-
-    if (dragIndex > -1 && dropIndex > -1) {
-      const [draggedColumn] = newColumnOrder.splice(dragIndex, 1);
-      const droppedColumn = this.getColumn(field);
-      if (!droppedColumn) return;
-
-      newColumnOrder.splice(dropIndex, 0, draggedColumn);
-      const requestEvent = new YatlColumnReorderRequestEvent(
-        draggedColumn,
-        droppedColumn.field,
-        newColumnOrder,
-      );
-      if (!this.dispatchEvent(requestEvent)) {
-        return;
-      }
-
-      this.columnOrder = newColumnOrder;
-    }
+    return this.controller.moveColumn(field, newPosition);
   }
 
   public isRowSelected(row: T) {
-    const rowId = this.getRowId(row);
-    return this.selectedRowIds.includes(rowId);
+    return this.controller.isRowSelected(row);
   }
 
   /**
    * Toggles the selection state of a specific row.
    */
   public toggleRowSelection(row: T, state?: boolean) {
-    const rowId = this.getRowId(row);
-
-    const isSelected = this.isRowSelected(row);
-    const newSelectionState = state !== undefined ? state : isSelected;
-
-    if (newSelectionState === isSelected) {
-      return;
-    }
-
-    let newSelection: RowId[];
-    if (newSelectionState) {
-      newSelection =
-        this.rowSelectionMethod === 'single'
-          ? [rowId]
-          : [...this.selectedRowIds, rowId];
-    } else {
-      newSelection = this.selectedRowIds.filter(
-        existingId => existingId !== rowId,
-      );
-    }
-
-    const requestEvent = new YatlRowSelectRequestEvent(newSelection);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
-    this.selectedRowIds = newSelection;
+    return this.controller.toggleRowSelection(row, state);
   }
 
   /**
    * Selects a specific row.
    */
   public selectRow(row: T) {
-    this.toggleRowSelection(row, true);
+    return this.controller.selectRow(row);
   }
 
   /**
    * Deselects a specific row.
    */
   public deselectRow(row: T) {
-    this.toggleRowSelection(row, false);
+    return this.controller.deselectRow(row);
   }
 
   /**
    * Selects all currently visible rows (for "Select All" checkbox).
    */
   public selectAll() {
-    if (this.rowSelectionMethod === 'single') return;
-
-    // Use visible rows (filtered) or all rows depending on your UX preference
-    const allIds = this.filteredData.map(row => this.getRowId(row));
-
-    const requestEvent = new YatlRowSelectRequestEvent(allIds);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
-    this.selectedRowIds = allIds;
+    return this.controller.selectAll();
   }
 
   /**
    * Clears all selection.
    */
   public deselectAll() {
-    const requestEvent = new YatlRowSelectRequestEvent([]);
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
-    this.selectedRowIds = [];
+    return this.controller.deselectAll();
   }
 
   /**
@@ -920,37 +600,15 @@ export class YatlTable<
    * @param filename - The name of the file to save.
    * @param all - If `true`, exports all original data (ignoring filters). If `false` (default), exports only the currently visible (filtered and sorted) rows.
    */
-  public export(filename: string, all = false) {
-    const data = all ? this.data : this.filteredData;
-
-    const columnData = this.displayColumns;
-    const csvHeaders = columnData
-      .filter(
-        column => all || this.getOrCreateColumnState(column.field).visible,
-      )
-      .map(column => `"${column.title}"`)
-      .join(',');
-
-    const csvRows = data
-      .map(row => {
-        const list: string[] = [];
-        for (const column of columnData) {
-          const state = this.getOrCreateColumnState(column.field);
-          let value = getNestedValue(row, column.field);
-          if (all || state.visible) {
-            if (typeof column.valueFormatter === 'function') {
-              value = column.valueFormatter(value, row);
-            }
-            value = String(value).replace('"', '""');
-            list.push(`"${value}"`);
-          }
-        }
-        return list.join(',');
-      })
-      .join('\n');
-
-    const csvContent = csvHeaders + '\n' + csvRows;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8,' });
+  public export(
+    filename: string,
+    options: ExportOptions = {
+      includeAllRows: false,
+      includeHiddenColumns: false,
+      includeInternalColumns: false,
+    },
+  ) {
+    const blob = this.controller.export(options);
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = URL.createObjectURL(blob);
@@ -1036,7 +694,7 @@ export class YatlTable<
    * @returns
    */
   public getRow(id: RowId) {
-    return this.idToRowMap.get(id);
+    return this.controller.getRow(id);
   }
 
   /**
@@ -1046,10 +704,7 @@ export class YatlTable<
    * @returns The found row, or undefined if no match is found.
    */
   public findRow(field: NestedKeyOf<T>, value: unknown) {
-    return this.data.find(row => {
-      const rowValue = getNestedValue(row, field);
-      return rowValue === value;
-    });
+    return this.controller.findRow(field, value);
   }
 
   /**
@@ -1067,19 +722,11 @@ export class YatlTable<
    * ```
    */
   public findRowIndex(field: NestedKeyOf<T>, value: unknown) {
-    const row = this.findRow(field, value);
-    if (row) {
-      return this.rowMetadata.get(row)!.index;
-    }
-    return -1;
+    return this.controller.findRowIndex(field, value);
   }
 
   public updateRow(rowId: RowId, data: Partial<T>) {
-    const row = this.idToRowMap.get(rowId);
-    if (row) {
-      Object.assign(row, data);
-      this.requestUpdate('data');
-    }
+    return this.controller.updateRow(rowId, data);
   }
 
   /**
@@ -1096,11 +743,7 @@ export class YatlTable<
    * ```
    */
   public updateRowAtIndex(index: number, data: Partial<T>) {
-    const row = this.data[index];
-    if (row) {
-      Object.assign(row, data);
-      this.requestUpdate('data');
-    }
+    return this.controller.updateRowAtIndex(index, data);
   }
 
   /**
@@ -1108,13 +751,7 @@ export class YatlTable<
    * @param id - The ID of the row to delete
    */
   public deleteRow(...rowIds: RowId[]) {
-    for (const rowId of rowIds) {
-      const row = this.idToRowMap.get(rowId);
-      if (row) {
-        const metadata = this.rowMetadata.get(row)!;
-        this.deleteRowAtIndex(metadata.index);
-      }
-    }
+    return this.controller.deleteRow(...rowIds);
   }
 
   /**
@@ -1122,20 +759,12 @@ export class YatlTable<
    * @param index - The original index of the row to delete.
    */
   public deleteRowAtIndex(index: number) {
-    const row = this.data[index];
-    if (row) {
-      const metadata = this.rowMetadata.get(row)!;
-      this.idToRowMap.delete(metadata.id);
-      this.rowMetadata.delete(row);
-      this._selectedRowIds.delete(metadata.id);
-      this.selectedRowIds = [...this._selectedRowIds];
-      this.data = this.data.toSpliced(index, 1);
-    }
+    return this.controller.deleteRowAtIndex(index);
   }
 
   // #endregion
 
-  // #region --- Render Methods ---
+  // #region Render Methods
 
   protected renderColumnSortIcon(
     column: DisplayColumnOptions<T>,
@@ -1170,13 +799,12 @@ export class YatlTable<
       : nothing;
   }
 
-  protected renderHeaderCell(field: NestedKeyOf<T>) {
-    const column = this.getDisplayColumn(field);
+  protected renderHeaderCell(column: DisplayColumnOptions<T>) {
     if (!column) {
       return nothing;
     }
 
-    const state = this.getOrCreateColumnState(field);
+    const state = this.getColumnState(column.field);
     const title = column.title ?? column.field;
 
     let ariaSort: 'none' | 'ascending' | 'descending' = 'none';
@@ -1244,7 +872,7 @@ export class YatlTable<
       <div role="rowgroup" part="header" class=${classMap(classes)}>
         <div role="row" class="row header-row" part="row header-row">
           ${this.renderRowNumberHeader()} ${this.renderSelectionHeader()}
-          ${this.columnOrder.map(field => this.renderHeaderCell(field))}
+          ${this.displayColumns.map(column => this.renderHeaderCell(column))}
         </div>
       </div>
     `;
@@ -1263,19 +891,14 @@ export class YatlTable<
       return this.nullValuePlaceholder;
     }
 
-    const indices = this.rowMetadata.get(row)!.highlightIndices;
+    const indices = this.controller.getRowHighlightIndicies(row);
 
     return this.enableSearchHighlight && indices
       ? highlightText(String(value), indices[column.field])
       : value;
   }
 
-  protected renderCell(field: NestedKeyOf<T>, row: T) {
-    const column = this.getDisplayColumn(field);
-    if (!column) {
-      return nothing;
-    }
-
+  protected renderCell(column: DisplayColumnOptions<T>, row: T) {
     let value = getNestedValue(row, column.field);
     // Get the user parts from the raw value
     // before we call the value formatter.
@@ -1333,8 +956,7 @@ export class YatlTable<
   }
 
   protected renderRow(row: T, renderIndex: number) {
-    const metadata = this.rowMetadata.get(row)!;
-    const selected = this._selectedRowIds.has(metadata.id);
+    const selected = this.isRowSelected(row);
     let userParts = this.rowParts?.(row) ?? '';
     if (Array.isArray(userParts)) {
       userParts = userParts.join(' ');
@@ -1353,7 +975,7 @@ export class YatlTable<
       >
         ${this.renderRowNumberCell(rowIndex)}
         ${this.renderRowSelectorCell(row, selected)}
-        ${this.columnOrder.map(field => this.renderCell(field, row))}
+        ${this.displayColumns.map(column => this.renderCell(column, row))}
       </div>
     `;
   }
@@ -1390,7 +1012,7 @@ export class YatlTable<
     return html`
       ${repeat(
         this.filteredData,
-        item => this.rowMetadata.get(item)!.id,
+        item => this.controller.getRowId(item),
         (item, index) => this.renderRow(item, index),
       )}
     `;
@@ -1471,82 +1093,6 @@ export class YatlTable<
 
   // #region --- Lifecycle Methods ---
 
-  protected override updated(changedProperties: PropertyValues<YatlTable<T>>) {
-    super.updated(changedProperties);
-
-    // Dispatch all of the change notification events here.
-    if (changedProperties.has('searchQuery')) {
-      this.dispatchEvent(new YatlTableSearchEvent(this.searchQuery));
-    }
-
-    if (changedProperties.has('selectedRowIds')) {
-      this.dispatchEvent(new YatlRowSelectEvent(this.selectedRowIds));
-    }
-
-    if (changedProperties.has('columnOrder')) {
-      this.dispatchEvent(new YatlColumnReorderEvent(this.columnOrder));
-    }
-
-    if (changedProperties.has('columnStates')) {
-      const oldValue = changedProperties.get('columnStates');
-      for (const newState of this.columnStates) {
-        const oldState = oldValue
-          ? findColumn(oldValue, newState.field)
-          : undefined;
-        const changes = getColumnStateChanges(oldState, newState);
-        if (changes.includes('sort')) {
-          const event = new YatlColumnSortEvent(
-            newState.field,
-            newState.sort?.order ?? null,
-          );
-          this.dispatchEvent(event);
-        }
-        if (changes.includes('visible')) {
-          const event = new YatlColumnToggleEvent(
-            newState.field,
-            newState.visible,
-          );
-          this.dispatchEvent(event);
-        }
-        if (changes.includes('width')) {
-          const event = new YatlColumnResizeEvent(
-            newState.field,
-            newState.width,
-          );
-          this.dispatchEvent(event);
-        }
-      }
-    }
-
-    // We check if any of the properties that affect visual state were updated.
-    const stateProps: (keyof YatlTable<T>)[] = [
-      'columnOrder',
-      'columnStates',
-      'searchQuery',
-      'filters',
-    ];
-
-    const changedStateProp = stateProps.filter(prop =>
-      changedProperties.has(prop),
-    );
-
-    if (changedStateProp.length) {
-      this.dispatchEvent(
-        new YatlTableStateChangeEvent(this.getTableState(), changedStateProp),
-      );
-    }
-
-    if (this.storageOptions?.key) {
-      const shouldSave = Array.from(changedProperties.keys()).some(prop =>
-        SAVE_TRIGGERS.has(prop as keyof YatlTable<T>),
-      );
-
-      if (shouldSave) {
-        this.scheduleSave();
-      }
-    }
-  }
-
   public override disconnectedCallback(): void {
     super.disconnectedCallback();
     window.addEventListener('mousemove', this.handleResizeMouseMove);
@@ -1555,393 +1101,12 @@ export class YatlTable<
 
   // #endregion
 
-  // #region --- Filter Methods ---
-
-  /**
-   * Calculates a relevance score for a given query against a target string.
-   *
-   * This function implements a tiered matching strategy:
-   * 1.  **Exact Match**: The query exactly matches the target. This yields the highest score.
-   * 2.  **Prefix Match**: The target starts with the query. This is the next most relevant.
-   * 3.  **Substring Match**: The target contains the query somewhere. This is the least relevant.
-   *
-   * The final score is weighted and adjusted by the length difference between the query and the target
-   * to ensure that more specific matches (e.g., "apple" vs "application" for the query "apple") rank higher.
-   *
-   * @param query The search term (e.g., "app").
-   * @param target The string to be searched (e.g., "Apple" or "Application").
-   * @returns A numerical score representing the relevance of the match. Higher is better. Returns 0 if no match is found.
-   */
-  private calculateSearchScore(query: string, target: string): SearchResult {
-    const results: SearchResult = { score: 0, ranges: [] };
-
-    if (!query || !target) {
-      return results;
-    }
-
-    let baseScore = 0;
-    let matchTypeWeight = 0;
-
-    if (target === query) {
-      matchTypeWeight = MATCH_WEIGHTS.EXACT;
-      baseScore = query.length;
-      results.ranges.push([0, target.length]);
-    } else if (target.startsWith(query)) {
-      matchTypeWeight = MATCH_WEIGHTS.PREFIX;
-      baseScore = query.length;
-      results.ranges.push([0, query.length]);
-    } else {
-      const index = target.indexOf(query);
-      if (index !== -1) {
-        matchTypeWeight = MATCH_WEIGHTS.SUBSTRING;
-        baseScore = query.length;
-
-        let cursor = index;
-        while (cursor !== -1) {
-          results.ranges.push([cursor, cursor + query.length]);
-          cursor = target.indexOf(query, cursor + 1);
-        }
-      } else {
-        return results;
-      }
-    }
-
-    // Reward matches where the query length is close to the target length.
-    const lengthDifference = target.length - query.length;
-    const specificityBonus = 1 / (1 + lengthDifference);
-
-    // The final score is a combination of the match type's importance,
-    // the base score from the query length, and the specificity bonus.
-    results.score = baseScore * matchTypeWeight * specificityBonus;
-    return results;
-  }
-
-  private searchField(
-    query: QueryToken,
-    value: string,
-    tokens?: string[],
-  ): SearchResult {
-    const result: SearchResult = { score: 0, ranges: [] };
-
-    const addRangesFromValue = (searchTerm: string) => {
-      let idx = value.indexOf(searchTerm);
-      while (idx !== -1) {
-        result.ranges.push([idx, idx + searchTerm.length]);
-        idx = value.indexOf(searchTerm, idx + 1);
-      }
-    };
-
-    // Handle Quoted/Untokenized (Direct Search)
-    if (query.quoted || !tokens) {
-      if (!this.enableSearchScoring) {
-        // Simple boolean match
-        if (value.includes(query.value)) {
-          result.score = 1;
-          addRangesFromValue(query.value);
-        }
-      } else {
-        // Scored match
-        const calculation = this.calculateSearchScore(query.value, value);
-        result.score = calculation.score;
-        result.ranges = calculation.ranges;
-      }
-      return result;
-    }
-
-    // Handle Tokenized Search
-    // We search the tokens to check for validity/scoring,
-    // but we map back to the 'value' for highlighting.
-    if (!this.enableSearchScoring) {
-      const isMatch = tokens.some(token => token.includes(query.value));
-      if (isMatch) {
-        result.score = 1;
-        addRangesFromValue(query.value);
-      }
-      return result;
-    }
-
-    // Complex Scored Token Search
-    // We sum the scores of all matching tokens
-    for (const token of tokens) {
-      const calculation = this.calculateSearchScore(query.value, token);
-      if (calculation.score > 0) {
-        result.score += calculation.score;
-        // If a token matched, find that query in the main string
-        addRangesFromValue(query.value);
-      }
-    }
-
-    return result;
-  }
-
-  private filterField(
-    value: unknown,
-    filter: unknown,
-    filterFunction: ColumnFilterCallback | null = null,
-  ): boolean {
-    if (Array.isArray(filter)) {
-      if (filter.length === 0) {
-        return true;
-      }
-      // If it's an array, we will use an OR filter.
-      // If any filters in the array match, keep it.
-      return filter.some(element =>
-        this.filterField(value, element, filterFunction),
-      );
-    }
-
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return false;
-      }
-      return value.some(element =>
-        this.filterField(element, filter, filterFunction),
-      );
-    }
-
-    if (typeof filterFunction === 'function') {
-      return filterFunction(value, filter);
-    }
-
-    if (filter instanceof RegExp) {
-      return filter.test(String(value));
-    }
-
-    return filter === value;
-  }
-
-  private filterRow(row: T, index: number): boolean {
-    if (!this.filters) {
-      return true;
-    }
-
-    if (typeof this.filters === 'function') {
-      return this.filters(row, index);
-    }
-
-    for (const field in this.filters) {
-      const filter = getNestedValue(this.filters, field);
-      const value = getNestedValue(row, field);
-      if (typeof filter === 'function') {
-        if (!filter(value)) {
-          return false;
-        }
-      } else {
-        const column = this.getColumn(field as NestedKeyOf<T>);
-        const filterCallback = column ? column.filter : undefined;
-        if (!this.filterField(value, filter, filterCallback)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  private filterRows() {
-    const columnData = [...this.columns];
-    const fields = columnData
-      .filter(column => column.searchable)
-      .map(column => column.field);
-
-    this._filteredData = this.data.filter((row, index) => {
-      const metadata = this.rowMetadata.get(row)!;
-      metadata.searchScore = 0;
-      metadata.highlightIndices = {};
-      // Filter takes precedence over search.
-      if (!this.filterRow(row, index)) {
-        return false;
-      }
-
-      if (!this.queryTokens) {
-        return true;
-      }
-
-      for (const field of fields) {
-        const originalValue = getNestedValue(row, field);
-        const compareValue = metadata.searchValues[field];
-        const columnTokens = metadata.searchTokens[field];
-
-        if (
-          typeof originalValue !== 'string' ||
-          typeof compareValue !== 'string'
-        ) {
-          continue;
-        }
-
-        const fieldResults: SearchResult = { score: 0, ranges: [] };
-        for (const token of this.queryTokens) {
-          const results = this.searchField(token, compareValue, columnTokens);
-          fieldResults.score += results.score;
-          fieldResults.ranges.push(...results.ranges);
-        }
-
-        if (fieldResults.score > 0) {
-          metadata.searchScore += fieldResults.score;
-          metadata.highlightIndices[field] = fieldResults.ranges;
-        }
-      }
-
-      return metadata.searchScore > 0;
-    });
-
-    this.filterDirty = false;
-
-    this.sortRows();
-    this.dispatchEvent(new YatlTableViewChangeEvent(this.data));
-  }
-
-  // #endregion
-
-  // #region --- Sort Methods ---
-
-  private compareRows(a: T, b: T, field: NestedKeyOf<T>): number {
-    let aValue, bValue;
-
-    const state = this.getOrCreateColumnState(field);
-    if (!state.sort) {
-      return 0;
-    }
-
-    const aMetadata = this.rowMetadata.get(a)!;
-    const bMetadata = this.rowMetadata.get(b)!;
-
-    if (state.sort?.order === 'asc') {
-      aValue = aMetadata.sortValues[field];
-      bValue = bMetadata.sortValues[field];
-    } else {
-      aValue = bMetadata.sortValues[field];
-      bValue = aMetadata.sortValues[field];
-    }
-
-    aValue ??= Number.MIN_SAFE_INTEGER;
-    bValue ??= Number.MIN_SAFE_INTEGER;
-
-    if (aValue < bValue) return -1;
-    if (aValue > bValue) return 1;
-    return 0;
-  }
-
-  private sortRows() {
-    if (this.filterDirty) {
-      this.filterRows();
-      return;
-    }
-
-    const sortedStates = [...this._columnStateMap.values()]
-      // Filter to visible columns with active sort states
-      .filter(state => state.visible && state.sort)
-      // Sort our columns by their sort priority.
-      // This is how sorting by multiple columns is handled.
-      .sort((a, b) => b.sort!.priority - a.sort!.priority);
-
-    this._filteredData = this._filteredData.toSorted((a, b) => {
-      const aMetadata = this.rowMetadata.get(a)!;
-      const bMetadata = this.rowMetadata.get(b)!;
-
-      // Try to sort by search score if we're using scoring and there is a query.
-      if (this.enableSearchScoring && this.queryTokens) {
-        const aValue = aMetadata.searchScore || 0;
-        const bValue = bMetadata.searchScore || 0;
-        if (aValue > bValue) return -1;
-        if (aValue < bValue) return 1;
-      }
-
-      for (const state of sortedStates) {
-        const comp = this.compareRows(a, b, state.field);
-        if (comp !== 0) {
-          return comp;
-        }
-      }
-
-      // Always fall back to the index column
-      return aMetadata.index - bMetadata.index;
-    });
-    this.sortDirty = false;
-  }
-
-  // #endregion
-
-  // #region --- Utilities ---
-
-  private createMetadata() {
-    this.idToRowMap = new Map();
-    this.rowMetadata = new WeakMap();
-
-    const rankMaps = new Map<string, Map<unknown, number>>();
-    // TODO: We only need rank maps for sortable columns
-    // but the user could enable sorting later. It's easiest
-    // to just compute them all know regardless.
-    for (const column of this.columns) {
-      // Collect all raw values for this column
-      const rawValues = this.data.map(row => {
-        const originalValue = getNestedValue(row, column.field);
-        const modifiedValue = column.sorter?.(originalValue) ?? originalValue;
-        return [originalValue, modifiedValue] as [unknown, unknown];
-      });
-      rankMaps.set(column.field, createRankMap(rawValues));
-    }
-
-    let index = 0;
-    for (const row of this.data) {
-      let rowId = this._rowIdCallback(row, index);
-      // If the user screws
-      if (rowId == null || this.idToRowMap.has(rowId)) {
-        warnInvalidIdFunction(index, rowId, row);
-        rowId = `__yatl_fallback_id_${index}`;
-      }
-
-      this.idToRowMap.set(rowId, row);
-      // Add the index
-      const metadata: RowMetadata = {
-        id: rowId,
-        index: index++,
-        searchTokens: {},
-        searchValues: {},
-        sortValues: {},
-        selected: false,
-      };
-      this.rowMetadata.set(row, metadata);
-
-      for (const column of this.columns) {
-        const value = getNestedValue(row, column.field);
-        const rankMap = rankMaps.get(column.field)!;
-        metadata.sortValues[column.field] = rankMap.get(value) ?? null;
-
-        // Cache precomputed lower-case values for search
-        if (typeof value === 'string') {
-          metadata.searchValues[column.field] = value.toLocaleLowerCase();
-        }
-
-        // Tokenize any searchable columns
-        if (column.searchable && column.tokenize && value) {
-          const tokenizer = column.searchTokenizer ?? this.searchTokenizer;
-          metadata.searchTokens[column.field] = tokenizer(String(value)).map(
-            token => token.value,
-          );
-        }
-      }
-    }
-  }
-
-  private updateInternalQuery() {
-    if (this.searchQuery.length === 0) {
-      this.queryTokens = null;
-      return;
-    }
-
-    this.queryTokens = [
-      { value: this.searchQuery.toLocaleLowerCase(), quoted: true },
-    ];
-
-    if (this.enableSearchTokenization) {
-      this.queryTokens.push(...this.searchTokenizer(this.searchQuery));
-    }
-  }
+  // #region Utilities
 
   private hasVisibleColumn() {
     return (
-      this.columnOrder
-        .map(field => this.getOrCreateColumnState(field))
+      this.displayColumns
+        .map(column => this.getColumnState(column.field))
         .filter(state => state.visible).length > 0
     );
   }
@@ -1965,8 +1130,8 @@ export class YatlTable<
       widths.push('0');
     }
 
-    for (const field of this.columnOrder) {
-      const state = this.getOrCreateColumnState(field);
+    for (const column of this.displayColumns) {
+      const state = this.getColumnState(column.field);
 
       // Check if we have a fixed pixel width (User resized it)
       const hasPixelWidth = state.width != null;
@@ -1989,140 +1154,6 @@ export class YatlTable<
     return widths;
   }
 
-  private scheduleSave() {
-    window.clearTimeout(this.saveTimer);
-
-    this.saveTimer = window.setTimeout(() => {
-      this.saveStateToStorage();
-    }, STATE_SAVE_DEBOUNCE);
-  }
-
-  /**
-   * Gets the column state associated with the given field.
-   * If the state doesn't exist, a default state will be created.
-   */
-  private getOrCreateColumnState(field: NestedKeyOf<T>) {
-    if (!this._columnStateMap.has(field)) {
-      const column = this.getDisplayColumn(field);
-      const state = createState(field, { title: column?.title });
-      this._columnStateMap.set(field, state);
-    }
-
-    return this._columnStateMap.get(field)!;
-  }
-
-  private getRowId(row: T) {
-    const metadata = this.rowMetadata.get(row);
-    if (!metadata) {
-      throw new Error('The provided row does not exist in the current dataset');
-    }
-    return metadata.id;
-  }
-
-  // #endregion
-
-  // #region --- Storage Methods  ---
-
-  private saveStateToStorage() {
-    if (!this.storageOptions) {
-      return;
-    }
-
-    const options = { ...DEFAULT_STORAGE_OPTIONS, ...this.storageOptions };
-    const savedTableState: RestorableTableState<T> = {
-      columns: [],
-    };
-    const tableState = this.getTableState();
-
-    if (options.saveSearchQuery) {
-      savedTableState.searchQuery = tableState.searchQuery;
-    }
-
-    if (options.saveColumnOrder) {
-      savedTableState.columnOrder = tableState.columnOrder;
-    }
-
-    for (const columnState of tableState.columns) {
-      const savedColumnState: RestorableColumnState<T> = {
-        field: columnState.field,
-      };
-
-      if (options.saveColumnSortOrders) {
-        savedColumnState.sort = columnState.sort;
-      }
-
-      if (options.saveColumnVisibility) {
-        savedColumnState.visible = columnState.visible;
-      }
-
-      if (options.saveColumnWidths) {
-        savedColumnState.width = columnState.width;
-      }
-
-      savedTableState.columns?.push(savedColumnState);
-    }
-
-    const storage =
-      options.storage === 'session' ? sessionStorage : localStorage;
-    try {
-      storage.setItem(options.key, JSON.stringify(savedTableState));
-    } catch (error) {
-      console.warn('Failed to save table state', error);
-    }
-  }
-
-  private loadStateFromStorage() {
-    if (!this.storageOptions) {
-      return;
-    }
-
-    const options = { ...DEFAULT_STORAGE_OPTIONS, ...this.storageOptions };
-    const json = localStorage.getItem(options.key);
-    if (!json) {
-      return;
-    }
-
-    try {
-      const savedTableState = JSON.parse(json) as RestorableTableState<T>;
-      const tableStateToRestore: RestorableTableState<T> = {};
-
-      if (options.saveSearchQuery) {
-        tableStateToRestore.searchQuery = savedTableState.searchQuery;
-      }
-
-      if (options.saveColumnOrder) {
-        tableStateToRestore.columnOrder = savedTableState.columnOrder;
-      }
-
-      if (savedTableState.columns) {
-        tableStateToRestore.columns = [];
-        for (const savedColumnState of savedTableState.columns) {
-          const columnStateToRestore: RestorableColumnState<T> = {
-            field: savedColumnState.field,
-          };
-
-          if (options.saveColumnVisibility) {
-            columnStateToRestore.visible = savedColumnState.visible;
-          }
-
-          if (options.saveColumnWidths) {
-            columnStateToRestore.width = savedColumnState.width;
-          }
-
-          if (options.saveColumnSortOrders) {
-            columnStateToRestore.sort = savedColumnState.sort;
-          }
-          tableStateToRestore.columns.push(columnStateToRestore);
-        }
-      }
-
-      this.updateTableState(tableStateToRestore);
-      this.hasRestoredState = true;
-    } catch (error) {
-      console.error('Failed to restore DataTable state:', error);
-    }
-  }
-
   // #endregion
 
   // #region --- Event Handlers ---
@@ -2138,15 +1169,24 @@ export class YatlTable<
     }
 
     const multiSort = event.shiftKey;
-    const state = this.getOrCreateColumnState(column.field);
-
+    const state = this.getColumnState(column.field);
+    let sortOrder: SortOrder | null = null;
     if (!state?.sort) {
-      this.sort(column.field, 'asc', !multiSort);
+      sortOrder = 'asc';
     } else if (state.sort.order === 'asc') {
-      this.sort(column.field, 'desc', !multiSort);
-    } else if (state.sort.order) {
-      this.sort(column.field, null, !multiSort);
+      sortOrder = 'desc';
     }
+
+    const requestEvent = new YatlColumnSortRequestEvent(
+      column.field,
+      sortOrder,
+      multiSort,
+    );
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
+    this.sort(column.field, sortOrder, !multiSort);
   };
 
   private handleCellClick = (
@@ -2157,9 +1197,10 @@ export class YatlTable<
     // Ignore events if the user is highlighting text
     if (window.getSelection()?.toString()) return;
 
-    const metadata = this.rowMetadata.get(row)!;
+    const rowId = this.controller.getRowId(row);
+    const rowIndex = this.controller.getRowIndex(row);
     this.dispatchEvent(
-      new YatlRowClickEvent(row, metadata.id, metadata.index, field, event),
+      new YatlRowClickEvent(row, rowId, rowIndex, field, event),
     );
   };
 
@@ -2173,7 +1214,9 @@ export class YatlTable<
       return;
     }
 
-    let columnIndex = this.columnOrder.findIndex(col => col === field);
+    let columnIndex = this.displayColumns.findIndex(
+      column => column.field === field,
+    );
     if (columnIndex < 0) {
       return;
     }
@@ -2194,10 +1237,8 @@ export class YatlTable<
         const field = element.dataset.field as NestedKeyOf<T> | undefined;
         if (field) {
           const state = this.getColumnState(field);
-          if (state) {
-            state.width = element.getBoundingClientRect().width;
-          }
-          this._columnStateMap.set(field, state);
+          state.width = element.getBoundingClientRect().width;
+          this.updateColumnState(field, state);
         }
       });
 
@@ -2307,6 +1348,22 @@ export class YatlTable<
     }
     event.preventDefault();
     event.stopPropagation();
+
+    const newColumns = this.displayColumns;
+    const originalIndex = newColumns.findIndex(
+      col => col.field === this.dragColumn,
+    );
+    const newIndex = newColumns.findIndex(col => col.field === field);
+
+    const requestEvent = new YatlColumnReorderRequestEvent(
+      this.dragColumn,
+      originalIndex,
+      newIndex,
+    );
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
     this.moveColumn(this.dragColumn, field);
   };
 
@@ -2322,29 +1379,22 @@ export class YatlTable<
     event.stopPropagation();
     const inputElement = event.currentTarget as HTMLInputElement;
     const selected = inputElement.checked;
+
+    const rowId = this.controller.getRowId(row);
+    const selectedRows = this.selectedRowIds;
+    const requestEvent = new YatlRowSelectRequestEvent(
+      rowId,
+      selected,
+      selectedRows,
+    );
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
     this.toggleRowSelection(row, selected);
   };
 
   // #endregion
-}
-
-interface RowMetadata {
-  id: RowId;
-  index: number;
-  searchScore?: number;
-  /** Precomputed search tokens */
-  searchTokens: Record<string, string[]>;
-  /** Precomputed search values */
-  searchValues: Record<string, string>;
-  /** Precomputed sort values */
-  sortValues: Record<string, number | null>;
-  highlightIndices?: Record<string, [number, number][]>;
-  selected: boolean;
-}
-
-interface SearchResult {
-  score: number;
-  ranges: [number, number][]; // Array of [start, end] tuples
 }
 
 declare global {
@@ -2352,38 +1402,3 @@ declare global {
     'yatl-table': YatlTable;
   }
 }
-
-let _hasWarnedMissingId = false;
-function warnMissingId() {
-  if (_hasWarnedMissingId) return;
-  _hasWarnedMissingId = true;
-
-  console.warn(
-    `[yatl-table] Data rows are missing a unique 'id' or 'key' property.
-     Falling back to array index.
-     Selection and sorting may behave unexpectedly.
-     Please provide a unique ID via the 'rowIdCallback' property.
-    `,
-  );
-}
-
-let _hasWarnedInvalidIdFunction = false;
-function warnInvalidIdFunction<T>(index: number, rowId: RowId, row: T) {
-  if (_hasWarnedInvalidIdFunction) return;
-  _hasWarnedInvalidIdFunction = true;
-  console.warn(
-    `[yatl-table] rowIdCallback returned non-unique id (${rowId}) for data at index ${index}.
-    Falling back to array index.
-    Selection and sorting may behave unexpectedly.
-  `,
-  );
-  console.debug(row);
-}
-
-export {
-  createRegexTokenizer,
-  findColumn,
-  isDisplayColumn,
-  isInternalColumn,
-  whitespaceTokenizer,
-};

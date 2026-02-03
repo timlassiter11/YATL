@@ -22,18 +22,18 @@ export default css`
     background-color: var(--yatl-header-bg);
   }
 
-  .header-row {
-    background-color: var(--yatl-header-bg);
-    border-bottom: 1px solid var(--yatl-border-color);
-    font-weight: 600;
-    color: var(--yatl-header-text);
-  }
-
   .row {
     background-color: var(--yatl-bg);
     border-bottom: 1px solid var(--yatl-border-color);
     transition: background-color 50ms;
     position: relative;
+  }
+
+  .row.header-row {
+    background-color: var(--yatl-header-bg);
+    border-bottom: 1px solid var(--yatl-border-color);
+    font-weight: 600;
+    color: var(--yatl-header-text);
   }
 
   .table:not(.resizing) .row {

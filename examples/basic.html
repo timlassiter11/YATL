@@ -1,49 +1,25 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Basic Example</title>
-    <style>
-      body {
-        height: 100vh;
-        width: 100vw;
-        margin: 0;
-        padding: 20px;
-        box-sizing: border-box;
-      }
-    </style>
-  </head>
-
-  <body>
-    <yatl-table sortable resizable enable-footer></yatl-table>
-    <script src="../dist/yatl.min.global.js"></script>
-    <script>
-      window.addEventListener('load', () => {
-        const table = document.querySelector('yatl-table');
-        table.columns = [
-          {
-            field: 'index',
-            title: 'ID',
-          },
-          {
-            field: 'name',
-          },
-          {
-            field: 'value',
-          },
-        ];
-
-        // Generate random rows of data
-        table.data = new Array(100).fill(null).map((v, i) => ({
-          index: i,
-          name: `Row ${i}`,
-          value: Math.random() * 1000,
-        }));
-
-        table.addEventListener('yatl-row-click', event => {
-          console.log(event.detail);
-        });
-      });
-    </script>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <title>Basic Example</title>
+  <style>
+    body {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <script src="../dist/yatl.min.global.js"></script>
+  <yatl-table-ui></yatl-table-ui>
+  <script>
+    const table = document.querySelector('yatl-table-ui');
+    table.columns = [{ field: 'name' }, { field: 'role' }];
+    table.data = [{ name: 'Tim', role: 'Dev' }, { name: 'Champ', role: 'Best Friend' }];
+  </script>
+</body>
 </html>

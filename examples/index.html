@@ -1,260 +1,198 @@
 <!doctype html>
 <html lang="en" class="dark">
-  <head>
-    <meta charset="utf-8" />
-    <title>YATL Demo</title>
-    <link rel="stylesheet" href="./site.css" />
-    <style>
-      #searchInput {
-        flex-grow: 1;
-      }
 
-      .filters-header {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-      }
+<head>
+  <meta charset="utf-8" />
+  <title>YATL Demo</title>
+  <link rel="stylesheet" href="./site.css" />
+  <style>
+    #searchInput {
+      flex-grow: 1;
+    }
 
-      .button.close {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
+    .filters-header {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-      yatl-table-ui {
-        width: 100%;
-      }
-    </style>
-  </head>
+    .button.close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-  <body>
-    <nav>
-      <div class="nav-left">
-        <span class="nav-title">YATL</span>
-      </div>
+    yatl-table-ui {
+      width: 100%;
+    }
+  </style>
+</head>
 
-      <div class="nav-right">
-        <a
-          href="https://github.com/timlassiter11/YATL"
-          target="_blank"
-          class="nav-link"
-        >
-          GitHub
-        </a>
-        <a
-          href="https://timlassiter11.github.io/YATL/docs/index.html"
-          class="nav-link"
-        >
-          Documentation
-        </a>
+<body>
+  <nav>
+    <div class="nav-left">
+      <span class="nav-title">YATL</span>
+    </div>
 
-        <div class="nav-divider"></div>
+    <div class="nav-right">
+      <a href="https://github.com/timlassiter11/YATL" target="_blank" class="nav-link">
+        GitHub
+      </a>
+      <a href="https://timlassiter11.github.io/YATL/docs/index.html" class="nav-link">
+        Documentation
+      </a>
 
-        <button id="themeToggle" class="nav-icon-btn">
-          <svg
-            class="icon-sun"
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="5" />
-            <path
-              d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-            />
-          </svg>
-          <svg
-            class="icon-moon"
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          </svg>
-        </button>
-      </div>
-    </nav>
-    <main>
-      <div class="sidebar">
-        <form id="filtersForm" onsubmit="event.preventDefault();">
-          <div class="card">
-            <div class="filters-header">
-              <h1>Filters</h1>
-              <button
-                id="clearFiltersButton"
-                type="reset"
-                class="button close"
-                title="Clear filters"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M6 18L18 6M6 6L18 18"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="square"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div class="option-group">
-              <h2>Status</h2>
-              <select multiple name="status"></select>
-            </div>
-            <div class="option-group">
-              <h2>Date Modified</h2>
-              <label class="inline">
-                From
-                <input type="date" class="form-control" name="startDate" />
-              </label>
-              <label class="inline">
-                To
-                <input type="date" class="form-control" name="endDate" />
-              </label>
-            </div>
-          </div>
-        </form>
-        <form id="optionsForm" onsubmit="event.preventDefault();">
-          <div class="card">
-            <h1>Table Options</h1>
-            <div class="option-group">
-              <h2>Row Count</h2>
-              <input type="number" name="rowCount" value="2000" />
-            </div>
-            <div class="option-group">
-              <h2>Interactivity</h2>
-              <label>
-                <input type="checkbox" name="resizable" checked />
-                Resizable Columns
-              </label>
-              <label>
-                <input type="checkbox" name="sortable" checked />
-                Sortable Columns
-              </label>
-              <label>
-                <input type="checkbox" name="enableColumnReorder" checked />
-                Rearrangeable Columns
-              </label>
-              <label>
-                <input type="checkbox" name="enableRowNumberColumn" checked />
-                Show Row Numbers
-              </label>
-              <h4>Row Selection Method</h4>
-              <label>
-                <input
-                  type="radio"
-                  name="rowSelectionMethod"
-                  value="multi"
-                  checked
-                />
-                Multiple
-              </label>
-              <label>
-                <input type="radio" name="rowSelectionMethod" value="single" />
-                Single
-              </label>
-              <label>
-                <input type="radio" name="rowSelectionMethod" value="null" />
-                None
-              </label>
-            </div>
-            <div class="option-group">
-              <h2>Search</h2>
-              <label>
-                <input
-                  type="checkbox"
-                  name="enableSearchTokenization"
-                  checked
-                />
-                Tokenize Search
-              </label>
-              <label>
-                <input type="checkbox" name="enableSearchScoring" checked />
-                Search Scoring
-              </label>
-              <label>
-                <input type="checkbox" name="enableSearchHighlight" checked />
-                Highlight Results
-              </label>
-            </div>
-            <div class="option-group">
-              <h2>Misc</h2>
-              <label>
-                <input type="checkbox" name="striped" checked />
-                Striped
-              </label>
-              <label>
-                <input type="checkbox" name="enableFooter" checked />
-                Show Footer
-              </label>
-              <label>
-                <input type="checkbox" name="enableVirtualScroll" checked />
-                Virtual Scroll
-              </label>
-            </div>
-          </div>
-        </form>
+      <div class="nav-divider"></div>
+
+      <button id="themeToggle" class="nav-icon-btn">
+        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5" />
+          <path
+            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+        </svg>
+        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      </button>
+    </div>
+  </nav>
+  <main>
+    <div class="sidebar">
+      <form id="filtersForm" onsubmit="event.preventDefault();">
         <div class="card">
-          <h1>Render State</h1>
-          <div class="inline">
-            Rendered Rows: <span id="renderedRows">0</span>
+          <div class="filters-header">
+            <h1>Filters</h1>
+            <button id="clearFiltersButton" type="reset" class="button close" title="Clear filters">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="square"
+                  stroke-linejoin="round" />
+              </svg>
+            </button>
           </div>
-          <div class="inline">
-            Filtered Rows: <span id="filteredRows">0</span>
+          <div class="option-group">
+            <h2>Status</h2>
+            <select multiple name="status"></select>
           </div>
-          <div class="inline">Total Rows: <span id="totalRows">0</span></div>
+          <div class="option-group">
+            <h2>Date Modified</h2>
+            <label class="inline">
+              From
+              <input type="date" class="form-control" name="startDate" />
+            </label>
+            <label class="inline">
+              To
+              <input type="date" class="form-control" name="endDate" />
+            </label>
+          </div>
         </div>
+      </form>
+      <form id="optionsForm" onsubmit="event.preventDefault();">
+        <div class="card">
+          <h1>Table Options</h1>
+          <div class="option-group">
+            <h2>Row Count</h2>
+            <input type="number" name="rowCount" value="2000" />
+          </div>
+          <div class="option-group">
+            <h2>UI</h2>
+            <label>
+              <input type="checkbox" name="striped" checked />
+              Striped
+            </label>
+            <label>
+              <input type="checkbox" name="enableRowNumberColumn" checked />
+              Show Row Numbers
+            </label>
+            <label>
+              <input type="checkbox" name="enableFooter" checked />
+              Show Footer
+            </label>
+            <label>
+              <input type="checkbox" name="enableSearchHighlight" checked />
+              Highlight Results
+            </label>
+          </div>
+          <div class="option-group">
+            <h2>Interactivity</h2>
+            <label>
+              <input type="checkbox" name="resizable" checked />
+              Resizable Columns
+            </label>
+            <label>
+              <input type="checkbox" name="sortable" checked />
+              Sortable Columns
+            </label>
+            <label>
+              <input type="checkbox" name="enableColumnReorder" checked />
+              Rearrangeable Columns
+            </label>
+            <h4>Row Selection Method</h4>
+            <label>
+              <input type="radio" name="rowSelectionMethod" value="multi" checked />
+              Multiple
+            </label>
+            <label>
+              <input type="radio" name="rowSelectionMethod" value="single" />
+              Single
+            </label>
+            <label>
+              <input type="radio" name="rowSelectionMethod" value="null" />
+              None
+            </label>
+          </div>
+          <div class="option-group">
+            <h2>Misc</h2>
+            <label>
+              <input type="checkbox" name="enableSearchTokenization" checked />
+              Tokenize Search
+            </label>
+            <label>
+              <input type="checkbox" name="enableSearchScoring" checked />
+              Search Scoring
+            </label>
+            <label>
+              <input type="checkbox" name="enableVirtualScroll" checked />
+              Virtual Scroll
+            </label>
+          </div>
+        </div>
+      </form>
+      <div class="card">
+        <h1>Render State</h1>
+        <div class="inline">
+          Rendered Rows: <span id="renderedRows">0</span>
+        </div>
+        <div class="inline">
+          Filtered Rows: <span id="filteredRows">0</span>
+        </div>
+        <div class="inline">Total Rows: <span id="totalRows">0</span></div>
       </div>
-      <div class="table-wrapper">
-        <yatl-table-ui>
-          <yatl-button id="deleteRowsButton" slot="toolbar-button-group" title="Delete selected rows" disabled>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6" />
+    </div>
+    <div class="table-wrapper">
+      <yatl-table-ui>
+        <yatl-button id="deleteRowsButton" slot="toolbar-button-group" title="Delete selected rows" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6" />
 
-              <path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" />
+            <path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" />
 
-              <line x1="10" y1="11" x2="10" y2="17" />
-              <line x1="14" y1="11" x2="14" y2="17" />
-            </svg>
-          </yatl-button>
-        </yatl-table-ui>
-      </div>
-    </main>
-    <script type="importmap">
+            <line x1="10" y1="11" x2="10" y2="17" />
+            <line x1="14" y1="11" x2="14" y2="17" />
+          </svg>
+        </yatl-button>
+      </yatl-table-ui>
+    </div>
+  </main>
+  <script type="importmap">
       {
         "imports": {
           "lit": "https://cdn.jsdelivr.net/npm/lit@3.1.2/+esm",
@@ -271,6 +209,7 @@
         }
       }
     </script>
-    <script type="module" src="./main.js"></script>
-  </body>
+  <script type="module" src="./main.js"></script>
+</body>
+
 </html>

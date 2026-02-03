@@ -54,6 +54,7 @@ window.addEventListener('load', () => {
   updateTableOptions();
 
   const deleteRowsButton = document.getElementById('deleteRowsButton');
+  deleteRowsButton.disabled = table.selectedRowIds.length <= 0;
   deleteRowsButton.addEventListener('click', () => {
     table.deleteRow(...table.selectedRowIds);
     deleteRowsButton.disabled = true;

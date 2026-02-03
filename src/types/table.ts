@@ -48,6 +48,9 @@ export interface StorageOptions {
 
   /** Save the current order of columns */
   saveColumnOrder?: boolean;
+
+  /** Save the currently selected rows */
+  saveSelectedRows?: boolean;
 }
 
 /**
@@ -65,9 +68,9 @@ export interface TableState<T> {
   searchQuery: string;
 
   /**
-   * The current filters applied to the table or null if no filters are applied.
+   * Currently selected row IDs.
    */
-  filters: Filters<T> | FilterCallback<T> | null;
+  selectedRows: RowId[];
 }
 
 export type RestorableTableState<T> = Partial<

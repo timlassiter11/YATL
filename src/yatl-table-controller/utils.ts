@@ -80,3 +80,24 @@ export function createRankMap(
   unique.forEach(([orig, _mod], index) => rankMap.set(orig, index));
   return rankMap;
 }
+
+/*
+ * Converts a string to a human-readable format.
+ * - Replaces underscores with spaces
+ * - Inserts spaces before uppercase letters (for camelCase)
+ * - Capitalizes the first letter of each word
+ *
+ * @param {string} str - The input string to convert.
+ * @returns {string} - The converted human-readable string.
+ */
+export const toHumanReadable = (str: string) => {
+  return (
+    str
+      // Replace underscores with spaces
+      .replace(/_/g, ' ')
+      // Insert spaces before uppercase letters (for camelCase)
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      // Capitalize the first letter of each word
+      .replace(/\b\w/g, char => char.toUpperCase())
+  );
+};

@@ -20,18 +20,15 @@ import type {
 } from '../types';
 
 import {
-  createRegexTokenizer,
   createState,
-  findColumn,
   getNestedValue,
   isDisplayColumn,
-  isInternalColumn,
   isRowIdType,
   isRowSelectionMethod,
   whitespaceTokenizer,
 } from '../utils';
 
-import { getColumnStateChanges, createRankMap } from './utils';
+import { createRankMap, getColumnStateChanges, toHumanReadable } from './utils';
 
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 
@@ -49,6 +46,7 @@ import {
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
 } from '../events';
+import { YatlTable } from '../yatl-table/yatl-table';
 
 // #region Constants
 
@@ -61,6 +59,7 @@ const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
   saveColumnVisibility: true,
   saveColumnWidths: true,
   saveColumnOrder: true,
+  saveSelectedRows: true,
 };
 
 const MATCH_WEIGHTS = {
@@ -77,6 +76,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   // #region State Data
 
   // Property data
+  private hosts = new Set<ReactiveControllerHost>();
   private _enableSearchTokenization = false;
   private _enableSearchScoring = false;
   // Original options passed by the user
@@ -178,7 +178,12 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return;
     }
 
-    const oldValue = this._columns;
+    for (const column of columns) {
+      if (isDisplayColumn(column) && column.title === undefined) {
+        column.title = toHumanReadable(column.field);
+      }
+    }
+
     this._columns = columns;
     this.filterDirty = true;
     // Cache these in a map for faster lookups
@@ -187,6 +192,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       this._columnDefinitionMap.set(column.field, column);
     }
     this.requestUpdate('columns');
+  }
+
+  public get displayColumns() {
+    return this.columns.filter(isDisplayColumn);
   }
 
   public get columnStates() {
@@ -306,11 +315,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     this._rowSelectionMethod = selection;
-    if (selection === 'single') {
-      this.selectedRowIds = this.selectedRowIds.slice(0, 1);
-    } else if (!selection) {
-      this.selectedRowIds = [];
-    }
     this.requestUpdate('rowSelectionMethod');
   }
 
@@ -320,7 +324,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    * the original data array index, *not* the filtered data.
    */
   public get selectedRowIds() {
-    return [...this._selectedRowIds];
+    let selectedRows = [...this._selectedRowIds];
+
+    if (this.rowSelectionMethod === 'single') {
+      selectedRows = selectedRows.slice(0, 1);
+    } else if (!this.rowSelectionMethod) {
+      selectedRows = [];
+    }
+    return selectedRows;
   }
 
   public set selectedRowIds(rows) {
@@ -329,12 +340,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       rows.every(a => this._selectedRowIds.has(a))
     ) {
       return;
-    }
-
-    if (this.rowSelectionMethod === 'single') {
-      rows = rows.slice(0, 1);
-    } else if (!this.rowSelectionMethod) {
-      rows = [];
     }
 
     this._selectedRowIds = new Set(rows);
@@ -388,9 +393,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   public set data(value: T[]) {
-    const oldValue = this._data;
     this._data = value;
-    this.selectedRowIds = [];
     this.createMetadata();
     this.filterDirty = true;
     this.requestUpdate('data');
@@ -413,12 +416,21 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Public Methods
 
-  constructor(public readonly host: ReactiveControllerHost & HTMLElement) {
-    (this.host = host).addController(this);
+  constructor(table?: YatlTable<T>) {
+    if (table) {
+      this.attach(table);
+    }
   }
 
   public getColumn(field: NestedKeyOf<T>) {
     return this._columnDefinitionMap.get(field);
+  }
+
+  public getDisplayColumn(field: NestedKeyOf<T>) {
+    const column = this._columnDefinitionMap.get(field);
+    if (isDisplayColumn(column)) {
+      return column;
+    }
   }
 
   /**
@@ -427,7 +439,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public getTableState(): TableState<T> {
     return {
       searchQuery: this.searchQuery,
-      filters: this.filters,
+      selectedRows: this.selectedRowIds,
       columns: this.columnStates.map(column => {
         const state = this.getColumnState(column.field);
         // Always return a copy so the user can't modify it
@@ -445,8 +457,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       this.searchQuery = state.searchQuery;
     }
 
-    if ('filters' in state && state.filters !== undefined) {
-      this.filters = state.filters;
+    if ('selectedRows' in state && state.selectedRows) {
+      this.selectedRowIds = state.selectedRows;
     }
 
     if ('columns' in state && state.columns !== undefined) {
@@ -479,7 +491,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   public search(query: string) {
     this.searchQuery = query;
-    this.host.dispatchEvent(new YatlTableSearchEvent(query));
+    this.dispatchEvent(new YatlTableSearchEvent(query));
   }
 
   /**
@@ -504,7 +516,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     const requestEvent = new YatlColumnSortRequestEvent(field, order);
-    if (!this.host.dispatchEvent(requestEvent)) {
+    if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
@@ -540,7 +552,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.columnStates = newStates;
 
     const event = new YatlColumnSortEvent(field, order);
-    this.host.dispatchEvent(event);
+    this.dispatchEvent(event);
   }
 
   /**
@@ -557,7 +569,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     const requestEvent = new YatlColumnToggleRequestEvent(field, newVisibility);
-    if (!this.host.dispatchEvent(requestEvent)) {
+    if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
@@ -565,7 +577,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.columnStates = [state];
 
     const event = new YatlColumnToggleEvent(field, newVisibility);
-    this.host.dispatchEvent(event);
+    this.dispatchEvent(event);
   }
 
   /**
@@ -594,7 +606,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     field: NestedKeyOf<T>,
     newPosition: number | NestedKeyOf<T>,
   ) {
-    const newColumns = this.columns.filter(isDisplayColumn);
+    const newColumns = this.displayColumns;
     const originalIndex = newColumns.findIndex(col => col.field === field);
     const newIndex =
       typeof newPosition === 'number'
@@ -610,13 +622,13 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         newIndex,
         newColumns.map(c => c.field),
       );
-      if (!this.host.dispatchEvent(requestEvent)) {
+      if (!this.dispatchEvent(requestEvent)) {
         return;
       }
 
       this.columns = newColumns;
       const event = new YatlColumnReorderEvent(newColumns.map(c => c.field));
-      this.host.dispatchEvent(event);
+      this.dispatchEvent(event);
     }
   }
 
@@ -624,7 +636,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     const state = this.getColumnState(field);
     state.width = width;
     this.updateColumnState(field, state);
-    this.host.dispatchEvent(new YatlColumnResizeEvent(field, width));
+    this.dispatchEvent(new YatlColumnResizeEvent(field, width));
   }
 
   public isRowSelected(row: T) {
@@ -658,14 +670,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     const requestEvent = new YatlRowSelectRequestEvent(newSelection);
-    if (!this.host.dispatchEvent(requestEvent)) {
+    if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
     this.selectedRowIds = newSelection;
 
     const event = new YatlRowSelectEvent(newSelection);
-    this.host.dispatchEvent(event);
+    this.dispatchEvent(event);
   }
 
   /**
@@ -692,7 +704,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     const allIds = this.filteredData.map(row => this.getRowId(row));
 
     const requestEvent = new YatlRowSelectRequestEvent(allIds);
-    if (!this.host.dispatchEvent(requestEvent)) {
+    if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
@@ -704,7 +716,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    */
   public deselectAll() {
     const requestEvent = new YatlRowSelectRequestEvent([]);
-    if (!this.host.dispatchEvent(requestEvent)) {
+    if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
@@ -725,10 +737,9 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   ) {
     const data = options.includeAllRows ? this.data : this.filteredData;
 
-    let columnData = this.columns;
-    if (options.includeInternalColumns) {
-      columnData.filter(isDisplayColumn);
-    }
+    const columnData = options.includeInternalColumns
+      ? this.columns
+      : this.displayColumns;
 
     const csvHeaders = columnData
       .filter(column => {
@@ -861,16 +872,19 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    * Deletes a row at a specific original index from the table.
    * @param index - The original index of the row to delete.
    */
-  public deleteRowAtIndex(index: number) {
-    const row = this.data[index];
-    if (row) {
-      const metadata = this.rowMetadata.get(row)!;
-      this.idToRowMap.delete(metadata.id);
-      this.rowMetadata.delete(row);
-      this._selectedRowIds.delete(metadata.id);
-      this.selectedRowIds = [...this._selectedRowIds];
-      this.data = this.data.toSpliced(index, 1);
+  public deleteRowAtIndex(...indexes: number[]) {
+    const newSelectedRows = new Set(this.selectedRowIds);
+    for (const index of indexes) {
+      const row = this.data[index];
+      if (row) {
+        const metadata = this.rowMetadata.get(row)!;
+        this.idToRowMap.delete(metadata.id);
+        this.rowMetadata.delete(row);
+        newSelectedRows.delete(metadata.id);
+        this.data = this.data.toSpliced(index, 1);
+      }
     }
+    this.selectedRowIds = [...newSelectedRows];
   }
 
   public getRowId(row: T) {
@@ -899,7 +913,29 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #endregion
 
+  private dispatchEvent(event: Event) {
+    for (const host of this.hosts) {
+      if (host instanceof YatlTable) {
+        if (!host.dispatchEvent(event)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   // #region Lifecycle Methods
+  public attach(host: ReactiveControllerHost) {
+    this.hosts.add(host);
+    host.addController(this);
+    host.requestUpdate();
+  }
+
+  public detach(host: ReactiveControllerHost) {
+    host.removeController(this);
+    this.hosts.delete(host);
+  }
+
   public hostConnected(): void {}
 
   public hostDisconnected(): void {}
@@ -918,11 +954,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     const triggers = props.filter(p => SAVE_TRIGGERS.includes(p));
     if (triggers.length) {
       this.scheduleSave();
-      this.host.dispatchEvent(
+      this.dispatchEvent(
         new YatlTableStateChangeEvent(this.getTableState(), triggers),
       );
     }
-    this.host.requestUpdate();
+
+    for (const host of this.hosts) {
+      host.requestUpdate();
+    }
   }
 
   // #endregion
@@ -1159,7 +1198,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.filterDirty = false;
 
     this.sortRows();
-    this.host.dispatchEvent(new YatlTableViewChangeEvent(this.data));
+    this.dispatchEvent(new YatlTableViewChangeEvent(this.data));
   }
 
   // #endregion
@@ -1337,6 +1376,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       savedTableState.searchQuery = tableState.searchQuery;
     }
 
+    if (options.saveSelectedRows) {
+      savedTableState.selectedRows = tableState.selectedRows;
+    }
+
     for (const columnState of tableState.columns) {
       const savedColumnState: RestorableColumnState<T> = {
         field: columnState.field,
@@ -1383,6 +1426,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
       if (options.saveSearchQuery) {
         tableStateToRestore.searchQuery = savedTableState.searchQuery;
+      }
+
+      if (options.saveSelectedRows) {
+        tableStateToRestore.selectedRows = savedTableState.selectedRows;
       }
 
       if (savedTableState.columns) {
@@ -1462,11 +1509,3 @@ function warnInvalidIdFunction<T>(index: number, rowId: RowId, row: T) {
   );
   console.debug(row);
 }
-
-export {
-  createRegexTokenizer,
-  findColumn,
-  isDisplayColumn,
-  isInternalColumn,
-  whitespaceTokenizer,
-};

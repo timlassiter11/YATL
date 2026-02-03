@@ -1,14 +1,11 @@
 import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import { ColumnVisibilityToggleState } from '../yatl-toolbar';
-
 import {
   YatlColumnToggleRequestEvent,
   YatlToolbarSearchInput,
 } from '../events';
 import { NestedKeyOf, UnspecifiedRecord } from '../types';
-import { isDisplayColumn } from '../utils';
 import { YatlTable } from '../yatl-table/yatl-table';
 
 import styles from './yatl-table-ui.styles';
@@ -26,26 +23,13 @@ export class YatlTableUi<
   public showExportButton = true;
 
   protected override render() {
-    const columnToggleStates: ColumnVisibilityToggleState[] = [];
-    for (const column of this.columns.filter(isDisplayColumn)) {
-      const state = this.columnStates.find(s => s.field === column.field);
-      columnToggleStates.push({
-        field: column.field,
-        title: column.title ?? column.field,
-        visible: state?.visible ?? true,
-      });
-    }
-
     return html`
       <div class="ui-wrapper">
         <yatl-toolbar
           ?showColumnPicker=${this.showColumnPicker}
           ?showExportButton=${this.showExportButton}
-          .searchQuery=${this.searchQuery}
-          .columnVisibilityStates=${columnToggleStates}
-          @yatl-column-toggle-request=${this.handleColumnToggled}
+          .controller=${this.controller}
           @yatl-toolbar-export-click=${this.handleTableExportClicked}
-          @yatl-toolbar-search-input=${this.handleSearchInput}
           ><slot name="toolbar-buttons"></slot
         ></yatl-toolbar>
         ${super.render()}
@@ -53,18 +37,7 @@ export class YatlTableUi<
     `;
   }
 
-  private handleColumnToggled = (event: YatlColumnToggleRequestEvent) => {
-    this.toggleColumnVisibility(
-      event.field as NestedKeyOf<T>,
-      event.visibility,
-    );
-  };
-
   private handleTableExportClicked = () => {
     this.export(document.title);
-  };
-
-  private handleSearchInput = (event: YatlToolbarSearchInput) => {
-    this.searchQuery = event.value;
   };
 }

@@ -93,8 +93,19 @@ export class YatlTable<
 
   // #region --- Properties ---
 
+  private _controller = new YatlTableController<T>(this);
   @property({ attribute: false })
-  public controller = new YatlTableController<T>(this);
+  public get controller() {
+    return this._controller;
+  }
+
+  public set controller(controller) {
+    if (this._controller === controller) {
+      return;
+    }
+    this._controller = controller;
+    controller.attach(this);
+  }
 
   /**
    * Default sortability for all columns.

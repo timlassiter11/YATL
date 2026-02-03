@@ -22,7 +22,6 @@ export class YatlButtonGroup extends LitElement {
   private handleSlotChange(event: Event) {
     const slot = event.target as HTMLSlotElement;
     const elements = getEffectiveChildren(slot);
-    console.log(elements);
     const count = elements.length;
     elements.forEach((element, index) => {
       // This is annoying but it handles when dropdowns are in the button group.

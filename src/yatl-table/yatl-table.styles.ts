@@ -79,12 +79,15 @@ export default css`
     .scroller {
       border: var(--table-border-width) solid
         var(--table-border-color);
-      background-color: var(--table-header-bg);
+    }
+
+    .table {
+      background-color: var(--table-bg);
     }
 
     .row {
       position: relative;
-      background-color: var(--table-bg);
+      background-color: var(--table-row-bg);
       border-bottom: 1px solid var(--table-border-color);
       transition: background-color 50ms;
     }

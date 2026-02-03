@@ -27,3 +27,9 @@ export class YatlButton extends LitElement {
     `;
   }
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-button': YatlButton;
+  }
+}

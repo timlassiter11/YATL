@@ -40,3 +40,9 @@ export class YatlButtonGroup extends LitElement {
     });
   }
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-button-group': YatlButtonGroup;
+  }
+}

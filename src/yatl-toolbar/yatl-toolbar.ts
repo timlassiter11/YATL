@@ -167,3 +167,9 @@ export class YatlToolbar<
     this.dispatchEvent(new YatlToolbarExportClick());
   };
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-toolbar': YatlToolbar;
+  }
+}

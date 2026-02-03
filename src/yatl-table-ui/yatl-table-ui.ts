@@ -5,15 +5,35 @@ import { YatlTable } from '../yatl-table/yatl-table';
 
 import styles from './yatl-table-ui.styles';
 
+/**
+ * A "Batteries Included" wrapper for `<yatl-table>` that provides a built-in toolbar.
+ *
+ * This element extends the core table engine to automatically render UI controls
+ * for common user actions, such as toggling column visibility and exporting data.
+ *
+ * It inherits all properties and events from `<yatl-table>`.
+ *
+ * @element yatl-table-ui
+ *
+ * @slot toolbar-buttons - Use this slot to inject custom buttons or controls into the right side of the toolbar.
+ * @slot footer - Inherited from `yatl-table`. Content to display in the table footer area.
+ * @slot body - Inherited from `yatl-table`. Custom rendering for the table body.
+ */
 @customElement('yatl-table-ui')
 export class YatlTableUi<
   T extends object = UnspecifiedRecord,
 > extends YatlTable<T> {
   public static override styles = [...YatlTable.styles, styles];
 
+  /**
+   * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
+   */
   @property({ type: Boolean })
   public showColumnPicker = true;
 
+  /**
+   * Toggles the visibility of the CSV export button in the toolbar. Defaults to `true`.
+   */
   @property({ type: Boolean })
   public showExportButton = true;
 
@@ -35,4 +55,10 @@ export class YatlTableUi<
   private handleTableExportClicked = () => {
     this.export(document.title);
   };
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-table-ui': YatlTableUi;
+  }
 }

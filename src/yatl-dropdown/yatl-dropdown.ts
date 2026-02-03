@@ -50,3 +50,9 @@ export class YatlDropdown extends LitElement {
     }
   };
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-dropdown': YatlDropdown;
+  }
+}

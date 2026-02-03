@@ -44,3 +44,9 @@ export class YatlDropdownItem extends LitElement {
     this.dispatchEvent(new YatlDropdownToggleEvent(input.value, input.checked));
   };
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-dropdown-item': YatlDropdownItem;
+  }
+}

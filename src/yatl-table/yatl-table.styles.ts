@@ -47,7 +47,7 @@ export default css`
   /* Use after element for row and header hover */
   .header.reorderable .cell::after,
   .header .cell.sortable::after,
-  .row:not(.header)::after {
+  .row:not(.header-row)::after {
     content: '';
     position: absolute;
     inset: 0;

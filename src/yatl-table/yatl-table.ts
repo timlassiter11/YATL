@@ -1222,19 +1222,13 @@ export class YatlTable<
       return;
     }
 
-    let columnIndex = this.displayColumns.findIndex(
+    const columnIndex = this.displayColumns.findIndex(
       column => column.field === field,
     );
     if (columnIndex < 0) {
       return;
     }
 
-    if (this.enableRowNumberColumn) {
-      columnIndex++;
-    }
-    if (this.rowSelectionMethod) {
-      columnIndex++;
-    }
 
     this.tableElement.classList.add('resizing');
 
@@ -1255,7 +1249,7 @@ export class YatlTable<
       active: true,
       startX: event.pageX,
       startWidth: header.getBoundingClientRect().width,
-      columnIndex: columnIndex,
+      columnIndex: columnIndex  + 2, // row number column + selector column
       columnField: field,
       currentWidths: gridWidths,
     };

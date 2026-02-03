@@ -122,8 +122,9 @@ export class YatlColumnReorderRequestEvent<
   public static readonly EVENT_NAME = 'yatl-column-reorder-request';
 
   constructor(
-    public readonly draggedColumn: NestedKeyOf<T>,
-    public readonlydroppedColumn: NestedKeyOf<T>,
+    public readonly movedColumn: NestedKeyOf<T>,
+    public readonly originalIndex: number,
+    public readonly newIndex: number,
     public readonly order: NestedKeyOf<T>[],
   ) {
     super(YatlColumnReorderRequestEvent.EVENT_NAME, { cancelable: true });

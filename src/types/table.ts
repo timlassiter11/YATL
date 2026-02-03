@@ -68,13 +68,14 @@ export interface TableState<T> {
    * The current filters applied to the table or null if no filters are applied.
    */
   filters: Filters<T> | FilterCallback<T> | null;
-
-  /**
-   * The current column order represented as a list of their fields from left to right.
-   */
-  columnOrder: NestedKeyOf<T>[];
 }
 
 export type RestorableTableState<T> = Partial<
   Omit<TableState<T>, 'columns'>
 > & { columns?: RestorableColumnState<T>[] };
+
+export interface ExportOptions {
+  includeAllRows?: boolean;
+  includeHiddenColumns?: boolean;
+  includeInternalColumns?: boolean;
+}

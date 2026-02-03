@@ -1,15 +1,15 @@
 import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import {
-  isDisplayColumn,
-  NestedKeyOf,
-  UnspecifiedRecord,
-  YatlColumnToggleRequestEvent,
-  YatlTable,
-  YatlToolbarSearchInput,
-} from '../yatl-table';
 import { ColumnVisibilityToggleState } from '../yatl-toolbar';
+
+import {
+  YatlColumnToggleRequestEvent,
+  YatlToolbarSearchInput,
+} from '../events';
+import { NestedKeyOf, UnspecifiedRecord } from '../types';
+import { isDisplayColumn } from '../utils';
+import { YatlTable } from '../yatl-table/yatl-table';
 
 import styles from './yatl-table-ui.styles';
 

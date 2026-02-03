@@ -12,6 +12,9 @@ export default css`
   }
 
   ::slotted(*) {
-    --button-group-radius: var(--yatl-button-group-radius, var(--yatl-radius-m));
+    --button-group-radius: var(
+      --yatl-button-group-radius,
+      var(--yatl-radius-m)
+    );
   }
 `;

@@ -3,10 +3,22 @@ import { css } from 'lit';
 export default css`
   :host {
     --dropdown-menu-bg: var(--yatl-dropdown-menu-bg, var(--yatl-surface-3));
-    --dropdown-menu-padding: var(--yatl-dropdown-menu-padding, var(--yatl-spacing-s));
-    --dropdown-menu-radius: var(--yatl-dropdown-menu-radius, var(--yatl-radius-m));
-    --dropdown-menu-border: var(--yatl-dropdown-menu-border, var(--yatl-border-color));
-    --dropdown-menu-open-bg: var(--yatl-dropdown-menu-open-bg, var(--yatl-color-brand));
+    --dropdown-menu-padding: var(
+      --yatl-dropdown-menu-padding,
+      var(--yatl-spacing-s)
+    );
+    --dropdown-menu-radius: var(
+      --yatl-dropdown-menu-radius,
+      var(--yatl-radius-m)
+    );
+    --dropdown-menu-border: var(
+      --yatl-dropdown-menu-border,
+      var(--yatl-border-color)
+    );
+    --dropdown-menu-open-bg: var(
+      --yatl-dropdown-menu-open-bg,
+      var(--yatl-color-brand)
+    );
 
     overflow: visible !important;
   }

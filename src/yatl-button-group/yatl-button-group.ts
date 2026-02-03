@@ -39,7 +39,6 @@ export class YatlButtonGroup extends LitElement {
       else if (index === 0) position = 'first';
       else if (index === count - 1) position = 'last';
       element.setAttribute('data-group-position', position);
-
     });
   }
 }

@@ -31,8 +31,8 @@
   ],
   "scripts": {
     "lint": "eslint",
-    "format": "prettier src/* --write",
-    "format:check": "prettier src/* --check",
+    "format": "prettier src/** --write",
+    "format:check": "prettier src/** --check",
     "type:check": "npx tsc --noEmit",
     "build": "tsup",
     "start": "web-dev-server --node-resolve",

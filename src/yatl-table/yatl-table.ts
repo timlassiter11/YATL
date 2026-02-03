@@ -1229,7 +1229,6 @@ export class YatlTable<
       return;
     }
 
-
     this.tableElement.classList.add('resizing');
 
     // Freeze the current widths as soon as the users starts resizing
@@ -1249,7 +1248,7 @@ export class YatlTable<
       active: true,
       startX: event.pageX,
       startWidth: header.getBoundingClientRect().width,
-      columnIndex: columnIndex  + 2, // row number column + selector column
+      columnIndex: columnIndex + 2, // row number column + selector column
       columnField: field,
       currentWidths: gridWidths,
     };

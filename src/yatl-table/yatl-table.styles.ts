@@ -54,15 +54,23 @@ export default css`
       color-mix(in srgb, var(--yatl-color-brand) 10%, transparent)
     );
     --table-footer-text: var(--yatl-table-footer-text, var(--yatl-tex-3));
-    --table-selector-color: var(--yatl-table-selector-color, color-mix(
-      in srgb,
-      var(--table-row-bg),
-      var(--yatl-color-brand, black) 5%
-    ));
+    --table-selector-color: var(
+      --yatl-table-selector-color,
+      color-mix(in srgb, var(--table-row-bg), var(--yatl-color-brand, black) 5%)
+    );
 
-    --table-row-number-column-width: var(--yatl-table-row-number-column-width, 48px);
-    --table-row-selector-column-width: var(--yatl-table-row-selector-column-width, 48px);
-    --table-column-visibility-transition: var(--yatl-table-column-visibility-transition, 100ms);
+    --table-row-number-column-width: var(
+      --yatl-table-row-number-column-width,
+      48px
+    );
+    --table-row-selector-column-width: var(
+      --yatl-table-row-selector-column-width,
+      48px
+    );
+    --table-column-visibility-transition: var(
+      --yatl-table-column-visibility-transition,
+      100ms
+    );
 
     /* Resize grab handle width */
     --resizer-width: var(--yatl-table-column-resizer-width, 10px);
@@ -77,8 +85,7 @@ export default css`
     }
 
     .scroller {
-      border: var(--table-border-width) solid
-        var(--table-border-color);
+      border: var(--table-border-width) solid var(--table-border-color);
     }
 
     .table {

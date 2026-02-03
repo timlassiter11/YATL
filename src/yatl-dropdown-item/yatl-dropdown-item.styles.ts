@@ -5,11 +5,23 @@ export default css`
     --dropdown-item-text: var(--yatl-dropdown-item-text, var(--yatl-text-1));
     --dropdown-item-font-size: var(--yatl-dropdown-item-font-size, 16px);
     --dropdown-item-bg: var(--yatl-dropdown-item-bg, transparent);
-    --dropdown-item-hover-bg: var(--yatl-dropdown-item-hover-bg, var(--yatl-color-brand));
-    --dropdown-item-padding: var(--yatl-dropdown-item-padding, var(--yatl-spacing-s) var(--yatl-spacing-m));
+    --dropdown-item-hover-bg: var(
+      --yatl-dropdown-item-hover-bg,
+      var(--yatl-color-brand)
+    );
+    --dropdown-item-padding: var(
+      --yatl-dropdown-item-padding,
+      var(--yatl-spacing-s) var(--yatl-spacing-m)
+    );
     --dropdown-item-gap: var(--yatl-dropdown-item-gap, var(--yatl-spacing-xs));
-    --dropdown-item-radius: var(--yatl-dropdown-item-radius, var(--yatl-radius-s));
-    --dropdown-item-focus-border: var(--yatl-dropdown-item-focus-border, var(--yatl-color-brand));
+    --dropdown-item-radius: var(
+      --yatl-dropdown-item-radius,
+      var(--yatl-radius-s)
+    );
+    --dropdown-item-focus-border: var(
+      --yatl-dropdown-item-focus-border,
+      var(--yatl-color-brand)
+    );
   }
 
   .dropdown-item {
@@ -24,7 +36,7 @@ export default css`
     background-color: var(--dropdown-item-bg);
     gap: var(--dropdown-item-gap);
     padding: var(--dropdown-item-padding);
-    
+
     transition: background 0.1s ease;
   }
 

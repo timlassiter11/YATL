@@ -35,8 +35,7 @@ export default css`
   }
 
   :host([data-group-position='first']) {
-    --button-radius: var(--button-group-radius) 0 0
-      var(--button-group-radius) !important;
+    --button-radius: var(--button-group-radius) 0 0 var(--button-group-radius) !important;
   }
 
   :host([data-group-position='last']) {

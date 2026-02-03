@@ -22,8 +22,8 @@ import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
  * @summary Provides a cohesive set of controls for searching, exporting, and managing column visibility,
  * along with a flexible slot for custom actions.
  *
- * @slot - The default slot for adding custom action buttons (e.g., "Add Record", "Refresh").
- * Items placed here are automatically styled to match the toolbar's button group layout.
+ * @slot - Adds contents to the right of the toolbar button group
+ * @slot toolbar-button-group - Adds content into the toolbar button group.
  *
  * @fires yatl-toolbar-search-input - Fired synchronously as the user types in the search box. Useful for real-time highlighting or suggestions.
  * @fires yatl-toolbar-search-change - Fired when the user commits a search query (e.g., on 'Enter' or blur). Use this for triggering the actual table filter.
@@ -72,8 +72,9 @@ export class YatlToolbar<
         <yatl-button-group>
           ${this.showColumnPicker ? this.renderColumnPicker() : nothing}
           ${this.showExportButton ? this.renderExportButton() : nothing}
-          <slot></slot>
+          <slot name="button-group"></slot>
         </yatl-button-group>
+        <slot></slot>
       </div>
     `;
   }

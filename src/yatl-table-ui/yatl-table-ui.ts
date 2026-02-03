@@ -15,7 +15,8 @@ import styles from './yatl-table-ui.styles';
  *
  * @element yatl-table-ui
  *
- * @slot toolbar-buttons - Use this slot to inject custom buttons or controls into the right side of the toolbar.
+ * @slot toolbar - Adds contents to the right of the toolbar button group
+ * @slot toolbar-button-group - Adds content into the toolbar button group.
  * @slot footer - Inherited from `yatl-table`. Content to display in the table footer area.
  * @slot body - Inherited from `yatl-table`. Custom rendering for the table body.
  */
@@ -45,7 +46,8 @@ export class YatlTableUi<
           ?showExportButton=${this.showExportButton}
           .controller=${this.controller}
           @yatl-toolbar-export-click=${this.handleTableExportClicked}
-          ><slot name="toolbar-buttons"></slot
+          ><slot name="toolbar-button-group" slot="button-group"></slot
+          ><slot name="toolbar"></slot
         ></yatl-toolbar>
         ${super.render()}
       </div>

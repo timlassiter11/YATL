@@ -135,7 +135,6 @@ out
 .pnp.*
 
 dist/
-docs/
 src/scratchpad.ts
 
 # Playwright

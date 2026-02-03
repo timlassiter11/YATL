@@ -40,42 +40,66 @@ export default css`
     /* Border */
     --yatl-border-color-light: var(--yatl-theme-border-color-light, #e2e8f0);
     --yatl-border-color-dark: var(--yatl-theme-border-color-dark, #2e2e2e);
-    --yatl-border-color: light-dark(var(--yatl-border-color-light), var(--yatl-border-color-dark));
+    --yatl-border-color: light-dark(
+      var(--yatl-border-color-light),
+      var(--yatl-border-color-dark)
+    );
 
     --yatl-color-brand: var(--yatl-theme-brand, #7531ae);
-    --yatl-color-danger: var(--yatl-theme-danger, #EF4444);
+    --yatl-color-danger: var(--yatl-theme-danger, #ef4444);
 
     --yatl-surface-1-light: #ffffff;
     --yatl-surface-1-dark: #101219;
-    --yatl-surface-1: light-dark(var(--yatl-surface-1-light), var(--yatl-surface-1-dark));
+    --yatl-surface-1: light-dark(
+      var(--yatl-surface-1-light),
+      var(--yatl-surface-1-dark)
+    );
 
     --yatl-surface-2-light: #f8fafc;
     --yatl-surface-2-dark: #1a1b1e;
-    --yatl-surface-2: light-dark(var(--yatl-surface-2-light), var(--yatl-surface-2-dark));
+    --yatl-surface-2: light-dark(
+      var(--yatl-surface-2-light),
+      var(--yatl-surface-2-dark)
+    );
 
     --yatl-surface-3-light: #f1f5f9;
     --yatl-surface-3-dark: #27272a;
-    --yatl-surface-3: light-dark(var(--yatl-surface-3-light), var(--yatl-surface-3-dark));
+    --yatl-surface-3: light-dark(
+      var(--yatl-surface-3-light),
+      var(--yatl-surface-3-dark)
+    );
 
     --yatl-surface-4-light: #e2e8f0;
     --yatl-surface-4-dark: #3f3f46;
-    --yatl-surface-4: light-dark(var(--yatl-surface-4-light), var(--yatl-surface-4-dark));
+    --yatl-surface-4: light-dark(
+      var(--yatl-surface-4-light),
+      var(--yatl-surface-4-dark)
+    );
 
     --yatl-text-1-light: #0f172a;
     --yatl-text-1-dark: #f1f5f9;
-    --yatl-text-1: light-dark(var(--yatl-text-1-light), var(--yatl-text-1-dark));
+    --yatl-text-1: light-dark(
+      var(--yatl-text-1-light),
+      var(--yatl-text-1-dark)
+    );
 
     --yatl-text-2-light: #475569;
     --yatl-text-2-dark: #cbd5e1;
-    --yatl-text-2: light-dark(var(--yatl-text-2-light), var(--yatl-text-2-dark));
+    --yatl-text-2: light-dark(
+      var(--yatl-text-2-light),
+      var(--yatl-text-2-dark)
+    );
 
     --yatl-text-3-light: #94a3b8;
     --yatl-text-3-dark: #64748b;
-    --yatl-text-3: light-dark(var(--yatl-text-3-light), var(--yatl-text-3-dark));
+    --yatl-text-3: light-dark(
+      var(--yatl-text-3-light),
+      var(--yatl-text-3-dark)
+    );
 
     --yatl-text-inverse: #ffffff;
     --yatl-mix-color: light-dark(black, white);
-    
+
     font-family: var(--yatl-font-family);
     font-size: var(--yatl-font-size);
     color: var(--yatl-text);

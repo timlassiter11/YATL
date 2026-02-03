@@ -125,7 +125,7 @@ export class YatlTable<
    * @default false
    */
   @property({ type: Boolean, attribute: 'sortable' })
-  public sortable = false;
+  public sortable = true;
 
   /**
    * Default resizability for all columns.
@@ -134,7 +134,7 @@ export class YatlTable<
    * @default false
    */
   @property({ type: Boolean, attribute: 'resizable' })
-  public resizable = false;
+  public resizable = true;
 
   /**
    * Enables virtual scrolling for the table.
@@ -208,7 +208,7 @@ export class YatlTable<
    * Shows a column to the left of each row with its row number.
    */
   @property({ type: Boolean })
-  public enableRowNumberColumn = false;
+  public enableRowNumberColumn = true;
 
   /**
    * Shows the built-in footer row which displays the current record count.
@@ -216,7 +216,7 @@ export class YatlTable<
    * @default false
    */
   @property({ type: Boolean, attribute: 'enable-footer' })
-  public enableFooter = false;
+  public enableFooter = true;
 
   /**
    * The string to display in a cell when the data value is `null` or `undefined`.

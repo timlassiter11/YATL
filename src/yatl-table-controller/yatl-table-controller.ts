@@ -93,6 +93,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   };
   private _data: T[] = [];
   private _filteredData: T[] = [];
+  // The last time the data was updated.
+  // This is just provided as a convience so the
+  // table element can display it in the footer.
+  // The controller needs to own it so it is always accurate.
+  private _dataUpdateTimestamp: Date | null = null;
 
   private _searchQuery = '';
   private _searchTokenizer: TokenizerCallback = whitespaceTokenizer;
@@ -382,6 +387,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public set data(data: T[]) {
     this._data = [...data];
     this.createMetadata();
+    this._dataUpdateTimestamp = new Date();
     this.filterDirty = true;
     this.requestUpdate('data');
   }
@@ -397,6 +403,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.sortDirty = false;
 
     return [...this._filteredData];
+  }
+
+  get dataUpdateTimestamp() {
+    return this._dataUpdateTimestamp;
   }
 
   // #endregion

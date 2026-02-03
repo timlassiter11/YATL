@@ -80,10 +80,6 @@ export class YatlTable<
 
   // Property data
 
-  // The last time the data was updated.
-  // For displaying in the footer only.
-  private dataLastUpdate: Date | null = null;
-
   private resizeState: {
     active: boolean;
     startX: number;
@@ -459,12 +455,15 @@ export class YatlTable<
   public set data(value: T[]) {
     const oldValue = this.data;
     this.controller.data = value;
-    this.dataLastUpdate = new Date();
     this.requestUpdate('data', oldValue);
   }
 
   get filteredData() {
     return this.controller.filteredData;
+  }
+
+  get dataUpdateTimestamp() {
+    return this.controller.dataUpdateTimestamp;
   }
 
   // #endregion
@@ -1044,8 +1043,9 @@ export class YatlTable<
       dateStyle: 'short',
       timeStyle: 'short',
     });
-    const lastUpdateText = this.dataLastUpdate
-      ? formatter.format(this.dataLastUpdate)
+
+    const lastUpdateText = this.dataUpdateTimestamp
+      ? formatter.format(this.dataUpdateTimestamp)
       : 'Never';
 
     return html`

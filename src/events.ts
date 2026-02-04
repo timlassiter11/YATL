@@ -182,15 +182,14 @@ export class YatlTableStateChangeEvent<
 
 // #endregion
 // #region --- UI Events ---
-
-export class YatlDropdownToggleEvent extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-dropdown-toggle';
+export class YatlDropdownClickEvent extends YatlEvent {
+  static readonly EVENT_NAME = 'yatl-dropdown-click';
 
   constructor(
     public readonly value: string,
     public readonly checked: boolean,
   ) {
-    super(YatlDropdownToggleEvent.EVENT_NAME);
+    super(YatlDropdownClickEvent.EVENT_NAME);
   }
 }
 
@@ -239,7 +238,7 @@ declare global {
     [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
 
-    [YatlDropdownToggleEvent.EVENT_NAME]: YatlDropdownToggleEvent;
+    [YatlDropdownClickEvent.EVENT_NAME]: YatlDropdownClickEvent;
     [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
     [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;
     [YatlToolbarExportClick.EVENT_NAME]: YatlToolbarExportClick;

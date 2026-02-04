@@ -6,13 +6,12 @@ import { repeat } from 'lit/directives/repeat.js';
 import theme from '../theme';
 import styles from './yatl-toolbar.styles';
 import {
-  YatlDropdownToggleEvent,
+  YatlDropdownClickEvent,
   YatlToolbarExportClick,
   YatlToolbarSearchChange,
   YatlToolbarSearchInput,
 } from '../events';
 import { YatlTableController } from '../yatl-table-controller';
-import { ifDefined } from 'lit/directives/if-defined.js';
 import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
 
 /**
@@ -62,16 +61,15 @@ export class YatlToolbar<
 
   protected override render() {
     return html`
-      <div class="toolbar">
-        <input
+      <div part="base">
+        <yatl-input
           part="search"
-          class="search"
           type="search"
           placeholder="Search"
-          value=${ifDefined(this.controller?.searchQuery)}
+          .value=${this.controller?.searchQuery ?? ''}
           @input=${this.onSearchInput}
           @change=${this.onSearchChange}
-        />
+        ></yatl-input>
         <yatl-button-group>
           ${this.showColumnPicker ? this.renderColumnPicker() : nothing}
           ${this.showExportButton ? this.renderExportButton() : nothing}
@@ -86,7 +84,7 @@ export class YatlToolbar<
     return html`
       <yatl-dropdown
         part="column-picker"
-        @yatl-dropdown-toggle=${this.handleDropdownToggle}
+        @yatl-dropdown-click=${this.handleDropdownToggle}
       >
         <yatl-button
           slot="trigger"
@@ -122,6 +120,7 @@ export class YatlToolbar<
     return html`
       <yatl-dropdown-item
         part="column-picker-item"
+        checkable
         .checked=${state.visible}
         .value=${state.field}
         >${column.title}</yatl-dropdown-item
@@ -129,7 +128,7 @@ export class YatlToolbar<
     `;
   }
 
-  private handleDropdownToggle = (event: YatlDropdownToggleEvent) => {
+  private handleDropdownToggle = (event: YatlDropdownClickEvent) => {
     this.controller?.toggleColumnVisibility(
       event.value as NestedKeyOf<T>,
       event.checked,

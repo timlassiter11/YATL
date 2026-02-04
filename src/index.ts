@@ -1,3 +1,4 @@
+export * from './form-controls';
 export * from './yatl-button';
 export * from './yatl-button-group';
 export * from './yatl-dropdown';

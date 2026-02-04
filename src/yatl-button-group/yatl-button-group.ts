@@ -13,7 +13,7 @@ export class YatlButtonGroup extends LitElement {
 
   render() {
     return html`
-      <div class="group-container">
+      <div part="base">
         <slot @slotchange=${this.handleSlotChange}></slot>
       </div>
     `;

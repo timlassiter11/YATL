@@ -1,7 +1,7 @@
 import { css } from 'lit';
 
 export default css`
-  .ui-wrapper {
+  [part='shell'] {
     display: flex;
     flex-direction: column;
     gap: var(--yatl-spacing-m);

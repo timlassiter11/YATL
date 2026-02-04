@@ -5,7 +5,7 @@ export default css`
     display: inline-flex;
   }
 
-  .group-container {
+  [part='base'] {
     display: flex;
     flex-direction: row;
     align-items: stretch;

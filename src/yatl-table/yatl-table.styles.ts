@@ -79,17 +79,13 @@ export default css`
   }
 
   @layer base {
-    .wrapper {
-      overflow: hidden;
+    .table {
       border-radius: var(--table-radius);
+      background-color: var(--table-bg);
     }
 
     .scroller {
       border: var(--table-border-width) solid var(--table-border-color);
-    }
-
-    .table {
-      background-color: var(--table-bg);
     }
 
     .row {
@@ -216,13 +212,14 @@ export default css`
     height: 100%;
   }
 
-  .wrapper {
+  .table {
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
   }
 
   .scroller {
@@ -232,14 +229,9 @@ export default css`
     height: 100%;
   }
 
-  .table {
-    box-sizing: border-box;
-  }
-
   .body {
     min-width: 100%;
     width: fit-content;
-    min-height: 100%;
     height: fit-content;
   }
 

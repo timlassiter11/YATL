@@ -22,27 +22,16 @@ export default css`
     );
   }
 
-  .toolbar {
+  [part='base'] {
     display: flex;
     flex-direction: row;
     gap: 10px;
   }
 
-  .search {
+  [part='search'] {
     flex-grow: 1;
-    border-radius: var(--toolbar-search-radius);
-    background-color: var(--toolbar-search-bg);
     line-height: 1;
-    border: none;
     font-size: large;
-    padding: var(--toolbar-search-padding);
-  }
-
-  .search:focus,
-  .search:focus-visible {
-    outline: var(--toolbar-search-outline-width) solid
-      var(--toolbar-search-outline-color);
-    outline-offset: calc(var(--toolbar-search-outline-width) * -1);
   }
 
   yatl-button-group yatl-button {

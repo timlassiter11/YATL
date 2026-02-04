@@ -23,12 +23,12 @@ export default css`
     overflow: visible !important;
   }
 
-  .dropdown {
+  [part='dropdown'] {
     position: relative;
     height: 100%;
   }
 
-  .dropdown summary {
+  [part='dropdown'] summary {
     box-sizing: border-box;
     /* Hides the dropdown arrow*/
     list-style: none;
@@ -39,7 +39,7 @@ export default css`
     background-color: var(--dropdown-menu-open-bg);
   }
 
-  .dropdown-menu {
+  [part='dropdown-menu'] {
     position: absolute;
     top: 100%;
     right: 0;

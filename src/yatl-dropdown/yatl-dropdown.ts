@@ -15,11 +15,11 @@ export class YatlDropdown extends LitElement {
 
   protected override render() {
     return html`
-      <details part="dropdown" class="dropdown" ?open=${this.open}>
+      <details part="dropdown" ?open=${this.open}>
         <summary @click=${this.handleDropdownTriggerClick}>
           <slot name="trigger"></slot>
         </summary>
-        <div part="dropdown-menu" class="dropdown-menu">
+        <div part="dropdown-menu">
           <slot></slot>
         </div>
       </details>

@@ -26,25 +26,7 @@ export default css`
     border: var(--button-border-width) solid var(--button-border-color);
   }
 
-  :host([data-group-position]) {
-    margin-right: -1px;
-  }
-
-  :host([data-group-position='middle']) {
-    --button-radius: 0 !important;
-  }
-
-  :host([data-group-position='first']) {
-    --button-radius: var(--button-group-radius) 0 0 var(--button-group-radius) !important;
-  }
-
-  :host([data-group-position='last']) {
-    --yatl-button-radius: 0 var(--button-group-radius)
-      var(--button-group-radius) 0;
-    margin-right: 0;
-  }
-
-  .button {
+  [part='button'] {
     box-sizing: border-box;
     width: 100%;
     height: 100%;
@@ -57,13 +39,12 @@ export default css`
     align-items: center;
   }
 
-  .button:not([disabled]):hover {
+  :host(:not([disabled])) [part='button']:hover {
     color: var(--button-hover-text);
     background: var(--button-hover-bg);
   }
 
-  .button:disabled,
-  .button[disabled] {
+  :host([disabled]) [part='button'] {
     opacity: 0.5;
     cursor: not-allowed;
     filter: grayscale(100%);

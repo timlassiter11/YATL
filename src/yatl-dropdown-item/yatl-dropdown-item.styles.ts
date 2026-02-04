@@ -24,7 +24,7 @@ export default css`
     );
   }
 
-  .dropdown-item {
+  [part='base'] {
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -40,12 +40,12 @@ export default css`
     transition: background 0.1s ease;
   }
 
-  .dropdown-item:hover {
+  [part='base']:hover {
     background-color: var(--dropdown-item-hover-bg);
     border-radius: var(--dropdown-item-radius);
   }
 
-  .dropdown-item input {
+  [part='input'] {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -57,7 +57,7 @@ export default css`
     border: 0;
   }
 
-  .check-container {
+  [part='check'] {
     width: 18px;
     height: 18px;
     margin-right: 12px;
@@ -69,7 +69,7 @@ export default css`
     transition: all 0.2s ease;
   }
 
-  .check-icon {
+  [part='check'] {
     width: 14px;
     height: 14px;
     fill: var(--dropdown-item-text);
@@ -78,17 +78,17 @@ export default css`
     transition: all 0.2s cubic-bezier(0.12, 0.4, 0.29, 1.46);
   }
 
-  input:checked ~ .check-container .check-icon {
+  :host([checked]) [part='check'] {
     opacity: 1;
     transform: scale(1);
   }
 
-  input:focus-visible ~ .check-container {
+  [part='check']:focus-visible {
     border-color: var(--dropdown-item-focus-border);
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
   }
 
-  .label-text {
+  [part='label'] {
     font-size: 14px;
     color: var(--dropdown-item-text);
   }

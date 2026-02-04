@@ -82,14 +82,8 @@
           </div>
           <div class="option-group">
             <h2>Date Modified</h2>
-            <label class="inline">
-              From
-              <input type="date" class="form-control" name="startDate" />
-            </label>
-            <label class="inline">
-              To
-              <input type="date" class="form-control" name="endDate" />
-            </label>
+            <yatl-date-input label="From" name="startDate"></yatl-date-input>
+            <yatl-date-input label="To" name="endDate"></yatl-date-input>
           </div>
         </div>
       </form>
@@ -97,42 +91,21 @@
         <div class="card">
           <h1>Table Options</h1>
           <div class="option-group">
-            <h2>Row Count</h2>
-            <input type="number" name="rowCount" value="2000" />
+            <yatl-number-input label="Row Count" name="rowCount" value="2000" min="0"></yatl-number-input>
           </div>
           <div class="option-group">
             <h2>UI</h2>
-            <label>
-              <input type="checkbox" name="striped" checked />
-              Striped
-            </label>
-            <label>
-              <input type="checkbox" name="enableRowNumberColumn" checked />
-              Show Row Numbers
-            </label>
-            <label>
-              <input type="checkbox" name="enableFooter" checked />
-              Show Footer
-            </label>
-            <label>
-              <input type="checkbox" name="enableSearchHighlight" checked />
-              Highlight Results
-            </label>
+            <yatl-checkbox name="striped" label="Striped" always-include checked></yatl-checkbox>
+            <yatl-checkbox name="enableRowNumberColumn" label="Show Row Numbers" always-include checked></yatl-checkbox>
+            <yatl-checkbox name="enableFooter" label="Show Footer" always-include checked></yatl-checkbox>
+            <yatl-checkbox name="enableSearchHighlight" label="Highlight Results" always-include checked></yatl-checkbox>
           </div>
           <div class="option-group">
             <h2>Interactivity</h2>
-            <label>
-              <input type="checkbox" name="resizable" checked />
-              Resizable Columns
-            </label>
-            <label>
-              <input type="checkbox" name="sortable" checked />
-              Sortable Columns
-            </label>
-            <label>
-              <input type="checkbox" name="enableColumnReorder" checked />
-              Rearrangeable Columns
-            </label>
+            <yatl-checkbox name="resizable" label="Resizable Columns" always-include checked></yatl-checkbox>
+            <yatl-checkbox name="sortable" label="Sortable Columns" always-include checked></yatl-checkbox>
+            <yatl-checkbox name="enableColumnReorder" label="Rearrangable Columns" always-include
+              checked></yatl-checkbox>
             <h4>Row Selection Method</h4>
             <label>
               <input type="radio" name="rowSelectionMethod" value="multi" checked />
@@ -149,18 +122,10 @@
           </div>
           <div class="option-group">
             <h2>Misc</h2>
-            <label>
-              <input type="checkbox" name="enableSearchTokenization" checked />
-              Tokenize Search
-            </label>
-            <label>
-              <input type="checkbox" name="enableSearchScoring" checked />
-              Search Scoring
-            </label>
-            <label>
-              <input type="checkbox" name="enableVirtualScroll" checked />
-              Virtual Scroll
-            </label>
+            <yatl-checkbox name="enableSearchTokenization" label="Tokenize Search" always-include
+              checked></yatl-checkbox>
+            <yatl-checkbox name="enableSearchScoring" label="Search Scoring" always-include checked></yatl-checkbox>
+            <yatl-checkbox name="enableVirtualScroll" label="Virtual Scroll" always-include checked></yatl-checkbox>
           </div>
         </div>
       </form>

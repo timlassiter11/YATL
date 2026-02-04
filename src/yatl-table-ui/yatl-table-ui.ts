@@ -40,7 +40,7 @@ export class YatlTableUi<
 
   protected override render() {
     return html`
-      <div class="ui-wrapper">
+      <div part="shell">
         <yatl-toolbar
           exportparts="search, "
           ?showColumnPicker=${this.showColumnPicker}

@@ -1072,20 +1072,18 @@ export class YatlTable<
      * It causes whitespace like new lines in the HTML to override the body.
      */
     return html`
-      <div class="wrapper">
+      <div
+        role="table"
+        aria-label="Data Table"
+        aria-rowcount=${this.filteredData.length}
+        part="table"
+        class="table"
+        style=${styleMap(style)}
+      >
         <div class="scroller">
-          <div
-            role="table"
-            aria-label="Data Table"
-            aria-rowcount=${this.filteredData.length}
-            part="table"
-            class="table"
-            style=${styleMap(style)}
-          >
-            ${this.renderHeader()}
-            <div class="body" role="rowgroup">
-              <slot name="body">${this.renderBodyContents()}</slot>
-            </div>
+          ${this.renderHeader()}
+          <div class="body" role="rowgroup">
+            <slot name="body">${this.renderBodyContents()}</slot>
           </div>
         </div>
         ${this.renderFooter()}

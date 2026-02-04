@@ -16,14 +16,11 @@ export class YatlButton extends LitElement {
 
   render() {
     return html`
-      <button
-        class="button"
-        type=${this.type}
-        ?disabled=${this.disabled}
-        part="button"
-      >
-        <slot></slot>
-      </button>
+      <div part="base">
+        <button part="button" type=${this.type} ?disabled=${this.disabled}>
+          <slot></slot>
+        </button>
+      </div>
     `;
   }
 }

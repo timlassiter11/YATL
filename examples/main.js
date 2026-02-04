@@ -1,4 +1,4 @@
-import { YatlTableUi } from '../dist/index.mjs';
+import { YatlDateInput, YatlFormControl, YatlTableUi } from '../dist/index.mjs';
 
 // Used for generating data and for filters
 const statuses = [
@@ -29,6 +29,10 @@ let table;
 let filtersForm;
 /** @type {HTMLFormElement} */
 let optionsForm;
+/** @type {YatlDateInput} */
+let startDateInput;
+/** @type {YatlDateInput} */
+let endDateInput;
 
 window.addEventListener('load', () => {
   // Stuff for the page, not about YATL.
@@ -37,6 +41,9 @@ window.addEventListener('load', () => {
   table = document.querySelector('yatl-table-ui');
   filtersForm = document.getElementById('filtersForm');
   optionsForm = document.getElementById('optionsForm');
+  startDateInput = document.querySelector('yatl-date-input[name="startDate"]');
+  endDateInput = document.querySelector('yatl-date-input[name="endDate"]');
+
   // Initialize the table columns and default options
   initTable();
   initFilterOptions();
@@ -219,6 +226,16 @@ function updateTableFilters() {
       filters[name] = value;
     }
   }
+
+  if (lastModified.startDate && !lastModified.endDate) {
+    endDateInput.min = lastModified.startDate;
+  } else if (lastModified.endDate && !lastModified.startDate) {
+    startDateInput.max = lastModified.endDate;
+  } else if (!lastModified.startDate && !lastModified.endDate) {
+    startDateInput.max = null;
+    endDateInput.min = null;
+  }
+
   table.filters = filters;
 }
 
@@ -264,7 +281,9 @@ function getTypedFormData(form) {
   const typedData = {};
   for (const [name, value] of formData.entries()) {
     const element = form.querySelector(`[name="${name}"]`);
-    if (element instanceof HTMLInputElement) {
+    if (element instanceof YatlFormControl) {
+      typedData[name] = element.typedValue;
+    } else if (element instanceof HTMLInputElement) {
       switch (element.type) {
         case 'radio':
         case 'checkbox':

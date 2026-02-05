@@ -122,20 +122,21 @@ export abstract class YatlFormControl<
   }
 
   protected override render() {
+    const inputId = 'input';
     return html`
-      ${this.renderLabel()}
-      <div part="base">${this.renderInput('iput')}</div>
+      ${this.renderLabel(inputId)}
+      <div part="base">${this.renderInput(inputId)}</div>
       ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
 
-  protected renderLabel(): unknown {
+  protected renderLabel(inputId: string): unknown {
     if (!this.label) {
       return nothing;
     }
 
     return html`
-      <label part="label" for="input">
+      <label part="label" for=${inputId}>
         <slot name="label">
           <span>${this.label}</span>
         </slot>

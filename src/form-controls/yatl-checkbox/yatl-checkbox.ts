@@ -1,6 +1,6 @@
 import { customElement, property, state } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
-import { html } from 'lit';
+import { html, TemplateResult } from 'lit';
 import { live } from 'lit/directives/live.js';
 
 import styles from './yatl-checkbox.styles';
@@ -59,6 +59,15 @@ export class YatlCheckbox extends YatlFormControl<boolean> {
     super.connectedCallback();
     this._checked = this.defaultChecked;
     this.updateFormValue();
+  }
+
+  protected override render() {
+    const inputId = 'input';
+    return html`
+      <div part="base">${this.renderInput(inputId)}</div>
+      ${this.renderLabel(inputId)}
+      ${this.renderHint()} ${this.renderErrorText()}
+    ` 
   }
 
   protected override renderInput(id: string) {

@@ -70,7 +70,7 @@ export class YatlInput extends YatlFormControl<string> {
     `;
   }
 
-  protected override renderLabel() {
+  protected override renderLabel(inputId: string) {
     if (!this.label && !this.showCount) {
       return nothing;
     }
@@ -79,7 +79,7 @@ export class YatlInput extends YatlFormControl<string> {
       <label part="label">
         <slot>
           <span part="label-row">
-            ${super.renderLabel()}
+            ${super.renderLabel(inputId)}
             <span part="label-spacer"></span>
             ${this.renderCount()}
           </span>

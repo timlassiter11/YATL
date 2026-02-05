@@ -26,13 +26,16 @@ export default css`
 
   :host([inline]) {
     flex-direction: row;
-    align-items: baseline;
+    align-items: flex-end
   }
 
   [part='label'] {
     color: var(--input-label-text);
     font-size: var(--input-label-font-size);
     font-weight: var(--input-label-font-weight);
+  }
+
+  :host(:not([inline])) [part='label'] {
     margin-block-end: var(--yatl-spacing-s);
   }
 

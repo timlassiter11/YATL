@@ -19,23 +19,13 @@ export default css`
     --input-hint-font-size: var(--yatl-input-hint-font-size, small);
     --input-error-text: var(--yatl-input-error-text, var(--yatl-color-danger));
     --input-error-font-size: var(--yatl-input-error-font-size, small);
-  }
 
-  [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--yatl-spacing-s);
   }
 
-  :host([inline]) [part='base'] {
+  :host([inline]) {
     flex-direction: row;
-    align-items: baseline;
-  }
-
-  [part='control'] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--yatl-spacing-s);
     align-items: baseline;
   }
 
@@ -43,6 +33,7 @@ export default css`
     color: var(--input-label-text);
     font-size: var(--input-label-font-size);
     font-weight: var(--input-label-font-weight);
+    margin-block-end: var(--yatl-spacing-s);
   }
 
   [part='input'] {

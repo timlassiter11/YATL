@@ -11,7 +11,7 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     splitting: false,
-    target: 'es2020',
+    target: 'es2024',
     // Don't bundle Lit
     external: [/^lit/, /^@lit/],
   },
@@ -24,7 +24,7 @@ export default defineConfig([
     sourcemap: true,
     minify: true,
     globalName: 'yatl',
-    target: 'es2020',
+    target: 'es2024',
     platform: 'browser',
     // Bundle Lit
     noExternal: [/^lit/, /^@lit/],

@@ -8,6 +8,14 @@ export default css`
     );
     --checkbox-label-font-weight: var(--yatl-checkbox-font-weight, normal);
     --checkbox-label-font-szie: var(--yatl-checkbox-font-size, medium);
+
+
+  }
+
+  :host([inline]) {
+    /* Checkbox on the left, label on the right.  */
+    flex-direction: row-reverse;
+    align-items: baseline;
   }
 
   [part='input'] {

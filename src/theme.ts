@@ -90,8 +90,8 @@ export default css`
       var(--yatl-text-2-dark)
     );
 
-    --yatl-text-3-light: #94a3b8;
-    --yatl-text-3-dark: #64748b;
+    --yatl-text-3-light: #4d4d4d;
+    --yatl-text-3-dark: #c1c1c1;
     --yatl-text-3: light-dark(
       var(--yatl-text-3-light),
       var(--yatl-text-3-dark)

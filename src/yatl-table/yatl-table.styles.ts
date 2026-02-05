@@ -53,7 +53,7 @@ export default css`
       --yatl-table-row-selected-bg,
       color-mix(in srgb, var(--yatl-color-brand) 10%, transparent)
     );
-    --table-footer-text: var(--yatl-table-footer-text, var(--yatl-tex-3));
+    --table-footer-text: var(--yatl-table-footer-text, var(--yatl-text-3));
     --table-selector-color: var(
       --yatl-table-selector-color,
       color-mix(in srgb, var(--table-row-bg), var(--yatl-color-brand, black) 5%)

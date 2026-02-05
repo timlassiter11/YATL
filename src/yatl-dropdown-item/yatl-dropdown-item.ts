@@ -20,6 +20,9 @@ export class YatlDropdownItem extends LitElement {
   @property({ type: Boolean, reflect: true })
   public checked = false;
 
+  @property({ type: Boolean, reflect: true })
+  public disabled = false;
+
   protected override render() {
     if (!this.checkable) {
       return html`<div part="base">${this.renderLabel()}</div>`;
@@ -54,7 +57,13 @@ export class YatlDropdownItem extends LitElement {
     this.removeEventListener('click', this.handleItemClicked);
   }
 
-  private handleItemClicked = () => {
+  private handleItemClicked = (event: Event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.disabled) {
+      return;
+    }
+
     if (this.checkable) {
       this.checked = !this.checked;
     }

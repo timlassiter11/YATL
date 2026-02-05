@@ -7,6 +7,7 @@ import theme from '../theme';
 import styles from './yatl-toolbar.styles';
 import {
   YatlDropdownClickEvent,
+  YatlDropdownSelectEvent,
   YatlToolbarExportClick,
   YatlToolbarSearchChange,
   YatlToolbarSearchInput,
@@ -84,7 +85,7 @@ export class YatlToolbar<
     return html`
       <yatl-dropdown
         part="column-picker"
-        @yatl-dropdown-click=${this.handleDropdownToggle}
+        @yatl-dropdown-select=${this.handleDropdownSelect}
       >
         <yatl-button
           slot="trigger"
@@ -128,7 +129,8 @@ export class YatlToolbar<
     `;
   }
 
-  private handleDropdownToggle = (event: YatlDropdownClickEvent) => {
+  private handleDropdownSelect = (event: YatlDropdownSelectEvent) => {
+    event.preventDefault();
     this.controller?.toggleColumnVisibility(
       event.value as NestedKeyOf<T>,
       event.checked,

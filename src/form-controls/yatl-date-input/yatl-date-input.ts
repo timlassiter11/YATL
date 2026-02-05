@@ -28,7 +28,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
     this.value = dateConverter.toAttribute(value ?? undefined) ?? '';
   }
 
-  protected override renderInput() {
+  protected override renderInput(id: string) {
     // Unfortunately we have to calculate the attributes for each render
     // because they aren't reflected back during the render cycle.
     const min = dateConverter.toAttribute(this.min) ?? undefined;
@@ -36,6 +36,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
     return html`
       <input
         part="input"
+        id=${id}
         name=${this.name}
         type="date"
         .value=${live(this.value)}

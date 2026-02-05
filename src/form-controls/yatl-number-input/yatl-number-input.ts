@@ -26,10 +26,11 @@ export class YatlNumberInput extends YatlFormControl<number> {
     this.value = value ? String(value) : '';
   }
 
-  protected renderInput() {
+  protected renderInput(id: string) {
     return html`
       <input
         part="input"
+        id=${id}
         name=${this.name}
         type="number"
         .value=${live(this.value)}

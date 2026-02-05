@@ -50,10 +50,11 @@ export class YatlInput extends YatlFormControl<string> {
     this.value = value;
   }
 
-  protected override renderInput() {
+  protected override renderInput(id: string) {
     return html`
       <input
         part="input"
+        id=${id}
         name=${this.name}
         type=${this.type}
         .value=${live(this.value)}
@@ -75,11 +76,15 @@ export class YatlInput extends YatlFormControl<string> {
     }
 
     return html`
-      <span part="label-row">
-        ${super.renderLabel()}
-        <span part="label-spacer"></span>
-        ${this.renderCount()}
-      </span>
+      <label part="label">
+        <slot>
+          <span part="label-row">
+            ${super.renderLabel()}
+            <span part="label-spacer"></span>
+            ${this.renderCount()}
+          </span>
+        </slot>
+      </label>
     `;
   }
 

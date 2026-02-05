@@ -61,17 +61,11 @@ export class YatlCheckbox extends YatlFormControl<boolean> {
     this.updateFormValue();
   }
 
-  protected override renderBaseContents() {
-    return html`
-      <div part="control">${this.renderInput()}</div>
-      ${this.renderLabel()}
-    `;
-  }
-
-  protected override renderInput() {
+  protected override renderInput(id: string) {
     return html`
       <input
         part="input"
+        id=${id}
         name=${this.name}
         type="checkbox"
         value=${this.value}

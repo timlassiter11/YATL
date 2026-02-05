@@ -74,6 +74,7 @@
     "vitest-browser-lit": "^1.0.1"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.5",
     "@lit-labs/virtualizer": "^2.1.1",
     "lit": "^3.3.2"
   }

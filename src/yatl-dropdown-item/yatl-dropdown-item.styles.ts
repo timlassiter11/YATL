@@ -18,10 +18,22 @@ export default css`
       --yatl-dropdown-item-radius,
       var(--yatl-radius-s)
     );
-    --dropdown-item-focus-border: var(
-      --yatl-dropdown-item-focus-border,
-      var(--yatl-color-brand)
+    --dropdown-item-focus-ring: var(
+      --yatl-dropdown-item-focus-ring,
+      3px solid var(--yatl-color-brand)
     );
+    --dropdown-item-focus-bg: var(
+      --yatl-dropdown-item-focus-bg,
+      color-mix(in srgb, var(--yatl-mix-color), 5%, transparent)
+    );
+
+    border-radius: var(--dropdown-item-radius);
+  }
+
+  :host(:focus-visible) {
+    z-index: 1;
+    outline: var(--dropdown-item-focus-ring);
+    background-color: var(--dropdown-item-focus-bg);
   }
 
   [part='base'] {
@@ -36,13 +48,12 @@ export default css`
     background-color: var(--dropdown-item-bg);
     gap: var(--dropdown-item-gap);
     padding: var(--dropdown-item-padding);
-
+    border-radius: var(--dropdown-item-radius);
     transition: background 0.1s ease;
   }
 
   [part='base']:hover {
     background-color: var(--dropdown-item-hover-bg);
-    border-radius: var(--dropdown-item-radius);
   }
 
   [part='input'] {
@@ -81,11 +92,6 @@ export default css`
   :host([checked]) [part='check'] {
     opacity: 1;
     transform: scale(1);
-  }
-
-  [part='check']:focus-visible {
-    border-color: var(--dropdown-item-focus-border);
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
   }
 
   [part='label'] {

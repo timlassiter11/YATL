@@ -66,7 +66,6 @@ export function getEffectiveChildren(node: Node): Element[] {
   return [];
 }
 
-
 /**
  * Lit Property converter to convert between date string and date objects
  */
@@ -90,6 +89,36 @@ class DateConverter implements ComplexAttributeConverter<Date | undefined> {
     const day = String(value.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
-} 
+}
 
 export const dateConverter = new DateConverter();
+
+// SOURCE: https://github.com/shoelace-style/webawesome/blob/next/packages/webawesome/src/internal/active-elements.ts#L14
+/**
+ * Use a generator so we can iterate and possibly break early.
+ * @example
+ *   // to operate like a regular array. This kinda nullifies generator benefits, but worth knowing if you need the whole array.
+ *   const allActiveElements = [...activeElements()]
+ *
+ *   // Early return
+ *   for (const activeElement of activeElements()) {
+ *     if (<cond>) {
+ *       break; // Break the loop, don't need to iterate over the whole array or store an array in memory!
+ *     }
+ *   }
+ */
+export function* activeElements(
+  activeElement: Element | null = document.activeElement,
+): Generator<Element> {
+  if (activeElement === null || activeElement === undefined) return;
+
+  yield activeElement;
+
+  if (
+    'shadowRoot' in activeElement &&
+    activeElement.shadowRoot &&
+    activeElement.shadowRoot.mode !== 'closed'
+  ) {
+    yield* activeElements(activeElement.shadowRoot.activeElement);
+  }
+}

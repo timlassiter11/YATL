@@ -7,7 +7,8 @@ import styles from './yatl-form-control.styles';
 export type FormControl =
   | HTMLInputElement
   | HTMLSelectElement
-  | HTMLTextAreaElement;
+  | HTMLTextAreaElement
+  | YatlFormControl;
 
 export abstract class YatlFormControl<
   TData = string,
@@ -89,6 +90,13 @@ export abstract class YatlFormControl<
     this.internals = this.attachInternals();
   }
 
+  protected override createRenderRoot() {
+    const root = super.createRenderRoot();
+    root.addEventListener('input', this.handleControlEvent);
+    root.addEventListener('change', this.handleControlEvent);
+    return root;
+  }
+
   public connectedCallback() {
     super.connectedCallback();
     if (!this.value && this.defaultValue) {
@@ -115,21 +123,9 @@ export abstract class YatlFormControl<
 
   protected override render() {
     return html`
-      <label
-        part="base"
-        @input=${this.handleControlEvent}
-        @change=${this.handleControlEvent}
-      >
-        ${this.renderBaseContents()}
-      </label>
-      ${this.renderHint()} ${this.renderErrorText()}
-    `;
-  }
-
-  protected renderBaseContents(): unknown {
-    return html`
       ${this.renderLabel()}
-      <div part="control">${this.renderInput()}</div>
+      <div part="base">${this.renderInput('iput')}</div>
+      ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
 
@@ -139,9 +135,11 @@ export abstract class YatlFormControl<
     }
 
     return html`
-      <slot name="label">
-        <span part="label">${this.label}</span>
-      </slot>
+      <label part="label" for="input">
+        <slot name="label">
+          <span>${this.label}</span>
+        </slot>
+      </label>
     `;
   }
 
@@ -169,7 +167,7 @@ export abstract class YatlFormControl<
     `;
   }
 
-  protected abstract renderInput(): unknown;
+  protected abstract renderInput(id: string): unknown;
 
   protected get hasErrorText() {
     return this.errorText;
@@ -221,11 +219,14 @@ export abstract class YatlFormControl<
   }
 
   protected setFormValue(value: string | File | FormData | null) {
-    this.internals.setFormValue(value);
+    // Clear form data on empty string
+    value ||= null;
+    // Don't add data for disabled controls
+    this.internals.setFormValue(this.disabled ? null : value);
     this.updateValidity();
   }
 
-  private handleControlEvent(event: Event) {
+  private handleControlEvent = (event: Event) => {
     const target = event.target as HTMLElement;
     if (this.formControl && this.formControl === target) {
       event.stopImmediatePropagation();
@@ -234,5 +235,5 @@ export abstract class YatlFormControl<
         new Event(event.type, { bubbles: true, composed: true }),
       );
     }
-  }
+  };
 }

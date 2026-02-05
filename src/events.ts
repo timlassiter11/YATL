@@ -193,6 +193,16 @@ export class YatlDropdownClickEvent extends YatlEvent {
   }
 }
 
+export class YatlDropdownSelectEvent extends YatlEvent {
+  static readonly EVENT_NAME = 'yatl-dropdown-select';
+  constructor(
+    public readonly value: string,
+    public readonly checked: boolean,
+  ) {
+    super(YatlDropdownSelectEvent.EVENT_NAME, { cancelable: true });
+  }
+}
+
 export class YatlToolbarSearchInput extends YatlEvent {
   static readonly EVENT_NAME = 'yatl-toolbar-search-input';
   constructor(public readonly value: string) {
@@ -239,6 +249,8 @@ declare global {
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
 
     [YatlDropdownClickEvent.EVENT_NAME]: YatlDropdownClickEvent;
+    [YatlDropdownSelectEvent.EVENT_NAME]: YatlDropdownSelectEvent;
+
     [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
     [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;
     [YatlToolbarExportClick.EVENT_NAME]: YatlToolbarExportClick;

@@ -3,3 +3,4 @@ export * from './yatl-checkbox';
 export * from './yatl-date-input';
 export * from './yatl-number-input';
 export * from './yatl-form-control';
+export * from './yatl-select';

@@ -1,15 +1,12 @@
 import { html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import styles from './yatl-dropdown-item.styles';
-import { YatlDropdownClickEvent } from '../events';
+import theme from '../theme';
+import styles from './yatl-option.styles';
 
-/**
- * @emits yatl-dropdown-toggle - Fired when a dropdown item's checked state changes
- */
-@customElement('yatl-dropdown-item')
-export class YatlDropdownItem extends LitElement {
-  public static override styles = [styles];
+@customElement('yatl-option')
+export class YatlOption extends LitElement {
+  public static override styles = [theme, styles];
 
   @property({ type: String, reflect: true })
   public value = 'on';
@@ -58,21 +55,20 @@ export class YatlDropdownItem extends LitElement {
   }
 
   private handleItemClicked = (event: Event) => {
-    event.stopPropagation();
-    event.preventDefault();
     if (this.disabled) {
+      event.stopPropagation();
+      event.preventDefault();
       return;
     }
 
     if (this.checkable) {
       this.checked = !this.checked;
     }
-    this.dispatchEvent(new YatlDropdownClickEvent(this.value, this.checked));
   };
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'yatl-dropdown-item': YatlDropdownItem;
+    'yatl-option': YatlOption;
   }
 }

@@ -6,7 +6,6 @@ import { repeat } from 'lit/directives/repeat.js';
 import theme from '../theme';
 import styles from './yatl-toolbar.styles';
 import {
-  YatlDropdownClickEvent,
   YatlDropdownSelectEvent,
   YatlToolbarExportClick,
   YatlToolbarSearchChange,
@@ -119,21 +118,21 @@ export class YatlToolbar<
   protected renderColumnVisibilityToggle(column: DisplayColumnOptions<T>) {
     const state = this.controller!.getColumnState(column.field);
     return html`
-      <yatl-dropdown-item
+      <yatl-option
         part="column-picker-item"
         checkable
         .checked=${state.visible}
         .value=${state.field}
-        >${column.title}</yatl-dropdown-item
-      >
+        >${column.title}
+      </yatl-option>
     `;
   }
 
   private handleDropdownSelect = (event: YatlDropdownSelectEvent) => {
     event.preventDefault();
     this.controller?.toggleColumnVisibility(
-      event.value as NestedKeyOf<T>,
-      event.checked,
+      event.item.value as NestedKeyOf<T>,
+      event.item.checked,
     );
   };
 

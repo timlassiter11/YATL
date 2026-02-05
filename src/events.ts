@@ -5,6 +5,7 @@ import {
   TableState,
   UnspecifiedRecord,
 } from './types';
+import { YatlOption } from './yatl-option';
 
 /**
  * Base event class that bubbles and is composed.
@@ -182,23 +183,9 @@ export class YatlTableStateChangeEvent<
 
 // #endregion
 // #region --- UI Events ---
-export class YatlDropdownClickEvent extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-dropdown-click';
-
-  constructor(
-    public readonly value: string,
-    public readonly checked: boolean,
-  ) {
-    super(YatlDropdownClickEvent.EVENT_NAME);
-  }
-}
-
 export class YatlDropdownSelectEvent extends YatlEvent {
   static readonly EVENT_NAME = 'yatl-dropdown-select';
-  constructor(
-    public readonly value: string,
-    public readonly checked: boolean,
-  ) {
+  constructor(public readonly item: YatlOption) {
     super(YatlDropdownSelectEvent.EVENT_NAME, { cancelable: true });
   }
 }
@@ -248,9 +235,7 @@ declare global {
     [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
 
-    [YatlDropdownClickEvent.EVENT_NAME]: YatlDropdownClickEvent;
     [YatlDropdownSelectEvent.EVENT_NAME]: YatlDropdownSelectEvent;
-
     [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
     [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;
     [YatlToolbarExportClick.EVENT_NAME]: YatlToolbarExportClick;

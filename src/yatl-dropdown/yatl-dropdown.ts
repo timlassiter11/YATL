@@ -11,10 +11,13 @@ import {
 
 import styles from './yatl-dropdown.styles';
 import theme from '../theme';
-import { YatlDropdownItem } from '../yatl-dropdown-item';
+import { YatlOption } from '../yatl-option';
 import { activeElements } from '../utils';
 import { YatlDropdownSelectEvent as YatlDropdownItemSelectEvent } from '../events';
 
+/**
+ * @fires yatl-dropdown-select
+ */
 @customElement('yatl-dropdown')
 export class YatlDropdown extends LitElement {
   public static override styles = [theme, styles];
@@ -43,7 +46,7 @@ export class YatlDropdown extends LitElement {
             @keydown=${this.handleTriggerKeydown}
           ></slot>
         </div>
-        <div part="menu" @yatl-dropdown-click=${this.handleItemClick}>
+        <div part="menu" @click=${this.handleItemClick}>
           <slot></slot>
         </div>
       </div>
@@ -74,13 +77,16 @@ export class YatlDropdown extends LitElement {
   // #region Event Handlers
 
   private handleTriggerClick() {
-    console.log('trigger click');
     this.open = !this.open;
   }
 
   private handleItemClick(event: Event) {
-    const item = event.target as YatlDropdownItem;
-    const selectEvent = new YatlDropdownItemSelectEvent(item.value, item.checked);
+    const item = event.target;
+    if (!(item instanceof YatlOption)) {
+      return;
+    }
+
+    const selectEvent = new YatlDropdownItemSelectEvent(item);
     if (this.dispatchEvent(selectEvent)) {
       this.open = false;
     }
@@ -110,7 +116,7 @@ export class YatlDropdown extends LitElement {
           activeItem.tabIndex = -1;
         }
 
-        let itemToFocus: YatlDropdownItem | undefined;
+        let itemToFocus: YatlOption | undefined;
         const activeItemIndex = activeItem ? items.indexOf(activeItem) : -1;
         if (event.key === 'ArrowUp') {
           if (activeItemIndex > 0) {
@@ -171,14 +177,14 @@ export class YatlDropdown extends LitElement {
     const items =
       this.defaultSlot
         ?.assignedElements({ flatten: true })
-        .filter(i => i instanceof YatlDropdownItem) ?? [];
+        .filter(i => i instanceof YatlOption) ?? [];
 
     return includeDisabled ? items : items.filter(i => !i.disabled);
   }
 
-  private getActiveItem(items: YatlDropdownItem[]) {
+  private getActiveItem(items: YatlOption[]) {
     const activeElement = [...activeElements()].find(
-      i => i instanceof YatlDropdownItem,
+      i => i instanceof YatlOption,
     );
     return items.find(item => item === activeElement);
   }

@@ -2,7 +2,7 @@ export * from './form-controls';
 export * from './yatl-button';
 export * from './yatl-button-group';
 export * from './yatl-dropdown';
-export * from './yatl-dropdown-item';
+export * from './yatl-option';
 export * from './yatl-table';
 export * from './yatl-table-controller';
 export * from './yatl-table-ui';

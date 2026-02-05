@@ -3,10 +3,10 @@ import { YatlFormControl } from '../yatl-form-control';
 import { html } from 'lit';
 
 import styles from './yatl-select.styles';
-import { YatlDropdownClickEvent } from '../../events';
 import { live } from 'lit/directives/live.js';
 import { YatlInput } from '../yatl-input';
-import { YatlDropdownItem } from '../../yatl-dropdown-item';
+import { YatlOption } from '../../yatl-option';
+import { YatlDropdownSelectEvent } from '../../events';
 
 @customElement('yatl-select')
 export class YatlSelect extends YatlFormControl<string, YatlFormControl> {
@@ -27,7 +27,7 @@ export class YatlSelect extends YatlFormControl<string, YatlFormControl> {
   }
 
   @state()
-  private selectedItem?: YatlDropdownItem;
+  private selectedItem?: YatlOption;
 
   @state()
   private open = false;
@@ -36,7 +36,7 @@ export class YatlSelect extends YatlFormControl<string, YatlFormControl> {
     return html`
       <yatl-dropdown
         .open=${live(this.open)}
-        @yatl-dropdown-click=${this.onDropdownSelect}
+        @yatl-dropdown-select=${this.onDropdownSelect}
       >
         <yatl-input
           slot="trigger"
@@ -53,20 +53,16 @@ export class YatlSelect extends YatlFormControl<string, YatlFormControl> {
 
   private onSlotChange = () => this.updateSelectedOption();
 
-  private onDropdownSelect = (event: YatlDropdownClickEvent) => {
-    const target = event.target;
-    if (!(target instanceof YatlDropdownItem)) {
-      return;
-    }
+  private onDropdownSelect = (event: YatlDropdownSelectEvent) => {
+    const item = event.item;
 
-    if (target === this.selectedItem) {
+    if (item === this.selectedItem) {
       this.selectedItem = undefined;
     } else {
-      this.selectedItem = target;
+      this.selectedItem = item;
     }
 
     this.open = false;
-    console.log('item selected');
     this.formControl!.value = this.selectedItem?.value ?? '';
     this.updateSelectedOption();
 
@@ -84,6 +80,6 @@ export class YatlSelect extends YatlFormControl<string, YatlFormControl> {
   }
 
   private getAllOptions() {
-    return this?.querySelectorAll('yatl-dropdown-item') ?? [];
+    return this?.querySelectorAll('yatl-option') ?? [];
   }
 }

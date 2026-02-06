@@ -11,9 +11,12 @@ export type FormControl =
   | YatlFormControl;
 
 export abstract class YatlFormControl<
-  TData = string,
-  TInput extends FormControl = HTMLInputElement,
-> extends LitElement {
+    TData = string,
+    TInput extends FormControl = HTMLInputElement,
+  >
+  extends LitElement
+  implements ElementInternals
+{
   public static override styles = [theme, styles];
   public static formAssociated = true;
   public static shadowRootOptions = {
@@ -174,6 +177,14 @@ export abstract class YatlFormControl<
     return this.errorText;
   }
 
+  public get labels() {
+    return this.internals.labels;
+  }
+
+  public get states() {
+    return this.internals.states;
+  }
+
   public get validity() {
     return this.internals.validity;
   }
@@ -184,6 +195,26 @@ export abstract class YatlFormControl<
 
   public get willValidate() {
     return this.internals.willValidate;
+  }
+
+  public get form() {
+    return this.internals.form;
+  }
+
+  public setFormValue(value: string | File | FormData | null) {
+    // Clear form data on empty string
+    value ||= null;
+    // Don't add data for disabled controls
+    this.internals.setFormValue(this.disabled ? null : value);
+    this.updateValidity();
+  }
+
+  public setValidity(
+    flags?: ValidityStateFlags,
+    message?: string,
+    anchor?: HTMLElement,
+  ): void {
+    this.internals.setValidity(flags, message, anchor);
   }
 
   public checkValidity() {
@@ -205,26 +236,18 @@ export abstract class YatlFormControl<
   private updateValidity() {
     if (this._errorText) {
       // If the user set an error, that will always take precedence.
-      this.internals.setValidity({ customError: true }, this._errorText);
+      this.setValidity({ customError: true }, this._errorText);
     } else if (this.required && !this.value) {
-      this.internals.setValidity({ valueMissing: true }, this.requiredText);
+      this.setValidity({ valueMissing: true }, this.requiredText);
     } else if (this.formControl && !this.formControl.checkValidity()) {
       // Sync the custom control's validity with the native input's validity
-      this.internals.setValidity(
+      this.setValidity(
         this.formControl.validity,
         this.formControl.validationMessage,
       );
     } else {
-      this.internals.setValidity({});
+      this.setValidity({});
     }
-  }
-
-  protected setFormValue(value: string | File | FormData | null) {
-    // Clear form data on empty string
-    value ||= null;
-    // Don't add data for disabled controls
-    this.internals.setFormValue(this.disabled ? null : value);
-    this.updateValidity();
   }
 
   private handleControlEvent = (event: Event) => {

@@ -26,7 +26,8 @@ export default css`
 
   :host([inline]) {
     flex-direction: row;
-    align-items: flex-end
+    align-items: flex-start;
+    gap: var(--yatl-spacing-s);
   }
 
   [part='label'] {

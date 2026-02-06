@@ -1,4 +1,4 @@
-import { YatlDateInput, YatlFormControl, YatlTableUi } from '../dist/index.mjs';
+import { YatlCheckbox, YatlDateInput, YatlFormControl, YatlTableUi } from '../dist/index.mjs';
 
 // Used for generating data and for filters
 const statuses = [
@@ -194,10 +194,10 @@ function initTable() {
 }
 
 function initFilterOptions() {
-  const statusOptions = filtersForm.querySelector('select[name="status"]');
+  const statusOptions = filtersForm.querySelector('yatl-select[name="status"]');
   statusOptions.size = statuses.length;
   for (const status of statuses) {
-    const option = document.createElement('option');
+    const option = document.createElement('yatl-option');
     option.value = status;
     option.textContent = status;
     statusOptions.append(option);
@@ -281,8 +281,10 @@ function getTypedFormData(form) {
   const typedData = {};
   for (const [name, value] of formData.entries()) {
     const element = form.querySelector(`[name="${name}"]`);
-    if (element instanceof YatlFormControl) {
-      typedData[name] = element.typedValue;
+    if (element instanceof YatlCheckbox) {
+      typedData[name] = element.checked;
+    } else if (element instanceof YatlFormControl) {
+      typedData[name] = element.value;
     } else if (element instanceof HTMLInputElement) {
       switch (element.type) {
         case 'radio':

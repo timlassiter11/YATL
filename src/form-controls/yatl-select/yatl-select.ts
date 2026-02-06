@@ -9,7 +9,7 @@ import { YatlOption } from '../../yatl-option';
 import { YatlDropdownSelectEvent } from '../../events';
 
 @customElement('yatl-select')
-export class YatlSelect extends YatlFormControl<string, YatlFormControl> {
+export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   public static override styles = [...YatlFormControl.styles, styles];
 
   @query('yatl-input')
@@ -18,68 +18,103 @@ export class YatlSelect extends YatlFormControl<string, YatlFormControl> {
   @property({ type: String })
   public placeholder = '';
 
-  public get typedValue(): string | null {
-    return this.value || null;
+  @property({ type: Boolean, reflect: true })
+  public multi = false;
+
+  @property({ type: Array, attribute: 'value' })
+  public defaultValue = [];
+
+  // Mutable value types need to be copied
+  // so the user's changes don't mess things up.
+  private _value: string[] = [];
+  @property({ attribute: false })
+  public get value() {
+    return [...this._value];
+  }
+  public set value(value) {
+    const oldValue = this.value;
+    if (oldValue === value) {
+      return;
+    }
+    this._value = [...value];
+    this.requestUpdate('value', oldValue);
   }
 
-  public set typedValue(value: string | null) {
-    this.value = value ?? '';
+  public get formValue() {
+    const data = new FormData();
+    for (const value of this.value) {
+      data.append(this.name, value);
+    }
+    return data;
   }
 
   @state()
-  private selectedItem?: YatlOption;
-
-  @state()
-  private open = false;
+  private displayValue = '';
 
   protected renderInput(id: string) {
     return html`
-      <yatl-dropdown
-        .open=${live(this.open)}
-        @yatl-dropdown-select=${this.onDropdownSelect}
-      >
+      <yatl-dropdown @yatl-dropdown-select=${this.onDropdownSelect}>
         <yatl-input
           slot="trigger"
           id=${id}
           placeholder=${this.placeholder}
-          .value=${live(this.selectedItem?.textContent ?? '')}
+          .value=${this.displayValue}
           readonly
         ></yatl-input>
         <slot @slotchange=${this.onSlotChange}></slot>
       </yatl-dropdown>
-      <input .value=${live(this.value)} type="hidden" />
     `;
   }
 
   private onSlotChange = () => this.updateSelectedOption();
 
   private onDropdownSelect = (event: YatlDropdownSelectEvent) => {
-    const item = event.item;
-
-    if (item === this.selectedItem) {
-      this.selectedItem = undefined;
-    } else {
-      this.selectedItem = item;
+    if (this.multi) {
+      event.preventDefault();
     }
 
-    this.open = false;
-    this.formControl!.value = this.selectedItem?.value ?? '';
-    this.updateSelectedOption();
+    const item = event.item;
 
-    // Dispatch on the form control so the base class gets it
-    this.formControl?.dispatchEvent(
-      new Event('change', { composed: true, bubbles: true }),
-    );
+    // Clear all values if not multi
+    const newValue = new Set<string>(this.multi ? this.value : []);
+    if (item.checked) {
+      newValue.add(item.value);
+    } else {
+      newValue.delete(item.value);
+    }
+
+    this.value = [...newValue];
+
+    if (this.multi) {
+      const selectedOptions = this.getSelectedOptions();
+      if (selectedOptions.length) {
+        this.displayValue = `${selectedOptions.length} options selected`;
+      } else {
+        this.displayValue = '';
+      }
+    } else if (item.checked) {
+      this.displayValue = item.textContent ?? '';
+    } else {
+      this.displayValue = '';
+    }
+
+    this.updateSelectedOption();
+    this.setFormValue(this.formValue);
+    this.dispatchEvent(new Event('change', { composed: true, bubbles: true }));
   };
 
   private updateSelectedOption() {
     for (const option of this.getAllOptions()) {
       option.checkable = true;
-      option.checked = option.value === this.formControl!.value;
+      option.checked = this.value.includes(option.value);
     }
   }
 
+  private getSelectedOptions() {
+    return this.getAllOptions().filter(o => o.checked);
+  }
+
   private getAllOptions() {
-    return this?.querySelectorAll('yatl-option') ?? [];
+    return [...this?.querySelectorAll('yatl-option')];
   }
 }

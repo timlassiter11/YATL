@@ -1,7 +1,7 @@
 import { html, LitElement, nothing, PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 
-import theme from '../theme';
+import theme from '../../theme';
 import styles from './yatl-form-control.styles';
 
 export type FormControl =
@@ -49,27 +49,10 @@ export abstract class YatlFormControl<
   @property({ type: Boolean, reflect: true })
   public inline = false;
 
-  @property({ type: String, attribute: 'value' })
-  public defaultValue = '';
-
-  @state()
-  private _value: string = '';
-
-  public get value() {
-    return this._value;
-  }
-
-  public set value(newValue) {
-    const oldValue = this._value;
-    if (newValue === oldValue) return;
-
-    this._value = newValue;
-    this.setFormValue(newValue);
-    this.requestUpdate();
-  }
-
-  public abstract get typedValue(): TData | null;
-  public abstract set typedValue(value);
+  public abstract value?: TData;
+  public abstract defaultValue?: TData;
+  public abstract formValue: string | File | FormData | null;
+  protected onValueChange(_event: Event): boolean | void {};
 
   private _errorText = '';
   @property({ type: String, attribute: 'error-text' })
@@ -95,16 +78,17 @@ export abstract class YatlFormControl<
 
   protected override createRenderRoot() {
     const root = super.createRenderRoot();
-    root.addEventListener('input', this.handleControlEvent);
-    root.addEventListener('change', this.handleControlEvent);
+    root.addEventListener('input', this.handleInputChange);
+    root.addEventListener('change', this.handleInputChange);
     return root;
   }
 
-  public connectedCallback() {
+  public connectedCallback(): void {
     super.connectedCallback();
     if (!this.value && this.defaultValue) {
       this.value = this.defaultValue;
     }
+    this.setFormValue(this.formValue);
   }
 
   protected override willUpdate(
@@ -250,14 +234,15 @@ export abstract class YatlFormControl<
     }
   }
 
-  private handleControlEvent = (event: Event) => {
-    const target = event.target as HTMLElement;
-    if (this.formControl && this.formControl === target) {
-      event.stopImmediatePropagation();
-      this.value = this.formControl.value;
-      this.dispatchEvent(
-        new Event(event.type, { bubbles: true, composed: true }),
-      );
+  private handleInputChange = (event: Event) => {
+    if (this.onValueChange?.(event)) {
+      return;
     }
+
+    event.stopPropagation();
+    this.setFormValue(this.formValue);
+    this.dispatchEvent(
+      new Event(event.type, { bubbles: true, composed: true }),
+    );
   };
 }

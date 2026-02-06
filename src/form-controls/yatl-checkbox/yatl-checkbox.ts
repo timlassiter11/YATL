@@ -6,11 +6,19 @@ import { live } from 'lit/directives/live.js';
 import styles from './yatl-checkbox.styles';
 
 @customElement('yatl-checkbox')
-export class YatlCheckbox extends YatlFormControl<boolean> {
+export class YatlCheckbox extends YatlFormControl<string> {
   public static override styles = [...YatlFormControl.styles, styles];
 
-  @property({ type: Boolean, attribute: 'checked' })
-  public defaultChecked = false;
+  /**
+   * The value to store in the form data if the checkbox is checked
+   */
+  @property({ type: String })
+  public value = 'on';
+
+  public get defaultValue() {
+    // Just use the value attribute since it doesn't really change on checkboxes
+    return this.value;
+  }
 
   private _uncheckedValue?: string;
   @property({ type: String, attribute: 'unchecked-value' })
@@ -21,9 +29,14 @@ export class YatlCheckbox extends YatlFormControl<boolean> {
   public set uncheckedValue(value) {
     const oldValue = this.uncheckedValue;
     this._uncheckedValue = value;
-    this.updateFormValue();
+    this.updateValue();
     this.requestUpdate('uncheckedValue', oldValue);
   }
+
+  @property({ type: Boolean, attribute: 'checked' })
+  public defaultChecked = false;
+
+  
 
   @property({ type: Boolean, attribute: 'always-include' })
   public alwaysInclude = false;
@@ -39,35 +52,35 @@ export class YatlCheckbox extends YatlFormControl<boolean> {
 
   public set checked(value) {
     this._checked = value;
-    this.updateFormValue();
-    this.requestUpdate();
+    this.updateValue();
+  }
+
+  public get formValue() {
+    if (this._checked) {
+      return this.value || 'on';
+    } else if (this.alwaysInclude) {
+      return this.uncheckedValue ?? 'off';
+    }
+    return null;
   }
 
   public override formResetCallback() {
     this.checked = this.defaultChecked;
   }
 
-  public override get typedValue() {
-    return this.checked;
-  }
-
-  public override set typedValue(value) {
-    this.checked = !!value;
-  }
-
   public override connectedCallback() {
     super.connectedCallback();
-    this._checked = this.defaultChecked;
-    this.updateFormValue();
+    this.checked = this.defaultChecked;
+    this.updateValue();
   }
 
   protected override render() {
     const inputId = 'input';
     return html`
       <div part="base">${this.renderInput(inputId)}</div>
-      ${this.renderLabel(inputId)}
-      ${this.renderHint()} ${this.renderErrorText()}
-    ` 
+      ${this.renderLabel(inputId)} ${this.renderHint()}
+      ${this.renderErrorText()}
+    `;
   }
 
   protected override renderInput(id: string) {
@@ -82,26 +95,16 @@ export class YatlCheckbox extends YatlFormControl<boolean> {
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}
-        @change=${this.handleCheckChange}
       />
     `;
   }
 
-  private updateFormValue() {
-    let formValue: string | null = null;
-    if (this._checked) {
-      formValue = this.value || 'on';
-    } else if (this.alwaysInclude) {
-      formValue = this.uncheckedValue ?? 'off';
-    }
-
-    this.setFormValue(formValue);
+  private updateValue() {
+    this.setFormValue(this.formValue);
   }
 
-  private handleCheckChange(event: Event) {
-    event.stopImmediatePropagation();
-    this.checked = this.formControl!.checked;
-    this.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  protected override onValueChange(event: Event) {
+    this.checked = (event.target as HTMLInputElement).checked;
   }
 }
 

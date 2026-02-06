@@ -19,11 +19,14 @@ export class YatlNumberInput extends YatlFormControl<number> {
   @property({ type: Number })
   public max?: number;
 
-  public get typedValue() {
-    return this.formControl?.valueAsNumber ?? null;
-  }
-  public set typedValue(value) {
-    this.value = value ? String(value) : '';
+  @property({ type: Number, attribute: 'value'})
+  public defaultValue?: number;
+
+  @property({ attribute: false})
+  public value?: number;
+
+  public get formValue() {
+    return this.value ? String(this.value) : '';
   }
 
   protected renderInput(id: string) {
@@ -33,7 +36,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
         id=${id}
         name=${this.name}
         type="number"
-        .value=${live(this.value)}
+        .value=${live(this.formValue)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
         ?readonly=${this.readonly}
@@ -41,6 +44,11 @@ export class YatlNumberInput extends YatlFormControl<number> {
         ?required=${this.required}
       />
     `;
+  }
+
+  protected override onValueChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.value = Number(input.value);
   }
 }
 

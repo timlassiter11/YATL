@@ -17,6 +17,8 @@ export default css`
   [part='input'] {
     width: 1rem;
     height: 1rem;
+    padding: 0;
+    margin: 0;
     accent-color: var(--checkbox-accent-color);
   }
 
@@ -30,5 +32,7 @@ export default css`
     font-size: var(--checkbox-label-font-szie);
     font-weight: var(--checkbox-label-font-weight);
     user-select: none;
+    width: 100%;
+    cursor: pointer;
   }
 `;

@@ -43,11 +43,14 @@ export class YatlInput extends YatlFormControl<string> {
   @property({ type: Boolean, attribute: 'show-count' })
   public showCount = false;
 
-  public get typedValue(): string {
+  @property({ type: String, attribute: 'value' })
+  public defaultValue = '';
+
+  @property({ attribute: false })
+  public value = '';
+
+  public get formValue() {
     return this.value;
-  }
-  public set typedValue(value: string) {
-    this.value = value;
   }
 
   protected override renderInput(id: string) {
@@ -94,6 +97,10 @@ export class YatlInput extends YatlFormControl<string> {
       : `${this.value.length}`;
 
     return html`<span part="label-count">${count}</span>`;
+  }
+
+  protected override onValueChange(event: Event) {
+    this.value = (event.target as HTMLInputElement).value;
   }
 }
 

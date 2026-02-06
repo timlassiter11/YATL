@@ -1,12 +1,11 @@
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 
 import styles from './yatl-select.styles';
-import { live } from 'lit/directives/live.js';
 import { YatlInput } from '../yatl-input';
-import { YatlOption } from '../../yatl-option';
 import { YatlDropdownSelectEvent } from '../../events';
+import { YatlDropdown } from '../../yatl-dropdown';
 
 @customElement('yatl-select')
 export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
@@ -24,6 +23,12 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   @property({ type: Array, attribute: 'value' })
   public defaultValue = [];
 
+  @property({ type: Boolean, reflect: true })
+  public open = false;
+
+  @property({ type: Boolean, reflect: true })
+  public clearable = false;
+
   // Mutable value types need to be copied
   // so the user's changes don't mess things up.
   private _value: string[] = [];
@@ -37,6 +42,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
       return;
     }
     this._value = [...value];
+    this.updateSelectedOptions();
     this.requestUpdate('value', oldValue);
   }
 
@@ -51,24 +57,74 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   @state()
   private displayValue = '';
 
-  protected renderInput(id: string) {
+  protected override render() {
     return html`
-      <yatl-dropdown @yatl-dropdown-select=${this.onDropdownSelect}>
-        <yatl-input
-          slot="trigger"
-          id=${id}
-          placeholder=${this.placeholder}
-          .value=${this.displayValue}
-          readonly
-        ></yatl-input>
-        <slot @slotchange=${this.onSlotChange}></slot>
+      ${this.renderLabel()}
+      <div part="base">${this.renderInput()}</div>
+      ${this.renderHint()}${this.renderErrorText()}
+    `;
+  }
+
+  protected renderInput() {
+    return html`
+      <yatl-dropdown
+        .open=${this.open}
+        @yatl-dropdown-select=${this.handleDropdownSelect}
+        @yatl-dropdown-open=${this.handleDropdownToggle}
+        @yatl-dropdown-close=${this.handleDropdownToggle}
+      >
+        <div class="text-input" slot="trigger" tabindex="0">
+          <span part="input">${this.displayValue || this.placeholder}</span>
+          ${this.renderClearIcon()} ${this.renderArrowIcon()}
+        </div>
+        <slot @slotchange=${this.handleSlotChange}></slot>
       </yatl-dropdown>
     `;
   }
 
-  private onSlotChange = () => this.updateSelectedOption();
+  protected renderClearIcon() {
+    if (!this.clearable || this.value.length === 0) {
+      return nothing;
+    }
 
-  private onDropdownSelect = (event: YatlDropdownSelectEvent) => {
+    return html`
+      <button
+        part="clear-icon"
+        slot="end"
+        @click=${this.handleClearButtonClick}
+      >
+        <yatl-icon name="close"></yatl-icon>
+      </button>
+    `;
+  }
+
+  protected renderArrowIcon() {
+    return html`
+      <yatl-icon part="arrow-icon" name="chevron-down"></yatl-icon>
+    `;
+  }
+
+  private handleSlotChange() {
+    this.updateSelectedOptions();
+  }
+
+  private handleClearButtonClick(event: Event) {
+    event.stopPropagation();
+    this.value = [];
+  }
+
+  private handleDropdownToggle(event: Event) {
+    const target = event.target as YatlDropdown;
+    if (target.open) {
+      this.states.add('open');
+    } else {
+      this.states.delete('open');
+    }
+    this.open = target.open;
+  }
+
+  private handleDropdownSelect(event: YatlDropdownSelectEvent) {
+    // Stop the dropdown from closing
     if (this.multi) {
       event.preventDefault();
     }
@@ -84,29 +140,25 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     }
 
     this.value = [...newValue];
-
-    if (this.multi) {
-      const selectedOptions = this.getSelectedOptions();
-      if (selectedOptions.length) {
-        this.displayValue = `${selectedOptions.length} options selected`;
-      } else {
-        this.displayValue = '';
-      }
-    } else if (item.checked) {
-      this.displayValue = item.textContent ?? '';
-    } else {
-      this.displayValue = '';
-    }
-
-    this.updateSelectedOption();
     this.setFormValue(this.formValue);
     this.dispatchEvent(new Event('change', { composed: true, bubbles: true }));
-  };
+  }
 
-  private updateSelectedOption() {
+  private updateSelectedOptions() {
     for (const option of this.getAllOptions()) {
       option.checkable = true;
       option.checked = this.value.includes(option.value);
+    }
+
+    if (this.multi) {
+      if (this.value.length) {
+        this.displayValue = `${this.value.length} options selected`;
+      } else {
+        this.displayValue = '';
+      }
+    } else {
+      const selectedOption = this.getSelectedOptions().at(0);
+      this.displayValue = selectedOption?.textContent ?? '';
     }
   }
 
@@ -115,6 +167,12 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   }
 
   private getAllOptions() {
-    return [...this?.querySelectorAll('yatl-option')];
+    return [...this.querySelectorAll('yatl-option')];
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'yatl-select': YatlSelect;
   }
 }

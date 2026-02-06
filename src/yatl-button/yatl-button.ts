@@ -18,7 +18,9 @@ export class YatlButton extends LitElement {
     return html`
       <div part="base">
         <button part="button" type=${this.type} ?disabled=${this.disabled}>
+          <slot name="start"></slot>
           <slot></slot>
+          <slot name="end"></slot>
         </button>
       </div>
     `;

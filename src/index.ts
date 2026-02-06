@@ -7,6 +7,7 @@ export * from './yatl-option';
 export * from './yatl-table';
 export * from './yatl-table-controller';
 export * from './yatl-table-ui';
+export * from './yatl-tag';
 export * from './yatl-toolbar';
 
 export {

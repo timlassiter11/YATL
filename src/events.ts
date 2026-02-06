@@ -226,6 +226,13 @@ export class YatlToolbarSearchInput extends YatlEvent {
   }
 }
 
+export class YatlTagDismissEvent extends YatlEvent {
+  static readonly EVENT_NAME = 'yatl-tag-dismiss';
+  constructor() {
+    super(YatlTagDismissEvent.EVENT_NAME);
+  }
+}
+
 export class YatlToolbarSearchChange extends YatlEvent {
   static readonly EVENT_NAME = 'yatl-toolbar-search-change';
   constructor(public readonly value: string) {
@@ -269,6 +276,8 @@ declare global {
     [YatlDropdownCloseRequest.EVENT_NAME]: YatlDropdownCloseEvent;
     [YatlDropdownCloseEvent.EVENT_NAME]: YatlDropdownCloseEvent;
     [YatlDropdownSelectEvent.EVENT_NAME]: YatlDropdownSelectEvent;
+
+    [YatlTagDismissEvent.EVENT_NAME]: YatlTagDismissEvent;
     
     [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
     [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;

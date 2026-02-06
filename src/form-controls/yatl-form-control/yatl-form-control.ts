@@ -1,5 +1,5 @@
 import { html, LitElement, nothing, PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 
 import theme from '../../theme';
 import styles from './yatl-form-control.styles';
@@ -24,6 +24,10 @@ export abstract class YatlFormControl<
     delegatesFocus: true,
   };
   protected readonly internals: ElementInternals;
+  /**
+   * Used to associate the label with the control element
+   */
+  public readonly inputId = 'input'; 
 
   @query('input')
   protected formControl?: TInput;
@@ -109,21 +113,30 @@ export abstract class YatlFormControl<
   }
 
   protected override render() {
-    const inputId = 'input';
     return html`
-      ${this.renderLabel(inputId)}
-      <div part="base">${this.renderInput(inputId)}</div>
+      ${this.renderLabel()}
+      ${this.renderBase(this.renderInput())}
       ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
 
-  protected renderLabel(inputId: string): unknown {
+  protected renderBase(contents: unknown) {
+    return html`
+      <div part="base" class="text-input">
+        <slot part="start" name="start"></slot>
+        ${contents}
+        <slot part="end" name="end"></slot>
+      </div>
+    `
+  }
+
+  protected renderLabel(): unknown {
     if (!this.label) {
       return nothing;
     }
 
     return html`
-      <label part="label" for=${inputId}>
+      <label part="label" for="${this.inputId}">
         <slot name="label">
           <span>${this.label}</span>
         </slot>
@@ -155,7 +168,7 @@ export abstract class YatlFormControl<
     `;
   }
 
-  protected abstract renderInput(id: string): unknown;
+  protected abstract renderInput(): unknown;
 
   protected get hasErrorText() {
     return this.errorText;

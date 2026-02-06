@@ -1,5 +1,5 @@
 import { html } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
 
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -13,6 +13,9 @@ export class YatlDateInput extends YatlFormControl<Date> {
 
   @property({ type: String })
   public placeholder = '';
+
+  @property({ type: Number })
+  public size = 10;
 
   @property({ converter: dateConverter, reflect: true })
   public min?: Date;
@@ -44,9 +47,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
     return dateConverter.toAttribute(this.value);
   }
 
-  public formResetCallback() {}
-
-  protected override renderInput(id: string) {
+  protected override renderInput() {
     // Unfortunately we have to calculate the attributes for each render
     // because they aren't reflected back during the render cycle.
     const min = dateConverter.toAttribute(this.min) ?? undefined;
@@ -54,9 +55,9 @@ export class YatlDateInput extends YatlFormControl<Date> {
     return html`
       <input
         part="input"
-        id=${id}
         name=${this.name}
         type="date"
+        size=${this.size}
         .value=${live(this.formValue ?? '')}
         min=${ifDefined(min)}
         max=${ifDefined(max)}

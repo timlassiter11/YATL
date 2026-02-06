@@ -14,6 +14,9 @@ export class YatlNumberInput extends YatlFormControl<number> {
   public placeholder = '';
 
   @property({ type: Number })
+  public size = 4;
+
+  @property({ type: Number })
   public min?: number;
 
   @property({ type: Number })
@@ -29,13 +32,13 @@ export class YatlNumberInput extends YatlFormControl<number> {
     return this.value ? String(this.value) : '';
   }
 
-  protected renderInput(id: string) {
+  protected renderInput() {
     return html`
       <input
         part="input"
-        id=${id}
         name=${this.name}
         type="number"
+        size=${this.size}
         .value=${live(this.formValue)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}

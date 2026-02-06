@@ -1,6 +1,6 @@
 import { customElement, property, state } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
-import { html, TemplateResult } from 'lit';
+import { html } from 'lit';
 import { live } from 'lit/directives/live.js';
 
 import styles from './yatl-checkbox.styles';
@@ -35,8 +35,6 @@ export class YatlCheckbox extends YatlFormControl<string> {
 
   @property({ type: Boolean, attribute: 'checked' })
   public defaultChecked = false;
-
-  
 
   @property({ type: Boolean, attribute: 'always-include' })
   public alwaysInclude = false;
@@ -75,19 +73,18 @@ export class YatlCheckbox extends YatlFormControl<string> {
   }
 
   protected override render() {
-    const inputId = 'input';
     return html`
-      <div part="base">${this.renderInput(inputId)}</div>
-      ${this.renderLabel(inputId)} ${this.renderHint()}
-      ${this.renderErrorText()}
+      <div part="base">${this.renderInput()}</div>
+      ${this.renderLabel()}
+      ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
 
-  protected override renderInput(id: string) {
+  protected override renderInput() {
     return html`
       <input
         part="input"
-        id=${id}
+        id=${this.inputId}
         name=${this.name}
         type="checkbox"
         value=${this.value}

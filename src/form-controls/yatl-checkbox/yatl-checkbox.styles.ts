@@ -10,8 +10,14 @@ export default css`
     --checkbox-label-font-szie: var(--yatl-checkbox-font-size, medium);
   }
 
+  :host([inline]) {
+    align-items: center;
+  }
+
   [part='base'] {
     width: fit-content;
+    display: flex;
+    align-items: center;
   }
 
   [part='input'] {

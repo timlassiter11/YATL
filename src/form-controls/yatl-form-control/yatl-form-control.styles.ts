@@ -30,17 +30,11 @@ export default css`
     gap: var(--yatl-spacing-s);
   }
 
-  [part='label'] {
-    color: var(--input-label-text);
-    font-size: var(--input-label-font-size);
-    font-weight: var(--input-label-font-weight);
-  }
+  .text-input {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
 
-  :host(:not([inline])) [part='label'] {
-    margin-block-end: var(--yatl-spacing-s);
-  }
-
-  [part='input'] {
     box-sizing: border-box;
     border-radius: var(--input-radius);
     color: var(--input-text);
@@ -52,10 +46,42 @@ export default css`
     width: 100%;
   }
 
-  [part='input']:focus,
-  [part='input']:focus-visible {
+  .text-input:focus,
+  .text:focus-visible {
     outline: var(--input-outline-width) solid var(--input-outline-color);
     outline-offset: calc(var(--input-outline-width) * -1);
+  }
+
+  [part='label'] {
+    color: var(--input-label-text);
+    font-size: var(--input-label-font-size);
+    font-weight: var(--input-label-font-weight);
+  }
+
+  :host(:not([inline])) [part='label'] {
+    margin-block-end: var(--yatl-spacing-s);
+  }
+
+  input:not([type='checkbox']):not([type='radio']) {
+    height: 100%;
+    min-width: 0px;
+    flex: 1 1 auto;
+
+    margin: 0px;
+    padding: 0px;
+    padding-block: 0px;
+
+    border: none;
+    outline: none;
+    box-shadow: none;
+
+    color: inherit;
+    background-color: transparent;
+    appearance: none;
+
+    cursor: inherit;
+    font: inherit;
+    transition: inherit;
   }
 
   [part='hint'] {
@@ -66,5 +92,13 @@ export default css`
   [part='error'] {
     color: var(--input-error-text);
     font-size: var(--input-error-font-size);
+  }
+
+  [part='start'],
+  [part='end'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    cursor: default;
   }
 `;

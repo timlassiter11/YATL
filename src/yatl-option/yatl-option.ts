@@ -36,7 +36,7 @@ export class YatlOption extends LitElement {
 
   protected renderCheck() {
     return html`
-      <svg part="check" viewBox="0 0 16 16">
+      <svg part="check" viewBox="0 0 16 16" fill="currentColor">
         <path
           d="M13.485 1.929l-8.485 8.485-3.536-3.536-1.414 1.414 4.95 4.95 9.9-9.9z"
         />

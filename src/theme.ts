@@ -91,7 +91,7 @@ export default css`
     );
 
     --yatl-text-3-light: #4d4d4d;
-    --yatl-text-3-dark: #c1c1c1;
+    --yatl-text-3-dark: #8a8a8a;
     --yatl-text-3: light-dark(
       var(--yatl-text-3-light),
       var(--yatl-text-3-dark)

@@ -2,38 +2,35 @@ import { css } from 'lit';
 
 export default css`
   :host {
-    --dropdown-item-text: var(--yatl-dropdown-item-text, var(--yatl-text-1));
-    --dropdown-item-font-size: var(--yatl-dropdown-item-font-size, 16px);
-    --dropdown-item-bg: var(--yatl-dropdown-item-bg, transparent);
-    --dropdown-item-hover-bg: var(
-      --yatl-dropdown-item-hover-bg,
-      var(--yatl-color-brand)
-    );
-    --dropdown-item-padding: var(
-      --yatl-dropdown-item-padding,
+    --option-color: var(--yatl-option-color, var(--yatl-text-1));
+    --option-font-size: var(--yatl-option-font-size, 16px);
+    --option-bg: var(--yatl-option-bg, transparent);
+    --option-hover-bg: var(--yatl-option-hover-bg, var(--yatl-color-brand));
+    --option-padding: var(
+      --yatl-option-padding,
       var(--yatl-spacing-s) var(--yatl-spacing-m)
     );
-    --dropdown-item-gap: var(--yatl-dropdown-item-gap, var(--yatl-spacing-xs));
-    --dropdown-item-radius: var(
-      --yatl-dropdown-item-radius,
-      var(--yatl-radius-s)
-    );
-    --dropdown-item-focus-ring: var(
-      --yatl-dropdown-item-focus-ring,
+    --option-gap: var(--yatl-option-gap, var(--yatl-spacing-xs));
+    --option-radius: var(--yatl-option-radius, var(--yatl-radius-s));
+    --option-focus-ring: var(
+      --yatl-option-focus-ring,
       3px solid var(--yatl-color-brand)
     );
-    --dropdown-item-focus-bg: var(
-      --yatl-dropdown-item-focus-bg,
+    --option-focus-bg: var(
+      --yatl-option-focus-bg,
       color-mix(in srgb, var(--yatl-mix-color), 5%, transparent)
     );
-
-    border-radius: var(--dropdown-item-radius);
+    --option-disabled-color: var(
+      --yatl-option-disabled-color,
+      var(--yatl-text-3)
+    );
+    border-radius: var(--option-radius);
   }
 
   :host(:focus-visible) {
     z-index: 1;
-    outline: var(--dropdown-item-focus-ring);
-    background-color: var(--dropdown-item-focus-bg);
+    outline: var(--option-focus-ring);
+    background-color: var(--option-focus-bg);
   }
 
   [part='base'] {
@@ -43,29 +40,21 @@ export default css`
     white-space: nowrap;
     user-select: none;
 
-    color: var(--dropdown-item-text);
-    font-size: var(--dropdown-item-font-size);
-    background-color: var(--dropdown-item-bg);
-    gap: var(--dropdown-item-gap);
-    padding: var(--dropdown-item-padding);
-    border-radius: var(--dropdown-item-radius);
+    color: var(--option-color);
+    font-size: var(--option-font-size);
+    background-color: var(--option-bg);
+    padding: var(--option-padding);
+    border-radius: var(--option-radius);
     transition: background 0.1s ease;
   }
 
-  [part='base']:hover {
-    background-color: var(--dropdown-item-hover-bg);
+  :host([disabled]) [part='base'] {
+    color: var(--option-disabled-color);
+    cursor: not-allowed;
   }
 
-  [part='input'] {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  :host(:not([disabled])) [part='base']:hover {
+    background-color: var(--option-hover-bg);
   }
 
   [part='check'] {
@@ -77,13 +66,6 @@ export default css`
     justify-content: center;
     border: 1px solid transparent;
     border-radius: 3px;
-    transition: all 0.2s ease;
-  }
-
-  [part='check'] {
-    width: 14px;
-    height: 14px;
-    fill: var(--dropdown-item-text);
     opacity: 0;
     transform: scale(0.5);
     transition: all 0.2s cubic-bezier(0.12, 0.4, 0.29, 1.46);
@@ -92,10 +74,5 @@ export default css`
   :host([checked]) [part='check'] {
     opacity: 1;
     transform: scale(1);
-  }
-
-  [part='label'] {
-    font-size: 14px;
-    color: var(--dropdown-item-text);
   }
 `;

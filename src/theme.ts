@@ -22,7 +22,7 @@ export default css`
       'Apple Color Emoji',
       'Segoe UI Emoji'
     );
-    --yatl-font-size: var(--yatl-theme-font-size, 0.875rem);
+    --yatl-font-size: var(--yatl-theme-font-size, 1rem);
     --yatl-line-height: var(--yatl-theme-line-height, 1.25rem);
 
     /* Spacing */

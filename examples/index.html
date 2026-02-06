@@ -50,16 +50,8 @@
       <div class="nav-divider"></div>
 
       <button id="themeToggle" class="nav-icon-btn">
-        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5" />
-          <path
-            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-        </svg>
-        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
+        <yatl-icon name="sun"></yatl-icon>
+        <yatl-icon name="moon"></yatl-icon>
       </button>
     </div>
   </nav>
@@ -70,14 +62,11 @@
           <div class="filters-header">
             <h1>Filters</h1>
             <button id="clearFiltersButton" type="reset" class="button close" title="Clear filters">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="square"
-                  stroke-linejoin="round" />
-              </svg>
+              <yatl-icon name="close"></yatl-icon>
             </button>
           </div>
           <div class="option-group">
-            <yatl-select name="status" label="Status" multi></yatl-select>
+            <yatl-select name="status" label="Status" multi clearable></yatl-select>
             <h2>Date Modified</h2>
             <yatl-date-input label="From" name="startDate"></yatl-date-input>
             <yatl-date-input label="To" name="endDate"></yatl-date-input>
@@ -140,16 +129,7 @@
     <div class="table-wrapper">
       <yatl-table-ui>
         <yatl-button id="deleteRowsButton" slot="toolbar-button-group" title="Delete selected rows" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 6h18" />
-            <path d="M19 6v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6" />
-
-            <path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" />
-
-            <line x1="10" y1="11" x2="10" y2="17" />
-            <line x1="14" y1="11" x2="14" y2="17" />
-          </svg>
+          <yatl-icon name="trash"></yatl-icon>
         </yatl-button>
       </yatl-table-ui>
     </div>

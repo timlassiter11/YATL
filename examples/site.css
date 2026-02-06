@@ -152,48 +152,17 @@ nav {
   background: light-dark(#f1f5f9, #1e293b);
 }
 
-.icon-sun {
+yatl-icon[name="sun"] {
   display: none;
 }
-.icon-moon {
+yatl-icon[name="moon"] {
   display: block;
 }
-:root.dark .icon-sun {
+:root.dark yatl-icon[name="sun"] {
   display: block;
 }
-:root.dark .icon-moon {
+:root.dark yatl-icon[name="moon"] {
   display: none;
-}
-
-label:has(input[type="radio"], input[type="checkbox"]) {
-  user-select: none;
-}
-
-input[type='text'],
-input[type='number'],
-input[type='search'],
-input[type='date'],
-input:not([type]),
-select {
-  background-color: var(--bg-subtle);
-  line-height: 1;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: large;
-  padding: var(--spacing-sm);
-}
-
-input[type="checkbox"],
-input[type="radio"] {
-  accent-color: var(--accent);
-}
-
-select option {
-  padding: 0 var(--spacing-sm);
-}
-
-select option:hover {
-  background-color: var(--bg-hover);
 }
 
 .sidebar {
@@ -221,7 +190,7 @@ select option:hover {
 .card h4,
 .card h5,
 .card h6 {
-  margin: 5px;
+  margin: 0px;
 }
 
 .card h1 {
@@ -237,14 +206,6 @@ select option:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.inline {
-  display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
 }
 
 /* Need this to limit virtual scroll */

@@ -183,6 +183,35 @@ export class YatlTableStateChangeEvent<
 
 // #endregion
 // #region --- UI Events ---
+
+export class YatlDropdownOpenRequest extends YatlEvent {
+  static readonly EVENT_NAME = 'yatl-dropdown-open-request';
+  constructor() {
+    super(YatlDropdownOpenRequest.EVENT_NAME, { cancelable: true });
+  }
+}
+
+export class YatlDropdownOpenEvent extends YatlEvent {
+  static readonly EVENT_NAME = 'yatl-dropdown-open';
+  constructor() {
+    super(YatlDropdownOpenEvent.EVENT_NAME);
+  }
+}
+
+export class YatlDropdownCloseRequest extends YatlEvent {
+  static readonly EVENT_NAME = 'yatl-dropdown-close-request';
+  constructor() {
+    super(YatlDropdownCloseRequest.EVENT_NAME, { cancelable: true });
+  }
+}
+
+export class YatlDropdownCloseEvent extends YatlEvent {
+  static readonly EVENT_NAME = 'yatl-dropdown-close';
+  constructor() {
+    super(YatlDropdownCloseEvent.EVENT_NAME);
+  }
+}
+
 export class YatlDropdownSelectEvent extends YatlEvent {
   static readonly EVENT_NAME = 'yatl-dropdown-select';
   constructor(public readonly item: YatlOption) {
@@ -235,7 +264,12 @@ declare global {
     [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
 
+    [YatlDropdownOpenRequest.EVENT_NAME]: YatlDropdownOpenRequest;
+    [YatlDropdownOpenEvent.EVENT_NAME]: YatlDropdownOpenEvent;
+    [YatlDropdownCloseRequest.EVENT_NAME]: YatlDropdownCloseEvent;
+    [YatlDropdownCloseEvent.EVENT_NAME]: YatlDropdownCloseEvent;
     [YatlDropdownSelectEvent.EVENT_NAME]: YatlDropdownSelectEvent;
+    
     [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
     [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;
     [YatlToolbarExportClick.EVENT_NAME]: YatlToolbarExportClick;

@@ -1,19 +1,25 @@
-import { html, LitElement, PropertyValues } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
 import {
-  computePosition,
   autoUpdate,
+  computePosition,
   flip,
-  shift,
   offset,
+  shift,
   size,
 } from '@floating-ui/dom';
+import { html, LitElement, PropertyValues } from 'lit';
+import { customElement, property, query } from 'lit/decorators.js';
 
-import styles from './yatl-dropdown.styles';
+import {
+  YatlDropdownCloseEvent,
+  YatlDropdownCloseRequest,
+  YatlDropdownSelectEvent as YatlDropdownItemSelectEvent,
+  YatlDropdownOpenEvent,
+  YatlDropdownOpenRequest,
+} from '../events';
 import theme from '../theme';
-import { YatlOption } from '../yatl-option';
 import { activeElements } from '../utils';
-import { YatlDropdownSelectEvent as YatlDropdownItemSelectEvent } from '../events';
+import { YatlOption } from '../yatl-option';
+import styles from './yatl-dropdown.styles';
 
 /**
  * @fires yatl-dropdown-select
@@ -62,8 +68,10 @@ export class YatlDropdown extends LitElement {
     if (changedProperties.has('open')) {
       if (this.open) {
         this.addListeners();
+        this.dispatchEvent(new YatlDropdownOpenEvent());
       } else {
         this.removeListeners();
+        this.dispatchEvent(new YatlDropdownCloseEvent());
       }
     }
   }
@@ -76,7 +84,20 @@ export class YatlDropdown extends LitElement {
   // #endregion
   // #region Event Handlers
 
-  private handleTriggerClick() {
+  private handleTriggerClick(event: PointerEvent) {
+    if (event.pointerId === -1 && this.open) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    const requestEvent = this.open
+      ? new YatlDropdownCloseRequest()
+      : new YatlDropdownOpenRequest();
+    if (!this.dispatchEvent(requestEvent)) {
+      return;
+    }
+
     this.open = !this.open;
   }
 
@@ -221,10 +242,9 @@ export class YatlDropdown extends LitElement {
   }
 
   private get referenceElement() {
-    const nodes = this.triggerSlot?.assignedElements({ flatten: true });
-    if (nodes?.length) {
-      return nodes[0] as HTMLElement;
-    }
+    return this.triggerSlot?.assignedElements({ flatten: true }).at(0) as
+      | HTMLElement
+      | undefined;
   }
 
   // #endregion

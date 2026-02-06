@@ -19,6 +19,7 @@ export default css`
     --input-hint-font-size: var(--yatl-input-hint-font-size, small);
     --input-error-text: var(--yatl-input-error-text, var(--yatl-color-danger));
     --input-error-font-size: var(--yatl-input-error-font-size, small);
+    --input-placeholder-color: var(--yatl-input-placeholder-color, var(--yatl-text-2));
 
     display: flex;
     flex-direction: column;
@@ -100,5 +101,9 @@ export default css`
     flex: 0 0 auto;
     align-items: center;
     cursor: default;
+  }
+
+  input::placeholder {
+    color: var(--input-placeholder-color);
   }
 `;

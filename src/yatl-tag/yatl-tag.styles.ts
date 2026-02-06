@@ -11,6 +11,7 @@ export default css`
     color: var(--yatl-text-3);
     white-space: nowrap;
     text-overflow: ellipsis;
+    user-select: none;
   }
 
   [part='dismiss-button'] {

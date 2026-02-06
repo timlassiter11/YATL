@@ -6,6 +6,7 @@ export default css`
     --input-padding: var(--yatl-input-padding, var(--yatl-spacing-m));
     --input-bg: var(--yatl-input-bg, var(--yatl-surface-2));
     --input-text: var(--yatl-input-text, var(--yatl-text-1));
+    --input-line-height: var(--yatl-input-line-height, 1.2);
     --input-outline-color: var(
       --yatl-input-outline-color,
       var(--yatl-color-brand)
@@ -40,7 +41,7 @@ export default css`
     border-radius: var(--input-radius);
     color: var(--input-text);
     background-color: var(--input-bg);
-    line-height: 1;
+    line-height: var(--input-line-height);
     border: none;
     font-size: large;
     padding: var(--input-padding);

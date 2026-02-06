@@ -14,8 +14,35 @@ export default css`
     );
   }
 
+  .text-input {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+  }
+
   [part='input'] {
     width: 100%;
+  }
+
+  .input-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+  }
+
+  [part='tags'] {
+    display: flex;
+    flex-direction: row;
+    gap: var(--yatl-spacing-xs);
+    flex: 1 1 0%;
+    flex-wrap: wrap;
+    margin-left: calc(var(--yatl-spacing-s) * -1);
+  }
+
+  :host(:not([multi])) [part='tags'] {
+    display: none;
   }
 
   [part='clear-icon'],
@@ -25,9 +52,16 @@ export default css`
     justify-content: center;
     width: 1.15rem;
     height: 1.15rem;
+    background-color: inherit;
+    margin-left: var(--yatl-spacing-xs);
+    z-index: 1;
   }
 
-  [part='clear-icon'] {
+  yatl-button[part='clear-icon'] {
+    border: none;
+  }
+
+  yatl-button[part='clear-icon']::part(button) {
     appearance: none;
     background: none;
     border: none;

@@ -173,6 +173,7 @@ yatl-icon[name="moon"] {
   flex-shrink: 0;
   gap: var(--spacing-md);
   overflow-y: auto;
+  width: 250px;
 }
 
 .card {

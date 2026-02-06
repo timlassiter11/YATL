@@ -1,4 +1,4 @@
-import { customElement, property, query, state } from 'lit/decorators.js';
+import { customElement, property, query } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
 import { html, nothing } from 'lit';
 
@@ -6,6 +6,8 @@ import styles from './yatl-select.styles';
 import { YatlInput } from '../yatl-input';
 import { YatlDropdownSelectEvent } from '../../events';
 import { YatlDropdown } from '../../yatl-dropdown';
+import { YatlOption } from '../../yatl-option';
+import { repeat } from 'lit/directives/repeat.js';
 
 @customElement('yatl-select')
 export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
@@ -19,6 +21,9 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
 
   @property({ type: Boolean, reflect: true })
   public multi = false;
+
+  @property({ type: Number, attribute: 'max-tags' })
+  public maxTags = 3;
 
   @property({ type: Array, attribute: 'value' })
   public defaultValue = [];
@@ -43,6 +48,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     }
     this._value = [...value];
     this.updateSelectedOptions();
+    this.setFormValue(this.formValue);
     this.requestUpdate('value', oldValue);
   }
 
@@ -54,8 +60,22 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     return data;
   }
 
-  @state()
-  private displayValue = '';
+  public toggleOption(value: string, state?: boolean) {
+    // Clear all values if not multi
+    const newValue = new Set<string>(this.multi ? this.value : []);
+
+    if (state === undefined) {
+      state = !this.value.includes(value);
+    }
+
+    if (state) {
+      newValue.add(value);
+    } else {
+      newValue.delete(value);
+    }
+
+    this.value = [...newValue];
+  }
 
   protected override render() {
     return html`
@@ -74,12 +94,54 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
         @yatl-dropdown-close=${this.handleDropdownToggle}
       >
         <div class="text-input" slot="trigger" tabindex="0">
-          <span part="input">${this.displayValue || this.placeholder}</span>
-          ${this.renderClearIcon()} ${this.renderArrowIcon()}
+          <div class="input-row">
+            <div part="input">${this.renderDisplayValue()}${this.renderTags()}</div>
+            ${this.renderClearIcon()} ${this.renderArrowIcon()}
+          </div>
         </div>
         <slot @slotchange=${this.handleSlotChange}></slot>
       </yatl-dropdown>
     `;
+  }
+
+  protected renderDisplayValue() {
+    if (this.multi) {
+      return nothing;
+    }
+    return this.getSelectedOptions().at(0)?.textContent ?? this.placeholder;
+  }
+
+  protected renderTags() {
+    if (!this.multi) {
+      return nothing;
+    }
+
+    let extraTag: unknown = nothing;
+    const selectedOptions = this.getSelectedOptions();
+    if (selectedOptions.length > this.maxTags) {
+      extraTag = html`<yatl-tag
+        >+${selectedOptions.length - this.maxTags}</yatl-tag
+      >`;
+    }
+    return html`
+      <div part="tags">
+        ${repeat(
+          selectedOptions.slice(0, this.maxTags),
+          option => option.value,
+          option => this.renderTag(option),
+        )}
+        ${extraTag}
+      </div>
+    `;
+  }
+
+  protected renderTag(option: YatlOption) {
+    return html`<yatl-tag
+      dismissable
+      @yatl-tag-dismiss=${(event: Event) =>
+        this.handleTagDissmiss(option, event)}
+      >${option.textContent}</yatl-tag
+    >`;
   }
 
   protected renderClearIcon() {
@@ -88,13 +150,13 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     }
 
     return html`
-      <button
+      <yatl-button
         part="clear-icon"
         slot="end"
         @click=${this.handleClearButtonClick}
       >
         <yatl-icon name="close"></yatl-icon>
-      </button>
+      </yatl-button>
     `;
   }
 
@@ -104,6 +166,12 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     `;
   }
 
+  private handleTagDissmiss(option: YatlOption, event: Event) {
+    (event.target as HTMLElement).remove();
+    this.toggleOption(option.value, false);
+    this.dispatchChange();
+  }
+
   private handleSlotChange() {
     this.updateSelectedOptions();
   }
@@ -111,6 +179,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   private handleClearButtonClick(event: Event) {
     event.stopPropagation();
     this.value = [];
+    this.dispatchChange();
   }
 
   private handleDropdownToggle(event: Event) {
@@ -130,35 +199,14 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     }
 
     const item = event.item;
-
-    // Clear all values if not multi
-    const newValue = new Set<string>(this.multi ? this.value : []);
-    if (item.checked) {
-      newValue.add(item.value);
-    } else {
-      newValue.delete(item.value);
-    }
-
-    this.value = [...newValue];
-    this.setFormValue(this.formValue);
-    this.dispatchEvent(new Event('change', { composed: true, bubbles: true }));
+    this.toggleOption(item.value, item.checked);
+    this.dispatchChange();
   }
 
   private updateSelectedOptions() {
     for (const option of this.getAllOptions()) {
       option.checkable = true;
       option.checked = this.value.includes(option.value);
-    }
-
-    if (this.multi) {
-      if (this.value.length) {
-        this.displayValue = `${this.value.length} options selected`;
-      } else {
-        this.displayValue = '';
-      }
-    } else {
-      const selectedOption = this.getSelectedOptions().at(0);
-      this.displayValue = selectedOption?.textContent ?? '';
     }
   }
 
@@ -168,6 +216,10 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
 
   private getAllOptions() {
     return [...this.querySelectorAll('yatl-option')];
+  }
+
+  private dispatchChange() {
+    this.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
   }
 }
 

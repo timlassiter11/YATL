@@ -110,6 +110,12 @@ export abstract class YatlFormControl<
     if (changedProperties.has('requiredText')) {
       this.updateValidity();
     }
+
+    // Update form data when disabled state changes.
+    if (changedProperties.has('disabled')) {
+      this.setFormValue(this.formValue);
+      this.toggleState('disabled', this.disabled);
+    }
   }
 
   protected override render() {
@@ -244,6 +250,15 @@ export abstract class YatlFormControl<
       );
     } else {
       this.setValidity({});
+    }
+  }
+
+  protected toggleState(name: string, state?: boolean) {
+    state ??= !this.states.has(name);
+    if (state) {
+      this.states.add(name);
+    } else {
+      this.states.delete(name);
     }
   }
 

@@ -48,14 +48,14 @@ export default css`
     --yatl-color-brand: var(--yatl-theme-brand, #7531ae);
     --yatl-color-danger: var(--yatl-theme-danger, #ef4444);
 
-    --yatl-surface-1-light: #ffffff;
+    --yatl-surface-1-light: #f3f4f6;
     --yatl-surface-1-dark: #101219;
     --yatl-surface-1: light-dark(
       var(--yatl-surface-1-light),
       var(--yatl-surface-1-dark)
     );
 
-    --yatl-surface-2-light: #f8fafc;
+    --yatl-surface-2-light: #f7f7f7;
     --yatl-surface-2-dark: #1a1b1e;
     --yatl-surface-2: light-dark(
       var(--yatl-surface-2-light),

@@ -95,7 +95,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
       >
         <div class="text-input" slot="trigger" tabindex="0">
           <div class="input-row">
-            <div part="input">${this.renderDisplayValue()}${this.renderTags()}</div>
+            ${this.renderDisplayValue()}${this.renderTags()}
             ${this.renderClearIcon()} ${this.renderArrowIcon()}
           </div>
         </div>

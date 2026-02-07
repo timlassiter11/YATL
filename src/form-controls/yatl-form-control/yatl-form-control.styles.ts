@@ -7,6 +7,13 @@ export default css`
     --input-bg: var(--yatl-input-bg, var(--yatl-surface-2));
     --input-text: var(--yatl-input-text, var(--yatl-text-1));
     --input-line-height: var(--yatl-input-line-height, 1.2);
+    --input-min-height: var(
+      --yatl-input-min-height,
+      round(
+        calc(2 * var(--input-padding) + 1em * var(--input-line-height)),
+        1px
+      )
+    );
     --input-outline-color: var(
       --yatl-input-outline-color,
       var(--yatl-color-brand)
@@ -20,7 +27,10 @@ export default css`
     --input-hint-font-size: var(--yatl-input-hint-font-size, small);
     --input-error-text: var(--yatl-input-error-text, var(--yatl-color-danger));
     --input-error-font-size: var(--yatl-input-error-font-size, small);
-    --input-placeholder-color: var(--yatl-input-placeholder-color, var(--yatl-text-2));
+    --input-placeholder-color: var(
+      --yatl-input-placeholder-color,
+      var(--yatl-text-2)
+    );
 
     display: flex;
     flex-direction: column;
@@ -46,6 +56,8 @@ export default css`
     font-size: large;
     padding: var(--input-padding);
     width: 100%;
+    min-height: var(--input-min-height);
+    justify-content: center;
   }
 
   .text-input:focus,

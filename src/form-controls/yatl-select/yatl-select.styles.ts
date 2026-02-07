@@ -19,6 +19,7 @@ export default css`
     flex-direction: column;
     align-items: flex-start;
     position: relative;
+    padding: 0 var(--input-padding);
   }
 
   [part='input'] {
@@ -36,9 +37,10 @@ export default css`
     display: flex;
     flex-direction: row;
     gap: var(--yatl-spacing-xs);
-    flex: 1 1 0%;
     flex-wrap: wrap;
     margin-left: calc(var(--yatl-spacing-s) * -1);
+    flex-grow: 1;
+    padding: var(--yatl-spacing-xs) 0;
   }
 
   :host(:not([multi])) [part='tags'] {
@@ -55,6 +57,7 @@ export default css`
     background-color: inherit;
     margin-left: var(--yatl-spacing-xs);
     z-index: 1;
+    flex-shrink: 0;
   }
 
   yatl-button[part='clear-icon'] {

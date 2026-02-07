@@ -940,14 +940,13 @@ export class YatlTable<
       <div part="cell body-cell" class="cell body-cell">
         <div part="row-selector-cell" class="row-selector-cell">
           <label>
-            <input
+            <yatl-checkbox
               part="row-checkbox"
               class="row-checkbox"
-              type="checkbox"
-              .checked=${selected}
+              ?checked=${selected}
               @change=${(event: Event) =>
                 this.handleRowSelectionClicked(event, row)}
-            />
+            ></yatl-checkbox>
           </label>
         </div>
       </div>

@@ -29,29 +29,36 @@ export default css`
     );
 
     --table-header-text: var(--yatl-table-header-text, var(--yatl-text-1));
-    --table-header-bg: var(--yatl-table-header-bg, var(--yatl-surface-3));
+    --table-header-bg: var(
+      --yatl-table-header-bg,
+      color-mix(in srgb, var(--yatl-mix-color) 4%, var(--table-bg))
+    );
     --table-header-hover-bg: var(
       --yatl-table-header-hover-bg,
-      color-mix(in srgb, var(--table-header-bg), var(--yatl-mix-color) 5%)
+      color-mix(in srgb, var(--yatl-mix-color) 4%, var(--table-header-bg))
     );
     --table-header-drop-bg: var(
       --yatl-table-header-drop-bg,
-      color-mix(in srgb, var(--table-header-bg), var(--yatl-mix-color) 5%)
+      color-mix(in srgb, var(--yatl-mix-color) 4%, var(--table-header-bg))
     );
 
     --table-row-text: var(--yatl-table-row-text, var(--yatl-text-1));
-    --table-row-bg: var(--yatl-table-row-bg, var(--yatl-surface-2));
+    --table-row-bg: var(
+      --yatl-table-row-bg,
+      color-mix(in srgb, var(--yatl-mix-color) 2%, var(--table-bg))
+    );
     --table-row-hover-bg: var(
       --yatl-table-row-hover-bg,
-      color-mix(in srgb, var(--table-row-bg), var(--yatl-mix-color) 5%)
+      var(--table-header-bg)
     );
     --table-row-stripe-bg: var(
       --yatl-table-row-stripe-bg,
-      var(--yatl-surface-1)
+      color-mix(in srbg, var(--yatl-mix-color) 3%, var(--table-bg))
+        var(--table-header-bg)
     );
     --table-row-selected-bg: var(
       --yatl-table-row-selected-bg,
-      color-mix(in srgb, var(--yatl-color-brand) 10%, transparent)
+      color-mix(in srgb, var(--yatl-color-brand) 20%, transparent)
     );
     --table-footer-text: var(--yatl-table-footer-text, var(--yatl-text-3));
     --table-selector-color: var(

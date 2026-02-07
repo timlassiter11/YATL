@@ -91,7 +91,7 @@ export class YatlColumnSortEvent<
 }
 
 export class YatlColumnToggleRequestEvent extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-column-toggle-request';
+  public static readonly EVENT_NAME = 'yatl-column-toggle-request';
   constructor(
     public readonly field: string,
     public readonly visibility: boolean,
@@ -185,63 +185,63 @@ export class YatlTableStateChangeEvent<
 // #region --- UI Events ---
 
 export class YatlDropdownOpenRequest extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-dropdown-open-request';
+  public static readonly EVENT_NAME = 'yatl-dropdown-open-request';
   constructor() {
     super(YatlDropdownOpenRequest.EVENT_NAME, { cancelable: true });
   }
 }
 
 export class YatlDropdownOpenEvent extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-dropdown-open';
+  public static readonly EVENT_NAME = 'yatl-dropdown-open';
   constructor() {
     super(YatlDropdownOpenEvent.EVENT_NAME);
   }
 }
 
 export class YatlDropdownCloseRequest extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-dropdown-close-request';
+  public static readonly EVENT_NAME = 'yatl-dropdown-close-request';
   constructor() {
     super(YatlDropdownCloseRequest.EVENT_NAME, { cancelable: true });
   }
 }
 
 export class YatlDropdownCloseEvent extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-dropdown-close';
+  public static readonly EVENT_NAME = 'yatl-dropdown-close';
   constructor() {
     super(YatlDropdownCloseEvent.EVENT_NAME);
   }
 }
 
 export class YatlDropdownSelectEvent extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-dropdown-select';
+  public static readonly EVENT_NAME = 'yatl-dropdown-select';
   constructor(public readonly item: YatlOption) {
     super(YatlDropdownSelectEvent.EVENT_NAME, { cancelable: true });
   }
 }
 
 export class YatlToolbarSearchInput extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-toolbar-search-input';
+  public static readonly EVENT_NAME = 'yatl-toolbar-search-input';
   constructor(public readonly value: string) {
     super(YatlToolbarSearchInput.EVENT_NAME);
   }
 }
 
 export class YatlTagDismissEvent extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-tag-dismiss';
+  public static readonly EVENT_NAME = 'yatl-tag-dismiss';
   constructor() {
     super(YatlTagDismissEvent.EVENT_NAME);
   }
 }
 
 export class YatlToolbarSearchChange extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-toolbar-search-change';
+  public static readonly EVENT_NAME = 'yatl-toolbar-search-change';
   constructor(public readonly value: string) {
     super(YatlToolbarSearchChange.EVENT_NAME);
   }
 }
 
 export class YatlToolbarExportClick extends YatlEvent {
-  static readonly EVENT_NAME = 'yatl-toolbar-export-click';
+  public static readonly EVENT_NAME = 'yatl-toolbar-export-click';
   constructor() {
     super(YatlToolbarExportClick.EVENT_NAME);
   }

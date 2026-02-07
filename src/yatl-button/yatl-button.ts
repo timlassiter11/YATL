@@ -9,12 +9,12 @@ export class YatlButton extends LitElement {
   public static override styles = [theme, styles];
 
   @property({ type: Boolean, reflect: true })
-  disabled = false;
+  public disabled = false;
 
   @property({ type: String, reflect: true })
-  type: 'button' | 'submit' | 'reset' = 'button';
+  public type: 'button' | 'submit' | 'reset' = 'button';
 
-  render() {
+  protected override render() {
     return html`
       <div part="base">
         <button part="button" type=${this.type} ?disabled=${this.disabled}>

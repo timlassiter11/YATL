@@ -5,33 +5,37 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: [
-      "node_modules",
-      "dist",
-      "examples"
-    ]
+    ignores: ['node_modules', 'dist', 'examples'],
   },
   eslint.configs.recommended,
   tseslint.configs.recommended,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [
-      "warn",
-      {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_",
-        "caughtErrorsIgnorePattern": "^_"
-      }
-    ]
-    }
-  },
-  {
-    files: ["**/*.test.ts"],
-    rules: {
-      "no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-expressions": "off",
-      "@typescript-eslint/no-explicit-any": "off"
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/explicit-member-accessibility': [
+        'error',
+        {
+          accessibility: 'explicit',
+          overrides: {
+            constructors: 'no-public',
+          },
+        },
+      ],
     },
   },
-
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      'no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 );

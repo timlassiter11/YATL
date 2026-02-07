@@ -9,9 +9,9 @@ import { getEffectiveChildren } from '../utils';
 
 @customElement('yatl-button-group')
 export class YatlButtonGroup extends LitElement {
-  static styles = [theme, styles];
+  public static override styles = [theme, styles];
 
-  render() {
+  protected override render() {
     return html`
       <div part="base">
         <slot @slotchange=${this.handleSlotChange}></slot>

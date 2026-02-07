@@ -461,11 +461,11 @@ export class YatlTable<
     this.requestUpdate('data', oldValue);
   }
 
-  get filteredData() {
+  public get filteredData() {
     return this.controller.filteredData;
   }
 
-  get dataUpdateTimestamp() {
+  public get dataUpdateTimestamp() {
     return this.controller.dataUpdateTimestamp;
   }
 

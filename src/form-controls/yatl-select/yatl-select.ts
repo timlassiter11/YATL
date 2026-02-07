@@ -1,9 +1,8 @@
-import { customElement, property, query } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
 import { html, nothing } from 'lit';
 
 import styles from './yatl-select.styles';
-import { YatlInput } from '../yatl-input';
 import { YatlDropdownSelectEvent } from '../../events';
 import { YatlDropdown } from '../../yatl-dropdown';
 import { YatlOption } from '../../yatl-option';
@@ -12,9 +11,6 @@ import { repeat } from 'lit/directives/repeat.js';
 @customElement('yatl-select')
 export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   public static override styles = [...YatlFormControl.styles, styles];
-
-  @query('yatl-input')
-  protected displayInput?: YatlInput;
 
   @property({ type: String })
   public placeholder = '';
@@ -108,7 +104,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     if (this.multi) {
       return nothing;
     }
-    
+
     const selectedOption = this.getSelectedOptions().at(0);
     const displayValue = selectedOption?.textContent;
     return html`

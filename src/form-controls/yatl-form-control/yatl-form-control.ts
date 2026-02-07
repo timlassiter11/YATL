@@ -17,17 +17,19 @@ export abstract class YatlFormControl<
   extends LitElement
   implements ElementInternals
 {
-  public static override styles = [theme, styles];
   public static formAssociated = true;
-  public static shadowRootOptions = {
+  public static override shadowRootOptions = {
     ...LitElement.shadowRootOptions,
     delegatesFocus: true,
   };
+  public static override styles = [theme, styles];
+
   protected readonly internals: ElementInternals;
+
   /**
    * Used to associate the label with the control element
    */
-  public readonly inputId = 'input'; 
+  public readonly inputId = 'input';
 
   @query('input')
   protected formControl?: TInput;
@@ -56,7 +58,7 @@ export abstract class YatlFormControl<
   public abstract value?: TData;
   public abstract defaultValue?: TData;
   public abstract formValue: string | File | FormData | null;
-  protected onValueChange(_event: Event): boolean | void {};
+  protected onValueChange(_event: Event): boolean | void {}
 
   private _errorText = '';
   @property({ type: String, attribute: 'error-text' })
@@ -75,7 +77,7 @@ export abstract class YatlFormControl<
     this.requestUpdate('errorText', oldValue);
   }
 
-  public constructor() {
+  constructor() {
     super();
     this.internals = this.attachInternals();
   }
@@ -87,7 +89,7 @@ export abstract class YatlFormControl<
     return root;
   }
 
-  public connectedCallback(): void {
+  public override connectedCallback(): void {
     super.connectedCallback();
     if (!this.value && this.defaultValue) {
       this.value = this.defaultValue;
@@ -120,8 +122,7 @@ export abstract class YatlFormControl<
 
   protected override render() {
     return html`
-      ${this.renderLabel()}
-      ${this.renderBase(this.renderInput())}
+      ${this.renderLabel()} ${this.renderBase(this.renderInput())}
       ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
@@ -133,7 +134,7 @@ export abstract class YatlFormControl<
         ${contents}
         <slot part="end" name="end"></slot>
       </div>
-    `
+    `;
   }
 
   protected renderLabel(): unknown {

@@ -392,7 +392,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.requestUpdate('data');
   }
 
-  get filteredData() {
+  public get filteredData() {
     if (this.filterDirty) {
       this.filterRows();
     } else if (this.sortDirty) {
@@ -405,7 +405,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     return [...this._filteredData];
   }
 
-  get dataUpdateTimestamp() {
+  public get dataUpdateTimestamp() {
     return this._dataUpdateTimestamp;
   }
 

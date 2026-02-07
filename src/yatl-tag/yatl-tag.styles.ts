@@ -2,13 +2,18 @@ import { css } from 'lit';
 
 export default css`
   :host {
-    border-radius: var(--yatl-radius-s);
-    border: 1px solid var(--yatl-border-color);
+    --tag-radius: var(--yatl-tag-border-radius, var(--yatl-radius-s));
+    --tag-border-color: var(--yatl-tag-border-color, var(--yatl-border-color));
+    --tag-padding: var(--yatl-tag-padding, var(--yatl-spacing-s));
+    --tag-color: var(--yatl-tag-color, var(--yatl-text-3));
+
+    border-radius: var(--tag-radius);
+    border: 1px solid var(--tag-border-color);
     display: flex;
     align-items: center;
-    padding: var(--yatl-spacing-xs);
+    padding: var(--tag-padding);
     font-size: 0.85rem;
-    color: var(--yatl-text-3);
+    color: var(--tag-color);
     white-space: nowrap;
     text-overflow: ellipsis;
     user-select: none;

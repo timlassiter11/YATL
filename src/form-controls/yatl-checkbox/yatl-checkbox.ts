@@ -66,6 +66,11 @@ export class YatlCheckbox extends YatlFormControl<string> {
     this.checked = this.defaultChecked;
   }
 
+  constructor() {
+    super();
+    this.addEventListener('click', (event: Event) => this.handleClick(event));
+  }
+
   public override connectedCallback() {
     super.connectedCallback();
     this.checked = this.defaultChecked;
@@ -75,8 +80,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
   protected override render() {
     return html`
       <div part="base">${this.renderInput()}</div>
-      ${this.renderLabel()}
-      ${this.renderHint()} ${this.renderErrorText()}
+      ${this.renderLabel()} ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
 
@@ -102,6 +106,17 @@ export class YatlCheckbox extends YatlFormControl<string> {
 
   protected override onValueChange(event: Event) {
     this.checked = (event.target as HTMLInputElement).checked;
+  }
+
+  private handleClick = (event: Event) => {
+    const path = event.composedPath();
+    if (!this.formControl || path.includes(this.formControl)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.formControl.click();
   }
 }
 

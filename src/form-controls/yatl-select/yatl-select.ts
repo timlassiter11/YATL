@@ -108,7 +108,12 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     if (this.multi) {
       return nothing;
     }
-    return this.getSelectedOptions().at(0)?.textContent ?? this.placeholder;
+    
+    const selectedOption = this.getSelectedOptions().at(0);
+    const displayValue = selectedOption?.textContent;
+    return html`
+      <span part="input">${displayValue ?? this.placeholder}</span>
+    `;
   }
 
   protected renderTags() {
@@ -123,6 +128,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
         >+${selectedOptions.length - this.maxTags}</yatl-tag
       >`;
     }
+
     return html`
       <div part="tags">
         ${repeat(
@@ -211,7 +217,10 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   }
 
   private getSelectedOptions() {
-    return this.getAllOptions().filter(o => o.checked);
+    const options = this.getAllOptions().filter(o => o.checked);
+    const optionMap = new Map(options.map(o => [o.value, o]));
+    // Map this.value to keep the order they were added
+    return this.value.map(v => optionMap.get(v)).filter(o => o !== undefined);
   }
 
   private getAllOptions() {

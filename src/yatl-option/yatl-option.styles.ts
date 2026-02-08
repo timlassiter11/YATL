@@ -57,6 +57,10 @@ export default css`
     background-color: var(--option-hover-bg);
   }
 
+  [part='label'] {
+    flex-grow: 1;
+  }
+
   [part='check'] {
     width: 18px;
     height: 18px;

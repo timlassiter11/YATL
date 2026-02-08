@@ -1,4 +1,4 @@
-import { html, LitElement } from 'lit';
+import { html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import theme from '../theme';
@@ -21,12 +21,12 @@ export class YatlOption extends LitElement {
   public disabled = false;
 
   protected override render() {
-    if (!this.checkable) {
-      return html`<div part="base">${this.renderLabel()}</div>`;
-    }
-
     return html`
-      <label part="base"> ${this.renderCheck()} ${this.renderLabel()} </label>
+      <span part="base">
+        <slot part="start" name="start"></slot>
+        ${this.renderCheck()} ${this.renderLabel()}
+        <slot part="end" name="end"></slot>
+      </span>
     `;
   }
 
@@ -35,7 +35,9 @@ export class YatlOption extends LitElement {
   }
 
   protected renderCheck() {
-    return html`<yatl-icon part="check" name="check"></yatl-icon>`;
+    return this.checkable
+      ? html`<yatl-icon part="check" name="check"></yatl-icon>`
+      : nothing;
   }
 
   public override connectedCallback() {

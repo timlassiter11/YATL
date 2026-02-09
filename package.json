@@ -15,7 +15,9 @@
   },
   "sideEffects": [
     "./dist/index.mjs",
-    "./dist/index.js"
+    "./dist/index.js",
+    "./src/setup-context.ts",
+    "./src/index.ts"
   ],
   "keywords": [
     "table",

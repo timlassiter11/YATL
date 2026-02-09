@@ -42,7 +42,6 @@ export class YatlTableUi<
     return html`
       <div part="shell">
         <yatl-toolbar
-          exportparts="search, "
           ?showColumnPicker=${this.showColumnPicker}
           ?showExportButton=${this.showExportButton}
           .controller=${this.controller}

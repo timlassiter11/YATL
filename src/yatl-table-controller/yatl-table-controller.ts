@@ -522,6 +522,22 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.dispatchEvent(new YatlTableSearchEvent(query));
   }
 
+  public getColumnFilterValues(field: NestedKeyOf<T>, includeNull = false) {
+    const column = this.getDisplayColumn(field);
+    const values = new Map<unknown, number>();
+    for (const row of this.filteredData) {
+      let value = getNestedValue(row, field);
+      if (column?.valueFormatter) {
+        value = column.valueFormatter(value, row);
+      }
+      if (value != null || includeNull) {
+        const valueCount = values.get(value) ?? 0;
+        values.set(value, valueCount + 1);
+      }
+    }
+    return values;
+  }
+
   /**
    * Sorts the table by a specified column and order.
    * If `order` is `null`, the sort on this column is removed.
@@ -1117,7 +1133,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         if (!filter(value)) {
           return false;
         }
-      } else {
+      } else if (filter !== undefined) {
         const column = this.getColumn(field as NestedKeyOf<T>);
         const filterCallback = column ? column.filter : undefined;
         if (!this.filterField(value, filter, filterCallback)) {

@@ -1,12 +1,25 @@
-import { html } from 'lit';
+import { html, PropertyValues } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { YatlTableUi } from '../yatl-table-ui';
+import { ContextProvider } from '@lit/context';
+import { tableContext } from '../context';
 
 import styles from './yatl-table-view.styles';
 
 @customElement('yatl-table-view')
 export class YatlTableView extends YatlTableUi {
   public static override styles = [...YatlTableUi.styles, styles];
+
+  private tableContext = new ContextProvider(this, {
+    context: tableContext,
+    initialValue: this.controller,
+  });
+
+  protected override willUpdate(changedProperties: PropertyValues): void {
+    if (changedProperties.has('controller')) {
+      this.tableContext.setValue(this.controller);
+    }
+  }
 
   protected override render() {
     return html`

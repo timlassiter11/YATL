@@ -20,6 +20,9 @@ export class YatlOption extends LitElement {
   @property({ type: Boolean, reflect: true })
   public disabled = false;
 
+  @property({ type: String, reflect: true })
+  public label = '';
+
   protected override render() {
     return html`
       <span part="base">
@@ -31,7 +34,7 @@ export class YatlOption extends LitElement {
   }
 
   protected renderLabel() {
-    return html`<span part="label"><slot></slot></span>`;
+    return html`<span part="label">${this.label}</span>`;
   }
 
   protected renderCheck() {

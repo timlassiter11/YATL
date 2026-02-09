@@ -110,10 +110,10 @@ export class YatlToolbar<
       <yatl-option
         part="column-picker-item"
         checkable
+        label=${column.title ?? column.field}
         .checked=${state.visible}
         .value=${state.field}
-        >${column.title}
-      </yatl-option>
+        ></yatl-option>
     `;
   }
 

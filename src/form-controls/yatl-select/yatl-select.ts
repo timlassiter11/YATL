@@ -103,7 +103,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     }
 
     const selectedOption = this.getSelectedOptions().at(0);
-    const displayValue = selectedOption?.textContent;
+    const displayValue = selectedOption?.label;
     return html`
       <span part="input">${displayValue ?? this.placeholder}</span>
     `;
@@ -139,7 +139,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
       dismissable
       @yatl-tag-dismiss=${(event: Event) =>
         this.handleTagDissmiss(option, event)}
-      >${option.textContent}</yatl-tag
+      >${option.label}</yatl-tag
     >`;
   }
 

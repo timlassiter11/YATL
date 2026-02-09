@@ -61,10 +61,15 @@ export default css`
     flex-grow: 1;
   }
 
+  [part='start'],
+  [part='end'] {
+    flex-shrink: 0;
+  }
+
   [part='check'] {
     width: 18px;
     height: 18px;
-    margin-right: 12px;
+    margin-right: var(--yatl-spacing-s);
     display: flex;
     align-items: center;
     justify-content: center;

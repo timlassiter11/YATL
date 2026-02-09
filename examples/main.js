@@ -184,52 +184,6 @@ function initTable() {
   return table;
 }
 
-function initFilterOptions() {
-  const statusOptions = filtersForm.querySelector('yatl-select[name="status"]');
-  statusOptions.size = statuses.length;
-  for (const status of statuses) {
-    const option = document.createElement('yatl-option');
-    option.value = status;
-    option.textContent = status;
-    statusOptions.append(option);
-  }
-}
-
-/**
- * Update table filters from the filters form inputs
- */
-function updateTableFilters() {
-  const lastModified = {};
-  const filters = { lastModified };
-  const formData = getTypedFormData(filtersForm);
-  for (const [name, value] of Object.entries(formData)) {
-    if (name === 'startDate') {
-      lastModified.startDate = value;
-    } else if (name === 'endDate') {
-      // We want our end date to be inclusive
-      // So increment it by a day and we'll check
-      // for < in the filter callback.
-      if (value) {
-        value.setDate(value.getDate() + 1);
-      }
-      lastModified.endDate = value;
-    } else {
-      filters[name] = value;
-    }
-  }
-
-  if (lastModified.startDate && !lastModified.endDate) {
-    endDateInput.min = lastModified.startDate;
-  } else if (lastModified.endDate && !lastModified.startDate) {
-    startDateInput.max = lastModified.endDate;
-  } else if (!lastModified.startDate && !lastModified.endDate) {
-    startDateInput.max = null;
-    endDateInput.min = null;
-  }
-
-  table.filters = filters;
-}
-
 /**
  * Update the table options from the options form inputs
  */

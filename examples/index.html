@@ -76,14 +76,15 @@
             </button>
           </div>
           <div class="option-group">
-            <yatl-select
-              name="status"
+            <yatl-search-filter field="name" label="Name"></yatl-search-filter>
+            <yatl-select-filter
+              field="status"
               label="Status"
               max-tags="1"
               multi
               clearable
-            ></yatl-select>
-            <yatl-search-select name="name" label="Test"></yatl-search-select>
+            ></yatl-select-filter>
+            
             <h2>Date Modified</h2>
             <yatl-date-input label="From" name="startDate"></yatl-date-input>
             <yatl-date-input label="To" name="endDate"></yatl-date-input>

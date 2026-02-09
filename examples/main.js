@@ -38,7 +38,7 @@ window.addEventListener('load', () => {
   // Stuff for the page, not about YATL.
   initExtras();
 
-  table = document.querySelector('yatl-table-ui');
+  table = document.querySelector('yatl-table-view');
   filtersForm = document.getElementById('filtersForm');
   optionsForm = document.getElementById('optionsForm');
   startDateInput = document.querySelector('yatl-date-input[name="startDate"]');
@@ -46,15 +46,6 @@ window.addEventListener('load', () => {
 
   // Initialize the table columns and default options
   initTable();
-  initFilterOptions();
-
-  // Sync filter controls and table filters
-  filtersForm.addEventListener('change', updateTableFilters);
-  // Update table fitlers AFTER form reset
-  filtersForm.addEventListener('reset', () =>
-    setTimeout(updateTableFilters, 0),
-  );
-  updateTableFilters();
 
   // Sync option controls and table options
   optionsForm.addEventListener('change', updateTableOptions);

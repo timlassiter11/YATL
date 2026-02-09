@@ -4,6 +4,8 @@ import { customElement, property } from 'lit/decorators.js';
 import theme from '../theme';
 import styles from './yatl-button.styles';
 
+export type YatlButtonVariant = 'button' | 'icon';
+
 @customElement('yatl-button')
 export class YatlButton extends LitElement {
   public static override styles = [theme, styles];
@@ -13,6 +15,9 @@ export class YatlButton extends LitElement {
 
   @property({ type: String, reflect: true })
   public type: 'button' | 'submit' | 'reset' = 'button';
+
+  @property({ type: String, reflect: true})
+  public variant: YatlButtonVariant = 'button';
 
   protected override render() {
     return html`

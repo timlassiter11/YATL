@@ -17,13 +17,24 @@ export default css`
     box-sizing: border-box;
     overflow: hidden;
     padding: 0;
+    border-radius: var(--button-radius);
+  }
 
+  :host(:not([variant])),
+  :host([variant='button']) {
     color: var(--button-text);
     font-size: large;
     font-weight: 500;
     background: var(--button-bg);
-    border-radius: var(--button-radius);
     border: var(--button-border-width) solid var(--button-border-color);
+  }
+
+  :host([variant='icon']) {
+    color: var(--button-text);
+    font-size: large;
+    font-weight: 500;
+    background: none;
+    border: none;
   }
 
   [part='button'] {
@@ -39,7 +50,7 @@ export default css`
     align-items: center;
   }
 
-  :host(:not([disabled])) [part='button']:hover {
+  :host(:not([disabled]):not([variant='icon'])) [part='button']:hover {
     color: var(--button-hover-text);
     background: var(--button-hover-bg);
   }

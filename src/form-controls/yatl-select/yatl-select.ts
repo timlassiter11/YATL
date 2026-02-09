@@ -38,10 +38,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     return [...this._value];
   }
   public set value(value) {
-    const oldValue = this.value;
-    if (oldValue === value) {
-      return;
-    }
+    const oldValue = this._value;
     this._value = [...value];
     this.updateSelectedOptions();
     this.setFormValue(this.formValue);

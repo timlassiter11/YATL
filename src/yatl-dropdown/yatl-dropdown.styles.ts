@@ -61,5 +61,6 @@ export default css`
     padding: var(--dropdown-menu-padding);
     display: none;
     flex-direction: column;
+    overflow-y: auto;
   }
 `;

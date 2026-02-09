@@ -23,6 +23,8 @@ import styles from './yatl-dropdown.styles';
 
 /**
  * @fires yatl-dropdown-select
+ * @fires yatl-dropdown-open
+ * @fires yatl-dropdown-close
  */
 @customElement('yatl-dropdown')
 export class YatlDropdown extends LitElement {
@@ -76,7 +78,7 @@ export class YatlDropdown extends LitElement {
     }
   }
 
-  public disconnectedCallback() {
+  public override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeListeners();
   }
@@ -223,9 +225,10 @@ export class YatlDropdown extends LitElement {
         middleware: [
           offset(4),
           size({
-            apply({ rects, elements }) {
+            apply({ rects, availableHeight, elements }) {
               Object.assign(elements.floating.style, {
                 'min-width': `${rects.reference.width}px`,
+                'max-height': `${availableHeight}px`,
               });
             },
           }),

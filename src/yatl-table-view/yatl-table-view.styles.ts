@@ -18,5 +18,6 @@ export default css`
     flex-direction: column;
     overflow-y: auto;
     margin-right: var(--yatl-spacing-m);
+    min-width: 300px;
   }
 `;

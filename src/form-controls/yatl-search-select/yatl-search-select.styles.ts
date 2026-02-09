@@ -2,7 +2,7 @@ import { css } from "lit";
 
 export default css`
   :host {
-    --option-height: 50px
+    --option-height: var(--yatl-option-height, 30px);
   }
 
   [part='base'] {
@@ -25,8 +25,12 @@ export default css`
     height: var(--option-height);
   }
 
-  .text-input > yatl-option::part(button) {
-    padding: 0;
-    margin: 0;
+  [part='selected-trash-icon'] {
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  yatl-option:hover [part='selected-trash-icon'] {
+    opacity: 1;
   }
 `;

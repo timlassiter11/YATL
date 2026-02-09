@@ -3,9 +3,6 @@ import { property, query } from 'lit/decorators.js';
 
 import theme from '../../theme';
 import styles from './yatl-form-control.styles';
-import { consume } from '@lit/context';
-import { tableContext } from '../../context';
-import { YatlTableController } from '../../yatl-table-controller';
 
 export type FormControl =
   | HTMLInputElement
@@ -58,13 +55,6 @@ export abstract class YatlFormControl<
   @property({ type: Boolean, reflect: true })
   public inline = false;
 
-  @property({ type: Boolean, attribute: 'auto-filter' })
-  public autoFilter = true;
-
-  @consume({ context: tableContext, subscribe: true })
-  @property({ attribute: false })
-  public controller?: YatlTableController;
-
   public abstract value?: TData;
   public abstract defaultValue?: TData;
   public abstract formValue: string | File | FormData | null;
@@ -110,13 +100,6 @@ export abstract class YatlFormControl<
   protected override willUpdate(
     changedProperties: PropertyValues<YatlFormControl<TData, TInput>>,
   ): void {
-    if (changedProperties.has('controller')) {
-      this.subscribeToController(changedProperties.get('controller'));
-      if (this.name === 'name') {
-        console.log('Controller changed', this.controller);
-      }
-    }
-
     if (changedProperties.has('required')) {
       // Keep the underlying form control in sync before we update validity.
       // Our validity relies on the form control so if it is out of sync we get a false positive
@@ -228,14 +211,6 @@ export abstract class YatlFormControl<
     // Don't add data for disabled controls
     this.internals.setFormValue(this.disabled ? null : value);
     this.updateValidity();
-
-    // Update table filters
-    if (this.autoFilter && typeof this.controller?.filters === 'object') {
-      this.controller.filters = {
-        ...this.controller.filters,
-        [this.name]: this.value,
-      };
-    }
   }
 
   public setValidity(
@@ -286,11 +261,6 @@ export abstract class YatlFormControl<
     } else {
       this.states.delete(name);
     }
-  }
-
-  private subscribeToController(oldController?: YatlTableController) {
-    oldController?.detach(this);
-    this.controller?.attach(this);
   }
 
   private handleInputChange = (event: Event) => {

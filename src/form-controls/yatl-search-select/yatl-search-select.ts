@@ -1,8 +1,7 @@
 import { html, nothing } from 'lit';
-import { customElement, property, queryAll } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../events';
-import { YatlDropdown } from '../../yatl-dropdown';
 import { YatlOption } from '../../yatl-option';
 import { YatlFormControl } from '../yatl-form-control';
 
@@ -10,17 +9,26 @@ import theme from '../../theme';
 import formStyles from '../yatl-form-control/yatl-form-control.styles';
 import styles from './yatl-search-select.styles';
 import { YatlInput } from '../yatl-input';
-import { getNestedValue } from '../../utils';
+import { YatlDropdown } from '../../yatl-dropdown';
 
 @customElement('yatl-search-select')
 export class YatlSearchSelect extends YatlFormControl<string[]> {
   public static override styles = [theme, formStyles, styles];
 
-  @queryAll('yatl-option')
-  private controllerOptions!: NodeListOf<YatlOption>;
+  @query('slot:not([name])')
+  private defaultSlot?: HTMLSlotElement;
+
+  @state()
+  private noMatch = false;
+
+  @property({ type: String, attribute: 'no-results-text' })
+  public noResultsText = 'No matching options...';
 
   @property({ type: Boolean, reflect: true })
   public open = false;
+
+  @property({ type: Boolean, attribute: 'match-width' })
+  public matchWidth = true;
 
   @property({ type: Number, reflect: true })
   public size = 4;
@@ -37,6 +45,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     const oldValue = this._value;
     this._value = [...value];
     this.setFormValue(this.formValue);
+    this.updateSelectedOptions();
     this.requestUpdate('value', oldValue);
   }
 
@@ -75,6 +84,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     return html`
       <yatl-dropdown
         .open=${this.open}
+        .matchWidth=${this.matchWidth}
         @yatl-dropdown-select=${this.handleDropdownSelect}
         @yatl-dropdown-open=${this.handleDropdownToggle}
         @yatl-dropdown-close=${this.handleDropdownToggle}
@@ -87,40 +97,17 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
           placeholder="Search"
           @input=${this.handleInput}
         ></yatl-input>
-        <slot @slotchange=${this.handleSlotChange}>
-          ${this.renderControllerOptions()}
-        </slot>
+        <slot @slotchange=${this.handleSlotChange}></slot>
+        ${this.renderDropdownContents()}
       </yatl-dropdown>
       <div class="text-input">${this.renderSelectedOptions()}</div>
     `;
   }
 
-  protected renderControllerOptions() {
-    if (!this.controller) {
-      return nothing;
-    }
-
-    const values = new Set<string>();
-    const data = this.value.length
-      ? this.controller.data
-      : this.controller.filteredData;
-      
-    for (const row of data) {
-      const value = getNestedValue(row, this.name);
-      if (value) {
-        values.add(String(value));
-      }
-    }
-
-    return repeat(
-      values,
-      value => value,
-      value => this.renderDropdownOption(value),
-    );
-  }
-
-  protected renderDropdownOption(value: string) {
-    return html` <yatl-option value=${value} checkable>${value}</yatl-option> `;
+  protected renderDropdownContents() {
+    return this.noMatch
+      ? html`<span part="empty-options">${this.noResultsText}</span>`
+      : nothing;
   }
 
   protected renderSelectedOptions() {
@@ -134,11 +121,16 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   protected renderOption(option: YatlOption) {
     return html`
-      <yatl-option value=${option.value}>
-        ${option.textContent ?? ''}
-        <yatl-button slot="end" variant="icon">
-          <yatl-icon name="close"></yatl-icon>
-        </yatl-button>
+      <yatl-option
+        value=${option.value}
+        label=${option.label}
+        @click=${this.handleSelectedOptionClick}
+      >
+        <yatl-icon
+          part="selected-trash-icon"
+          slot="end"
+          name="trash"
+        ></yatl-icon>
       </yatl-option>
     `;
   }
@@ -170,17 +162,31 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     this.updateSelectedOptions();
   }
 
+  private handleSelectedOptionClick(event: Event) {
+    const target = event.currentTarget as YatlOption;
+    this.toggleOption(target.value, false);
+    target.remove();
+    this.dispatchChange();
+  }
+
   private updateVisibleOptions(query: string) {
+    // If we don't have a query we automatically have a match
+    let noMatch = query ? true : false;
     for (const option of this.getAllOptions()) {
       if (!query) {
         option.hidden = false;
         continue;
       }
 
-      const text = option.textContent?.toLocaleLowerCase();
+      const text = option.label.toLocaleLowerCase();
       const match = text?.includes(query) ?? false;
       option.hidden = !match;
+      if (match) {
+        noMatch = false;
+      }
     }
+
+    this.noMatch = noMatch;
   }
 
   private updateSelectedOptions() {
@@ -198,12 +204,11 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   }
 
   private getAllOptions() {
-    const slottedOptions = [...this.querySelectorAll('yatl-option')];
-    if (!this.controller || slottedOptions.length) {
-      return slottedOptions;
-    } else {
-      return [...this.controllerOptions];
-    }
+    const slottedOptions =
+      this.defaultSlot
+        ?.assignedElements({ flatten: true })
+        .filter(e => e instanceof YatlOption) ?? [];
+    return [...slottedOptions];
   }
 
   private dispatchChange() {

@@ -40,6 +40,26 @@ export function getNestedValue(obj: object, path: string): unknown {
   return current;
 }
 
+export function setNestedValue(obj: object, path: string, value: unknown) {
+  const keys = path.split('.');
+  const finalProp = keys.at(-1);
+  if (!finalProp) {
+    throw new Error('Cannot set nested value with empty path');
+  }
+
+  let current = obj;
+  for (const key of keys.slice(0, -1)) {
+    if (!isValidKey(key, current)) {
+      current = {};
+      Object.assign(current, { [key]: current });
+    } else {
+      current = current[key];
+    }
+  }
+
+  Object.assign(current, { [finalProp]: value });
+}
+
 /**
  * Retrieves the flattened list of elements assigned to a slot.
  *

@@ -42,6 +42,9 @@ export class YatlDropdown extends LitElement {
   @property({ type: Boolean, reflect: true })
   public open = false;
 
+  @property({ type: Boolean, attribute: 'match-width' })
+  public matchWidth = false;
+
   // #region Render
 
   protected override render() {
@@ -222,15 +225,28 @@ export class YatlDropdown extends LitElement {
     this.autoUpdateCleanup = autoUpdate(trigger, menu, () => {
       computePosition(trigger, menu, {
         placement: 'bottom-start',
+        strategy: 'fixed',
         middleware: [
           offset(4),
           size({
-            apply({ rects, availableHeight, elements }) {
-              Object.assign(elements.floating.style, {
-                'min-width': `${rects.reference.width}px`,
-                'max-height': `${availableHeight}px`,
-              });
+            apply: ({ rects, availableHeight, elements }) => {
+              const maxHeight = 400;
+              const screenBuffer = 10;
+              const actualMaxHeight = Math.min(
+                maxHeight,
+                availableHeight - screenBuffer,
+              );
+              const styles: Record<string, string> = {
+                'max-height': `${actualMaxHeight}px`,
+              };
+              if (this.matchWidth) {
+                styles['width'] = `${rects.reference.width}px`;
+              } else {
+                styles['min-width'] = `${rects.reference.width}px`;
+              }
+              Object.assign(elements.floating.style, styles);
             },
+            padding: 10,
           }),
           flip(),
           shift({ padding: 5 }),

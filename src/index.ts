@@ -9,6 +9,7 @@ export * from './yatl-table-controller';
 export * from './yatl-table-ui';
 export * from './yatl-tag';
 export * from './yatl-toolbar';
+export * from './yatl-table-view';
 
 export {
   createRegexTokenizer,

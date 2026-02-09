@@ -6,10 +6,7 @@ export default css`
     --option-font-size: var(--yatl-option-font-size, 16px);
     --option-bg: var(--yatl-option-bg, transparent);
     --option-hover-bg: var(--yatl-option-hover-bg, var(--yatl-color-brand));
-    --option-padding: var(
-      --yatl-option-padding,
-      var(--yatl-spacing-s) var(--yatl-spacing-m)
-    );
+    --option-padding: var(--yatl-option-padding, var(--yatl-spacing-s));
     --option-gap: var(--yatl-option-gap, var(--yatl-spacing-xs));
     --option-radius: var(--yatl-option-radius, var(--yatl-radius-s));
     --option-focus-ring: var(
@@ -58,12 +55,14 @@ export default css`
   }
 
   [part='label'] {
-    flex-grow: 1;
+    flex: 1 1 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   [part='start'],
   [part='end'] {
-    flex-shrink: 0;
+    flex: 0 0 0%;
   }
 
   [part='check'] {

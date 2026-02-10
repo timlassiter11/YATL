@@ -87,7 +87,6 @@ export class YatlCheckbox extends YatlFormControl<string> {
 
   public override connectedCallback() {
     super.connectedCallback();
-    this.checked = this.defaultChecked;
     this.updateFormValue();
   }
 

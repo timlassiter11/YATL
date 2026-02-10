@@ -50,8 +50,9 @@ export function setNestedValue(obj: object, path: string, value: unknown) {
   let current = obj;
   for (const key of keys.slice(0, -1)) {
     if (!isValidKey(key, current)) {
-      current = {};
-      Object.assign(current, { [key]: current });
+      const newObj = {};
+      Object.assign(current, { [key]: newObj });
+      current = newObj;
     } else {
       current = current[key];
     }

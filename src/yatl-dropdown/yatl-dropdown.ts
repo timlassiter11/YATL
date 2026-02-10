@@ -157,6 +157,13 @@ export class YatlDropdown extends LitElement {
             itemToFocus = items[0];
           }
         } else if (event.key === 'Home' || event.key === 'End') {
+          // Ignore home and end when focus is on the tirgger element.
+          // Fixes issues with using inputs as triggers.
+          const composedPath = event.composedPath();
+          const trigger = this.referenceElement;
+          if (trigger && composedPath.includes(trigger)) {
+            return;
+          }
           itemToFocus =
             event.key === 'Home' ? items[0] : items[items.length - 1];
         } else if (event.key === ' ') {

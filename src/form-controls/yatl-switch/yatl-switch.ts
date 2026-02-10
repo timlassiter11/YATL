@@ -9,7 +9,7 @@ import styles from './yatl-switch.styles';
 export class YatlSwitch extends YatlFormControl<string> {
   public static override styles = [...YatlFormControl.styles, styles];
 
-  private _value: string = this.getAttribute('value') ?? 'on';
+  private _value = this.getAttribute('value') ?? 'on';
   private _uncheckedValue?: string;
 
   /**

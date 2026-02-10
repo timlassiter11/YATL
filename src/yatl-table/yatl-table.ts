@@ -943,7 +943,7 @@ export class YatlTable<
             <yatl-checkbox
               part="row-checkbox"
               class="row-checkbox"
-              ?checked=${selected}
+              .checked=${selected}
               @change=${(event: Event) =>
                 this.handleRowSelectionClicked(event, row)}
             ></yatl-checkbox>

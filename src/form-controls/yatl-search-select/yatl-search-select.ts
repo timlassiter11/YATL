@@ -1,31 +1,31 @@
-import { html, nothing } from 'lit';
+import { html, LitElement } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { YatlDropdownSelectEvent } from '../../events';
 import { YatlOption } from '../../yatl-option';
 import { YatlFormControl } from '../yatl-form-control';
-
-import theme from '../../theme';
-import formStyles from '../yatl-form-control/yatl-form-control.styles';
-import styles from './yatl-search-select.styles';
 import { YatlInput } from '../yatl-input';
-import { YatlDropdown } from '../../yatl-dropdown';
+
+import styles from './yatl-search-select.styles';
 
 @customElement('yatl-search-select')
 export class YatlSearchSelect extends YatlFormControl<string[]> {
-  public static override styles = [theme, formStyles, styles];
+  public static override styles = [...YatlFormControl.styles, styles];
+  public static override shadowRootOptions = {
+    ...LitElement.shadowRootOptions,
+    // We have to use manual focus delegation for this one
+    // or else when the user tries to clear a selection option
+    // it sends focus to the input and shows all the options.
+    delegatesFocus: false,
+  };
 
-  @query('slot:not([name])')
-  private defaultSlot?: HTMLSlotElement;
+  @state() private noMatch = false;
+  @state() private hasFocus = false;
 
-  @state()
-  private noMatch = false;
+  @property({ type: String })
+  public placeholder = 'Search';
 
   @property({ type: String, attribute: 'no-results-text' })
   public noResultsText = 'No matching options...';
-
-  @property({ type: Boolean, reflect: true })
-  public open = false;
 
   @property({ type: Boolean, attribute: 'match-width' })
   public matchWidth = true;
@@ -57,6 +57,25 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     return data;
   }
 
+  public get hasSelection() {
+    return this.value.length > 0;
+  }
+
+  constructor() {
+    super();
+    this.addEventListener('click', this.handleOptionClick);
+  }
+
+  public override connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener('focusin', this.handleFocus);
+  }
+
+  public override disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('focusin', this.handleFocus);
+  }
+
   public toggleOption(value: string, state?: boolean) {
     const newValue = new Set<string>(this.value);
     if (state === undefined) {
@@ -82,32 +101,29 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   protected renderInput() {
     return html`
-      <yatl-dropdown
-        .open=${this.open}
-        .matchWidth=${this.matchWidth}
-        @yatl-dropdown-select=${this.handleDropdownSelect}
-        @yatl-dropdown-open=${this.handleDropdownToggle}
-        @yatl-dropdown-close=${this.handleDropdownToggle}
-      >
-        <yatl-input
-          style=${`--size: ${this.size};`}
+      <div class="text-input" style=${`--size: ${this.size + 1}`}>
+        <input
           part="search"
           type="search"
-          slot="trigger"
-          placeholder="Search"
+          placeholder=${this.placeholder}
           @input=${this.handleInput}
-        ></yatl-input>
-        <slot @slotchange=${this.handleSlotChange}></slot>
-        ${this.renderDropdownContents()}
-      </yatl-dropdown>
-      <div class="text-input">${this.renderSelectedOptions()}</div>
+        />
+        ${this.renderContents()}
+      </div>
     `;
   }
 
-  protected renderDropdownContents() {
-    return this.noMatch
-      ? html`<span part="empty-options">${this.noResultsText}</span>`
-      : nothing;
+  protected renderContents() {
+    if ((this.hasFocus || !this.hasSelection) && !this.noMatch) {
+      return html`<slot
+        part="options"
+        @slotchange=${this.handleSlotChange}
+      ></slot>`;
+    } else if (this.noMatch) {
+      return html`<span part="empty-options">${this.noResultsText}</span>`;
+    }
+
+    return this.renderSelectedOptions();
   }
 
   protected renderSelectedOptions() {
@@ -135,22 +151,26 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     `;
   }
 
-  private handleDropdownSelect(event: YatlDropdownSelectEvent) {
-    event.preventDefault();
-    const item = event.item;
-    this.toggleOption(item.value, item.checked);
-    this.dispatchChange();
-  }
-
-  private handleDropdownToggle(event: Event) {
-    const target = event.target as YatlDropdown;
-    if (target.open) {
-      this.states.add('open');
-    } else {
-      this.states.delete('open');
+  private handleOptionClick = (event: Event) => {
+    if (event.target instanceof YatlOption) {
+      this.hasFocus = true;
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggleOption(event.target.value, event.target.checked);
+      this.dispatchChange();
     }
-    this.open = target.open;
-  }
+  };
+
+  private handleFocus = (event: FocusEvent) => {
+    const path = event.composedPath();
+    console.log(path);
+    console.log(path.includes(this), path.includes(this.formControl!));
+    if (!path.includes(this)) {
+      this.hasFocus = false;
+    } else if (this.formControl && path.includes(this.formControl)) {
+      this.hasFocus = true;
+    }
+  };
 
   private handleInput(event: Event) {
     event.stopPropagation();
@@ -163,6 +183,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   }
 
   private handleSelectedOptionClick(event: Event) {
+    event.stopPropagation();
     const target = event.currentTarget as YatlOption;
     this.toggleOption(target.value, false);
     target.remove();
@@ -203,12 +224,9 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     return this.value.map(v => optionMap.get(v)).filter(o => o !== undefined);
   }
 
-  private getAllOptions() {
-    const slottedOptions =
-      this.defaultSlot
-        ?.assignedElements({ flatten: true })
-        .filter(e => e instanceof YatlOption) ?? [];
-    return [...slottedOptions];
+  private getAllOptions(includeDisabled = false) {
+    const options = [...this.querySelectorAll<YatlOption>(':not([slot])')];
+    return includeDisabled ? options : options.filter(o => !o.disabled);
   }
 
   private dispatchChange() {

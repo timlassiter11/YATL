@@ -39,7 +39,7 @@ export default css`
 
     /* Border */
     --yatl-border-color-light: var(--yatl-theme-border-color-light, #e2e8f0);
-    --yatl-border-color-dark: var(--yatl-theme-border-color-dark, #2e2e2e);
+    --yatl-border-color-dark: var(--yatl-theme-border-color-dark, #404040);
     --yatl-border-color: light-dark(
       var(--yatl-border-color-light),
       var(--yatl-border-color-dark)

@@ -67,13 +67,15 @@ export default css`
     pointer-events: none;
   }
 
-  /* Focus */
   label:not(.disabled) .input:focus-visible ~ .switch .thumb {
     outline: var(--wa-focus-ring);
     outline-offset: var(--wa-focus-ring-offset);
   }
 
-  /* Checked */
+  :host(:hover) .switch {
+    border-color: var(--switch-accent);
+  }
+
   :host(:state(checked)) .switch {
     background-color: var(--switch-accent);
     border-color: var(--switch-border-color);

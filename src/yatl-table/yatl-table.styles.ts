@@ -154,20 +154,6 @@ export default css`
       background-color: var(--table-header-bg);
     }
 
-    .row-checkbox {
-      width: 1.125rem;
-      height: 1.125rem;
-
-      cursor: pointer;
-      margin: 0;
-
-      accent-color: var(--table-selector-color);
-      transition: transform 0.1s ease-in-out;
-    }
-
-    .row-checkbox:active {
-      transform: scale(0.9);
-    }
     .message {
       font-size: large;
     }

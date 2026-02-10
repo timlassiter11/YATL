@@ -78,7 +78,7 @@ export default css`
 
   :host(:state(checked)) .switch {
     background-color: var(--switch-accent);
-    border-color: var(--switch-border-color);
+    border-color: var(--switch-accent);
   }
 
   :host(:state(checked)) .switch .thumb {

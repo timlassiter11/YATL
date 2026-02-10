@@ -4,6 +4,14 @@ import { YatlFormControl } from '../yatl-form-control';
 import { YatlSwitch } from '../yatl-switch';
 
 import styles from './yatl-radio-group.styles';
+import { YatlRadio } from '../yatl-radio/yatl-radio';
+import { YatlCheckbox } from '../yatl-checkbox';
+
+type SupportedChildren =
+  | HTMLInputElement
+  | YatlRadio
+  | YatlSwitch
+  | YatlCheckbox;
 
 @customElement('yatl-radio-group')
 export class YatlRadioGroup extends YatlFormControl<string> {
@@ -21,16 +29,28 @@ export class YatlRadioGroup extends YatlFormControl<string> {
 
   public override connectedCallback(): void {
     super.connectedCallback();
+
+    // Children wont have been upgraded yet so
+    // just use the attributes, not the props.
     if (!this.value) {
+      // If the user didnt provide a default value
+      // look for the first one that is checked and use that.
       const children = this.getAllChildren();
-      const defaultChild = children.find(c => c.hasAttribute('checked')) ?? children.at(0);
+      let defaultChild = children.find(c => c.hasAttribute('checked'));
+
+      // None checked and field is required, use first option.
+      if (!defaultChild && this.required) {
+        defaultChild = children.at(0);
+      }
+
       const defaultValue = defaultChild?.getAttribute('value');
       if (defaultValue) {
         this.value = defaultValue;
       }
 
       for (const child of children) {
-        child.toggleAttribute('checked', child.getAttribute('value') === this.value);
+        const childValue = child.getAttribute('value');
+        child.toggleAttribute('checked', childValue === this.value);
       }
     }
   }
@@ -44,22 +64,18 @@ export class YatlRadioGroup extends YatlFormControl<string> {
   }
 
   protected override renderInput() {
-    return html`<slot @slotchange=${this.syncChildStates}></slot> `;
+    return html`<slot part="group" @slotchange=${this.syncChildStates}></slot> `;
   }
 
   protected override onValueChange(event: Event) {
     event.stopPropagation();
     if (event.type === 'change') {
-      const target = event.target as YatlSwitch;
+      const target = event.target as SupportedChildren;
       this.value = target.value;
       this.syncChildStates();
       return false;
     }
     return true;
-  }
-
-  private handleSlotChange() {
-
   }
 
   private syncChildStates() {
@@ -69,7 +85,7 @@ export class YatlRadioGroup extends YatlFormControl<string> {
   }
 
   private getAllChildren(includeDisabled = false) {
-    const elements = [...this.querySelectorAll<YatlSwitch>('yatl-switch')];
+    const elements = [...this.querySelectorAll<SupportedChildren>('*')];
     if (includeDisabled) {
       return elements;
     }

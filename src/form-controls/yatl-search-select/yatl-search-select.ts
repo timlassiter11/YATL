@@ -136,10 +136,13 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   }
 
   protected renderOption(option: YatlOption) {
+    // Make them checkable so the text indentation matches.
+    // We'll make sure to hide the icon with CSS.
     return html`
       <yatl-option
         value=${option.value}
         label=${option.label}
+        checkable
         @click=${this.handleSelectedOptionClick}
       >
         <yatl-icon

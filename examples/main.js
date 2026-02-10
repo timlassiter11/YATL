@@ -32,23 +32,14 @@ const possibleTags = [
 /** @type {YatlTableUi} */
 let table;
 /** @type {HTMLFormElement} */
-let filtersForm;
-/** @type {HTMLFormElement} */
 let optionsForm;
-/** @type {YatlDateInput} */
-let startDateInput;
-/** @type {YatlDateInput} */
-let endDateInput;
 
 window.addEventListener('load', () => {
   // Stuff for the page, not about YATL.
   initExtras();
 
   table = document.querySelector('yatl-table-view');
-  filtersForm = document.getElementById('filtersForm');
   optionsForm = document.getElementById('optionsForm');
-  startDateInput = document.querySelector('yatl-date-input[name="startDate"]');
-  endDateInput = document.querySelector('yatl-date-input[name="endDate"]');
 
   // Initialize the table columns and default options
   initTable();
@@ -134,15 +125,23 @@ function initTable() {
       sortValue: value => value?.getTime(),
       // Custom filter logic just for this column
       filter: (value, filter) => {
-        if (filter.startDate && filter.endDate) {
+        let { startDate, endDate } = filter;
+        // endDate should be inclusive.
+        if (endDate instanceof Date) {
+          // Make a copy so we don't keep increasing
+          endDate = new Date(endDate);
+          endDate.setDate(endDate.getDate() + 1);
+        }
+
+        if (startDate instanceof Date && endDate instanceof Date) {
           return (
-            filter.startDate.getTime() <= value.getTime() &&
-            filter.endDate.getTime() > value.getTime()
+            startDate.getTime() <= value.getTime() &&
+            endDate.getTime() > value.getTime()
           );
-        } else if (filter.startDate) {
-          return filter.startDate.getTime() <= value.getTime();
-        } else if (filter.endDate) {
-          return filter.endDate.getTime() >= value.getTime();
+        } else if (startDate instanceof Date) {
+          return startDate.getTime() <= value.getTime();
+        } else if (endDate) {
+          return endDate.getTime() >= value.getTime();
         }
         return true;
       },

@@ -1,4 +1,10 @@
-import { YatlCheckbox, YatlDateInput, YatlFormControl, YatlSwitch, YatlTableUi } from '../dist/index.mjs';
+import {
+  YatlCheckbox,
+  YatlDateInput,
+  YatlFormControl,
+  YatlSwitch,
+  YatlTableUi,
+} from '../dist/index.mjs';
 
 // Used for generating data and for filters
 const statuses = [
@@ -189,10 +195,12 @@ function initTable() {
  */
 function updateTableOptions() {
   const options = getTypedFormData(optionsForm);
-  const {rowCount, ...tableOptions} = options;
+  const { rowCount, rowSelectionMethod, ...tableOptions } = options;
   if (table.data.length !== rowCount) {
     table.data = generateMockData(rowCount);
   }
+  tableOptions['rowSelectionMethod'] =
+    rowSelectionMethod === 'null' ? null : rowSelectionMethod;
   Object.assign(table, tableOptions);
 }
 

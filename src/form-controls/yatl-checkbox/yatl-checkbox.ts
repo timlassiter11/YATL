@@ -9,18 +9,31 @@ import styles from './yatl-checkbox.styles';
 export class YatlCheckbox extends YatlFormControl<string> {
   public static override styles = [...YatlFormControl.styles, styles];
 
+  private _value = this.getAttribute('value') ?? 'on';
+  private _uncheckedValue?: string;
+
   /**
    * The value to store in the form data if the checkbox is checked
    */
-  @property({ type: String })
-  public value = 'on';
+  @property({ type: String, reflect: true })
+  public get value() {
+    return this._value;
+  }
 
-  public get defaultValue() {
-    // Just use the value attribute since it doesn't really change on checkboxes
+  public set value(value) {
+    if (this._value === value) {
+      return;
+    }
+    const oldValue = this._value;
+    this._value = value;
+    this.updateFormValue();
+    this.requestUpdate('value', oldValue);
+  }
+
+  public override get defaultValue() {
     return this.value;
   }
 
-  private _uncheckedValue?: string;
   @property({ type: String, attribute: 'unchecked-value' })
   public get uncheckedValue() {
     return this._uncheckedValue;
@@ -29,12 +42,12 @@ export class YatlCheckbox extends YatlFormControl<string> {
   public set uncheckedValue(value) {
     const oldValue = this.uncheckedValue;
     this._uncheckedValue = value;
-    this.updateValue();
+    this.updateFormValue();
     this.requestUpdate('uncheckedValue', oldValue);
   }
 
   @property({ type: Boolean, attribute: 'checked' })
-  public defaultChecked = false;
+  public defaultChecked = this.hasAttribute('checked');
 
   @property({ type: Boolean, attribute: 'always-include' })
   public alwaysInclude = false;
@@ -42,7 +55,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
   public override inline = true;
 
   @state()
-  private _checked = false;
+  private _checked = this.hasAttribute('checked');
 
   public get checked() {
     return this._checked;
@@ -50,7 +63,8 @@ export class YatlCheckbox extends YatlFormControl<string> {
 
   public set checked(value) {
     this._checked = value;
-    this.updateValue();
+    this.toggleState('checked', value);
+    this.updateFormValue();
   }
 
   public get formValue() {
@@ -74,7 +88,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
   public override connectedCallback() {
     super.connectedCallback();
     this.checked = this.defaultChecked;
-    this.updateValue();
+    this.updateFormValue();
   }
 
   protected override render() {
@@ -100,7 +114,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
     `;
   }
 
-  private updateValue() {
+  private updateFormValue() {
     this.setFormValue(this.formValue);
   }
 
@@ -117,7 +131,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
     event.preventDefault();
     event.stopPropagation();
     this.formControl.click();
-  }
+  };
 }
 
 declare global {

@@ -1,4 +1,4 @@
-import { YatlCheckbox, YatlDateInput, YatlFormControl, YatlTableUi } from '../dist/index.mjs';
+import { YatlCheckbox, YatlDateInput, YatlFormControl, YatlSwitch, YatlTableUi } from '../dist/index.mjs';
 
 // Used for generating data and for filters
 const statuses = [
@@ -189,16 +189,11 @@ function initTable() {
  */
 function updateTableOptions() {
   const options = getTypedFormData(optionsForm);
-  for (const [name, value] of Object.entries(options)) {
-    if (name === 'rowCount') {
-      // Prevent the data from changing when toggling other settings
-      if (table.data.length !== value) {
-        table.data = generateMockData(value);
-      }
-    } else if (name in table) {
-      table[name] = value;
-    }
+  const {rowCount, ...tableOptions} = options;
+  if (table.data.length !== rowCount) {
+    table.data = generateMockData(rowCount);
   }
+  Object.assign(table, tableOptions);
 }
 
 /**
@@ -226,7 +221,7 @@ function getTypedFormData(form) {
   const typedData = {};
   for (const [name, value] of formData.entries()) {
     const element = form.querySelector(`[name="${name}"]`);
-    if (element instanceof YatlCheckbox) {
+    if (element instanceof YatlCheckbox || element instanceof YatlSwitch) {
       typedData[name] = element.checked;
     } else if (element instanceof YatlFormControl) {
       typedData[name] = element.value;

@@ -56,7 +56,10 @@ export default css`
 
   [part='label'] {
     flex: 1 1 100%;
-    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    line-height: normal;
+    overflow-x: hidden;
     text-overflow: ellipsis;
   }
 

@@ -1,8 +1,10 @@
-import { html, LitElement, nothing, PropertyValues } from 'lit';
+import { html, LitElement, PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
+import { HasSlotController } from '../../utils/slot-controller';
 
 import theme from '../../theme';
 import styles from './yatl-form-control.styles';
+import { classMap } from 'lit/directives/class-map.js';
 
 export type FormControl =
   | HTMLInputElement
@@ -25,6 +27,12 @@ export abstract class YatlFormControl<
   public static override styles = [theme, styles];
 
   protected readonly internals: ElementInternals;
+  private slotController = new HasSlotController(
+    this,
+    'hint',
+    'label',
+    'error',
+  );
 
   /**
    * Used to associate the label with the control element
@@ -33,7 +41,9 @@ export abstract class YatlFormControl<
 
   @query('input')
   protected formControl?: TInput;
-
+  @query('slot[name="label"]')
+  protected labelSlot?: HTMLSlotElement;
+  @query('slot[name=""]')
   @property({ type: String })
   public name = '';
 
@@ -75,6 +85,18 @@ export abstract class YatlFormControl<
     this._errorText = newValue;
     this.updateValidity();
     this.requestUpdate('errorText', oldValue);
+  }
+
+  protected get hasLabel() {
+    return this.label ? true : this.slotController.test('label');
+  }
+
+  protected get hasHint() {
+    return this.hint ? true : this.slotController.test('hint');
+  }
+
+  protected get hasError() {
+    return this.errorText ? true : this.slotController.test('error');
   }
 
   constructor() {
@@ -138,38 +160,31 @@ export abstract class YatlFormControl<
   }
 
   protected renderLabel(): unknown {
-    if (!this.label) {
-      return nothing;
-    }
-
     return html`
-      <label part="label" for="${this.inputId}">
-        <slot name="label">
-          <span>${this.label}</span>
-        </slot>
+      <label
+        part="label"
+        for="input"
+        class=${classMap({ 'has-label': this.hasLabel })}
+      >
+        <slot name="label"> ${this.label} </slot>
       </label>
     `;
   }
 
   protected renderHint(): unknown {
-    if (!this.hint || this.hasErrorText) {
-      return nothing;
-    }
-
     return html`
-      <slot name="hint">
+      <slot
+        name="hint"
+        class=${classMap({ 'has-hint': this.hasHint && !this.hasError })}
+      >
         <span part="hint">${this.hint}</span>
       </slot>
     `;
   }
 
   protected renderErrorText(): unknown {
-    if (!this.hasErrorText) {
-      return nothing;
-    }
-
     return html`
-      <slot name="error">
+      <slot name="error" class=${classMap({'has-error': this.hasError})}>
         <span part="error">${this.errorText}</span>
       </slot>
     `;
@@ -178,7 +193,7 @@ export abstract class YatlFormControl<
   protected abstract renderInput(): unknown;
 
   protected get hasErrorText() {
-    return this.errorText;
+    return !!this.errorText;
   }
 
   public get labels() {

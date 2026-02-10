@@ -72,6 +72,10 @@ export default css`
     font-weight: var(--input-label-font-weight);
   }
 
+  [part='label']:not(.has-label) {
+    display: none;
+  }
+
   :host(:not([inline])) [part='label'] {
     margin-block-end: var(--yatl-spacing-s);
   }
@@ -103,9 +107,17 @@ export default css`
     font-size: var(--input-hint-font-size);
   }
 
+  [part='hint']:not(.has-hint) {
+    display: none;
+  }
+
   [part='error'] {
     color: var(--input-error-text);
     font-size: var(--input-error-font-size);
+  }
+
+  [part='error']:not(.has-error) {
+    display: none;
   }
 
   [part='start'],

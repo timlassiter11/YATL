@@ -8,3 +8,4 @@ export * from './yatl-radio-group'
 export * from './yatl-select';
 export * from './yatl-search-select';
 export * from './yatl-switch';
+export * from './yatl-typeahead';

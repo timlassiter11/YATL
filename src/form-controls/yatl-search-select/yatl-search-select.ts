@@ -166,8 +166,6 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   private handleFocus = (event: FocusEvent) => {
     const path = event.composedPath();
-    console.log(path);
-    console.log(path.includes(this), path.includes(this.formControl!));
     if (!path.includes(this)) {
       this.hasFocus = false;
     } else if (this.formControl && path.includes(this.formControl)) {

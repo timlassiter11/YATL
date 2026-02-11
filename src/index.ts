@@ -4,6 +4,7 @@ export * from './filter-components';
 export * from './form-controls';
 export * from './yatl-button';
 export * from './yatl-button-group';
+export * from './yatl-card';
 export * from './yatl-dropdown';
 export * from './yatl-icon';
 export * from './yatl-option';

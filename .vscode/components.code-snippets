@@ -18,15 +18,14 @@
   "LitElement Component": {
     "prefix": "lit-element",
     "body": [
-      "import { LitElement, html } from 'lit';",
+      "import { html } from 'lit';",
       "import { customElement, property } from 'lit/decorators.js';",
-
-      "import theme from '../theme';",
+      "import { YatlBase } from '../yatl-base';",
       "import styles from './${1:tag-name}.styles';",
       "",
       "@customElement('${1:tag-name}')",
-      "export class ${2:ClassName} extends LitElement {",
-      "  public static override styles = [theme, styles];",
+      "export class ${2:ClassName} extends YatlBase {",
+      "  public static override styles = [...super.styles, styles];",
       "",
       "  protected override render() {",
       "    return html`",

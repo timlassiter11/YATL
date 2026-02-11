@@ -64,7 +64,7 @@ export default css`
     border: none;
   }
 
-  yatl-button[part='clear-icon']::part(button) {
+  yatl-button[part='clear-icon']::part(base) {
     appearance: none;
     background: none;
     border: none;

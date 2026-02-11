@@ -78,11 +78,13 @@
   --yatl-text-3-dark: #8a8a8a;
   --yatl-text-3: light-dark(var(--yatl-text-3-light), var(--yatl-text-3-dark));
 
-  --yatl-text-inverse: #ffffff;
+  /* Brand doesn't change with light / dark mode */
+  --yatl-text-brand: #ffffff;
   --yatl-mix-color: light-dark(black, white);
 
   font-family: var(--yatl-font-family);
   font-size: var(--yatl-font-size);
   color: var(--yatl-text-1);
+  background-color: var(--yatl-surface-1);
 }
 

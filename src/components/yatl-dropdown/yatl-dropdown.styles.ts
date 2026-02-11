@@ -36,7 +36,7 @@ export default css`
   }
 
   :host([open]) ::slotted(yatl-button[slot='trigger']) {
-    background-color: var(--dropdown-menu-open-bg);
+    --yatl-button-bg: var(--dropdown-menu-open-bg);
   }
 
   [part='trigger'] {

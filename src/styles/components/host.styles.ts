@@ -21,10 +21,4 @@ export default css`
     --button-radius: 0 var(--button-group-radius) var(--button-group-radius) 0;
     margin-right: 0;
   }
-
-  [part='base'] {
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-  }
 `;

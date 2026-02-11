@@ -33,12 +33,12 @@ export default css`
     border: none;
   }
 
-  yatl-button[part='dismiss-button']::part(button) {
+  yatl-button[part='dismiss-button']::part(base) {
     padding: 0;
     margin: 0;
   }
 
-  yatl-button[part='dismiss-button']::part(button):hover {
+  yatl-button[part='dismiss-button']::part(base):hover {
     color: var(--yatl-text-1);
     background: none;
   }

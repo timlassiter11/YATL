@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../yatl-base';
 import styles from './yatl-button.styles';
 
-export type YatlButtonVariant = 'button' | 'icon';
+export type YatlButtonVariant = 'neutral' | 'outline' | 'brand' | 'icon';
 
 @customElement('yatl-button')
 export class YatlButton extends YatlBase {
@@ -16,17 +16,15 @@ export class YatlButton extends YatlBase {
   public type: 'button' | 'submit' | 'reset' = 'button';
 
   @property({ type: String, reflect: true })
-  public variant: YatlButtonVariant = 'button';
+  public variant: YatlButtonVariant = 'neutral';
 
   protected override render() {
     return html`
-      <div part="base">
-        <button part="button" type=${this.type} ?disabled=${this.disabled}>
-          <slot name="start"></slot>
-          <slot></slot>
-          <slot name="end"></slot>
-        </button>
-      </div>
+      <button part="base" type=${this.type} ?disabled=${this.disabled}>
+        <slot name="start"></slot>
+        <slot></slot>
+        <slot name="end"></slot>
+      </button>
     `;
   }
 }

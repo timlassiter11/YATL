@@ -161,12 +161,12 @@ export abstract class YatlFormControl<
 
   protected renderLabel(): unknown {
     return html`
-      <label
-        part="label"
-        for="input"
-        class=${classMap({ 'has-label': this.hasLabel })}
-      >
-        <slot name="label"> ${this.label} </slot>
+      <label for="input">
+        <slot name="label">
+          <div part="label" class=${classMap({ 'has-label': this.hasLabel })}>
+            ${this.label}
+          </div>
+        </slot>
       </label>
     `;
   }
@@ -184,7 +184,7 @@ export abstract class YatlFormControl<
 
   protected renderErrorText(): unknown {
     return html`
-      <slot name="error" class=${classMap({'has-error': this.hasError})}>
+      <slot name="error" class=${classMap({ 'has-error': this.hasError })}>
         <span part="error">${this.errorText}</span>
       </slot>
     `;

@@ -40,7 +40,7 @@
           Documentation
         </a>
 
-        <yatl-button id="themeToggle" variant="icon">
+        <yatl-button id="themeToggle" variant="plain">
           <yatl-icon name="sun"></yatl-icon>
           <yatl-icon name="moon"></yatl-icon>
         </yatl-button>
@@ -49,11 +49,11 @@
     <main>
       <yatl-table-view>
         <yatl-card slot="filters">
-          <span slot="header">Filters</span>
+          <span slot="header-start">Filters</span>
           <yatl-button
             id="clearFiltersButton"
-            slot="header-actions"
-            variant="icon"
+            slot="header-end"
+            variant="plain"
             title="Clear filters"
           >
             <yatl-icon name="close"></yatl-icon>
@@ -80,7 +80,7 @@
           </div>
         </yatl-card>
         <yatl-card slot="sidebar-end">
-          <span slot="header">Table Options</span>
+          <span slot="header-start">Table Options</span>
           <form id="optionsForm" onsubmit="event.preventDefault();">
             <div class="option-group">
               <yatl-number-input
@@ -168,7 +168,7 @@
           </form>
         </yatl-card>
         <yatl-card slot="sidebar-end">
-          <span slot="header">Render State</span>
+          <span slot="header-start">Render State</span>
           <div class="option-group">
             <div class="inline">
               Rendered Rows: <span id="renderedRows">0</span>
@@ -183,6 +183,7 @@
           id="deleteRowsButton"
           slot="toolbar-button-group"
           title="Delete selected rows"
+          color="raised"
           disabled
         >
           <yatl-icon name="trash"></yatl-icon>

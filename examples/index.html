@@ -5,24 +5,10 @@
     <title>YATL Demo</title>
     <link rel="stylesheet" href="./site.css" />
     <style>
-      #searchInput {
-        flex-grow: 1;
-      }
-
       .filters-header {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
-        align-items: center;
-      }
-
-      .button.close {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0;
-        display: flex;
-        justify-content: center;
         align-items: center;
       }
 
@@ -53,28 +39,24 @@
           Documentation
         </a>
 
-        <div class="nav-divider"></div>
-
-        <button id="themeToggle" class="nav-icon-btn">
+        <yatl-button id="themeToggle" variant="icon">
           <yatl-icon name="sun"></yatl-icon>
           <yatl-icon name="moon"></yatl-icon>
-        </button>
+        </yatl-button>
       </div>
     </nav>
     <main>
       <yatl-table-view>
-        <div class="card" slot="filters">
-          <div class="filters-header">
-            <h1>Filters</h1>
-            <button
-              id="clearFiltersButton"
-              type="reset"
-              class="button close"
-              title="Clear filters"
-            >
-              <yatl-icon name="close"></yatl-icon>
-            </button>
-          </div>
+        <yatl-card slot="filters">
+          <span slot="header">Filters</span>
+          <yatl-button
+            id="clearFiltersButton"
+            slot="header-actions"
+            variant="icon"
+            title="Clear filters"
+          >
+            <yatl-icon name="close"></yatl-icon>
+          </yatl-button>
           <div class="option-group">
             <yatl-search-filter field="name" label="Name"></yatl-search-filter>
             <yatl-select-filter
@@ -84,19 +66,21 @@
               multi
               clearable
             ></yatl-select-filter>
-            
-            <h2>Date Modified</h2>
-            <yatl-date-filter label="From" field="lastModified.startDate"></yatl-date-filter>
-            <yatl-date-filter label="To" field="lastModified.endDate"></yatl-date-filter>
+
+            <h3>Date Modified</h3>
+            <yatl-date-filter
+              label="From"
+              field="lastModified.startDate"
+            ></yatl-date-filter>
+            <yatl-date-filter
+              label="To"
+              field="lastModified.endDate"
+            ></yatl-date-filter>
           </div>
-        </div>
-        <form
-          id="optionsForm"
-          slot="sidebar-end"
-          onsubmit="event.preventDefault();"
-        >
-          <div class="card">
-            <h1>Table Options</h1>
+        </yatl-card>
+        <yatl-card slot="sidebar-end">
+          <span slot="header">Table Options</span>
+          <form id="optionsForm" onsubmit="event.preventDefault();">
             <div class="option-group">
               <yatl-number-input
                 label="Row Count"
@@ -106,7 +90,7 @@
               ></yatl-number-input>
             </div>
             <div class="option-group">
-              <h2>UI</h2>
+              <h4>UI</h4>
               <yatl-switch
                 name="striped"
                 label="Striped"
@@ -133,7 +117,7 @@
               ></yatl-switch>
             </div>
             <div class="option-group">
-              <h2>Interactivity</h2>
+              <h4>Interactivity</h4>
               <yatl-switch
                 name="resizable"
                 label="Resizable Columns"
@@ -152,14 +136,15 @@
                 always-include
                 checked
               ></yatl-switch>
-              <yatl-radio-group label="Row Selection Method" name="rowSelectionMethod" >
-                <yatl-radio label="Multi" value="multi" checked></yatl-radio>
-                <yatl-radio label="Single" value="single"></yatl-radio>
-                <yatl-radio label="None" value="null"></yatl-radio>
-              </yatl-radio-group>
             </div>
+            <yatl-radio-group class="option-group" name="rowSelectionMethod">
+              <h4 slot="label">Row Selection Method</h4>
+              <yatl-radio label="Multi" value="multi" checked></yatl-radio>
+              <yatl-radio label="Single" value="single"></yatl-radio>
+              <yatl-radio label="None" value="null"></yatl-radio>
+            </yatl-radio-group>
             <div class="option-group">
-              <h2>Misc</h2>
+              <h4>Misc</h4>
               <yatl-switch
                 name="enableSearchTokenization"
                 label="Tokenize Search"
@@ -179,18 +164,20 @@
                 checked
               ></yatl-switch>
             </div>
+          </form>
+        </yatl-card>
+        <yatl-card slot="sidebar-end">
+          <span slot="header">Render State</span>
+          <div class="option-group">
+            <div class="inline">
+              Rendered Rows: <span id="renderedRows">0</span>
+            </div>
+            <div class="inline">
+              Filtered Rows: <span id="filteredRows">0</span>
+            </div>
+            <div class="inline">Total Rows: <span id="totalRows">0</span></div>
           </div>
-        </form>
-        <div class="card" slot="sidebar-end">
-          <h1>Render State</h1>
-          <div class="inline">
-            Rendered Rows: <span id="renderedRows">0</span>
-          </div>
-          <div class="inline">
-            Filtered Rows: <span id="filteredRows">0</span>
-          </div>
-          <div class="inline">Total Rows: <span id="totalRows">0</span></div>
-        </div>
+        </yatl-card>
         <yatl-button
           id="deleteRowsButton"
           slot="toolbar-button-group"

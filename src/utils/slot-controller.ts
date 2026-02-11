@@ -40,7 +40,9 @@ export class HasSlotController implements ReactiveController {
   }
 
   public test(slotName: string) {
-    return slotName === '[default]' ? this.hasDefaultSlot() : this.hasNamedSlot(slotName);
+    return slotName === '[default]'
+      ? this.hasDefaultSlot()
+      : this.hasNamedSlot(slotName);
   }
 
   public hostConnected() {
@@ -48,13 +50,19 @@ export class HasSlotController implements ReactiveController {
   }
 
   public hostDisconnected() {
-    this.host.shadowRoot!.removeEventListener('slotchange', this.handleSlotChange);
+    this.host.shadowRoot!.removeEventListener(
+      'slotchange',
+      this.handleSlotChange,
+    );
   }
 
   private handleSlotChange = (event: Event) => {
     const slot = event.target as HTMLSlotElement;
 
-    if ((this.slotNames.includes('[default]') && !slot.name) || (slot.name && this.slotNames.includes(slot.name))) {
+    if (
+      (this.slotNames.includes('[default]') && !slot.name) ||
+      (slot.name && this.slotNames.includes(slot.name))
+    ) {
       this.host.requestUpdate();
     }
   };
@@ -66,7 +74,10 @@ export class HasSlotController implements ReactiveController {
  * @param nodes - The list of nodes to iterate over.
  * @param callback - A function that can be used to customize the HTML output for specific types of nodes. If the function returns undefined, the default HTML output will be used.
  */
-export function getInnerHTML(nodes: Iterable<Node>, callback?: (node: Node) => string | undefined): string {
+export function getInnerHTML(
+  nodes: Iterable<Node>,
+  callback?: (node: Node) => string | undefined,
+): string {
   let html = '';
 
   for (const node of nodes) {

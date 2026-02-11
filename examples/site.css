@@ -76,14 +76,7 @@ nav {
   justify-content: space-between;
   padding: 0.5rem 1.5rem;
   width: 100%;
-
-  flex-shrink: 0;
-  flex-grow: 0;
-
-  position: sticky;
-  top: 0;
-  z-index: 100;
-
+  flex: 0 0 0%;
   background: color-mix(in srgb, var(--bg-color) 80%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-color);
@@ -99,15 +92,6 @@ nav {
   font-weight: 700;
   font-size: 1.25rem;
   letter-spacing: -0.025em;
-}
-
-.nav-version {
-  font-size: 0.75rem;
-  color: light-dark(#64748b, #94a3b8); /* Muted Text */
-  font-family: monospace;
-  background: light-dark(#f1f5f9, #1e293b);
-  padding: 2px 6px;
-  border-radius: 4px;
 }
 
 .nav-right {
@@ -129,29 +113,6 @@ nav {
   opacity: 1;
 }
 
-.nav-divider {
-  width: 1px;
-  height: 24px;
-  background-color: var(--border-color);
-}
-
-.nav-icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-color);
-  padding: 8px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-.nav-icon-btn:hover {
-  background: light-dark(#f1f5f9, #1e293b);
-}
-
 yatl-icon[name="sun"] {
   display: none;
 }
@@ -165,54 +126,19 @@ yatl-icon[name="moon"] {
   display: none;
 }
 
-.sidebar {
-  padding: 0;
-  padding-right: 10px;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  gap: var(--spacing-md);
-  overflow-y: auto;
-  width: 250px;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-}
-
-.card h1,
-.card h2,
-.card h3,
-.card h4,
-.card h5,
-.card h6 {
-  margin: 0px;
-}
-
-.card h1 {
-  font-weight: bold;
-  font-size: x-large;
-}
-
-.card h2 {
-  font-size: large;
+h4 {
+  margin: 4px 0;
 }
 
 .option-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 12px;
 }
 
-/* Need this to limit virtual scroll */
-.table-wrapper {
+.inline {
   display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  overflow: hidden;
+  flex-direction: row;
+  justify-content: space-between;
 }

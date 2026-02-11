@@ -56,9 +56,14 @@ window.addEventListener('load', () => {
 
   const deleteRowsButton = document.getElementById('deleteRowsButton');
   deleteRowsButton.disabled = table.selectedRowIds.length <= 0;
-  deleteRowsButton.addEventListener('click', () => {
-    table.deleteRow(...table.selectedRowIds);
-    deleteRowsButton.disabled = true;
+  deleteRowsButton.addEventListener('click', async () => {
+    const selectedRows = table.selectedRowIds;
+    const title = 'Delete Rows?';
+    const body = `Are you sure you want to delete ${selectedRows.length} rows?`;
+    if (await showDialog(title, body)) {
+      table.deleteRow(...table.selectedRowIds);
+      deleteRowsButton.disabled = true;
+    }
   });
 
   /* --- Table Events --- */
@@ -350,6 +355,34 @@ function generateMockData(count) {
     generatedData.push(dataRow);
   }
   return generatedData;
+}
+
+async function showDialog(title, body) {
+  const dialog = document.createElement('yatl-confirmation-dialog');
+
+  const acceptButton = document.createElement('yatl-button');
+  acceptButton.slot = 'actions';
+  acceptButton.color = 'danger';
+  acceptButton.innerText = 'Yes';
+  acceptButton.onclick = () => dialog.accept();
+
+  const rejectButton = document.createElement('yatl-button');
+  rejectButton.slot = 'actions';
+  rejectButton.color = 'muted';
+  rejectButton.innerText = 'No';
+  rejectButton.onclick = () => dialog.reject();
+
+  dialog.label = title;
+  dialog.innerText = body;
+
+  dialog.append(rejectButton);
+  dialog.append(acceptButton);
+  document.body.append(dialog);
+
+  const ret = await dialog.confirm();
+  // remove the element once it is done hiding itself
+  dialog.hide().then(() => dialog.remove());
+  return ret;
 }
 
 function initExtras() {

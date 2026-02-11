@@ -1,19 +1,7 @@
 import './setup-context';
 
-export * from './filter-components';
-export * from './form-controls';
-export * from './yatl-button';
-export * from './yatl-button-group';
-export * from './yatl-card';
-export * from './yatl-dropdown';
-export * from './yatl-icon';
-export * from './yatl-option';
-export * from './yatl-table';
-export * from './yatl-table-controller';
-export * from './yatl-table-ui';
-export * from './yatl-tag';
-export * from './yatl-toolbar';
-export * from './yatl-table-view';
+export * from './components';
+export * from './controllers';
 
 export {
   createRegexTokenizer,

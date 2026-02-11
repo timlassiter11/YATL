@@ -5,7 +5,7 @@ import {
   TableState,
   UnspecifiedRecord,
 } from './types';
-import { type YatlOption } from './yatl-option';
+import { type YatlOption } from './components/yatl-option';
 
 /**
  * Base event class that bubbles and is composed.

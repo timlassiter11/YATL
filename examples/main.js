@@ -44,6 +44,12 @@ window.addEventListener('load', () => {
   // Initialize the table columns and default options
   initTable();
 
+  const clearFiltersButton = document.getElementById('clearFiltersButton');
+  clearFiltersButton.addEventListener('click', () => {
+    table.filters = {};
+    table.searchQuery = '';
+  })
+
   // Sync option controls and table options
   optionsForm.addEventListener('change', updateTableOptions);
   updateTableOptions();

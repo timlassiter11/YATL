@@ -11,31 +11,37 @@ export class YatlCard extends YatlBase {
 
   private slotController = new HasSlotController(
     this,
-    'header',
-    'header-actions',
-    'footer',
-    'footer-actions',
+    'header-start',
+    'header-end',
+    'footer-start',
+    'footer-end',
   );
 
   protected override render() {
     const hasHeader =
-      this.slotController.test('header') ||
-      this.slotController.test('header-actions');
+      this.slotController.test('header-start') ||
+      this.slotController.test('header-end');
     const hasFooter =
-      this.slotController.test('footer') ||
-      this.slotController.test('footer-actions');
+      this.slotController.test('footer-start') ||
+      this.slotController.test('footer-end');
 
     return html`
-      <header part="header" class=${classMap({ hasHeader })}>
-        <slot name="header"></slot>
-        <slot name="header-actions"></slot>
+      <header part="header" class=${classMap({ 'has-header': hasHeader })}>
+        <slot name="header-start"></slot>
+        <slot name="header">
+          <div class="divider"></div>
+        </slot>
+        <slot name="header-end"></slot>
       </header>
 
       <slot part="body"></slot>
 
-      <footer part="footer" class=${classMap({ hasFooter })}>
-        <slot name="footer"></slot>
-        <slot name="footer-actions"></slot>
+      <footer part="footer" class=${classMap({ 'has-footer': hasFooter })}>
+        <slot name="footer-start"></slot>
+        <slot name="footer">
+          <div class="divider"></div>
+        </slot>
+        <slot name="footer-end"></slot>
       </footer>
     `;
   }

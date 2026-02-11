@@ -1,10 +1,10 @@
-import { LitElement } from 'lit';
+import { LitElement, PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import theme from '../../theme';
 import { YatlTableController } from '../../yatl-table-controller';
 import { consume } from '@lit/context';
 import { tableContext } from '../../context';
-import { setNestedValue } from '../../utils';
+import { getNestedValue, setNestedValue } from '../../utils';
 
 export class YatlBaseFilter<T> extends LitElement {
   public static override styles = [theme];
@@ -82,6 +82,24 @@ export class YatlBaseFilter<T> extends LitElement {
       this.controller?.getColumnFilterValues(this.field) as Map<T, number> ??
       new Map<T, number>()
     );
+  }
+
+  protected override willUpdate(changedProperties: PropertyValues) {
+    super.willUpdate(changedProperties);
+
+    const filters = this.filters;
+    if (filters === undefined) {
+      return;
+    }
+
+    const filtersValue = getNestedValue(filters ?? {}, this.field);
+    // We can't always check if a value changed since 
+    // some values are mutable and return copies but
+    // we can check if the filter value doesn't exist anymore.
+    // If that is the case, clear this value.
+    if (!filtersValue) {
+      this.value = undefined;
+    }
   }
 
   protected updateFilters() {

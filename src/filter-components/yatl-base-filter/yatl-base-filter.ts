@@ -1,14 +1,12 @@
-import { LitElement, PropertyValues } from 'lit';
-import { property } from 'lit/decorators.js';
-import theme from '../../theme';
-import { YatlTableController } from '../../yatl-table-controller';
 import { consume } from '@lit/context';
+import { PropertyValues } from 'lit';
+import { property } from 'lit/decorators.js';
 import { tableContext } from '../../context';
 import { getNestedValue, setNestedValue } from '../../utils';
+import { YatlBase } from '../../yatl-base';
+import { YatlTableController } from '../../yatl-table-controller';
 
-export class YatlBaseFilter<T> extends LitElement {
-  public static override styles = [theme];
-
+export class YatlBaseFilter<T> extends YatlBase {
   private _filterOptions?: Map<T, number>;
 
   private _controller?: YatlTableController;
@@ -32,6 +30,7 @@ export class YatlBaseFilter<T> extends LitElement {
     this.requestUpdate('controller', oldValue);
   }
 
+  // TODO: Use actual filter value as single source of truth?
   private _value?: T;
   @property({ attribute: false })
   public get value() {
@@ -79,7 +78,7 @@ export class YatlBaseFilter<T> extends LitElement {
   protected get options() {
     return (
       this._filterOptions ??
-      this.controller?.getColumnFilterValues(this.field) as Map<T, number> ??
+      (this.controller?.getColumnFilterValues(this.field) as Map<T, number>) ??
       new Map<T, number>()
     );
   }
@@ -93,7 +92,7 @@ export class YatlBaseFilter<T> extends LitElement {
     }
 
     const filtersValue = getNestedValue(filters ?? {}, this.field);
-    // We can't always check if a value changed since 
+    // We can't always check if a value changed since
     // some values are mutable and return copies but
     // we can check if the filter value doesn't exist anymore.
     // If that is the case, clear this value.
@@ -117,7 +116,9 @@ export class YatlBaseFilter<T> extends LitElement {
       this._filterOptions = undefined;
     } else if (this._filterOptions === undefined) {
       // Lock in our filter options as soon as the user selects a value
-      this._filterOptions = this.controller?.getColumnFilterValues(this.field)  as Map<T, number>;
-    }    
+      this._filterOptions = this.controller?.getColumnFilterValues(
+        this.field,
+      ) as Map<T, number>;
+    }
   }
 }

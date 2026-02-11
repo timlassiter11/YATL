@@ -1,13 +1,13 @@
-import { customElement, property, state } from 'lit/decorators.js';
-import { YatlFormControl } from '../yatl-form-control';
 import { html } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
+import { YatlFormControl } from '../yatl-form-control';
 
 import styles from './yatl-checkbox.styles';
 
 @customElement('yatl-checkbox')
 export class YatlCheckbox extends YatlFormControl<string> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   private _value = this.getAttribute('value') ?? 'on';
   private _uncheckedValue?: string;

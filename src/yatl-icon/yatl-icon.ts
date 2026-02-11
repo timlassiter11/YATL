@@ -1,13 +1,12 @@
-import { html, LitElement, nothing } from 'lit';
-
-import theme from '../theme';
-import styles from './yatl-icon.styles';
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { icons } from '../icons';
+import { YatlBase } from '../yatl-base';
+import styles from './yatl-icon.styles';
 
 @customElement('yatl-icon')
-export class YatlIcon extends LitElement {
-  public static override styles = [theme, styles];
+export class YatlIcon extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   @property({ type: String })
   public name = '';

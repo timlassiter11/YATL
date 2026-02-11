@@ -1,15 +1,14 @@
 import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-
-import styles from './yatl-typeahead.styles';
-import { YatlFormControl } from '../yatl-form-control';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../events';
+import { YatlFormControl } from '../yatl-form-control';
+import styles from './yatl-typeahead.styles';
 
 @customElement('yatl-typeahead')
 export class YatlTypeahead extends YatlFormControl {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   private _uri = '';
   private _minQueryLength = 3;

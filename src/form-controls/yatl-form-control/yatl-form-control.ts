@@ -1,10 +1,9 @@
 import { html, LitElement, PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { HasSlotController } from '../../utils/slot-controller';
-
-import theme from '../../theme';
-import styles from './yatl-form-control.styles';
 import { classMap } from 'lit/directives/class-map.js';
+import { YatlBase } from '../../yatl-base';
+import styles from './yatl-form-control.styles';
 
 export type FormControl =
   | HTMLInputElement
@@ -16,7 +15,7 @@ export abstract class YatlFormControl<
     TData = string,
     TInput extends FormControl = HTMLInputElement,
   >
-  extends LitElement
+  extends YatlBase
   implements ElementInternals
 {
   public static formAssociated = true;
@@ -24,7 +23,7 @@ export abstract class YatlFormControl<
     ...LitElement.shadowRootOptions,
     delegatesFocus: true,
   };
-  public static override styles = [theme, styles];
+  public static override styles = [...super.styles, styles];
 
   protected readonly internals: ElementInternals;
   private slotController = new HasSlotController(

@@ -2,9 +2,8 @@ import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { YatlFormControl } from '../yatl-form-control';
-
-import styles from './yatl-input.styles';
 import { live } from 'lit/directives/live.js';
+import styles from './yatl-input.styles';
 
 export type YatlInputType =
   | 'email'
@@ -16,7 +15,7 @@ export type YatlInputType =
 
 @customElement('yatl-input')
 export class YatlInput extends YatlFormControl<string> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   @property({ type: String })
   public type: YatlInputType = 'text';

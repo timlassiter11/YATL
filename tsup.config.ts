@@ -3,7 +3,13 @@ import { defineConfig } from 'tsup';
 export default defineConfig([
   {
     entry: {
-      'index': 'src/index.ts',
+      'themes/default': 'src/styles/themes/default.css',
+    },
+    clean: true,
+  },
+  {
+    entry: {
+      index: 'src/index.ts',
     },
     format: ['esm', 'cjs'],
     outDir: 'dist',
@@ -29,6 +35,6 @@ export default defineConfig([
     // Bundle Lit
     noExternal: [/^lit/, /^@lit/],
     // Don't generate duplicate d.ts files
-    dts: false, 
-  }
+    dts: false,
+  },
 ]);

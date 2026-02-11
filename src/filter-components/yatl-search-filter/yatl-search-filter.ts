@@ -1,14 +1,13 @@
 import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import theme from '../../theme';
-import styles from './yatl-search-filter.styles';
-import { YatlBaseFilter } from '../yatl-base-filter';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlSearchSelect } from '../../form-controls';
+import { YatlBaseFilter } from '../yatl-base-filter';
+import styles from './yatl-search-filter.styles';
 
 @customElement('yatl-search-filter')
 export class YatlSearchFilter extends YatlBaseFilter<string[]> {
-  public static override styles = [theme, styles];
+  public static override styles = [...super.styles, styles];
 
   @property({ type: Number })
   public size = 4;

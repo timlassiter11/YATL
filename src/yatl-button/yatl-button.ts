@@ -1,14 +1,13 @@
-import { html, LitElement } from 'lit';
+import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-
-import theme from '../theme';
+import { YatlBase } from '../yatl-base';
 import styles from './yatl-button.styles';
 
 export type YatlButtonVariant = 'button' | 'icon';
 
 @customElement('yatl-button')
-export class YatlButton extends LitElement {
-  public static override styles = [theme, styles];
+export class YatlButton extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   @property({ type: Boolean, reflect: true })
   public disabled = false;
@@ -16,7 +15,7 @@ export class YatlButton extends LitElement {
   @property({ type: String, reflect: true })
   public type: 'button' | 'submit' | 'reset' = 'button';
 
-  @property({ type: String, reflect: true})
+  @property({ type: String, reflect: true })
   public variant: YatlButtonVariant = 'button';
 
   protected override render() {

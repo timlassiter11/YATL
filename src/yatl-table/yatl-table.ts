@@ -22,13 +22,13 @@ import {
 import { highlightText, toHumanReadable } from './utils';
 
 import {
+  YatlColumnReorderRequestEvent,
+  YatlColumnSortRequestEvent,
   YatlRowClickEvent,
   YatlRowSelectRequestEvent,
-  YatlColumnSortRequestEvent,
-  YatlColumnReorderRequestEvent,
 } from '../events';
 
-import { html, LitElement, nothing, TemplateResult } from 'lit';
+import { html, nothing, TemplateResult } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -37,7 +37,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
-import theme from '../theme';
+import { YatlBase } from '../yatl-base';
 import { YatlTableController } from '../yatl-table-controller/yatl-table-controller';
 import styles from './yatl-table.styles';
 
@@ -66,10 +66,8 @@ import styles from './yatl-table.styles';
  * @fires yatl-table-state-change - Fired when any persistable state (width, order, sort, query) changes. Used for syncing with local storage.
  */
 @customElement('yatl-table')
-export class YatlTable<
-  T extends object = UnspecifiedRecord,
-> extends LitElement {
-  public static override styles = [theme, styles];
+export class YatlTable<T extends object = UnspecifiedRecord> extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   @query('.table')
   private tableElement!: HTMLElement;

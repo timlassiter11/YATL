@@ -1,18 +1,18 @@
-import { html, LitElement, nothing } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import { repeat } from 'lit/directives/repeat.js';
 
-import theme from '../theme';
-import styles from './yatl-toolbar.styles';
 import {
   YatlDropdownSelectEvent,
   YatlToolbarExportClick,
   YatlToolbarSearchChange,
   YatlToolbarSearchInput,
 } from '../events';
-import { YatlTableController } from '../yatl-table-controller';
 import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
+import { YatlBase } from '../yatl-base';
+import { YatlTableController } from '../yatl-table-controller';
+import styles from './yatl-toolbar.styles';
 
 /**
  * A table toolbar component with a search input, column picker, and export button.
@@ -36,8 +36,8 @@ import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../types';
 @customElement('yatl-toolbar')
 export class YatlToolbar<
   T extends object = UnspecifiedRecord,
-> extends LitElement {
-  public static override styles = [theme, styles];
+> extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   private _controller?: YatlTableController<T>;
   @property({ attribute: false })
@@ -113,7 +113,7 @@ export class YatlToolbar<
         label=${column.title ?? column.field}
         .checked=${state.visible}
         .value=${state.field}
-        ></yatl-option>
+      ></yatl-option>
     `;
   }
 

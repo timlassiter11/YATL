@@ -2,10 +2,9 @@ import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
 import { YatlSwitch } from '../yatl-switch';
-
-import styles from './yatl-radio-group.styles';
-import { YatlRadio } from '../yatl-radio/yatl-radio';
 import { YatlCheckbox } from '../yatl-checkbox';
+import { YatlRadio } from '../yatl-radio/yatl-radio';
+import styles from './yatl-radio-group.styles';
 
 type SupportedChildren =
   | HTMLInputElement
@@ -15,7 +14,7 @@ type SupportedChildren =
 
 @customElement('yatl-radio-group')
 export class YatlRadioGroup extends YatlFormControl<string> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   @property({ type: String, attribute: 'value' })
   public defaultValue = this.getAttribute('value') ?? '';
@@ -64,7 +63,10 @@ export class YatlRadioGroup extends YatlFormControl<string> {
   }
 
   protected override renderInput() {
-    return html`<slot part="group" @slotchange=${this.syncChildStates}></slot> `;
+    return html`<slot
+      part="group"
+      @slotchange=${this.syncChildStates}
+    ></slot> `;
   }
 
   protected override onValueChange(event: Event) {

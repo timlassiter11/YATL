@@ -6,7 +6,7 @@ import {
   shift,
   size,
 } from '@floating-ui/dom';
-import { html, LitElement, PropertyValues } from 'lit';
+import { html, PropertyValues } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 
 import {
@@ -16,8 +16,8 @@ import {
   YatlDropdownOpenEvent,
   YatlDropdownOpenRequest,
 } from '../events';
-import theme from '../theme';
 import { activeElements } from '../utils';
+import { YatlBase } from '../yatl-base';
 import { YatlOption } from '../yatl-option';
 import styles from './yatl-dropdown.styles';
 
@@ -27,8 +27,8 @@ import styles from './yatl-dropdown.styles';
  * @fires yatl-dropdown-close
  */
 @customElement('yatl-dropdown')
-export class YatlDropdown extends LitElement {
-  public static override styles = [theme, styles];
+export class YatlDropdown extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   private autoUpdateCleanup?: () => void;
 

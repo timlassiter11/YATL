@@ -1,6 +1,5 @@
 import { html } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import theme from '../../theme';
 import styles from './yatl-date-filter.styles';
 import { YatlBaseFilter } from '../yatl-base-filter';
 import { live } from 'lit/directives/live.js';
@@ -8,7 +7,7 @@ import { YatlDateInput } from '../../form-controls';
 
 @customElement('yatl-date-filter')
 export class YatlDateFilter extends YatlBaseFilter<Date> {
-  public static override styles = [theme, styles];
+  public static override styles = [...super.styles, styles];
 
   protected override render() {
     return html`

@@ -1,10 +1,9 @@
 import { html, PropertyValues } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { YatlTableUi } from '../yatl-table-ui';
-
-import styles from './yatl-table-view.styles';
 import { ContextProvider } from '@lit/context';
 import { tableContext } from '../context';
+import styles from './yatl-table-view.styles';
 
 @customElement('yatl-table-view')
 export class YatlTableView extends YatlTableUi {
@@ -15,7 +14,9 @@ export class YatlTableView extends YatlTableUi {
     initialValue: this.controller,
   });
 
-  protected override willUpdate(changedProperties: PropertyValues<YatlTableView>): void {
+  protected override willUpdate(
+    changedProperties: PropertyValues<YatlTableView>,
+  ): void {
     if (changedProperties.has('controller')) {
       this.tableContext.setValue(this.controller);
     }

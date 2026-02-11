@@ -1,15 +1,15 @@
 import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
-
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { live } from 'lit/directives/live.js';
 import { dateConverter } from '../../utils';
+
 import styles from './yatl-date-input.styles';
 
 @customElement('yatl-date-input')
 export class YatlDateInput extends YatlFormControl<Date> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   @property({ type: String })
   public placeholder = '';
@@ -29,7 +29,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
   // Mutable value types need to be copied
   // so the user's changes don't mess things up.
   private _value?: Date;
-  @property({ attribute: false})
+  @property({ attribute: false })
   public get value() {
     return this._value ? new Date(this._value) : undefined;
   }
@@ -72,7 +72,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
   protected override onValueChange(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = dateConverter.fromAttribute(input.value);
-  } 
+  }
 }
 
 declare global {

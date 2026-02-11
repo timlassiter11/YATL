@@ -2,13 +2,12 @@ import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { YatlFormControl } from '../yatl-form-control';
-
-import styles from './yatl-number-input.styles';
 import { live } from 'lit/directives/live.js';
+import styles from './yatl-number-input.styles';
 
 @customElement('yatl-number-input')
 export class YatlNumberInput extends YatlFormControl<number> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   @property({ type: String })
   public placeholder = '';
@@ -22,10 +21,10 @@ export class YatlNumberInput extends YatlFormControl<number> {
   @property({ type: Number })
   public max?: number;
 
-  @property({ type: Number, attribute: 'value'})
+  @property({ type: Number, attribute: 'value' })
   public defaultValue?: number;
 
-  @property({ attribute: false})
+  @property({ attribute: false })
   public value?: number;
 
   public get formValue() {

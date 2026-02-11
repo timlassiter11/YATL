@@ -1,15 +1,14 @@
-import { LitElement, html } from 'lit';
+import { html } from 'lit';
 import { customElement } from 'lit/decorators.js';
-
-import theme from '../theme';
-import styles from './yatl-button-group.styles';
+import { getEffectiveChildren } from '../utils';
+import { YatlBase } from '../yatl-base';
 import { YatlButton } from '../yatl-button/yatl-button';
 import { YatlDropdown } from '../yatl-dropdown';
-import { getEffectiveChildren } from '../utils';
+import styles from './yatl-button-group.styles';
 
 @customElement('yatl-button-group')
-export class YatlButtonGroup extends LitElement {
-  public static override styles = [theme, styles];
+export class YatlButtonGroup extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   protected override render() {
     return html`

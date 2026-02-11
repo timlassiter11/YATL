@@ -1,12 +1,11 @@
-import { html, LitElement, nothing } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-
-import theme from '../theme';
+import { YatlBase } from '../yatl-base';
 import styles from './yatl-option.styles';
 
 @customElement('yatl-option')
-export class YatlOption extends LitElement {
-  public static override styles = [theme, styles];
+export class YatlOption extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   @property({ type: String, reflect: true })
   public value = 'on';

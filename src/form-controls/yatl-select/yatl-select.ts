@@ -1,16 +1,15 @@
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../yatl-form-control';
-import { html, nothing } from 'lit';
-
-import styles from './yatl-select.styles';
+import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../events';
 import { YatlDropdown } from '../../yatl-dropdown';
 import { YatlOption } from '../../yatl-option';
-import { repeat } from 'lit/directives/repeat.js';
+import styles from './yatl-select.styles';
 
 @customElement('yatl-select')
 export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   @property({ type: String })
   public placeholder = '';

@@ -1,16 +1,16 @@
-import { html, LitElement, nothing } from 'lit';
-import theme from '../theme';
-import styles from './yatl-tag.styles';
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlTagDismissEvent } from '../events';
+import { YatlBase } from '../yatl-base';
+import styles from './yatl-tag.styles';
 
 /**
  * @fires yatl-tag-dismiss-request
  * @fires yatl-tag-dismiss
  */
 @customElement('yatl-tag')
-export class YatlTag extends LitElement {
-  public static override styles = [theme, styles];
+export class YatlTag extends YatlBase {
+  public static override styles = [...super.styles, styles];
 
   @property({ type: Boolean, reflect: true })
   public dismissable = false;
@@ -25,10 +25,10 @@ export class YatlTag extends LitElement {
     }
 
     return html`
-    <yatl-button part="dismiss-button" @click=${this.dismissClick}>
-      <yatl-icon name="close"></yatl-icon>
-    </yatl-button>
-    `
+      <yatl-button part="dismiss-button" @click=${this.dismissClick}>
+        <yatl-icon name="close"></yatl-icon>
+      </yatl-button>
+    `;
   }
 
   private dismissClick(event: Event) {

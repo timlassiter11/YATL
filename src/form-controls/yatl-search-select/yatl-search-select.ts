@@ -4,12 +4,11 @@ import { repeat } from 'lit/directives/repeat.js';
 import { YatlOption } from '../../yatl-option';
 import { YatlFormControl } from '../yatl-form-control';
 import { YatlInput } from '../yatl-input';
-
 import styles from './yatl-search-select.styles';
 
 @customElement('yatl-search-select')
 export class YatlSearchSelect extends YatlFormControl<string[]> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
   public static override shadowRootOptions = {
     ...LitElement.shadowRootOptions,
     // We have to use manual focus delegation for this one

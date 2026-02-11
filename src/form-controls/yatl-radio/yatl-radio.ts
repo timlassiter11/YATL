@@ -1,13 +1,12 @@
-import { customElement, property, state } from 'lit/decorators.js';
-import { YatlFormControl } from '../yatl-form-control';
 import { html } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
-
+import { YatlFormControl } from '../yatl-form-control';
 import styles from './yatl-radio.styles';
 
 @customElement('yatl-radio')
 export class YatlRadio extends YatlFormControl<string> {
-  public static override styles = [...YatlFormControl.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   private _value = this.getAttribute('value') ?? 'on';
   private _uncheckedValue?: string;

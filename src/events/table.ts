@@ -1,27 +1,11 @@
+import { YatlEvent } from './base';
 import {
   NestedKeyOf,
   RowId,
   SortOrder,
   TableState,
   UnspecifiedRecord,
-} from './types';
-import { type YatlOption } from './components/yatl-option';
-
-/**
- * Base event class that bubbles and is composed.
- */
-export class YatlEvent extends Event {
-  constructor(name: string, options: EventInit = {}) {
-    super(name, {
-      bubbles: true,
-      composed: true,
-      cancelable: false,
-      ...options,
-    });
-  }
-}
-
-// #region Table Events
+} from '../types';
 
 export class YatlRowClickEvent<
   T extends object = UnspecifiedRecord,
@@ -181,74 +165,6 @@ export class YatlTableStateChangeEvent<
   }
 }
 
-// #endregion
-// #region --- UI Events ---
-
-export class YatlDropdownOpenRequest extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-open-request';
-  constructor() {
-    super(YatlDropdownOpenRequest.EVENT_NAME, { cancelable: true });
-  }
-}
-
-export class YatlDropdownOpenEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-open';
-  constructor() {
-    super(YatlDropdownOpenEvent.EVENT_NAME);
-  }
-}
-
-export class YatlDropdownCloseRequest extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-close-request';
-  constructor() {
-    super(YatlDropdownCloseRequest.EVENT_NAME, { cancelable: true });
-  }
-}
-
-export class YatlDropdownCloseEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-close';
-  constructor() {
-    super(YatlDropdownCloseEvent.EVENT_NAME);
-  }
-}
-
-export class YatlDropdownSelectEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-select';
-  constructor(public readonly item: YatlOption) {
-    super(YatlDropdownSelectEvent.EVENT_NAME, { cancelable: true });
-  }
-}
-
-export class YatlToolbarSearchInput extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-toolbar-search-input';
-  constructor(public readonly value: string) {
-    super(YatlToolbarSearchInput.EVENT_NAME);
-  }
-}
-
-export class YatlTagDismissEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-tag-dismiss';
-  constructor() {
-    super(YatlTagDismissEvent.EVENT_NAME);
-  }
-}
-
-export class YatlToolbarSearchChange extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-toolbar-search-change';
-  constructor(public readonly value: string) {
-    super(YatlToolbarSearchChange.EVENT_NAME);
-  }
-}
-
-export class YatlToolbarExportClick extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-toolbar-export-click';
-  constructor() {
-    super(YatlToolbarExportClick.EVENT_NAME);
-  }
-}
-
-// #endregion
-
 declare global {
   interface HTMLElementEventMap {
     [YatlRowClickEvent.EVENT_NAME]: YatlRowClickEvent;
@@ -270,17 +186,5 @@ declare global {
     [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
     [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
-
-    [YatlDropdownOpenRequest.EVENT_NAME]: YatlDropdownOpenRequest;
-    [YatlDropdownOpenEvent.EVENT_NAME]: YatlDropdownOpenEvent;
-    [YatlDropdownCloseRequest.EVENT_NAME]: YatlDropdownCloseEvent;
-    [YatlDropdownCloseEvent.EVENT_NAME]: YatlDropdownCloseEvent;
-    [YatlDropdownSelectEvent.EVENT_NAME]: YatlDropdownSelectEvent;
-
-    [YatlTagDismissEvent.EVENT_NAME]: YatlTagDismissEvent;
-    
-    [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
-    [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;
-    [YatlToolbarExportClick.EVENT_NAME]: YatlToolbarExportClick;
   }
 }

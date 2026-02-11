@@ -35,9 +35,23 @@
     var(--yatl-border-color-dark)
   );
 
+  /* Colors */
   --yatl-color-brand: var(--yatl-theme-brand, #7531ae);
   --yatl-color-danger: var(--yatl-theme-danger, #ef4444);
+  --yatl-color-warning: var(--yatl-theme-warning, #9b5300);
+  --yatl-color-success: var(--yatl-theme-success, #227931);
+  --yatl-color-neutral-light: var(--yatl-theme-neutral-light, #2f323f);
+  --yatl-color-neutral-dark: var(--yatl-theme-neutral-dark, #e4e5e9);
+  --yatl-color-neutral: var(
+    --yatl-theme-neutral,
+    light-dark(var(--yatl-color-neutral-light), var(--yatl-color-neutral-dark))
+  );
 
+  /* Color for color-mix usually for hover */
+  --yatl-color-mix: light-dark(black, white);
+  
+
+  /* Surfaces */
   --yatl-surface-1-light: #f3f4f6;
   --yatl-surface-1-dark: #101219;
   --yatl-surface-1: light-dark(
@@ -66,6 +80,7 @@
     var(--yatl-surface-4-dark)
   );
 
+  /* Text colors */
   --yatl-text-1-light: #0f172a;
   --yatl-text-1-dark: #f1f5f9;
   --yatl-text-1: light-dark(var(--yatl-text-1-light), var(--yatl-text-1-dark));
@@ -78,13 +93,14 @@
   --yatl-text-3-dark: #8a8a8a;
   --yatl-text-3: light-dark(var(--yatl-text-3-light), var(--yatl-text-3-dark));
 
+  /* Used for neutral color scheme */
+  --yatl-text-inverse: light-dark(white, black);
+
   /* Brand doesn't change with light / dark mode */
-  --yatl-text-brand: #ffffff;
-  --yatl-mix-color: light-dark(black, white);
+  --yatl-text-brand: white;
 
   font-family: var(--yatl-font-family);
   font-size: var(--yatl-font-size);
   color: var(--yatl-text-1);
   background-color: var(--yatl-surface-1);
 }
-

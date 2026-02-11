@@ -31,21 +31,21 @@ export default css`
     --table-header-text: var(--yatl-table-header-text, var(--yatl-text-1));
     --table-header-bg: var(
       --yatl-table-header-bg,
-      color-mix(in srgb, var(--yatl-mix-color) 4%, var(--table-bg))
+      color-mix(in srgb, var(--yatl-color-mix) 4%, var(--table-bg))
     );
     --table-header-hover-bg: var(
       --yatl-table-header-hover-bg,
-      color-mix(in srgb, var(--yatl-mix-color) 4%, var(--table-header-bg))
+      color-mix(in srgb, var(--yatl-color-mix) 4%, var(--table-header-bg))
     );
     --table-header-drop-bg: var(
       --yatl-table-header-drop-bg,
-      color-mix(in srgb, var(--yatl-mix-color) 4%, var(--table-header-bg))
+      color-mix(in srgb, var(--yatl-color-mix) 4%, var(--table-header-bg))
     );
 
     --table-row-text: var(--yatl-table-row-text, var(--yatl-text-1));
     --table-row-bg: var(
       --yatl-table-row-bg,
-      color-mix(in srgb, var(--yatl-mix-color) 2%, var(--table-bg))
+      color-mix(in srgb, var(--yatl-color-mix) 2%, var(--table-bg))
     );
     --table-row-hover-bg: var(
       --yatl-table-row-hover-bg,
@@ -53,7 +53,7 @@ export default css`
     );
     --table-row-stripe-bg: var(
       --yatl-table-row-stripe-bg,
-      color-mix(in srbg, var(--yatl-mix-color) 3%, var(--table-bg))
+      color-mix(in srbg, var(--yatl-color-mix) 3%, var(--table-bg))
         var(--table-header-bg)
     );
     --table-row-selected-bg: var(
@@ -81,6 +81,7 @@ export default css`
 
     /* Resize grab handle width */
     --resizer-width: var(--yatl-table-column-resizer-width, 10px);
+
     /* z-index for the header */
     --header-z-index: 2;
   }
@@ -109,17 +110,17 @@ export default css`
       color: var(--table-header-text);
     }
 
-    .table:not(.resizing) .row {
-      transition: grid-template-columns
-        var(--table-column-visibility-transition);
-    }
-
     .body .row {
       background-color: var(--table-row-bg);
     }
 
     .row:last-child {
       border-bottom: none;
+    }
+
+    .table:not(.resizing) .row {
+      transition: grid-template-columns
+        var(--table-column-visibility-transition);
     }
 
     .cell {
@@ -146,7 +147,7 @@ export default css`
     .resizer::after {
       height: 60%;
       width: 1px;
-      background-color: color-mix(in srgb, currentColor 30%, transparent);
+      background-color: color-mix(in srgb, currentcolor 30%, transparent);
       transition: background-color 0.2s;
     }
 
@@ -169,13 +170,16 @@ export default css`
     .table:not(.resizing) .header .cell:hover {
       background-color: var(--table-header-hover-bg);
     }
+
     .body .row:hover {
       background-color: var(--table-row-hover-bg);
     }
+
     .resizer:hover::after {
-      background-color: currentColor;
+      background-color: currentcolor;
       width: 2px;
     }
+
     .drop-indicator {
       background: var(--table-header-drop-bg);
     }
@@ -199,6 +203,7 @@ export default css`
   * for the table to work properly. 
   * Modify with caution!
   */
+  /* stylelint-disable-next-line no-duplicate-selectors */
   :host {
     display: block;
     width: 100%;
@@ -292,10 +297,7 @@ export default css`
   .drop-indicator {
     display: none;
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     pointer-events: none;
     z-index: calc(var(--header-z-index) + 1);
   }
@@ -314,7 +316,6 @@ export default css`
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
-
     position: sticky;
     bottom: 0;
     left: 0;
@@ -326,6 +327,7 @@ export default css`
   .row {
     display: grid;
     grid-template-columns: var(--grid-template);
+    
     /* This is required! Don't remove it. */
     min-width: 100%;
     width: fit-content;

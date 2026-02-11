@@ -9,7 +9,11 @@ import {
   YatlToolbarSearchChange,
   YatlToolbarSearchInput,
 } from '../../events';
-import { DisplayColumnOptions, NestedKeyOf, UnspecifiedRecord } from '../../types';
+import {
+  DisplayColumnOptions,
+  NestedKeyOf,
+  UnspecifiedRecord,
+} from '../../types';
 import { YatlBase } from '../yatl-base';
 import { YatlTableController } from '../../controllers';
 import styles from './yatl-toolbar.styles';
@@ -90,6 +94,7 @@ export class YatlToolbar<
           slot="trigger"
           part="column-picker-trigger"
           title="Show/hide columns"
+          color="raised"
         >
           <slot name="column-picker-icon">
             <yatl-icon name="columns"></yatl-icon>
@@ -127,7 +132,7 @@ export class YatlToolbar<
 
   protected renderExportButton() {
     return html`
-      <yatl-button type="button" @click=${this.onExportClick}>
+      <yatl-button type="button" color="raised" @click=${this.onExportClick}>
         <slot name="export-button-icon">
           <yatl-icon name="download"></yatl-icon>
         </slot>

@@ -15,12 +15,13 @@ export default css`
     );
     --option-focus-bg: var(
       --yatl-option-focus-bg,
-      color-mix(in srgb, var(--yatl-mix-color), 5%, transparent)
+      color-mix(in srgb, var(--yatl-color-mix), 5%, transparent)
     );
     --option-disabled-color: var(
       --yatl-option-disabled-color,
       var(--yatl-text-3)
     );
+
     border-radius: var(--option-radius);
   }
 
@@ -36,7 +37,6 @@ export default css`
     cursor: pointer;
     white-space: nowrap;
     user-select: none;
-
     color: var(--option-color);
     font-size: var(--option-font-size);
     background-color: var(--option-bg);

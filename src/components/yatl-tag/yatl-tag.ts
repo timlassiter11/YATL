@@ -25,7 +25,7 @@ export class YatlTag extends YatlBase {
     }
 
     return html`
-      <yatl-button part="dismiss-button" @click=${this.dismissClick}>
+      <yatl-button variant="plain" color="muted" part="dismiss-button" @click=${this.dismissClick}>
         <yatl-icon name="close"></yatl-icon>
       </yatl-button>
     `;

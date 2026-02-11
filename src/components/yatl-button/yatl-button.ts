@@ -3,7 +3,15 @@ import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../yatl-base';
 import styles from './yatl-button.styles';
 
-export type YatlButtonVariant = 'neutral' | 'outline' | 'brand' | 'icon';
+export type YatlButtonVariant = 'neutral' | 'outline' | 'plain';
+export type YatlButtonColor =
+  | 'neutral'
+  | 'brand'
+  | 'danger'
+  | 'warning'
+  | 'success'
+  | 'raised'
+  | 'muted';
 
 @customElement('yatl-button')
 export class YatlButton extends YatlBase {
@@ -17,6 +25,9 @@ export class YatlButton extends YatlBase {
 
   @property({ type: String, reflect: true })
   public variant: YatlButtonVariant = 'neutral';
+
+  @property({ type: String, reflect: true })
+  public color: YatlButtonColor = 'neutral';
 
   protected override render() {
     return html`

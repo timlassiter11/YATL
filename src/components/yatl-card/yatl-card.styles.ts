@@ -3,8 +3,7 @@ import { css } from 'lit';
 export default css`
   :host {
     --card-bg: var(--yatl-card-bg, var(--yatl-surface-1));
-    --card-color: var(--yatl-card-color, var(--yatl-text-1));
-    --card-spacing: var(--yatl-card-spacing, var(--yatl-spacing-m));
+    --card-text: var(--yatl-card-text, var(--yatl-text-1));
 
     --card-border-width: var(--yatl-card-border-width, 1px);
     --card-border-style: var(--yatl-card-border-style, solid);
@@ -38,8 +37,7 @@ export default css`
 
     display: flex;
     flex-direction: column;
-
-    color: var(--card-color);
+    color: var(--card-text);
     background-color: var(--card-bg);
     border-width: var(--card-border-width);
     border-style: var(--card-border-style);
@@ -58,25 +56,25 @@ export default css`
   [part='header'] {
     font-size: var(--card-header-font-size);
     font-weight: var(--card-header-font-wieght);
-
     padding: var(--card-header-padding);
-    border-block-end-width: var(--card-header-border-width);
-    border-block-end-style: var(--card-border-style);
-    border-block-end-color: var(--card-border-color);
+    border-block-end: var(--card-header-border-width) var(--card-border-style)
+      var(--card-border-color);
   }
 
   [part='footer'] {
     font-size: var(--card-footer-font-size);
     font-weight: var(--card-footer-font-weight);
-
     padding: var(--card-footer-padding);
-    border-block-start-width: var(--card-footer-border-width);
-    border-block-start-style: var(--card-border-style);
-    border-block-start-color: var(--card-border-color);
+    border-block-start: var(--card-footer-border-width) var(--card-border-style)
+      var(--card-border-color);
   }
 
-  [part='header']:not(.hasHeader),
-  [part='footer']:not(.hasFooter) {
+  [part='header']:not(.has-header),
+  [part='footer']:not(.has-footer) {
     display: none;
+  }
+
+  .divider {
+    flex-grow: 1;
   }
 `;

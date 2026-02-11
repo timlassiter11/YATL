@@ -18,7 +18,7 @@ export const trashIcon = svg`
 `;
 
 export const closeIcon = svg`
-  <path d="M18 6L6 18M6 6l12 12" stroke-linecap="square" stroke-linejoin="round" />
+  <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
 `;
 
 export const chevronDownIcon = svg`

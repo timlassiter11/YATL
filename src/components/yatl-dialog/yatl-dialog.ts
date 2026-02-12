@@ -16,6 +16,19 @@ export class YatlDialog extends YatlBase {
 
   private _open = false;
 
+  private _transitionPromise?: Promise<void>;
+  public get transitionComplete() {
+    return this._transitionPromise;
+  }
+  private set transitionComplete(promise) {
+    promise?.then(() => (this._transitionPromise = undefined));
+    this._transitionPromise = promise;
+  }
+
+  public get isTransitioning() {
+    return !!this._transitionPromise;
+  }
+
   @query('dialog')
   private dialogElement?: HTMLDialogElement;
 
@@ -49,6 +62,10 @@ export class YatlDialog extends YatlBase {
   }
 
   public async show() {
+    if (this.isTransitioning) {
+      return this.transitionComplete;
+    }
+
     const requestEvent = new YatlDialogShowRequest();
     this.dispatchEvent(requestEvent);
     if (requestEvent.defaultPrevented) {
@@ -59,10 +76,11 @@ export class YatlDialog extends YatlBase {
     if (!this.hasUpdated) {
       await this.updateComplete;
     }
+
     this.dialogElement!.showModal();
     this.open = true;
-    await animateWithClass(this.dialogElement!, 'show');
-
+    this.transitionComplete = animateWithClass(this.dialogElement!, 'show');
+    await this.transitionComplete;
     const event = new YatlDialogShowEvent();
     this.dispatchEvent(event);
   }
@@ -86,7 +104,9 @@ export class YatlDialog extends YatlBase {
       >
         <yatl-card part="base">
           <slot part="header" name="header" slot="header-start">
-            <h2 part="label">${this.label || ' '}</h2>
+            <h2 part="label">
+              ${this.label || ' ' /* Empty character so it doesn't collapse */}
+            </h2>
           </slot>
           <slot
             part="header-actions"
@@ -114,8 +134,12 @@ export class YatlDialog extends YatlBase {
   }
 
   private async requestClose(source: HTMLElement) {
-    if (!this.hasUpdated || !this.open) {
+    if (!this.hasUpdated) {
       return;
+    }
+
+    if (this.isTransitioning) {
+      return this.transitionComplete;
     }
 
     const requestEvent = new YatlDialogHideRequest(source);
@@ -126,8 +150,9 @@ export class YatlDialog extends YatlBase {
       return;
     }
 
-    await animateWithClass(this.dialogElement!, 'hide');
+    this.transitionComplete = animateWithClass(this.dialogElement!, 'hide');
     this.open = false;
+    await this.transitionComplete;
     this.dialogElement!.close();
 
     const event = new YatlDialogHideEvent();
@@ -136,7 +161,7 @@ export class YatlDialog extends YatlBase {
 
   private handleCloseClick(event: Event) {
     const target = event.target as HTMLElement;
-    this.requestClose(target)
+    this.requestClose(target);
   }
 
   private handleDialogPointerdown(event: PointerEvent) {
@@ -151,10 +176,9 @@ export class YatlDialog extends YatlBase {
   }
 
   private handleDialogCancel(event: Event) {
-    if (
-      !this.dialogElement!.classList.contains('hide') &&
-      event.target === this.dialogElement
-    ) {
+    // Escape was pressed
+    event.preventDefault();
+    if (!this.isTransitioning && event.target === this.dialogElement) {
       this.requestClose(this.dialogElement);
     }
   }

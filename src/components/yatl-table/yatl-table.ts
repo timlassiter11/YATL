@@ -37,9 +37,11 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
+import { YatlTableController } from '../../controllers/yatl-table-controller';
 import { YatlBase } from '../yatl-base';
-import { YatlTableController } from '../../controllers';
 import styles from './yatl-table.styles';
+
+import '../form-controls/yatl-checkbox/yatl-checkbox';
 
 // #region --- Constants ---
 

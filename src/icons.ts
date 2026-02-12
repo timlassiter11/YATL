@@ -40,12 +40,12 @@ export const downloadIcon = svg`
 `;
 
 export const icons: Record<string, TemplateResult<2>> = {
-  'sun': sunIcon,
-  'moon': moonIcon,
-  'trash': trashIcon,
-  'close': closeIcon,
+  sun: sunIcon,
+  moon: moonIcon,
+  trash: trashIcon,
+  close: closeIcon,
   'chevron-down': chevronDownIcon,
-  'check': checkIcon,
-  'columns': columnsIcon,
-  'download': downloadIcon
+  check: checkIcon,
+  columns: columnsIcon,
+  download: downloadIcon,
 };

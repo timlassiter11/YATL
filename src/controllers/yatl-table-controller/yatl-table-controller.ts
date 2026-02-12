@@ -43,7 +43,7 @@ import {
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
 } from '../../events';
-import { YatlTable } from '../../components';
+import { YatlTable } from '../../components/yatl-table';
 
 // #region Constants
 

@@ -15,7 +15,7 @@ export default css`
     /* Appearance sets color, variant decides how to use it */
     --appearance-text: var(--yatl-text-inverse);
     --appearance-color: var(--yatl-color-neutral);
-    
+
     --button-text: var(--yatl-button-text, var(--appearance-text));
     --button-bg: var(--yatl-button-bg, var(--appearance-color));
     --button-border-width: var(--yatl-button-border-width, 1px);

@@ -1,4 +1,4 @@
-import { ColumnState } from '../types';
+import { ColumnState } from '../../types';
 
 export function getColumnStateChanges<T>(
   oldState: ColumnState<T> | undefined,

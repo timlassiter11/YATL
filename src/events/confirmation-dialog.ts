@@ -1,4 +1,4 @@
-import { YatlEvent } from "./base";
+import { YatlEvent } from './base';
 
 export class YatlConfirmationDialogAcceptEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-confirmation-dialog-accept';

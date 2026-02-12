@@ -23,7 +23,7 @@ import styles from './yatl-table-ui.styles';
 export class YatlTableUi<
   T extends object = UnspecifiedRecord,
 > extends YatlTable<T> {
-  public static override styles = [...YatlTable.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.

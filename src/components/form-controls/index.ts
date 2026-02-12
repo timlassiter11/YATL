@@ -4,7 +4,7 @@ export * from './yatl-date-input';
 export * from './yatl-form-control';
 export * from './yatl-number-input';
 export * from './yatl-radio';
-export * from './yatl-radio-group'
+export * from './yatl-radio-group';
 export * from './yatl-select';
 export * from './yatl-search-select';
 export * from './yatl-switch';

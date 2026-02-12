@@ -1,9 +1,10 @@
-import { test, expect, vi, describe } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
+import { YatlColumnSortRequestEvent, YatlRowClickEvent } from '../../events';
+import { ColumnOptions } from '../../types';
 import { YatlTable } from './yatl-table';
+
 import './yatl-table';
-import { ColumnOptions } from '../types';
-import { YatlColumnSortRequestEvent, YatlRowClickEvent } from '../events';
 
 // --- Test Data ---
 interface User {

@@ -327,7 +327,7 @@ export default css`
   .row {
     display: grid;
     grid-template-columns: var(--grid-template);
-    
+
     /* This is required! Don't remove it. */
     min-width: 100%;
     width: fit-content;

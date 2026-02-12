@@ -5,9 +5,11 @@ import { ContextProvider } from '@lit/context';
 import { tableContext } from '../../context';
 import styles from './yatl-table-view.styles';
 
+import '../form-controls/yatl-checkbox';
+
 @customElement('yatl-table-view')
 export class YatlTableView extends YatlTableUi {
-  public static override styles = [...YatlTableUi.styles, styles];
+  public static override styles = [...super.styles, styles];
 
   private tableContext = new ContextProvider(this, {
     context: tableContext,

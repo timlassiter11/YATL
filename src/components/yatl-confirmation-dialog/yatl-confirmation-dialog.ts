@@ -47,9 +47,7 @@ export class YatlConfirmationDialog extends YatlBase {
   }
 
   public async confirm() {
-    console.log('confirming dialog');
     await this.show();
-    console.log('dialog shown');
     const ret = await new Promise<boolean>((resolve, _reject) => {
       this.addEventListener(
         'yatl-confirmation-dialog-accept',
@@ -62,19 +60,16 @@ export class YatlConfirmationDialog extends YatlBase {
         { once: true },
       );
     });
-    console.log('dialog return: ', ret);
     return ret;
   }
 
   public async accept() {
-    console.log('dialog accepted');
     const event = new YatlConfirmationDialogAcceptEvent();
     this.dispatchEvent(event);
     await this.hide();
   }
 
   public async reject() {
-    console.log('dialog rejected');
     const event = new YatlConfirmationDialogRejectEvent();
     this.dispatchEvent(event);
     await this.hide();
@@ -99,14 +94,11 @@ export class YatlConfirmationDialog extends YatlBase {
   }
 
   private handleDialogShow() {
-    console.log('dialog show request');
     this.open = true;
   }
 
   private handleDialogHide() {
-    console.log('dialog hide request');
     if (this.open) {
-      console.log('rejecting dialog');
       this.open = false;
       this.reject();
     }

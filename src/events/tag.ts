@@ -5,6 +5,10 @@ export class YatlTagDismissEvent extends YatlEvent {
   constructor() {
     super(YatlTagDismissEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlTagDismissEvent();
+  }
 }
 
 declare global {

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
-import { YatlColumnSortRequestEvent, YatlRowClickEvent } from '../../events';
+import { YatlColumnSortRequest, YatlRowClickEvent } from '../../events';
 import { ColumnOptions } from '../../types';
 import { YatlTable } from './yatl-table';
 
@@ -157,7 +157,7 @@ describe('YatlTable Component', () => {
       const table = page.elementLocator(el);
 
       // Block sorting
-      el.addEventListener(YatlColumnSortRequestEvent.EVENT_NAME, e => {
+      el.addEventListener(YatlColumnSortRequest.EVENT_NAME, e => {
         e.preventDefault();
       });
 

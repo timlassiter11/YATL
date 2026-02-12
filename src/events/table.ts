@@ -21,9 +21,19 @@ export class YatlRowClickEvent<
   ) {
     super(YatlRowClickEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlRowClickEvent<T>(
+      this.row,
+      this.rowId,
+      this.index,
+      this.field,
+      this.originalEvent,
+    );
+  }
 }
 
-export class YatlRowSelectRequestEvent extends YatlEvent {
+export class YatlRowSelectRequest extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-row-select-request';
 
   constructor(
@@ -31,7 +41,15 @@ export class YatlRowSelectRequestEvent extends YatlEvent {
     public readonly selected: boolean,
     public readonly currentlySelectedRows: RowId[],
   ) {
-    super(YatlRowSelectRequestEvent.EVENT_NAME, { cancelable: true });
+    super(YatlRowSelectRequest.EVENT_NAME, { cancelable: true });
+  }
+
+  public override clone() {
+    return new YatlRowSelectRequest(
+      this.rowId,
+      this.selected,
+      this.currentlySelectedRows,
+    );
   }
 }
 
@@ -44,9 +62,16 @@ export class YatlRowSelectEvent extends YatlEvent {
   ) {
     super(YatlRowSelectEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlRowSelectEvent(
+      this.selectedIds,
+      this.previouslySelectedRows,
+    );
+  }
 }
 
-export class YatlColumnSortRequestEvent<
+export class YatlColumnSortRequest<
   T extends object = UnspecifiedRecord,
 > extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-column-sort-request';
@@ -56,7 +81,15 @@ export class YatlColumnSortRequestEvent<
     public readonly order: SortOrder | null,
     public readonly multisort: boolean,
   ) {
-    super(YatlColumnSortRequestEvent.EVENT_NAME, { cancelable: true });
+    super(YatlColumnSortRequest.EVENT_NAME, { cancelable: true });
+  }
+
+  public override clone() {
+    return new YatlColumnSortRequest<T>(
+      this.field,
+      this.order,
+      this.multisort,
+    );
   }
 }
 
@@ -72,15 +105,25 @@ export class YatlColumnSortEvent<
   ) {
     super(YatlColumnSortEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlColumnSortEvent<T>(this.field, this.order, this.multisort);
+  }
 }
 
-export class YatlColumnToggleRequestEvent extends YatlEvent {
+export class YatlColumnToggleRequest<
+  T extends object = UnspecifiedRecord,
+> extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-column-toggle-request';
   constructor(
-    public readonly field: string,
+    public readonly field: NestedKeyOf<T>,
     public readonly visibility: boolean,
   ) {
-    super(YatlColumnToggleRequestEvent.EVENT_NAME, { cancelable: true });
+    super(YatlColumnToggleRequest.EVENT_NAME, { cancelable: true });
+  }
+
+  public override clone() {
+    return new YatlColumnToggleRequest<T>(this.field, this.visibility);
   }
 }
 
@@ -95,6 +138,10 @@ export class YatlColumnToggleEvent<
   ) {
     super(YatlColumnToggleEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlColumnToggleEvent<T>(this.field, this.visible);
+  }
 }
 
 export class YatlColumnResizeEvent<
@@ -108,9 +155,13 @@ export class YatlColumnResizeEvent<
   ) {
     super(YatlColumnResizeEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlColumnResizeEvent<T>(this.field, this.width);
+  }
 }
 
-export class YatlColumnReorderRequestEvent<
+export class YatlColumnReorderRequest<
   T extends object = UnspecifiedRecord,
 > extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-column-reorder-request';
@@ -120,7 +171,15 @@ export class YatlColumnReorderRequestEvent<
     public readonly originalIndex: number,
     public readonly newIndex: number,
   ) {
-    super(YatlColumnReorderRequestEvent.EVENT_NAME, { cancelable: true });
+    super(YatlColumnReorderRequest.EVENT_NAME, { cancelable: true });
+  }
+
+  public override clone() {
+    return new YatlColumnReorderRequest<T>(
+      this.movedColumn,
+      this.originalIndex,
+      this.newIndex,
+    );
   }
 }
 
@@ -132,6 +191,10 @@ export class YatlColumnReorderEvent<
   constructor(public readonly order: NestedKeyOf<T>[]) {
     super(YatlColumnReorderEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlColumnReorderEvent<T>(this.order);
+  }
 }
 
 export class YatlTableSearchEvent extends YatlEvent {
@@ -139,6 +202,10 @@ export class YatlTableSearchEvent extends YatlEvent {
 
   constructor(public readonly query: string) {
     super(YatlTableSearchEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlTableSearchEvent(this.query);
   }
 }
 
@@ -149,6 +216,10 @@ export class YatlTableViewChangeEvent<
 
   constructor(public readonly data: T[]) {
     super(YatlTableViewChangeEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlTableViewChangeEvent<T>(this.data);
   }
 }
 
@@ -163,24 +234,28 @@ export class YatlTableStateChangeEvent<
   ) {
     super(YatlTableStateChangeEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlTableStateChangeEvent<T>(this.state, this.triggers);
+  }
 }
 
 declare global {
   interface HTMLElementEventMap {
     [YatlRowClickEvent.EVENT_NAME]: YatlRowClickEvent;
 
-    [YatlRowSelectRequestEvent.EVENT_NAME]: YatlRowSelectRequestEvent;
+    [YatlRowSelectRequest.EVENT_NAME]: YatlRowSelectRequest;
     [YatlRowSelectEvent.EVENT_NAME]: YatlRowSelectEvent;
 
-    [YatlColumnSortRequestEvent.EVENT_NAME]: YatlColumnSortRequestEvent;
+    [YatlColumnSortRequest.EVENT_NAME]: YatlColumnSortRequest;
     [YatlColumnSortEvent.EVENT_NAME]: YatlColumnSortEvent;
 
-    [YatlColumnToggleRequestEvent.EVENT_NAME]: YatlColumnToggleRequestEvent;
+    [YatlColumnToggleRequest.EVENT_NAME]: YatlColumnToggleRequest;
     [YatlColumnToggleEvent.EVENT_NAME]: YatlColumnToggleEvent;
 
     [YatlColumnResizeEvent.EVENT_NAME]: YatlColumnResizeEvent;
 
-    [YatlColumnReorderRequestEvent.EVENT_NAME]: YatlColumnReorderRequestEvent;
+    [YatlColumnReorderRequest.EVENT_NAME]: YatlColumnReorderRequest;
     [YatlColumnReorderEvent.EVENT_NAME]: YatlColumnReorderEvent;
 
     [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;

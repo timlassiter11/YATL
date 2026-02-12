@@ -43,7 +43,7 @@ import {
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
 } from '../../events';
-import { YatlTable } from '../../components/yatl-table';
+import { TypedEventTarget } from '../../utils/typed-event-target';
 
 // #region Constants
 
@@ -68,6 +68,7 @@ const MATCH_WEIGHTS = {
 // #endregion
 
 export class YatlTableController<T extends object = UnspecifiedRecord>
+  extends TypedEventTarget<ControllerEventMap>
   implements ReactiveController
 {
   // #region State Data
@@ -417,6 +418,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     host?: ReactiveControllerHost,
     options?: TableControllerOptions<T>,
   ) {
+    super();
+
     if (host) {
       this.attach(host);
     }
@@ -921,15 +924,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   // #endregion
-
-  private dispatchEvent(event: Event) {
-    for (const host of this.hosts) {
-      // Dispatch table events on any attached tables
-      if (host instanceof YatlTable) {
-        host.dispatchEvent(event);
-      }
-    }
-  }
 
   // #region Lifecycle Methods
   public hostConnected(): void {}
@@ -1459,6 +1453,17 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #endregion
 }
+
+export type ControllerEventMap = {
+  [YatlColumnReorderEvent.EVENT_NAME]: YatlColumnReorderEvent;
+  [YatlColumnResizeEvent.EVENT_NAME]: YatlColumnResizeEvent;
+  [YatlColumnSortEvent.EVENT_NAME]: YatlColumnSortEvent;
+  [YatlColumnToggleEvent.EVENT_NAME]: YatlColumnToggleEvent;
+  [YatlRowSelectEvent.EVENT_NAME]: YatlRowSelectEvent;
+  [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
+  [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
+  [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
+};
 
 interface RowMetadata {
   id: RowId;

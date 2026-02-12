@@ -22,10 +22,10 @@ import {
 import { highlightText, toHumanReadable } from './utils';
 
 import {
-  YatlColumnReorderRequestEvent,
-  YatlColumnSortRequestEvent,
+  YatlColumnReorderRequest,
+  YatlColumnSortRequest,
   YatlRowClickEvent,
-  YatlRowSelectRequestEvent,
+  YatlRowSelectRequest,
 } from '../../events';
 
 import { html, nothing, TemplateResult } from 'lit';
@@ -37,11 +37,15 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
-import { YatlTableController } from '../../controllers/yatl-table-controller';
+import {
+  ControllerEventMap,
+  YatlTableController,
+} from '../../controllers/yatl-table-controller';
 import { YatlBase } from '../yatl-base';
 import styles from './yatl-table.styles';
 
 import '../form-controls/yatl-checkbox/yatl-checkbox';
+import { YatlEvent } from '../../events/base';
 
 // #region --- Constants ---
 
@@ -107,12 +111,17 @@ export class YatlTable<T extends object = UnspecifiedRecord> extends YatlBase {
       return;
     }
 
-    if (this._controller) {
-      this._controller.detach(this);
+    const oldController = this._controller;
+    if (this.isConnected) {
+      this.removeControllerListeners(oldController);
+      this.addControllerListeners(controller);
     }
 
-    this._controller = controller;
+    oldController.detach(this);
     controller.attach(this);
+
+    this._controller = controller;
+    this.requestUpdate('controller', oldController);
   }
 
   @property({ type: Boolean, reflect: true })
@@ -1095,18 +1104,53 @@ export class YatlTable<T extends object = UnspecifiedRecord> extends YatlBase {
   }
 
   // #endregion
-
   // #region --- Lifecycle Methods ---
+
+  public override connectedCallback(): void {
+    super.connectedCallback();
+    this.addControllerListeners(this.controller);
+  }
 
   public override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.removeControllerListeners(this.controller);
+
+    // Clean up just in case
     window.addEventListener('mousemove', this.handleResizeMouseMove);
     window.addEventListener('mouseup', this.handleResizeMouseUp);
   }
 
   // #endregion
-
   // #region Utilities
+
+  private readonly eventNames: (keyof ControllerEventMap)[] = [
+    'yatl-column-reorder',
+    'yatl-column-resize',
+    'yatl-column-sort',
+    'yatl-column-toggle',
+    'yatl-row-select',
+    'yatl-table-search',
+    'yatl-table-state-change',
+    'yatl-table-view-change',
+  ];
+
+  private addControllerListeners(controller: YatlTableController<T>) {
+    for (const name of this.eventNames) {
+      controller.addEventListener(name, this.redispatchControllerEvent);
+    }
+  }
+
+  private removeControllerListeners(controller: YatlTableController<T>) {
+    for (const name of this.eventNames) {
+      controller.removeEventListener(name, this.redispatchControllerEvent);
+    }
+  }
+
+  private redispatchControllerEvent = (event: Event) => {
+    if (event instanceof YatlEvent) {
+      this.dispatchEvent(event.clone());
+    }
+  };
 
   private hasVisibleColumn() {
     return (
@@ -1182,7 +1226,7 @@ export class YatlTable<T extends object = UnspecifiedRecord> extends YatlBase {
       sortOrder = 'desc';
     }
 
-    const requestEvent = new YatlColumnSortRequestEvent(
+    const requestEvent = new YatlColumnSortRequest(
       column.field,
       sortOrder,
       multiSort,
@@ -1353,7 +1397,7 @@ export class YatlTable<T extends object = UnspecifiedRecord> extends YatlBase {
     );
     const newIndex = newColumns.findIndex(col => col.field === field);
 
-    const requestEvent = new YatlColumnReorderRequestEvent(
+    const requestEvent = new YatlColumnReorderRequest(
       this.dragColumn,
       originalIndex,
       newIndex,
@@ -1380,7 +1424,7 @@ export class YatlTable<T extends object = UnspecifiedRecord> extends YatlBase {
 
     const rowId = this.controller.getRowId(row);
     const selectedRows = this.selectedRowIds;
-    const requestEvent = new YatlRowSelectRequestEvent(
+    const requestEvent = new YatlRowSelectRequest(
       rowId,
       selected,
       selectedRows,

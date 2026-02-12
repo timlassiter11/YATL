@@ -5,12 +5,20 @@ export class YatlDialogShowRequest extends YatlEvent {
   constructor() {
     super(YatlDialogShowRequest.EVENT_NAME, { cancelable: true });
   }
+
+  public override clone() {
+    return new YatlDialogShowRequest();
+  }
 }
 
 export class YatlDialogShowEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-dialog-show';
   constructor() {
     super(YatlDialogShowEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlDialogShowEvent();
   }
 }
 
@@ -19,12 +27,20 @@ export class YatlDialogHideRequest extends YatlEvent {
   constructor(public readonly source: HTMLElement) {
     super(YatlDialogHideRequest.EVENT_NAME, { cancelable: true });
   }
+
+  public override clone() {
+    return new YatlDialogHideRequest(this.source);
+  }
 }
 
 export class YatlDialogHideEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-dialog-hide';
   constructor() {
     super(YatlDialogHideEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlDialogHideEvent();
   }
 }
 

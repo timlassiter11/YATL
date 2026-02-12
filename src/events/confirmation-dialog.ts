@@ -5,12 +5,20 @@ export class YatlConfirmationDialogAcceptEvent extends YatlEvent {
   constructor() {
     super(YatlConfirmationDialogAcceptEvent.EVENT_NAME);
   }
+
+  public override clone() {
+    return new YatlConfirmationDialogAcceptEvent();
+  }
 }
 
 export class YatlConfirmationDialogRejectEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-confirmation-dialog-reject';
   constructor() {
     super(YatlConfirmationDialogRejectEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlConfirmationDialogRejectEvent();
   }
 }
 

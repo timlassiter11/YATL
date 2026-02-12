@@ -4,7 +4,7 @@
     {
       "label": "Build Table",
       "type": "npm",
-      "script": "build",
+      "script": "build --workspace=packages/yatl",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -12,25 +12,82 @@
       }
     },
     {
-      "label": "Start Server",
+      "label": "Watch Table",
       "type": "npm",
-      "script": "start",
+      "script": "build:watch --workspace=packages/yatl",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
       "isBackground": true,
-      "dependsOn": ["Build Table"],
       "problemMatcher": {
-        "owner": "custom",
+        "owner": "typescript",
         "pattern": {
-          "regexp": "^$" // Matches nothing, prevents looking for compile errors
+          "regexp": "^$"
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "Web Dev Server started",
-          "endsPattern": "Local:",
+          "beginsPattern": "DTS",
+          "endsPattern": "Build success in" 
         }
-      },
+      }
+    },
+    {
+      "label": "Build UI",
+      "type": "npm",
+      "script": "build --workspace=packages/yatl-ui",
+      "group": "build",
+      "dependsOn": "Build Table",
       "presentation": {
         "reveal": "always",
-        "group": "server"
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Watch UI",
+      "type": "npm",
+      "script": "build:watch --workspace=packages/yatl-ui",
+      "group": "build",
+      "dependsOn": "Watch Table",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "DTS",
+          "endsPattern": "Build success in" 
+        }
+      }
+    },
+    {
+      "label": "Serve Playground",
+      "type": "npm",
+      "script": "dev", 
+      "path": "packages/playground",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated"
+      },
+      "dependsOn": ["Watch UI"],
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Vite",
+          "endsPattern": "Local:" 
+        }
       }
     }
   ]

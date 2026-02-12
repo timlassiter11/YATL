@@ -1,21 +1,18 @@
 {
   "compilerOptions": {
-    "target": "es2024",
-    "module": "nodenext",
-    "declaration": true,
-    "outDir": "dist",
-    "strict": true,
-    "noImplicitOverride": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
-    "moduleResolution": "nodenext",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": false,
-    "useDefineForClassFields": false,
-    "lib": ["DOM", "DOM.Iterable", "es2024"],
+    "rootDir": ".",
+    "outDir": "./dist/",
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/yatl",
+    },
+    {
+      "path": "./packages/yatl-ui"
+    },
+    {
+      "path": "./packages/playground"
+    }
+  ]
 }

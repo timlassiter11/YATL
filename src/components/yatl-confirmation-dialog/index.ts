@@ -1,1 +1,0 @@
-export * from './yatl-confirmation-dialog';

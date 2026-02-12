@@ -2,10 +2,11 @@
 
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
 
-export default tseslint.config(
+export const sharedConfig = defineConfig([
   {
-    ignores: ['node_modules', 'dist', 'examples'],
+    ignores: ['node_modules', 'dist'],
   },
   eslint.configs.recommended,
   tseslint.configs.recommended,
@@ -38,4 +39,6 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-);
+])
+
+export default sharedConfig;

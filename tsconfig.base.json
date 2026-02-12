@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "declaration": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    //"esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    //"allowJs": true,
+    "moduleResolution": "bundler",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": false,
+    "useDefineForClassFields": false,
+    "lib": ["DOM", "DOM.Iterable", "es2024"],
+    // Not sure
+    "declarationMap": true,
+    "sourceMap": true,    
+    "isolatedModules": true,
+  }
+}

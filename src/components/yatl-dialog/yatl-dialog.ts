@@ -3,11 +3,12 @@ import { customElement, property, query } from 'lit/decorators.js';
 import { YatlBase } from '../yatl-base';
 import styles from './yatl-dialog.styles';
 import {
-  YatlDialogCloseEvent,
-  YatlDialogCloseRequest,
+  YatlDialogHideEvent,
+  YatlDialogHideRequest,
   YatlDialogShowEvent,
   YatlDialogShowRequest,
 } from '../../events';
+import { animateWithClass } from '../../utils';
 
 @customElement('yatl-dialog')
 export class YatlDialog extends YatlBase {
@@ -35,10 +36,13 @@ export class YatlDialog extends YatlBase {
 
     const oldValue = this._open;
     this._open = value;
-    if (value) {
-      this.dialogElement?.showModal();
-    } else {
-      this.dialogElement?.close();
+
+    if (this.hasUpdated) {
+      if (this.open && !this.dialogElement!.open) {
+        this.show();
+      } else if (!this.open && this.dialogElement!.open) {
+        this.hide();
+      }
     }
 
     this.requestUpdate('open', oldValue);
@@ -52,34 +56,19 @@ export class YatlDialog extends YatlBase {
       return;
     }
 
+    if (!this.hasUpdated) {
+      await this.updateComplete;
+    }
+    this.dialogElement!.showModal();
     this.open = true;
-    await this.updateComplete;
+    await animateWithClass(this.dialogElement!, 'show');
 
     const event = new YatlDialogShowEvent();
     this.dispatchEvent(event);
   }
 
   public async hide() {
-    await this.requestClose();
-    await new Promise<void>(resolve => {
-      const dialog = this.dialogElement!;
-      const fallbackTimeout = setTimeout(() => {
-        dialog.removeEventListener('transitionend', handler);
-        resolve();
-      }, 350);
-
-      const handler = (e: TransitionEvent) => {
-        // Ignore transitions bubbling up from child elements inside the dialog
-        if (e.target !== dialog) return;
-        if (e.propertyName === 'opacity' || e.propertyName === 'display') {
-          clearTimeout(fallbackTimeout); // Cancel the safety net
-          dialog.removeEventListener('transitionend', handler);
-          resolve();
-        }
-      };
-
-      dialog.addEventListener('transitionend', handler);
-    });
+    await this.requestClose(this.dialogElement!);
   }
 
   protected override firstUpdated(_changedProperties: PropertyValues): void {
@@ -107,7 +96,7 @@ export class YatlDialog extends YatlBase {
           <yatl-button
             slot="header-end"
             variant="plain"
-            @click=${this.requestClose}
+            @click=${this.handleCloseClick}
             ><yatl-icon name="close"></yatl-icon
           ></yatl-button>
           <div part="body">
@@ -124,34 +113,50 @@ export class YatlDialog extends YatlBase {
     `;
   }
 
-  private async requestClose() {
-    const requestEvent = new YatlDialogCloseRequest();
-    this.dispatchEvent(requestEvent);
-    if (requestEvent.defaultPrevented) {
-      this.open = true;
+  private async requestClose(source: HTMLElement) {
+    if (!this.hasUpdated || !this.open) {
       return;
     }
 
+    const requestEvent = new YatlDialogHideRequest(source);
+    this.dispatchEvent(requestEvent);
+    if (requestEvent.defaultPrevented) {
+      this.open = true;
+      animateWithClass(this.dialogElement!, 'pulse');
+      return;
+    }
+
+    await animateWithClass(this.dialogElement!, 'hide');
     this.open = false;
+    this.dialogElement!.close();
 
-    await this.updateComplete;
-
-    const event = new YatlDialogCloseEvent();
+    const event = new YatlDialogHideEvent();
     this.dispatchEvent(event);
+  }
+
+  private handleCloseClick(event: Event) {
+    const target = event.target as HTMLElement;
+    this.requestClose(target)
   }
 
   private handleDialogPointerdown(event: PointerEvent) {
     // Detect when the backdrop is clicked
     if (event.target === this.dialogElement) {
       if (!this.modal) {
-        this.requestClose();
+        this.requestClose(this.dialogElement!);
+      } else {
+        animateWithClass(this.dialogElement!, 'pulse');
       }
     }
   }
 
   private handleDialogCancel(event: Event) {
-    event.preventDefault();
-    this.requestClose();
+    if (
+      !this.dialogElement!.classList.contains('hide') &&
+      event.target === this.dialogElement
+    ) {
+      this.requestClose(this.dialogElement);
+    }
   }
 }
 

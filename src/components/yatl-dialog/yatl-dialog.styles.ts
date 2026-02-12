@@ -23,29 +23,43 @@ export default css`
       --yatl-dialog-body-padding,
       var(--yatl-spacing-l)
     );
+
+    --dialog-show-duration: var(--yatl-dialog-show-duration, 250ms);
+    --dialog-hide-duration: var(--yatl-dialog-hide-duration, 250ms);
+    --dialog-pulse-duration: var(--yatl-dialog-pulse-duration, 250ms);
   }
 
   dialog {
     border: none;
     background: none;
 
-    /* Animations */
-    opacity: 0;
-    transform: scale(0.95) translateY(10px);
-    transition:
-      opacity 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
-      transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
-      overlay 0.3s allow-discrete,
-      display 0.3s allow-discrete;
-  }
+    &.show {
+      animation: show-dialog var(--dialog-show-duration) ease;
 
-  dialog[open] {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+      &::backdrop {
+        animation: show-backdrop var(--dialog-show-duration, 200ms) ease;
+      }
+    }
+
+    &.hide {
+      animation: show-dialog var(--dialog-hide-duration) ease reverse;
+
+      &::backdrop {
+        animation: show-backdrop var(--dialog-hide-duration, 200ms) ease reverse;
+      }
+    }
+
+    &.pulse {
+      animation: pulse var(--dialog-pulse-duration) ease;
+    }
   }
 
   dialog:focus-visible {
     outline: none;
+  }
+
+  dialog::backdrop {
+    background-color: color-mix(in oklab, black 60%, transparent);
   }
 
   yatl-card {
@@ -86,27 +100,35 @@ export default css`
     padding: var(--dialog-body-padding);
   }
 
-  @starting-style {
-    dialog[open] {
-      opacity: 0;
-      transform: scale(0.95) translateY(10px);
+  @keyframes pulse {
+    0% {
+      scale: 1;
+    }
+    50% {
+      scale: 1.02;
+    }
+    100% {
+      scale: 1;
     }
   }
 
-  dialog::backdrop {
-    transition:
-      background-color 0.3s ease-out,
-      overlay 0.3s allow-discrete,
-      display 0.3s allow-discrete;
+  @keyframes show-dialog {
+    from {
+      opacity: 0;
+      scale: 0.8;
+    }
+    to {
+      opacity: 1;
+      scale: 1;
+    }
   }
 
-  dialog[open]::backdrop {
-    background-color: color-mix(in oklab, black 60%, transparent);
-  }
-
-  @starting-style {
-    dialog[open]::backdrop {
-      background-color: rgb(0 0 0 / 0%);
+  @keyframes show-backdrop {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 `;

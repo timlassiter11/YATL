@@ -143,3 +143,41 @@ export function* activeElements(
     yield* activeElements(activeElement.shadowRoot.activeElement);
   }
 }
+
+export interface AnimationOptions {
+  classes?: string | string[];
+  properties?: string | string[];
+  timeout?: number;
+}
+
+export async function animateWithClass(
+  element: HTMLElement,
+  className: string,
+  timeout = 350,
+) {
+  await new Promise<void>(resolve => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    if (element.classList.contains(className)) {
+      return;
+    }
+    element.classList.remove(className);
+    element.classList.add(className);
+
+    let timer = 0;
+    const onEnd = () => {
+      clearTimeout(timer);
+      element.classList.remove(className);
+      resolve();
+      controller.abort();
+    };
+
+    timer = window.setTimeout(() => {
+      onEnd();
+    }, timeout);
+
+    element.addEventListener('animationend', onEnd, { once: true, signal });
+    element.addEventListener('animationcancel', onEnd, { once: true, signal });
+  });
+}

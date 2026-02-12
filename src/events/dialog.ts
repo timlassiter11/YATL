@@ -14,17 +14,17 @@ export class YatlDialogShowEvent extends YatlEvent {
   }
 }
 
-export class YatlDialogCloseRequest extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dialog-close-request';
-  constructor() {
-    super(YatlDialogCloseRequest.EVENT_NAME, { cancelable: true });
+export class YatlDialogHideRequest extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-dialog-hide-request';
+  constructor(public readonly source: HTMLElement) {
+    super(YatlDialogHideRequest.EVENT_NAME, { cancelable: true });
   }
 }
 
-export class YatlDialogCloseEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dialog-close';
+export class YatlDialogHideEvent extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-dialog-hide';
   constructor() {
-    super(YatlDialogCloseEvent.EVENT_NAME);
+    super(YatlDialogHideEvent.EVENT_NAME);
   }
 }
 
@@ -32,7 +32,7 @@ declare global {
   interface HTMLElementEventMap {
     [YatlDialogShowRequest.EVENT_NAME]: YatlDialogShowRequest;
     [YatlDialogShowEvent.EVENT_NAME]: YatlDialogShowEvent;
-    [YatlDialogCloseRequest.EVENT_NAME]: YatlDialogCloseRequest;
-    [YatlDialogCloseEvent.EVENT_NAME]: YatlDialogCloseEvent;
+    [YatlDialogHideRequest.EVENT_NAME]: YatlDialogHideRequest;
+    [YatlDialogHideEvent.EVENT_NAME]: YatlDialogHideEvent;
   }
 }

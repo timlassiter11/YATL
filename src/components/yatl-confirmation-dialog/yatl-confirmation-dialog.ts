@@ -18,6 +18,9 @@ export class YatlConfirmationDialog extends YatlBase {
   @property({ type: Boolean })
   public open = false;
 
+  @property({ type: Boolean })
+  public modal = false;
+
   @property({ type: String })
   public label = '';
 
@@ -31,47 +34,50 @@ export class YatlConfirmationDialog extends YatlBase {
     if (!this.hasUpdated) {
       await this.updateComplete;
     }
-    return this.dialogElement!.show();
+    this.open = true;
+    await this.dialogElement!.show();
   }
 
   public async hide() {
     if (!this.hasUpdated) {
-      await this.updateComplete;
+      return;
     }
-    return this.dialogElement!.hide();
+    this.open = false;
+    await this.dialogElement!.hide();
   }
 
   public async confirm() {
-    this.open = true;
+    console.log('confirming dialog');
+    await this.show();
+    console.log('dialog shown');
     const ret = await new Promise<boolean>((resolve, _reject) => {
       this.addEventListener(
         'yatl-confirmation-dialog-accept',
         () => resolve(true),
-        {
-          once: true,
-        },
+        { once: true },
       );
       this.addEventListener(
         'yatl-confirmation-dialog-reject',
         () => resolve(false),
-        {
-          once: true,
-        },
+        { once: true },
       );
     });
+    console.log('dialog return: ', ret);
     return ret;
   }
 
-  public accept() {
-    this.open = false;
+  public async accept() {
+    console.log('dialog accepted');
     const event = new YatlConfirmationDialogAcceptEvent();
     this.dispatchEvent(event);
+    await this.hide();
   }
 
-  public reject() {
-    this.open = false;
+  public async reject() {
+    console.log('dialog rejected');
     const event = new YatlConfirmationDialogRejectEvent();
     this.dispatchEvent(event);
+    await this.hide();
   }
 
   protected override render() {
@@ -79,7 +85,9 @@ export class YatlConfirmationDialog extends YatlBase {
       <yatl-dialog
         label=${this.label}
         ?open=${this.open}
-        @yatl-dialog-close=${this.handleDialogClose}
+        ?modal=${this.modal}
+        @yatl-dialog-show-request=${this.handleDialogShow}
+        @yatl-dialog-hide-request=${this.handleDialogHide}
       >
         <slot></slot>
         <slot name="actions" slot="footer-actions">
@@ -90,8 +98,16 @@ export class YatlConfirmationDialog extends YatlBase {
     `;
   }
 
-  private handleDialogClose() {
+  private handleDialogShow() {
+    console.log('dialog show request');
+    this.open = true;
+  }
+
+  private handleDialogHide() {
+    console.log('dialog hide request');
     if (this.open) {
+      console.log('rejecting dialog');
+      this.open = false;
       this.reject();
     }
   }

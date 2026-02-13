@@ -1,6 +1,16 @@
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
-import { YatlColumnSortRequest, YatlRowClickEvent } from '../events';
+import {
+  YatlColumnReorderEvent,
+  YatlColumnReorderRequest,
+  YatlColumnResizeEvent,
+  YatlColumnSortEvent,
+  YatlColumnSortRequest,
+  YatlColumnToggleEvent,
+  YatlRowClickEvent,
+  YatlRowSelectEvent,
+  YatlRowSelectRequest,
+} from '../events';
 import { DisplayColumnOptions } from '../types/columns';
 import { YatlTable } from './table';
 
@@ -44,6 +54,8 @@ async function renderTable(props: Partial<YatlTable<User>> = {}) {
 }
 
 describe('YatlTable Component', () => {
+  // #region Rendering
+
   describe('Rendering', () => {
     test('renders the correct number of rows (Header + Body)', async () => {
       const el = await renderTable();
@@ -73,6 +85,9 @@ describe('YatlTable Component', () => {
     });
   });
 
+  // #endregion
+  // #region Sorting
+
   describe('Sorting', () => {
     test('updates aria-sort attribute when clicked', async () => {
       const el = await renderTable();
@@ -92,6 +107,9 @@ describe('YatlTable Component', () => {
       await expect.element(header).toHaveAttribute('aria-sort', 'descending');
     });
   });
+
+  // #endregion
+  // #region Row Selection
 
   describe('Row Selection', () => {
     test('toggles aria-selected on row when clicked', async () => {
@@ -120,6 +138,9 @@ describe('YatlTable Component', () => {
     });
   });
 
+  // #endregion
+  // #region Search & Filter
+
   describe('Search & Filter', () => {
     test('filters rows visible in the accessibility tree', async () => {
       const el = await renderTable();
@@ -137,38 +158,188 @@ describe('YatlTable Component', () => {
     });
   });
 
+  // #endregion
+  // #region Events
+
   describe('Events & Interceptors', () => {
     test('fires yatl-row-click with row details', async () => {
-      const el = await renderTable();
-      const table = page.elementLocator(el);
+      const table = await renderTable();
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Alice' });
       const spy = vi.fn();
-      el.addEventListener(YatlRowClickEvent.EVENT_NAME, spy);
 
-      // Click Alice's Name Cell
-      const cell = table.getByRole('cell', { name: 'Alice' });
+      table.addEventListener('yatl-row-click', spy);
+
       await userEvent.click(cell);
+      await table.updateComplete;
 
+      const event = spy.mock.calls[0][0] as YatlRowClickEvent;
       expect(spy).toHaveBeenCalledOnce();
-      expect(spy.mock.calls[0][0].row.name).toBe('Alice');
+      expect(event.row.name).toBe('Alice');
+    });
+
+    test('fires yatl-row-select event', async () => {
+      const table = await renderTable({ rowSelectionMethod: 'multi' });
+      const tableLocator = page.elementLocator(table);
+      const firstRow = tableLocator.getByRole('row').nth(1);
+      const checkbox = firstRow.getByRole('checkbox').first();
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-row-select', spy);
+
+      await userEvent.click(checkbox);
+      await table.updateComplete;
+
+      const event = spy.mock.calls[0][0] as YatlRowSelectEvent;
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.selectedIds).toHaveLength(1);
+      expect(event.selectedIds[0]).toBe(1);
+    });
+
+    test('respects prevented select request', async () => {
+      const table = await renderTable({ rowSelectionMethod: 'multi' });
+      const tableLocator = page.elementLocator(table);
+      const firstRow = tableLocator.getByRole('row').nth(1);
+      const checkbox = firstRow.getByRole('checkbox').first();
+      const spy = vi.fn((event: Event) => event.preventDefault());
+
+      table.addEventListener('yatl-row-select-request', spy);
+
+      await userEvent.click(checkbox);
+      await table.updateComplete;
+
+      const event = spy.mock.calls[0][0] as YatlRowSelectRequest;
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.rowId).toBe(1);
+      expect(event.selected).toBeTruthy();
+      await expect.element(checkbox).not.toBeChecked();
+    });
+
+    test('fires yatl-column-sort event', async () => {
+      const table = await renderTable();
+      const tableLocator = page.elementLocator(table);
+      const header = tableLocator.getByRole('columnheader', { name: 'Age' });
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-column-sort', spy);
+
+      await userEvent.click(header);
+      await table.updateComplete;
+
+      const event = spy.mock.calls[0][0] as YatlColumnSortEvent;
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.field).toBe('age');
+      expect(event.order).toBe('asc');
+      expect(event.multisort).toBeFalsy();
     });
 
     test('respects prevented sort request', async () => {
-      const el = await renderTable();
-      const table = page.elementLocator(el);
-
+      const table = await renderTable();
+      const tableLocator = page.elementLocator(table);
+      const header = tableLocator.getByRole('columnheader', { name: 'Age' });
       // Block sorting
-      el.addEventListener(YatlColumnSortRequest.EVENT_NAME, e => {
-        e.preventDefault();
-      });
+      const spy = vi.fn((event: Event) => event.preventDefault());
 
-      const header = table.getByRole('columnheader', { name: 'Age' });
+      table.addEventListener('yatl-column-sort-request', spy);
+
       await userEvent.click(header);
-      await el.updateComplete;
+      await table.updateComplete;
 
+      const event = spy.mock.calls[0][0] as YatlColumnSortRequest;
+      const column = table.getColumnState('name');
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.field).toBe('age');
+      expect(event.order).toBe('asc');
+      expect(event.multisort).toBeFalsy();
+      expect(column.sort).toBeNull();
       // Verify ARIA sort did NOT change
       await expect.element(header).toHaveAttribute('aria-sort', 'none');
     });
+
+    test('fires yatl-column-toggle event', async () => {
+      const table = await renderTable();
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-column-toggle', spy);
+
+      table.toggleColumnVisibility('name');
+      table.toggleColumnVisibility('name');
+
+      const event1 = spy.mock.calls[0][0] as YatlColumnToggleEvent;
+      const event2 = spy.mock.calls[1][0] as YatlColumnToggleEvent;
+
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(event1.field).toBe('name');
+      expect(event1.visible).toBeFalsy();
+      expect(event2.field).toBe('name');
+      expect(event2.visible).toBeTruthy();
+    });
+
+    test('fires yatl-column-resize event', async () => {
+      const table = await renderTable();
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-column-resize', spy);
+
+      table.resizeColumn('age', 200);
+
+      const event = spy.mock.calls[0][0] as YatlColumnResizeEvent;
+
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.field).toBe('age');
+      expect(event.width).toBe(200);
+    });
+
+    test('respects prevented reorder request', async () => {
+      const table = await renderTable({ enableColumnReorder: true });
+      const tableLocator = page.elementLocator(table);
+      const dragHeader = tableLocator.getByRole('columnheader', {
+        name: 'Age',
+      });
+      const dropHeader = tableLocator.getByRole('columnheader', {
+        name: 'Name',
+      });
+      const spy = vi.fn((event: Event) => event.preventDefault());
+
+      table.addEventListener('yatl-column-reorder-request', spy);
+
+      await userEvent.dragAndDrop(dragHeader, dropHeader);
+      await table.updateComplete;
+
+      const headers = tableLocator.getByRole('columnheader');
+      const event = spy.mock.calls[0][0] as YatlColumnReorderRequest;
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.movedColumn).toBe('age');
+      expect(event.originalIndex).toBe(3);
+      expect(event.newIndex).toBe(1);
+      // Make sure they didn't change
+      expect(headers.nth(1)).toHaveAccessibleName('Name');
+      expect(headers.nth(3)).toHaveAccessibleName('Age');
+    });
+
+    test('fires yatl-column-reorder event', async () => {
+      const table = await renderTable();
+      const tableLocator = page.elementLocator(table);
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-column-reorder', spy);
+
+      table.moveColumn('id', 3);
+      await table.updateComplete;
+
+      const event = spy.mock.calls[0][0] as YatlColumnReorderEvent;
+      const headers = tableLocator.getByRole('columnheader');
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.order).toEqual(['name', 'role', 'age', 'id']);
+      expect(headers.nth(0)).toHaveAccessibleName('Name');
+      expect(headers.nth(1)).toHaveAccessibleName('Role');
+      expect(headers.nth(2)).toHaveAccessibleName('Age');
+      expect(headers.nth(3)).toHaveAccessibleName('ID');
+    });
   });
+
+  // #endregion
+  // #region Column Visibility
 
   describe('Column Visibility', () => {
     test('removes columnheader from accessibility tree when hidden', async () => {
@@ -183,6 +354,9 @@ describe('YatlTable Component', () => {
       await expect.element(header).not.toBeInTheDocument();
     });
   });
+
+  // #endregion
+  // #region Complex Filters
 
   describe('Complex Filtering Logic', () => {
     // We define a table of inputs and expected outputs
@@ -202,6 +376,9 @@ describe('YatlTable Component', () => {
       await expect.element(rows).toHaveLength(expectedRows + 1);
     });
   });
+
+  // #endregion
+  // #region Dirty Data
 
   describe('Dirty Data Handling', () => {
     const DIRTY_DATA = [
@@ -253,6 +430,9 @@ describe('YatlTable Component', () => {
         .toHaveTextContent(/--/);
     });
   });
+
+  // #endregion
+  // #region State
 
   describe('State Persistence', () => {
     test('saves state to localStorage when columns are toggled', async () => {
@@ -313,6 +493,9 @@ describe('YatlTable Component', () => {
     });
   });
 
+  // #endregion
+  // #region CRUD
+
   describe('CRUD API', () => {
     test('updateRowAtIndex updates the DOM', async () => {
       const el = await renderTable();
@@ -341,6 +524,9 @@ describe('YatlTable Component', () => {
       await expect.element(alice).not.toBeInTheDocument();
     });
   });
+
+  // #endregion
+  // #region Custom Render
 
   describe('Custom Rendering', () => {
     test('uses custom cellRenderer', async () => {
@@ -378,4 +564,6 @@ describe('YatlTable Component', () => {
         .toHaveAttribute('part', expect.stringContaining('highlight-danger'));
     });
   });
+
+  // #endregion
 });

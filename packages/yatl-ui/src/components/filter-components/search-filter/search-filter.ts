@@ -19,6 +19,7 @@ export class YatlSearchFilter extends YatlBaseFilter<string[]> {
         label=${this.label}
         size=${this.size}
         .value=${this.value ?? []}
+        ?disabled=${this.disabled}
         @change=${this.handleSelectChange}
       >
         ${this.renderSelectOptions()}

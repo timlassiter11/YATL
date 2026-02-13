@@ -15,6 +15,7 @@ export class YatlDateFilter extends YatlBaseFilter<Date> {
         name=${this.field}
         label=${this.label}
         .value=${live(this.value)}
+        ?disabled=${this.disabled}
         @change=${this.handleChange}
       >
       </yatl-date-input>

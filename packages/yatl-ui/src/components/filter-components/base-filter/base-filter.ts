@@ -57,6 +57,9 @@ export class YatlBaseFilter<T> extends YatlBase {
   @property({ type: String })
   public label = '';
 
+  @property({ type: Boolean })
+  public disabled = false;
+
   protected get filters() {
     // Don't mess with filters if user sets a custom function
     if (!this.controller || typeof this.controller.filters === 'function') {

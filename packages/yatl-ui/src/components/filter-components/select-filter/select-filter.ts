@@ -30,6 +30,7 @@ export class YatlSelectFilter extends YatlBaseFilter<string[]> {
         max-tags=${this.maxTags}
         ?multi=${this.multi}
         ?clearable=${this.clearable}
+        ?disabled=${this.disabled}
         .value=${this.value ?? []}
         @change=${this.handleSelectChange}
       >

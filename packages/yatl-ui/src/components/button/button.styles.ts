@@ -28,6 +28,7 @@ export default css`
     height: 100%;
     display: flex;
     align-items: center;
+    justify-content: space-around;
     cursor: pointer;
     padding: var(--button-padding);
     border-radius: var(--button-radius);

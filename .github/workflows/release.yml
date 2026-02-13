@@ -36,13 +36,6 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          # This runs when the Version PR is merged
           publish: npx changeset publish
           title: "ci: version packages"
           commit: "ci: version packages"
-        env:
-          # A Personal Access Token is often better than GITHUB_TOKEN for triggering 
-          # subsequent workflows (like docs deploy), but GITHUB_TOKEN works for basic needs.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # You must add this token to your Repo Secrets
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

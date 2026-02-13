@@ -34,46 +34,36 @@ jobs:
         run: npm ci
 
       - name: Lint & Format
-        # Assuming your root package.json scripts use --workspaces
         run: |
           npm run lint
           npm run format:check
 
-      # Runs 'tsup' for libraries and 'tsc' for type checking
       - name: Build Libraries
         run: npm run build
 
       - name: Type Check
-        # Uses root tsconfig with "references" or checks all workspaces
         run: npx tsc -b
 
       - name: Install Playwright Browsers
         run: npx playwright install chromium --with-deps
 
       - name: Run Tests
-        # Runs vitest in all packages
         run: npm test
 
-      # --- Documentation / Demo Preparation ---
-      
-      # 1. Build the Playground (Your Demo App)
       - name: Build Playground
         run: npm run build --workspace=@timlassiter11/playground
 
-      # 2. (Optional) Generate API Docs for Core
       - name: Generate Core API Docs
         run: npx typedoc packages/yatl/src/index.ts --out packages/playground/dist/docs/core
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Point this to the DIST folder of your playground
           path: packages/playground/dist
 
   deploy_pages:
     name: Deploy to GitHub Pages
     needs: test_and_build
-    # Only deploy on pushes to main (not PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages

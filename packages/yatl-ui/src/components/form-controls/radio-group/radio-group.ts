@@ -73,7 +73,12 @@ export class YatlRadioGroup extends YatlFormControl<string> {
     event.stopPropagation();
     if (event.type === 'change') {
       const target = event.target as SupportedChildren;
-      this.value = target.value;
+      // Allow no inputs to be checked if this isn't required
+      if (!this.required && !target.checked) {
+        this.value = '';
+      } else {
+        this.value = target.value;
+      }
       this.syncChildStates();
       return false;
     }

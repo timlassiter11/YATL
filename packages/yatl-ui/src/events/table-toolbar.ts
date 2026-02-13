@@ -33,7 +33,6 @@ export class YatlToolbarExportClick extends YatlEvent {
   }
 }
 
-
 export class YatlColumnToggleRequest<
   T extends object = UnspecifiedRecord,
 > extends YatlEvent {

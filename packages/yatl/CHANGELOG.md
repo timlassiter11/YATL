@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.2.2
+
+### Patch Changes
+
+- 92e24e5: Apply color scheme based on root .light or .dark class
+
 ## 1.2.1
 
 ### Patch Changes

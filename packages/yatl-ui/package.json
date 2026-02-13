@@ -41,7 +41,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/timlassiter11/YATL"
+    "url": "git+https://github.com/timlassiter11/YATL.git"
   },
   "bugs": {
     "url": "https://github.com/timlassiter11/YATL/issues"

@@ -9,14 +9,10 @@
   "scripts": {
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
-
     "format": "npm run format --workspaces --if-present",
     "format:check": "npm run format:check --workspaces --if-present",
-
     "type:check": "npm run type:check --workspaces --if-present",
-
     "test": "npm run test --workspaces --if-present",
-
     "build": "npm run build --workspaces --if-present",
     "build:table": "npm run build --workspace=packages/yatl",
     "build:watch:table": "npm run build:watch --workspace=packages/yatl",
@@ -27,5 +23,6 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8"
-  }
+  },
+  "version": ""
 }

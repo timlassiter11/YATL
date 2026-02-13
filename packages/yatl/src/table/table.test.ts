@@ -303,6 +303,7 @@ describe('YatlTable Component', () => {
 
       table.addEventListener('yatl-column-reorder-request', spy);
 
+      await table.updateComplete;
       await userEvent.dragAndDrop(dragHeader, dropHeader);
       await table.updateComplete;
 

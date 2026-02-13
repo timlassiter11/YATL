@@ -12,9 +12,9 @@ export type FormControl =
   | YatlFormControl;
 
 export abstract class YatlFormControl<
-  TData = string,
-  TInput extends FormControl = HTMLInputElement,
->
+    TData = string,
+    TInput extends FormControl = HTMLInputElement,
+  >
   extends YatlBase
   implements ElementInternals
 {
@@ -42,7 +42,7 @@ export abstract class YatlFormControl<
   protected formControl?: TInput;
   @query('slot[name="label"]')
   protected labelSlot?: HTMLSlotElement;
-  @query('slot[name=""]')
+
   @property({ type: String })
   public name = '';
 

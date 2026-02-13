@@ -65,7 +65,16 @@ export default css`
 
   [part='start'],
   [part='end'] {
+    display: flex;
     flex: 0 0 0%;
+  }
+
+  [part='start'] {
+    margin-right: var(--yatl-spacing-s);
+  }
+
+  [part='end'] {
+    margin-left: var(--yatl-spacing-s);
   }
 
   [part='check'] {

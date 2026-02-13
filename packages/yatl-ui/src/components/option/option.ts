@@ -25,8 +25,9 @@ export class YatlOption extends YatlBase {
   protected override render() {
     return html`
       <span part="base">
+        ${this.renderCheck()}
         <slot part="start" name="start"></slot>
-        ${this.renderCheck()} ${this.renderLabel()}
+        ${this.renderLabel()}
         <slot part="end" name="end"></slot>
       </span>
     `;

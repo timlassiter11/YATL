@@ -6,18 +6,23 @@ export default css`
     align-items: center;
     justify-content: center;
 
-    --spinner-size: var(--yatl-spinner-size, 1rem);
+    --spinner-size: var(--yatl-spinner-size, 1em);
     --spinner-track-color: var(--yatl-spinner-track-color, currentColor);
     --spinner-indicator-color: var(
       --yatl-spinner-indicator-color,
       currentColor
     );
-    --spinner-track-width: var(--yatl-spinner-track-width, 2px);
-    --spinner-indicator-width: var(--yatl-spinner-indicator-width, 2px);
+    --spinner-track-width: var(--yatl-spinner-track-width, 3px);
+    --spinner-indicator-width: var(--yatl-spinner-indicator-width, 3px);
     --spinner-indicator-length: var(--yatl--spinner-indicator-length, 25);
 
     width: var(--spinner-size);
     height: var(--spinner-size);
+  }
+
+  [part='base'] {
+    width: 100%;
+    height: 100%;
   }
 
   svg {

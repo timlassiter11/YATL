@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 1.0.3
+
+### Patch Changes
+
+- d76618e: Fixed falsy filter values being cleared
+
 ## 1.0.2
 
 ### Patch Changes

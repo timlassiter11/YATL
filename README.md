@@ -6,7 +6,7 @@
 YATL is a powerful, feature-rich, and lightweight Web Component data table built with Lit. It handles large datasets with ease using virtual scrolling, offers advanced fuzzy search capabilities, supports state persistence, and works in any framework (React, Vue, Angular, or Vanilla JS).
 
 
-[Try the Live Demo](https://timlassiter11.github.io/YATL/examples/index.html)  | [Check out the Docs](https://timlassiter11.github.io/YATL/docs/index.html)
+[Try the Live Demo](https://timlassiter11.github.io/YATL/)  | [Check out the Docs](https://timlassiter11.github.io/YATL/docs/core/index.html)
 
 
 ![Showcase](./docs/YATL-demo.gif)

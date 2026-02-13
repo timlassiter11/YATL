@@ -29,7 +29,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": "DTS",
-          "endsPattern": "Build success in" 
+          "endsPattern": "Build success in"
         }
       }
     },
@@ -63,21 +63,21 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": "DTS",
-          "endsPattern": "Build success in" 
+          "endsPattern": "Build success in"
         }
       }
     },
     {
       "label": "Serve Playground",
       "type": "npm",
-      "script": "dev", 
+      "script": "dev",
       "path": "packages/playground",
       "isBackground": true,
       "presentation": {
         "reveal": "never",
         "panel": "dedicated"
       },
-      "dependsOn": ["Watch UI"],
+
       "problemMatcher": {
         "owner": "typescript",
         "pattern": {
@@ -86,7 +86,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": "Vite",
-          "endsPattern": "Local:" 
+          "endsPattern": "Local:"
         }
       }
     }

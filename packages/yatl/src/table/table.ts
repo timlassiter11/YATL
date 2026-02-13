@@ -1453,6 +1453,7 @@ export class YatlTable<
       selectedRows,
     );
     if (!this.dispatchEvent(requestEvent)) {
+      inputElement.checked = !selected;
       return;
     }
 

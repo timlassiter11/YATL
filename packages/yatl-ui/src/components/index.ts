@@ -16,6 +16,7 @@ export * from './filter-components/base-filter/base-filter';
 export * from './filter-components/date-filter/date-filter';
 export * from './filter-components/search-filter/search-filter';
 export * from './filter-components/select-filter/select-filter';
+export * from './filter-components/switch-filter/switch-filter';
 
 export * from './form-controls/form-control/form-control';
 export * from './form-controls/checkbox/checkbox';

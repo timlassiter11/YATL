@@ -19,10 +19,18 @@
     "build:ui": "npm run build --workspace=packages/yatl-ui",
     "build:watch:ui": "npm run build:watch --workspace=packages/yatl-ui",
     "build:playground": "npm run build --workspace=packages/playground",
-    "dev:playground": "npm run dev --workspace=packages/playground"
+    "dev:playground": "npm run dev --workspace=packages/playground",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.8"
+    "@changesets/cli": "^2.29.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
   },
-  "version": ""
+  "version": "",
+  "lint-staged": {
+    "**/*.{ts,js,json,md,html,css}": [
+      "prettier --write"
+    ]
+  }
 }

@@ -306,9 +306,9 @@ describe('YatlTable Component', () => {
       await userEvent.dragAndDrop(dragHeader, dropHeader);
       await table.updateComplete;
 
+      expect(spy).toHaveBeenCalledOnce();
       const headers = tableLocator.getByRole('columnheader');
       const event = spy.mock.calls[0][0] as YatlColumnReorderRequest;
-      expect(spy).toHaveBeenCalledOnce();
       expect(event.movedColumn).toBe('age');
       expect(event.originalIndex).toBe(3);
       expect(event.newIndex).toBe(1);

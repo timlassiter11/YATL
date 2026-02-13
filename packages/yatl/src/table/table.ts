@@ -573,6 +573,10 @@ export class YatlTable<
     return this.controller.moveColumn(field, newPosition);
   }
 
+  public resizeColumn(field: NestedKeyOf<T>, width: number | null) {
+    return this.controller.resizeColumn(field, width);
+  }
+
   public isRowSelected(row: T) {
     return this.controller.isRowSelected(row);
   }
@@ -1354,9 +1358,8 @@ export class YatlTable<
       const finalWidth = parseFloat(
         this.resizeState.currentWidths[this.resizeState.columnIndex],
       );
-      const columnState = this.getColumnState(this.resizeState.columnField);
-      columnState.width = finalWidth;
-      this.columnStates = [columnState];
+
+      this.resizeColumn(this.resizeState.columnField, finalWidth);
     }
 
     // This is a hacky workaround to prevent the header click event from firing

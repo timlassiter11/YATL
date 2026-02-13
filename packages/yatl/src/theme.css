@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light dark;
+
   /* Typography */
   --yatl-font-family: var(
     --yatl-theme-font,
@@ -102,4 +104,12 @@
   font-size: var(--yatl-font-size);
   color: var(--yatl-text-1);
   background-color: var(--yatl-surface-1);
+}
+
+:root.light {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
 }

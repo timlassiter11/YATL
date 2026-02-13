@@ -6,14 +6,14 @@ export default css`
     --input-count-font-size: var(--yatl-input-count-font-size, small);
   }
 
-  [part='label-row'] {
+  .label-row {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: baseline;
   }
 
-  [part='label-spacer'] {
+  .label-spacer {
     flex-grow: 1;
   }
 

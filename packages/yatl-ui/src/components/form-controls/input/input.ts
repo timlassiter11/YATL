@@ -1,6 +1,7 @@
 import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
+import { classMap } from 'lit/directives/class-map.js';
 import { YatlFormControl } from '../form-control/form-control';
 import { live } from 'lit/directives/live.js';
 import styles from './input.styles';
@@ -76,19 +77,15 @@ export class YatlInput extends YatlFormControl<string> {
   }
 
   protected override renderLabel() {
-    if (!this.label && !this.showCount) {
-      return nothing;
-    }
-
     return html`
-      <label part="label">
-        <slot>
-          <span part="label-row">
-            ${super.renderLabel()}
-            <span part="label-spacer"></span>
-            ${this.renderCount()}
-          </span>
+      <label for="input" class="label-row">
+        <slot name="label">
+          <div part="label" class=${classMap({ 'has-label': this.hasLabel })}>
+            ${this.label}
+          </div>
         </slot>
+        <span class="label-spacer"></span>
+        ${this.showCount ? this.renderCount() : nothing}
       </label>
     `;
   }

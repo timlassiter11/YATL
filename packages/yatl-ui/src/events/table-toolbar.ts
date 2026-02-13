@@ -1,4 +1,4 @@
-import { YatlEvent } from '@timlassiter11/yatl';
+import { NestedKeyOf, UnspecifiedRecord, YatlEvent } from '@timlassiter11/yatl';
 
 export class YatlToolbarSearchInput extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-toolbar-search-input';
@@ -33,10 +33,28 @@ export class YatlToolbarExportClick extends YatlEvent {
   }
 }
 
+
+export class YatlColumnToggleRequest<
+  T extends object = UnspecifiedRecord,
+> extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-column-toggle-request';
+  constructor(
+    public readonly field: NestedKeyOf<T>,
+    public readonly visibility: boolean,
+  ) {
+    super(YatlColumnToggleRequest.EVENT_NAME, { cancelable: true });
+  }
+
+  public override clone() {
+    return new YatlColumnToggleRequest<T>(this.field, this.visibility);
+  }
+}
+
 declare global {
   interface HTMLElementEventMap {
     [YatlToolbarSearchInput.EVENT_NAME]: YatlToolbarSearchInput;
     [YatlToolbarSearchChange.EVENT_NAME]: YatlToolbarSearchChange;
     [YatlToolbarExportClick.EVENT_NAME]: YatlToolbarExportClick;
+    [YatlColumnToggleRequest.EVENT_NAME]: YatlColumnToggleRequest;
   }
 }

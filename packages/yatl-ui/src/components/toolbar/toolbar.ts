@@ -10,6 +10,7 @@ import {
   YatlTableController,
 } from '@timlassiter11/yatl';
 import {
+  YatlColumnToggleRequest,
   YatlDropdownSelectEvent,
   YatlToolbarExportClick,
   YatlToolbarSearchChange,
@@ -122,14 +123,6 @@ export class YatlToolbar<
     `;
   }
 
-  private handleDropdownSelect = (event: YatlDropdownSelectEvent) => {
-    event.preventDefault();
-    this.controller?.toggleColumnVisibility(
-      event.item.value as NestedKeyOf<T>,
-      event.item.checked,
-    );
-  };
-
   protected renderExportButton() {
     return html`
       <yatl-button type="button" color="raised" @click=${this.onExportClick}>
@@ -139,6 +132,21 @@ export class YatlToolbar<
       </yatl-button>
     `;
   }
+
+  private handleDropdownSelect = (event: YatlDropdownSelectEvent) => {
+    // Stop dropdown from closing on select event
+    event.preventDefault();
+
+    const field = event.item.value as NestedKeyOf<T>;
+    const visible = event.item.checked;
+    const requestEvent = new YatlColumnToggleRequest(field, visible);
+    this.dispatchEvent(requestEvent);
+    if (requestEvent.defaultPrevented) {
+      return;
+    }
+
+    this.controller?.toggleColumnVisibility(field, visible);
+  };
 
   private onSearchInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;

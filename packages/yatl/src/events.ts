@@ -122,22 +122,6 @@ export class YatlColumnSortEvent<
   }
 }
 
-export class YatlColumnToggleRequest<
-  T extends object = UnspecifiedRecord,
-> extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-column-toggle-request';
-  constructor(
-    public readonly field: NestedKeyOf<T>,
-    public readonly visibility: boolean,
-  ) {
-    super(YatlColumnToggleRequest.EVENT_NAME, { cancelable: true });
-  }
-
-  public override clone() {
-    return new YatlColumnToggleRequest<T>(this.field, this.visibility);
-  }
-}
-
 export class YatlColumnToggleEvent<
   T extends object = UnspecifiedRecord,
 > extends YatlEvent {
@@ -261,7 +245,6 @@ declare global {
     [YatlColumnSortRequest.EVENT_NAME]: YatlColumnSortRequest;
     [YatlColumnSortEvent.EVENT_NAME]: YatlColumnSortEvent;
 
-    [YatlColumnToggleRequest.EVENT_NAME]: YatlColumnToggleRequest;
     [YatlColumnToggleEvent.EVENT_NAME]: YatlColumnToggleEvent;
 
     [YatlColumnResizeEvent.EVENT_NAME]: YatlColumnResizeEvent;

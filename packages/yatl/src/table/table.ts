@@ -59,7 +59,6 @@ import styles from './table.styles';
  * @fires yatl-row-select - Fired when the row selection changes.
  * @fires yatl-column-sort-request - Fired before a column sort order changes. Cancellable.
  * @fires yatl-column-sort - Fired when a column sort order changes.
- * @fires yatl-column-toggle-request - Fired before a column's visibility changes. Cancellable.
  * @fires yatl-column-toggle - Fired when a column's visibility changes.
  * @fires yatl-column-resize - Fired after a column has been resized by the user.
  * @fires yatl-column-reorder-request - Fired when the user drops a column into a new position. Cancellable.

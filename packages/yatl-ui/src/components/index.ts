@@ -6,6 +6,7 @@ export * from './dialog/dialog';
 export * from './dropdown/dropdown';
 export * from './icon/icon';
 export * from './option/option';
+export * from './spinner/spinner';
 export * from './table-ui/table-ui';
 export * from './table-view/table-view';
 export * from './tag/tag';

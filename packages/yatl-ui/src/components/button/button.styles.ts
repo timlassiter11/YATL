@@ -39,6 +39,27 @@ export default css`
     border: var(--button-border-width) solid var(--button-border-color);
   }
 
+  :host([loading]) {
+    pointer-events: none;
+  }
+
+  :host([loading]) slot {
+    visibility: hidden;
+  }
+
+  :host([loading]) [part='base'] {
+    cursor: wait;
+    position: relative;
+    opacity: 0.8;
+  }
+
+  yatl-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
   :host([disabled]) [part='base'] {
     opacity: 0.5;
     cursor: not-allowed;

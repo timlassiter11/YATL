@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './button.styles';
@@ -29,12 +29,24 @@ export class YatlButton extends YatlBase {
   @property({ type: String, reflect: true })
   public color: YatlButtonColor = 'neutral';
 
+  @property({ type: Boolean, reflect: true })
+  public loading = false;
+
   protected override render() {
     return html`
-      <button part="base" type=${this.type} ?disabled=${this.disabled}>
+      <button
+        part="base"
+        type=${this.type}
+        ?disabled=${this.disabled || this.loading}
+        aria-busy=${this.loading ? 'true' : 'false'}
+        aria-disabled=${this.loading ? 'true' : 'false'}
+      >
         <slot name="start"></slot>
         <slot></slot>
         <slot name="end"></slot>
+        ${this.loading
+          ? html`<yatl-spinner part="spinner"></yatl-spinner>`
+          : nothing}
       </button>
     `;
   }

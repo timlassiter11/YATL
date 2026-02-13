@@ -21,15 +21,17 @@ export class YatlIcon extends YatlBase {
     const svg = icons[this.name];
 
     return html`
-      <svg
-        part="svg"
-        viewBox=${this.viewBox}
-        aria-hidden=${this.label ? 'false' : 'true'}
-        aria-label=${this.label || undefined}
-        role=${this.label ? 'img' : 'presentation'}
-      >
-        ${svg ?? nothing}
-      </svg>
+      <slot>
+        <svg
+          part="svg"
+          viewBox=${this.viewBox}
+          aria-hidden=${this.label ? 'false' : 'true'}
+          aria-label=${this.label || undefined}
+          role=${this.label ? 'img' : 'presentation'}
+        >
+          ${svg ?? nothing}
+        </svg>
+      </slot>
     `;
   }
 }

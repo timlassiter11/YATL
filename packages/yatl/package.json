@@ -1,6 +1,6 @@
 {
   "name": "@timlassiter11/yatl",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Yet another table library with all of the standard bells and whistles.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

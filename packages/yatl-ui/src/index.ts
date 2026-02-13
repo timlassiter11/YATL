@@ -1,6 +1,8 @@
 import './setup-context';
 
 export * from './components';
+export * from './context';
+export * from './events';
 export * from './utils';
 
 // Export some lit stuff for vanilla JS users

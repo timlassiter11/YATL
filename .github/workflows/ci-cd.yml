@@ -1,0 +1,75 @@
+name: CI/CD & Deploy Demo
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  test_and_build:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint & Format
+        run: |
+          npm run lint
+          npm run format:check
+
+      - name: Build Libraries
+        run: npm run build
+
+      - name: Type Check
+        run: npx tsc -b
+
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Tests
+        run: npm test
+
+      - name: Build Playground
+        run: npm run build:playground
+
+      - name: Generate Core API Docs
+        run: npx typedoc packages/yatl/src/index.ts --out packages/playground/dist/docs/core
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/playground/dist
+
+  deploy_pages:
+    name: Deploy to GitHub Pages
+    needs: test_and_build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

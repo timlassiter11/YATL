@@ -1,50 +1,41 @@
-name: Create GitHub Release
+name: Release
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
-  id-token: write  # Required for OIDC
-  contents: write
+  contents: write # Needed to create releases/tags
+  pull-requests: write # Needed to create the Version PR
+  id-token: write # Needed for NPM provenance
 
 jobs:
-  create_release:
-    name: Create Release
+  release:
+    name: Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
+          node-version: 22
           registry-url: 'https://registry.npmjs.org'
-          node-version: 24.x
 
-      - name: Upgrade npm for OIDC support
-        run: npm install -g npm@latest
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Build library
+      - name: Build All Packages
         run: npm run build
 
-      - name: Publish to npm
-        run: npm publish --access public
-
-      - name: Archive dist folder
-        run: zip -r -j yatl-${{ github.ref_name }}.zip dist/
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
         with:
-          files: yatl-${{ github.ref_name }}.zip
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
-          generate_release_notes: true
+          publish: npx changeset publish
+          title: "ci: version packages"
+          commit: "ci: version packages"

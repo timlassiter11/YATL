@@ -5,24 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug Playground",
             "type": "chrome",
             "request": "launch",
-            "name": "Chrome",
-            "url": "http://localhost:8000/examples/index.html", // Default WDS port
-            "webRoot": "${workspaceFolder}",
-            "preLaunchTask": "Start Server", // 2. Triggers the task chain
-            "sourceMaps": true,
-            "smartStep": true
-        },
-        {
-            "type": "msedge",
-            "request": "launch",
-            "name": "Edge",
-            "url": "http://localhost:8000/examples/index.html", // Default WDS port
-            "webRoot": "${workspaceFolder}",
-            "preLaunchTask": "Start Server", // 2. Triggers the task chain
-            "sourceMaps": true,
-            "smartStep": true
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/packages/playground",
+            "preLaunchTask": "Serve Playground",
+            "sourceMapPathOverrides": {
+                "webpack:///*": "${webRoot}/*",
+                "/src/*": "${webRoot}/src/*"
+            }
         }
     ]
 }

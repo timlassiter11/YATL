@@ -790,7 +790,7 @@ export class YatlTable<
     column: DisplayColumnOptions<T>,
     state: ColumnState<T>,
   ) {
-    return (column.sortable ?? this.sortable)
+    return column.sortable ?? this.sortable
       ? html`<div
           part="header-sort-icon"
           class=${classMap({
@@ -806,7 +806,7 @@ export class YatlTable<
     column: DisplayColumnOptions<T>,
     _state: ColumnState<T>,
   ) {
-    return (column.resizable ?? this.resizable)
+    return column.resizable ?? this.resizable
       ? html`
           <div
             part="header-resizer"
@@ -1334,8 +1334,9 @@ export class YatlTable<
 
       const deltaX = event.pageX - this.resizeState.startX;
       const newWidth = Math.max(50, this.resizeState.startWidth + deltaX);
-      this.resizeState.currentWidths[this.resizeState.columnIndex] =
-        `${newWidth}px`;
+      this.resizeState.currentWidths[
+        this.resizeState.columnIndex
+      ] = `${newWidth}px`;
       this.tableElement.style.setProperty(
         '--grid-template',
         this.resizeState.currentWidths.join(' '),

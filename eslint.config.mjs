@@ -4,9 +4,9 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import { defineConfig } from 'eslint/config';
 
-export const sharedConfig = defineConfig([
+export default defineConfig([
   {
-    ignores: ['node_modules', 'dist'],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**'],
   },
   eslint.configs.recommended,
   tseslint.configs.recommended,
@@ -39,6 +39,4 @@ export const sharedConfig = defineConfig([
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-])
-
-export default sharedConfig;
+]);

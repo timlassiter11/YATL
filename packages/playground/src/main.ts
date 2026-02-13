@@ -49,13 +49,15 @@ window.addEventListener('load', () => {
   clearFiltersButton.addEventListener('click', () => {
     table.filters = {};
     table.searchQuery = '';
-  })
+  });
 
   // Sync option controls and table options
   optionsForm.addEventListener('change', updateTableOptions);
   updateTableOptions();
 
-  const deleteRowsButton = document.getElementById('deleteRowsButton') as YatlButton;
+  const deleteRowsButton = document.getElementById(
+    'deleteRowsButton',
+  ) as YatlButton;
   deleteRowsButton.disabled = table.selectedRowIds.length <= 0;
   deleteRowsButton.addEventListener('click', async () => {
     const selectedRows = table.selectedRowIds;
@@ -218,7 +220,8 @@ function updateTableState() {
     filteredRows.toLocaleString();
 
   const totalRows = table.data.length;
-  document.getElementById('totalRows')!.textContent = totalRows.toLocaleString();
+  document.getElementById('totalRows')!.textContent =
+    totalRows.toLocaleString();
 }
 
 /**
@@ -273,7 +276,8 @@ function generateMockData(count: number) {
   const generatedData = [];
 
   // Helper function to get a random element from an array
-  const getRandom = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+  const getRandom = <T>(arr: T[]) =>
+    arr[Math.floor(Math.random() * arr.length)];
 
   for (let i = 1; i <= count; i++) {
     // Generate a random date (+- 1 year from now)

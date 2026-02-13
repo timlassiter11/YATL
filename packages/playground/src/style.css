@@ -74,16 +74,16 @@ nav {
   opacity: 1;
 }
 
-yatl-icon[name="sun"] {
+yatl-icon[name='sun'] {
   display: none;
 }
-yatl-icon[name="moon"] {
+yatl-icon[name='moon'] {
   display: block;
 }
-:root.dark yatl-icon[name="sun"] {
+:root.dark yatl-icon[name='sun'] {
   display: block;
 }
-:root.dark yatl-icon[name="moon"] {
+:root.dark yatl-icon[name='moon'] {
   display: none;
 }
 

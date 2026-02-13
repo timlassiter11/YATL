@@ -31,10 +31,6 @@
     "dist"
   ],
   "scripts": {
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "format": "prettier src/** --write",
-    "format:check": "prettier src/** --check",
     "type:check": "npx tsc --noEmit",
     "build": "tsup",
     "build:watch": "tsup --watch"

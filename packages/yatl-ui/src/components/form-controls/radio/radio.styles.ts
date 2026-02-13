@@ -42,10 +42,7 @@ export default css`
     border-radius: 50%;
     background-color: var(--radio-bg);
     color: transparent;
-    transition:
-      background 250ms,
-      border-color 250ms,
-      box-shadow 250ms,
+    transition: background 250ms, border-color 250ms, box-shadow 250ms,
       color 250ms;
     transition-timing-function: ease;
     margin-inline-end: 0.5em;

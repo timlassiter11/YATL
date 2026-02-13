@@ -7,7 +7,7 @@ export default defineConfig(options => {
         theme: 'src/theme.css',
       },
       clean: !options.watch,
-      tsconfig: './tsconfig.json'
+      tsconfig: './tsconfig.json',
     },
     {
       entry: {
@@ -22,7 +22,7 @@ export default defineConfig(options => {
       target: 'es2024',
       // Don't bundle Lit
       external: [/^lit/, /^@lit/],
-      tsconfig: './tsconfig.json'
+      tsconfig: './tsconfig.json',
     },
     {
       entry: {
@@ -40,7 +40,7 @@ export default defineConfig(options => {
       noExternal: [/^lit/, /^@lit/],
       // Don't generate duplicate d.ts files
       dts: false,
-      tsconfig: './tsconfig.json'
+      tsconfig: './tsconfig.json',
     },
   ] as Options[];
 });

@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      
+
       - name: Update npm
         run: npm update -g npm
 
@@ -39,8 +39,8 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: npx changeset publish
-          title: "ci: version packages"
-          commit: "ci: version packages"
+          title: 'ci: version packages'
+          commit: 'ci: version packages'
         env:
           NPM_TOKEN: ''
           NPM_CONFIG_PROVENANCE: true

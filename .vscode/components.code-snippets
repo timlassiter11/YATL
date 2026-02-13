@@ -38,8 +38,8 @@
       "  interface HTMLElementTagNameMap {",
       "    'yatl-${1:tag-name}': ${2:ClassName};",
       "  }",
-      "}",
+      "}"
     ],
-    "description": "Scaffold a new LitElement with TypeScript tag mapping",
-  },
+    "description": "Scaffold a new LitElement with TypeScript tag mapping"
+  }
 }

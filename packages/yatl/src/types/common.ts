@@ -9,9 +9,9 @@ export type NestedKeyOf<ObjectType> = ObjectType extends object
       > extends unknown[]
         ? `${Key}`
         : NonNullable<ObjectType[Key]> extends object
-          ? // Recurse with the non-nullable type
-              `${Key}` | `${Key}.${NestedKeyOf<NonNullable<ObjectType[Key]>>}`
-          : `${Key}`;
+        ? // Recurse with the non-nullable type
+          `${Key}` | `${Key}.${NestedKeyOf<NonNullable<ObjectType[Key]>>}`
+        : `${Key}`;
     }[keyof ObjectType & (string | number)]
   : never;
 

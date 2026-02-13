@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "./dist/",
+    "outDir": "./dist/"
   },
   "files": [],
   "references": [
     {
-      "path": "./packages/yatl",
+      "path": "./packages/yatl"
     },
     {
       "path": "./packages/yatl-ui"

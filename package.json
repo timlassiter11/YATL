@@ -22,7 +22,7 @@
     "build:watch:table": "npm run build:watch --workspace=packages/yatl",
     "build:ui": "npm run build --workspace=packages/yatl-ui",
     "build:watch:ui": "npm run build:watch --workspace=packages/yatl-ui",
-
+    "build:playground": "npm run build --workspace=packages/playground",
     "dev:playground": "npm run dev --workspace=packages/playground"
   },
   "devDependencies": {

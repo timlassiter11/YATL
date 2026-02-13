@@ -51,7 +51,7 @@ jobs:
         run: npm test
 
       - name: Build Playground
-        run: npm run build --workspace=@timlassiter11/playground
+        run: npm run build:playground
 
       - name: Generate Core API Docs
         run: npx typedoc packages/yatl/src/index.ts --out packages/playground/dist/docs/core

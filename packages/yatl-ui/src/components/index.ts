@@ -5,6 +5,7 @@ export * from './confirmation-dialog/confirmation-dialog';
 export * from './dialog/dialog';
 export * from './dropdown/dropdown';
 export * from './icon/icon';
+export * from './loading-overlay/loading-overlay';
 export * from './option/option';
 export * from './spinner/spinner';
 export * from './table-ui/table-ui';

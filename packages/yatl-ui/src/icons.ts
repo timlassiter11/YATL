@@ -39,6 +39,11 @@ export const downloadIcon = svg`
   <line x1="12" y1="15" x2="12" y2="3" />
 `;
 
+export const reloadIcon = svg`
+  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+  <path d="M21 3v5h-5" />
+`;
+
 export const spinnerIcon = svg`
   <circle part="track" cx="12" cy="12" r="10"></circle>
   <circle part="indicator" cx="12" cy="12" r="10" stroke-linecap="round" pathLength="100" ></circle>
@@ -53,5 +58,6 @@ export const icons: Record<string, TemplateResult<2>> = {
   check: checkIcon,
   columns: columnsIcon,
   download: downloadIcon,
+  reload: reloadIcon,
   spinner: spinnerIcon,
 };

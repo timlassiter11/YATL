@@ -57,12 +57,6 @@ window.addEventListener('load', () => {
   // Initialize the table columns and default options
   initTable();
 
-  const clearFiltersButton = document.getElementById('clearFiltersButton')!;
-  clearFiltersButton.addEventListener('click', () => {
-    table.filters = {};
-    table.searchQuery = '';
-  });
-
   rowCountInput.addEventListener('change', () => {
     table.data = generateMockData(rowCountInput.value!);
   });

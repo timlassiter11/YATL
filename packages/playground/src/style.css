@@ -1,5 +1,7 @@
 :root {
   color-scheme: light dark;
+
+  --yatl-table-view-filters-width: 300px;
 }
 
 :root.light {

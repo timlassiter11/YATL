@@ -71,6 +71,10 @@ export class YatlTableView<
         this.requestReload({ reason: 'init', options: { silent: false } });
       }
     }
+
+    if (changedProperties.has('controller')) {
+      this.tableContext.setValue(this.controller);
+    }
   }
 
   protected override render() {

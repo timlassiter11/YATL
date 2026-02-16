@@ -96,8 +96,13 @@ export default css`
     .row {
       position: relative;
       background-color: var(--table-row-bg);
-      border-bottom: 1px solid var(--table-border-color);
+      /** Use box-shadow to mimic borders. It works better when virtualized */
+      box-shadow: inset 0 -1px 0 0 var(--table-border-color);
       transition: background-color 50ms;
+    }
+
+    .row-number-cell {
+      box-shadow: inset 0 -1px 0 0 var(--table-border-color);
     }
 
     .row.header-row {
@@ -112,7 +117,7 @@ export default css`
     }
 
     .row:last-child {
-      border-bottom: none;
+      box-shadow: none;
     }
 
     .table:not(.resizing) .row {

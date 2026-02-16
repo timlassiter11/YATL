@@ -1,6 +1,6 @@
 {
   "name": "@timlassiter11/yatl-ui",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "UI Components for @timlassiter11/yatl",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -1,5 +1,14 @@
 # @timlassiter11/yatl-ui
 
+## 1.0.4
+
+### Patch Changes
+
+- 328454d: Added reload button and loading indicator to table view
+- 9a7291a: Fixed not being able to uncheck radios when not required
+- 6affff8: Added a new loading overlay component
+- 53cafe9: Added reload icon
+
 ## 1.0.3
 
 ### Patch Changes

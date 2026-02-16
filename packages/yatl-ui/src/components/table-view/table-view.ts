@@ -21,6 +21,10 @@ export class YatlTableView<
   /** When the user requests a silent reload, show the loading icon in the button. */
   @state() private isButtonLoading = false;
 
+  /** Text to be display above the filters slot. */
+  @property({ type: String })
+  public filtersLabel = 'Filters';
+
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
    */
@@ -90,26 +94,37 @@ export class YatlTableView<
 
     return html`
       <div part="view">
-        <aside part="sidebar">
+        <div part="filters-header">
+          <slot name="filters-label">
+            <span part="filters-label"> ${this.filtersLabel} </span>
+          </slot>
+          <yatl-button
+            variant="plain"
+            title="Clear Filters"
+            @click=${this.handleClearFiltersClick}
+          >
+            <yatl-icon name="close"></yatl-icon>
+          </yatl-button>
+        </div>
+        <div part="sidebar">
           <slot name="sidebar-start"></slot>
-          <slot part="filters" name="filters"></slot>
-          <slot name="sidebar-end"></slot>
-        </aside>
-        <main>
-          <div part="shell">
-            <yatl-toolbar
-              ?showColumnPicker=${this.showColumnPicker}
-              ?showExportButton=${this.showExportButton}
-              .controller=${this.controller}
-              @yatl-toolbar-export-click=${this.handleTableExportClick}
-            >
-              ${showReload ? this.renderReloadButton() : nothing}
-              <slot name="toolbar-button-group" slot="button-group"></slot
-              ><slot name="toolbar"></slot
-            ></yatl-toolbar>
-            ${super.render()}
+          <div part="filters">
+            <slot name="filters"></slot>
           </div>
-        </main>
+          <slot name="sidebar-end"></slot>
+        </div>
+        <yatl-toolbar
+          part="toolbar"
+          ?showColumnPicker=${this.showColumnPicker}
+          ?showExportButton=${this.showExportButton}
+          .controller=${this.controller}
+          @yatl-toolbar-export-click=${this.handleTableExportClick}
+        >
+          ${showReload ? this.renderReloadButton() : nothing}
+          <slot name="toolbar-button-group" slot="button-group"></slot
+          ><slot name="toolbar"></slot
+        ></yatl-toolbar>
+        ${super.render()}
       </div>
     `;
   }
@@ -134,6 +149,10 @@ export class YatlTableView<
       ${super.renderBodyContents()}
       <yatl-loading-overlay ?show=${this.loading}></yatl-loading-overlay>
     `;
+  }
+
+  private handleClearFiltersClick() {
+    this.filters = null;
   }
 
   private handleReloadClick() {

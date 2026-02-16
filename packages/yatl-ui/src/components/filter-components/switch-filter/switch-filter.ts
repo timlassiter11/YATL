@@ -66,6 +66,10 @@ export class YatlSwitchFilter<T = string> extends YatlBaseFilter<T> {
     `;
   }
 
+  protected override reset() {
+    this.checked = this.hasAttribute('checked');
+  }
+
   private handleChange(event: Event) {
     event.stopPropagation();
     const target = event.target as YatlSwitch;

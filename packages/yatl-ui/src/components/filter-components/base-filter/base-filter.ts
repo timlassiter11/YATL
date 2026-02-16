@@ -118,6 +118,10 @@ export class YatlBaseFilter<
     }
   }
 
+  protected reset() {
+    this.value = undefined;
+  }
+
   protected updateFilters() {
     if (!this.controller || !this.field) {
       return;

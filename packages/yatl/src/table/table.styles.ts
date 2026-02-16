@@ -158,7 +158,7 @@ export default css`
   }
 
   @layer striped {
-    :host([striped]) .body .row:nth-child(even) {
+    :host([striped]) .row-even {
       background-color: var(--table-row-stripe-bg);
     }
   }

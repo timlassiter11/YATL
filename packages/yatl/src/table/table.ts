@@ -992,7 +992,12 @@ export class YatlTable<
       userParts = userParts.join(' ');
     }
 
-    const classes = { row: true, selected };
+    const classes = {
+      row: true,
+      selected,
+      'row-even': renderIndex % 2 === 0,
+      'row-odd': renderIndex % 2 !== 0,
+    };
     const rowIndex = renderIndex + 1;
 
     return html`

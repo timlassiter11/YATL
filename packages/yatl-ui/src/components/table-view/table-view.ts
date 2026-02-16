@@ -46,6 +46,13 @@ export class YatlTableView<
   public loading = false;
 
   /**
+   * When set and fetch task was provided, automatically start
+   * a fetch request before first render.
+   */
+  @property({ type: Boolean, attribute: 'auto-load', hasChanged: () => false })
+  public autoLoad?: boolean;
+
+  /**
    * A function used to load data into the table.
    * This will be called when the reload button is presssed or the reloadData method is called.
    * The table will show the loading indicator while this task is running.
@@ -67,7 +74,7 @@ export class YatlTableView<
   ): void {
     // Run fetch task before first update if it was provided and data wasn't.
     if (!this.hasUpdated) {
-      if (this.fetchTask && !changedProperties.has('data')) {
+      if (this.fetchTask && this.autoLoad) {
         this.requestReload({ reason: 'init', options: { silent: false } });
       }
     }
@@ -78,6 +85,9 @@ export class YatlTableView<
   }
 
   protected override render() {
+    // No point in showing the reload button if there is no fetch task
+    const showReload = this.fetchTask && this.showReloadButton;
+
     return html`
       <div part="view">
         <aside part="sidebar">
@@ -93,7 +103,7 @@ export class YatlTableView<
               .controller=${this.controller}
               @yatl-toolbar-export-click=${this.handleTableExportClick}
             >
-              ${this.showReloadButton ? this.renderReloadButton() : nothing}
+              ${showReload ? this.renderReloadButton() : nothing}
               <slot name="toolbar-button-group" slot="button-group"></slot
               ><slot name="toolbar"></slot
             ></yatl-toolbar>

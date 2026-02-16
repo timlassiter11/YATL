@@ -108,13 +108,15 @@ export class YatlBaseFilter<
       return;
     }
 
-    const filtersValue = getNestedValue(filters ?? {}, this.field);
-    // We can't always check if a value changed since
-    // some values are mutable and return copies but
-    // we can check if the filter value doesn't exist anymore.
-    // If that is the case, clear this value.
-    if (filtersValue === undefined) {
-      this.value = undefined;
+    if (this.field) {
+      const filtersValue = getNestedValue(filters ?? {}, this.field);
+      // We can't always check if a value changed since
+      // some values are mutable and return copies but
+      // we can check if the filter value doesn't exist anymore.
+      // If that is the case, clear this value.
+      if (filtersValue === undefined) {
+        this.reset();
+      }
     }
   }
 

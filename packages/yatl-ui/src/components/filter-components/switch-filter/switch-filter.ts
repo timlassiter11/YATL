@@ -4,9 +4,9 @@ import { YatlBaseFilter } from '../base-filter/base-filter';
 import type { YatlSwitch } from '../../form-controls/switch/switch';
 
 @customElement('yatl-switch-filter')
-export class YatlSwitchFilter<T = string> extends YatlBaseFilter<T> {
-  private _onValue?: T;
-  private _offValue?: T;
+export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
+  private _onValue?: unknown;
+  private _offValue?: unknown;
   private _checked = this.hasAttribute('checked');
 
   @property({ attribute: false })
@@ -71,7 +71,6 @@ export class YatlSwitchFilter<T = string> extends YatlBaseFilter<T> {
   }
 
   private handleChange(event: Event) {
-    event.stopPropagation();
     const target = event.target as YatlSwitch;
     this.checked = target.checked;
   }
@@ -83,6 +82,6 @@ export class YatlSwitchFilter<T = string> extends YatlBaseFilter<T> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'yatl-switch-filter': YatlSwitchFilter<unknown>;
+    'yatl-switch-filter': YatlSwitchFilter;
   }
 }

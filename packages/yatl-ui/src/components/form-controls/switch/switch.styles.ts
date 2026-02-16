@@ -29,7 +29,7 @@ export default css`
     display: flex;
     align-items: center;
     font: inherit;
-    color: var(--wa-form-control-value-color);
+    color: var(--switch-color);
     vertical-align: middle;
     cursor: pointer;
   }

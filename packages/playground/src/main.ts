@@ -117,10 +117,8 @@ function initTable() {
   table.data = generateMockData(rowCountInput.value!);
 
   // Add a fake task for fetching data
-  table.fetchTask = async reason => {
-    if (reason === 'init') {
-      return;
-    }
+  table.fetchTask = async context => {
+    context.options.silent = true;
 
     await sleep(1000);
     return generateMockData(rowCountInput.value!);

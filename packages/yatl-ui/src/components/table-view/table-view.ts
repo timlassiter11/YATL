@@ -5,8 +5,7 @@ import { ContextProvider } from '@lit/context';
 import { getTableContext } from '../../context';
 import styles from './table-view.styles';
 import { UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
-
-export type FetchReason = 'init' | 'reload';
+import { YatlTableFetchContext, YatlTableFetchTask } from '../../types';
 
 @customElement('yatl-table-view')
 export class YatlTableView<
@@ -19,9 +18,7 @@ export class YatlTableView<
     initialValue: this.controller,
   });
 
-  private _fetchTask?: (
-    reason: FetchReason,
-  ) => Promise<T[] | undefined> | undefined;
+  /** When the user requests a silent reload, show the loading icon in the button. */
   @state() private isButtonLoading = false;
 
   /**
@@ -53,46 +50,25 @@ export class YatlTableView<
    * This will be called when the reload button is presssed or the reloadData method is called.
    * The table will show the loading indicator while this task is running.
    */
-  public get fetchTask() {
-    return this._fetchTask;
-  }
-
   @property({ attribute: false })
-  public set fetchTask(value) {
-    this._fetchTask = value;
-    this._reloadData('init');
-  }
+  public fetchTask?: YatlTableFetchTask<T>;
 
+  /**
+   * Reloads the table data by calling the provided fetch task.
+   * @param silent - If true, the loading overlay is not shown and instead the reload button shows a spinner.
+   * @returns A promise that resolves when the data is finished being fetched and loaded into the table.
+   */
   public async reloadData(silent = false) {
-    return this._reloadData('reload', silent);
-  }
-
-  private async _reloadData(reason: FetchReason, silent = false) {
-    if (!this.fetchTask) {
-      return;
-    }
-
-    if (!silent) {
-      this.loading = true;
-    }
-
-    try {
-      const data = await this.fetchTask(reason);
-      if (data) {
-        this.controller.data = data;
-      }
-    } finally {
-      this.loading = false;
-    }
+    return this.requestReload({ reason: 'reload', options: { silent } });
   }
 
   protected override willUpdate(
     changedProperties: PropertyValues<YatlTableView>,
   ): void {
-    if (changedProperties.has('controller')) {
-      this.tableContext.setValue(this.controller);
-      if (this.data.length === 0) {
-        this._reloadData('init');
+    // Run fetch task before first update if it was provided and data wasn't.
+    if (!this.hasUpdated) {
+      if (this.fetchTask && !changedProperties.has('data')) {
+        this.requestReload({ reason: 'init', options: { silent: false } });
       }
     }
   }
@@ -147,11 +123,35 @@ export class YatlTableView<
   }
 
   private handleReloadClick() {
-    this.reloadData();
+    this.reloadData(true);
   }
 
   private handleTableExportClick() {
     this.controller.export();
+  }
+
+  private async requestReload(context: YatlTableFetchContext) {
+    if (!this.fetchTask) {
+      return;
+    }
+
+    const fetchTask = this.fetchTask(context);
+
+    if (context.options.silent) {
+      this.isButtonLoading = true;
+    } else {
+      this.loading = true;
+    }
+
+    try {
+      const data = await fetchTask;
+      if (data) {
+        this.controller.data = data;
+      }
+    } finally {
+      this.loading = false;
+      this.isButtonLoading = false;
+    }
   }
 }
 

@@ -1,19 +1,28 @@
 import { consume } from '@lit/context';
 import { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
-import { tableContext } from '../../../context';
+import { getTableContext } from '../../../context';
 import {
   getNestedValue,
+  NestedKeyOf,
   setNestedValue,
+  UnspecifiedRecord,
   YatlTableController,
 } from '@timlassiter11/yatl';
 import { YatlBase } from '../../base/base';
 
-export class YatlBaseFilter<T> extends YatlBase {
+export class YatlBaseFilter<
+  T,
+  TData extends object = UnspecifiedRecord,
+> extends YatlBase {
   private _filterOptions?: Map<T, number>;
 
-  private _controller?: YatlTableController;
-  @consume({ context: tableContext, subscribe: true })
+  private _controller?: YatlTableController<TData>;
+
+  @consume({
+    context: getTableContext<TData>(),
+    subscribe: true,
+  })
   @property({ attribute: false })
   public get controller() {
     return this._controller;
@@ -84,7 +93,9 @@ export class YatlBaseFilter<T> extends YatlBase {
   protected get options() {
     return (
       this._filterOptions ??
-      (this.controller?.getColumnFilterValues(this.field) as Map<T, number>) ??
+      (this.controller?.getColumnFilterValues(
+        this.field as NestedKeyOf<TData>,
+      ) as Map<T, number>) ??
       new Map<T, number>()
     );
   }
@@ -123,7 +134,7 @@ export class YatlBaseFilter<T> extends YatlBase {
     } else if (this._filterOptions === undefined) {
       // Lock in our filter options as soon as the user selects a value
       this._filterOptions = this.controller?.getColumnFilterValues(
-        this.field,
+        this.field as NestedKeyOf<TData>,
       ) as Map<T, number>;
     }
   }

@@ -80,15 +80,16 @@
         </yatl-card>
         <yatl-card slot="sidebar-end">
           <span slot="header-start">Table Options</span>
+          <div class="option-group">
+            <yatl-number-input
+              label="Row Count"
+              name="rowCount"
+              id="rowCountInput"
+              value="2000"
+              min="0"
+            ></yatl-number-input>
+          </div>
           <form id="optionsForm" onsubmit="event.preventDefault();">
-            <div class="option-group">
-              <yatl-number-input
-                label="Row Count"
-                name="rowCount"
-                value="2000"
-                min="0"
-              ></yatl-number-input>
-            </div>
             <div class="option-group">
               <h4>UI</h4>
               <yatl-switch

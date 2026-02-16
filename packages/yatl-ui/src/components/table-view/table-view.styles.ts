@@ -1,6 +1,10 @@
 import { css } from 'lit';
 
 export default css`
+  yatl-loading-overlay {
+    --yatl-loading-overlay-bg: var(--table-bg);
+  }
+
   main {
     width: 100%;
     height: 100%;
@@ -22,5 +26,13 @@ export default css`
     margin-right: var(--yatl-spacing-m);
     min-width: 300px;
     gap: var(--yatl-spacing-l);
+  }
+
+  [part='shell'] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--yatl-spacing-m);
+    height: 100%;
+    width: 100%;
   }
 `;

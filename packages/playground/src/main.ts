@@ -5,8 +5,9 @@ import {
   YatlButton,
   YatlCheckbox,
   YatlFormControl,
+  YatlNumberInput,
   YatlSwitch,
-  YatlTableUi,
+  YatlTableView,
 } from '@timlassiter11/yatl-ui';
 
 // Used for generating data and for filters
@@ -32,15 +33,26 @@ const possibleTags = [
   'refactor',
 ];
 
-let table: YatlTableUi;
+interface TableData {
+  id: number;
+  name: string;
+  status: string;
+  lastModified: Date;
+  issueCount: number | null;
+  tags: string;
+}
+
+let table: YatlTableView<TableData>;
 let optionsForm: HTMLFormElement;
+let rowCountInput: YatlNumberInput;
 
 window.addEventListener('load', () => {
   // Stuff for the page, not about YATL.
   initExtras();
 
-  table = document.querySelector<YatlTableUi>('yatl-table-view')!;
+  table = document.querySelector<YatlTableView<TableData>>('yatl-table-view')!;
   optionsForm = document.getElementById('optionsForm') as HTMLFormElement;
+  rowCountInput = document.getElementById('rowCountInput') as YatlNumberInput;
 
   // Initialize the table columns and default options
   initTable();
@@ -49,6 +61,10 @@ window.addEventListener('load', () => {
   clearFiltersButton.addEventListener('click', () => {
     table.filters = {};
     table.searchQuery = '';
+  });
+
+  rowCountInput.addEventListener('change', () => {
+    table.data = generateMockData(rowCountInput.value!);
   });
 
   // Sync option controls and table options
@@ -97,6 +113,18 @@ function initTable() {
   table.enableSearchScoring = true;
   table.enableSearchTokenization = true;
   table.enableFooter = true;
+
+  table.data = generateMockData(rowCountInput.value!);
+
+  // Add a fake task for fetching data
+  table.fetchTask = async reason => {
+    if (reason === 'init') {
+      return;
+    }
+
+    await sleep(1000);
+    return generateMockData(rowCountInput.value!);
+  };
 
   table.rowParts = row => {
     // Add row tags as parts so we can style them accordingly
@@ -198,10 +226,7 @@ function initTable() {
  */
 function updateTableOptions() {
   const options = getTypedFormData(optionsForm);
-  const { rowCount, rowSelectionMethod, ...tableOptions } = options;
-  if (table.data.length !== rowCount) {
-    table.data = generateMockData(rowCount as number);
-  }
+  const { rowSelectionMethod, ...tableOptions } = options;
   tableOptions['rowSelectionMethod'] =
     rowSelectionMethod === 'null' ? null : rowSelectionMethod;
   Object.assign(table, tableOptions);
@@ -273,7 +298,7 @@ function generateMockData(count: number) {
     'Vega',
   ];
 
-  const generatedData = [];
+  const generatedData: TableData[] = [];
 
   // Helper function to get a random element from an array
   const getRandom = <T>(arr: T[]) =>
@@ -345,3 +370,8 @@ function initExtras() {
     document.documentElement.classList.toggle('light');
   });
 }
+
+// Source - https://stackoverflow.com/a/39914235
+// Posted by Dan Dascalescu, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-02-14, License - CC BY-SA 4.0
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));

@@ -216,7 +216,7 @@ export class YatlTable<
   /**
    * Shows a column to the left of each row with its row number.
    */
-  @property({ type: Boolean })
+  @property({ type: Boolean, attribute: 'enable-row-number-column' })
   public enableRowNumberColumn = true;
 
   /**

@@ -74,7 +74,7 @@ export class YatlBaseFilter<
     if (!this.controller || typeof this.controller.filters === 'function') {
       return undefined;
     }
-    return structuredClone(this.controller.filters);
+    return { ...this.controller.filters };
   }
 
   protected set filters(filters) {

@@ -32,16 +32,14 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   // Mutable value types need to be copied
   // so the user's changes don't mess things up.
   private _value: string[] = [];
-  @property({ attribute: false })
   public get value() {
     return [...this._value];
   }
+  @property({ attribute: false })
   public set value(value) {
-    const oldValue = this._value;
     this._value = [...value];
     this.updateSelectedOptions();
     this.setFormValue(this.formValue);
-    this.requestUpdate('value', oldValue);
   }
 
   public get formValue() {

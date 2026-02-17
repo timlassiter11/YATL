@@ -128,6 +128,7 @@ export class YatlTypeahead extends YatlFormControl {
     `;
   }
 
+  // Satisfy base class
   protected override renderInput() {}
 
   protected renderDropdownContent() {
@@ -161,7 +162,7 @@ export class YatlTypeahead extends YatlFormControl {
   protected override onValueChange(event: Event): boolean | void {
     // Ignore change events that fire on focus loss
     if (event.type === 'change') {
-      return true;
+      return;
     }
 
     const target = event.target as HTMLInputElement;
@@ -173,7 +174,14 @@ export class YatlTypeahead extends YatlFormControl {
   }
 
   private handleDropdownSelect(event: YatlDropdownSelectEvent) {
-    this.value = event.item.value;
+    if (this.formControl) {
+      this.formControl.value = event.item.value;
+      this.formControl.dispatchEvent(
+        new Event('input', { composed: true, bubbles: true }),
+      );
+    }
+
+    this.open = false;
   }
 
   private handleDropdownRequest(event: Event) {

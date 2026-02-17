@@ -28,21 +28,21 @@ export class YatlTableUi<
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showColumnPicker = true;
+  @property({ type: Boolean, attribute: 'hide-column-picker' })
+  public hideColumnPicker = false;
 
   /**
    * Toggles the visibility of the CSV export button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showExportButton = true;
+  @property({ type: Boolean, attribute: 'hide-export-button' })
+  public hideExportButton = false;
 
   protected override render() {
     return html`
       <div part="shell">
         <yatl-toolbar
-          ?showColumnPicker=${this.showColumnPicker}
-          ?showExportButton=${this.showExportButton}
+          ?hide-column-picker=${this.hideColumnPicker}
+          ?hide-export-button=${this.hideExportButton}
           .controller=${this.controller}
           @yatl-toolbar-export-click=${this.handleTableExportClicked}
           ><slot name="toolbar-button-group" slot="button-group"></slot

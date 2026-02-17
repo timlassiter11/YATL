@@ -26,26 +26,29 @@ export class YatlTableView<
   @property({ type: String })
   public filtersLabel = 'Filters';
 
+  /**
+   * Toggles the visibility of the left filters pane and header. Defaults to `false`.
+   */
   @property({ type: Boolean, reflect: true, attribute: 'hide-filters' })
   public hideFilters = false;
 
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showColumnPicker = true;
+  @property({ type: Boolean, attribute: 'hide-column-picker' })
+  public hideColumnPicker = false;
 
   /**
    * Toggles the visibility of the CSV export button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showExportButton = true;
+  @property({ type: Boolean, attribute: 'hide-export-button' })
+  public hideExportButton = false;
 
   /**
    * Toggles the visibility of the reload button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showReloadButton = true;
+  @property({ type: Boolean, attribute: 'hide-reload-button' })
+  public hideReloadButton = false;
 
   /**
    * When set, displays the loading indicator inside the table.
@@ -94,7 +97,7 @@ export class YatlTableView<
 
   protected override render() {
     // No point in showing the reload button if there is no fetch task
-    const showReload = this.fetchTask && this.showReloadButton;
+    const showReload = this.fetchTask && !this.hideReloadButton;
 
     return html`
       <div part="view">
@@ -119,8 +122,8 @@ export class YatlTableView<
         </div>
         <yatl-toolbar
           part="toolbar"
-          ?showColumnPicker=${this.showColumnPicker}
-          ?showExportButton=${this.showExportButton}
+          ?hide-column-picker=${this.hideColumnPicker}
+          ?hide-export-button=${this.hideExportButton}
           .controller=${this.controller}
           @yatl-toolbar-export-click=${this.handleTableExportClick}
         >

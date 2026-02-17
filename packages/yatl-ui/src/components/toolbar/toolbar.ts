@@ -58,11 +58,11 @@ export class YatlToolbar<
     controller?.attach(this);
   }
 
-  @property({ type: Boolean })
-  public showColumnPicker = true;
+  @property({ type: Boolean, attribute: 'hide-column-picker' })
+  public hideColumnPicker = false;
 
-  @property({ type: Boolean })
-  public showExportButton = true;
+  @property({ type: Boolean, attribute: 'hide-export-button' })
+  public hideExportButton = false;
 
   protected override render() {
     return html`
@@ -76,8 +76,8 @@ export class YatlToolbar<
           @change=${this.onSearchChange}
         ></yatl-input>
         <yatl-button-group>
-          ${this.showColumnPicker ? this.renderColumnPicker() : nothing}
-          ${this.showExportButton ? this.renderExportButton() : nothing}
+          ${this.hideColumnPicker ? nothing : this.renderColumnPicker()}
+          ${this.hideExportButton ? nothing : this.renderExportButton()}
           <slot name="button-group"></slot>
         </yatl-button-group>
         <slot></slot>

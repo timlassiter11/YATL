@@ -37,6 +37,13 @@ export default css`
 
     height: 100%;
     width: 100%;
+
+    transition: grid-template-columns 200ms;
+  }
+
+  :host([hide-filters]) [part='view'] {
+    grid-template-columns: 0 1fr;
+    grid-column-gap: 0;
   }
 
   [part='filters-header'] {
@@ -47,6 +54,8 @@ export default css`
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+
+    overflow: hidden;
   }
 
   [part='filters-label'] {
@@ -61,6 +70,7 @@ export default css`
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
     gap: var(--yatl-spacing-l);
   }
 

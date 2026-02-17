@@ -25,6 +25,9 @@ export class YatlTableView<
   @property({ type: String })
   public filtersLabel = 'Filters';
 
+  @property({ type: Boolean, reflect: true, attribute: 'hide-filters' })
+  public hideFilters = false;
+
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
    */

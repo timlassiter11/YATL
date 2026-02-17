@@ -109,13 +109,13 @@ export class YatlDropdown extends YatlBase {
   private handleItemClick(event: Event) {
     const target = event.target as HTMLElement;
     const item = target.closest('yatl-option');
-
-    if (!(item instanceof YatlOption)) {
+    if (!item) {
       return;
     }
 
     const selectEvent = new YatlDropdownItemSelectEvent(item);
-    if (this.dispatchEvent(selectEvent)) {
+    this.dispatchEvent(selectEvent);
+    if (!selectEvent.defaultPrevented) {
       this.open = false;
     }
   }

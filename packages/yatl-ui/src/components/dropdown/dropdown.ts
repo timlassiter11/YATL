@@ -107,7 +107,9 @@ export class YatlDropdown extends YatlBase {
   }
 
   private handleItemClick(event: Event) {
-    const item = event.target;
+    const target = event.target as HTMLElement;
+    const item = target.closest('yatl-option');
+
     if (!(item instanceof YatlOption)) {
       return;
     }

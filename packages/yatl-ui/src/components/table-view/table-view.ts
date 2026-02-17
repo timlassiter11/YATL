@@ -6,6 +6,7 @@ import { getTableContext } from '../../context';
 import styles from './table-view.styles';
 import { UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
 import { YatlTableFetchContext, YatlTableFetchTask } from '../../types';
+import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
 
 @customElement('yatl-table-view')
 export class YatlTableView<
@@ -156,6 +157,7 @@ export class YatlTableView<
 
   private handleClearFiltersClick() {
     this.filters = null;
+    this.dispatchEvent(new YatlTableViewFiltersClearEvent());
   }
 
   private handleReloadClick() {

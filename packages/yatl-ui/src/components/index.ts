@@ -30,4 +30,5 @@ export * from './form-controls/radio-group/radio-group';
 export * from './form-controls/search-select/search-select';
 export * from './form-controls/select/select';
 export * from './form-controls/switch/switch';
+export * from './form-controls/textarea/textarea';
 export * from './form-controls/typeahead/typeahead';

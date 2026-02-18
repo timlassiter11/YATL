@@ -24,6 +24,9 @@ export class YatlNumberInput extends YatlFormControl<number> {
   @property({ type: Number })
   public step?: number;
 
+  @property({ type: Number })
+  public displayPrecision?: number;
+
   @property({ type: Number, attribute: 'value' })
   public defaultValue?: number;
 
@@ -35,13 +38,22 @@ export class YatlNumberInput extends YatlFormControl<number> {
   }
 
   protected renderInput() {
+    let value = this.formValue;
+    if (this.value !== undefined && this.displayPrecision) {
+      const formatter = Intl.NumberFormat(undefined, {
+        maximumFractionDigits: this.displayPrecision,
+        minimumFractionDigits: this.displayPrecision,
+      });
+      value = formatter.format(this.value);
+    }
+
     return html`
       <input
         part="input"
         name=${this.name}
         type="number"
         size=${this.size}
-        .value=${live(this.formValue)}
+        .value=${live(value)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
         step=${ifDefined(this.step)}

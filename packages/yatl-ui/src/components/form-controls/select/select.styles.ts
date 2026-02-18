@@ -24,6 +24,8 @@ export default css`
 
   [part='input'] {
     width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .input-row {

@@ -45,7 +45,7 @@ export abstract class YatlFormControl<
   @query('slot[name="label"]')
   protected labelSlot?: HTMLSlotElement;
 
-  @property({ type: String })
+  @property({ type: String, reflect: true })
   public name = '';
 
   @property({ type: String })

@@ -159,10 +159,10 @@ export class YatlTypeahead extends YatlFormControl {
     return html`<yatl-option value=${option} label=${option}></yatl-option>`;
   }
 
-  protected override onValueChange(event: Event): boolean | void {
+  protected override isValidChangeEvent(event: Event): boolean | void {
     // Ignore change events that fire on focus loss
     if (event.type === 'change') {
-      return;
+      return false;
     }
 
     const target = event.target as HTMLInputElement;

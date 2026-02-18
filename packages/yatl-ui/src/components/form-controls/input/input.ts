@@ -98,7 +98,7 @@ export class YatlInput extends YatlFormControl<string> {
     return html`<span part="label-count">${count}</span>`;
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     this.value = (event.target as HTMLInputElement).value;
   }
 }

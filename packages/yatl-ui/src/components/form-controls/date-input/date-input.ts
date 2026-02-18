@@ -69,7 +69,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
     `;
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = dateConverter.fromAttribute(input.value);
   }

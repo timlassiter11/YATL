@@ -69,20 +69,20 @@ export class YatlRadioGroup extends YatlFormControl<string> {
     ></slot> `;
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     event.stopPropagation();
-    if (event.type === 'change') {
-      const target = event.target as SupportedChildren;
-      // Allow no inputs to be checked if this isn't required
-      if (!this.required && !target.checked) {
-        this.value = '';
-      } else {
-        this.value = target.value;
-      }
-      this.syncChildStates();
+    if (event.type !== 'change') {
       return false;
     }
-    return true;
+
+    const target = event.target as SupportedChildren;
+    // Allow no inputs to be checked if this isn't required
+    if (!this.required && !target.checked) {
+      this.value = '';
+    } else {
+      this.value = target.value;
+    }
+    this.syncChildStates();
   }
 
   private syncChildStates() {

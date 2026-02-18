@@ -48,7 +48,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
     `;
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = Number(input.value);
   }

@@ -25,7 +25,6 @@ export abstract class YatlFormControl<
   };
   public static override styles = [...super.styles, styles];
 
-  protected readonly internals: ElementInternals;
   private slotController = new HasSlotController(
     this,
     'hint',
@@ -33,9 +32,12 @@ export abstract class YatlFormControl<
     'error',
   );
 
-  /**
-   * Used to associate the label with the control element
-   */
+  protected readonly internals: ElementInternals;
+
+  /** Indicates if the user made any changes */
+  protected hasUserInteracted = false;
+
+  /** Used to associate the label with the control element */
   public readonly inputId = 'input';
 
   @query('input')
@@ -64,10 +66,18 @@ export abstract class YatlFormControl<
   @property({ type: Boolean, reflect: true })
   public inline = false;
 
+  /** The live data value of this input */
   public abstract value?: TData;
+  /** The value to revert back to on form reset */
   public abstract defaultValue?: TData;
+  /** The vlue to be stored in the form data */
   public abstract formValue: string | File | FormData | null;
-  protected onValueChange(_event: Event): boolean | void {}
+  /**
+   * Override to handle change and input events.
+   * Return false to ignore the provided event.
+   * Return true or nothing (void) to process them as changes.
+   */
+  protected isValidChangeEvent(_event: Event): boolean | void {}
 
   private _errorText = '';
   @property({ type: String, attribute: 'error-text' })
@@ -110,17 +120,14 @@ export abstract class YatlFormControl<
     return root;
   }
 
-  public override connectedCallback(): void {
-    super.connectedCallback();
-    if (!this.value && this.defaultValue) {
-      this.value = this.defaultValue;
-    }
-    this.setFormValue(this.formValue);
-  }
-
   protected override willUpdate(
     changedProperties: PropertyValues<YatlFormControl<TData, TInput>>,
   ): void {
+    if (!this.hasUserInteracted && changedProperties.has('defaultValue')) {
+      this.value = this.defaultValue;
+      this.setFormValue(this.formValue);
+    }
+
     if (changedProperties.has('required')) {
       // Keep the underlying form control in sync before we update validity.
       // Our validity relies on the form control so if it is out of sync we get a false positive
@@ -134,10 +141,14 @@ export abstract class YatlFormControl<
       this.updateValidity();
     }
 
-    // Update form data when disabled state changes.
-    if (changedProperties.has('disabled')) {
+    // Update form data when disabled or readonly state changes.
+    if (
+      changedProperties.has('disabled') ||
+      changedProperties.has('readonly')
+    ) {
       this.setFormValue(this.formValue);
       this.toggleState('disabled', this.disabled);
+      this.toggleState('readonly', this.readonly);
     }
   }
 
@@ -247,7 +258,13 @@ export abstract class YatlFormControl<
     return valid;
   }
 
+  /** DON'T OVERRIDE THIS. Use onFormReset instead */
   public formResetCallback() {
+    this.onFormReset();
+    this.hasUserInteracted = false;
+  }
+
+  protected onFormReset() {
     this.value = this.defaultValue;
   }
 
@@ -278,11 +295,12 @@ export abstract class YatlFormControl<
   }
 
   private handleInputChange = (event: Event) => {
-    if (this.onValueChange?.(event)) {
+    if (this.isValidChangeEvent?.(event) === false) {
       return;
     }
 
     event.stopPropagation();
+    this.hasUserInteracted = true;
     this.setFormValue(this.formValue);
     this.dispatchEvent(
       new Event(event.type, { bubbles: true, composed: true }),

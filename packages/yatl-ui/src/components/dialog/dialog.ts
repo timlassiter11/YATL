@@ -38,6 +38,9 @@ export class YatlDialog extends YatlBase {
   @property({ type: Boolean })
   public modal = false;
 
+  @property({ type: Boolean, reflect: true })
+  public fullscreen = false;
+
   @property({ type: Boolean })
   public get open() {
     return this._open;
@@ -98,6 +101,7 @@ export class YatlDialog extends YatlBase {
   protected override render() {
     return html`
       <dialog
+        part="dialog"
         popover
         @cancel=${this.handleDialogCancel}
         @pointerdown=${this.handleDialogPointerdown}

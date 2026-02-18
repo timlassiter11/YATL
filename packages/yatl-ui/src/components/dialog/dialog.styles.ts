@@ -11,8 +11,10 @@ export default css`
       --yatl-dialog-border-color,
       var(--yatl-border-color)
     );
-    --dialog-width: var(--yatl-dialog-width, 500px);
+    --dialog-width: var(--yatl-dialog-width, fit-content);
+    --dialog-max-width: var(--yatl-dialog-max-width, 90%);
     --dialog-padding: var(--yatl-dialog-padding, var(--yatl-spacing-s));
+    --dialog-margin: var(--yatl-dialog-margin, var(--yatl-spacing-l));
     --dialog-header-font-size: var(--yatl-dialog-header-font-size, medium);
     --dialog-header-font-weight: var(--yatl-dialog-header-font-weight, 700);
     --dialog-header-padding: var(
@@ -32,6 +34,10 @@ export default css`
   dialog {
     border: none;
     background: none;
+
+    width: var(--dialog-width);
+    max-width: var(--dialog-max-width);
+    padding: var(--dialog-margin);
 
     &.show {
       animation: show-dialog var(--dialog-show-duration) ease;
@@ -62,6 +68,15 @@ export default css`
     background-color: color-mix(in oklab, black 60%, transparent);
   }
 
+  :host([fullscreen]) dialog {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    padding: 0;
+    margin: 0;
+  }
+
   yatl-card {
     --card-bg: var(--dialog-bg);
     --card-text: var(--dialog-text);
@@ -73,7 +88,12 @@ export default css`
     --card-header-font-weight: var(--dialog-header-font-weight);
     --card-header-padding: var(--dialog-header-padding);
 
+    height: 100%;
     padding: var(--dialog-padding);
+  }
+
+  :host([fullscreen]) yatl-card {
+    --card-border-radius: 0;
   }
 
   [part='header'] {

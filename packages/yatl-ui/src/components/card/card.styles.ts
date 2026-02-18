@@ -65,6 +65,8 @@ export default css`
     font-size: var(--card-footer-font-size);
     font-weight: var(--card-footer-font-weight);
     padding: var(--card-footer-padding);
+    /** Force the footer to the bottom */
+    margin-top: auto;
     border-block-start: var(--card-footer-border-width) var(--card-border-style)
       var(--card-border-color);
   }

@@ -28,7 +28,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
   public value?: number;
 
   public get formValue() {
-    return this.value ? String(this.value) : '';
+    return this.value !== undefined ? String(this.value) : '';
   }
 
   protected renderInput() {

@@ -196,14 +196,14 @@ export class YatlDropdown extends YatlBase {
   // #region Utilities
   private addListeners() {
     this.startPositioning();
-    document.addEventListener('click', this.handleDocumentFocusin);
+    document.addEventListener('pointerdown', this.handleDocumentFocusin);
     document.addEventListener('focusin', this.handleDocumentFocusin);
     document.addEventListener('keydown', this.handleKeydown);
   }
 
   private removeListeners() {
     this.autoUpdateCleanup?.();
-    document.removeEventListener('click', this.handleDocumentFocusin);
+    document.removeEventListener('pointerdown', this.handleDocumentFocusin);
     document.removeEventListener('focusin', this.handleDocumentFocusin);
     document.removeEventListener('keydown', this.handleKeydown);
   }

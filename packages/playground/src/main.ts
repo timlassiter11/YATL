@@ -1,5 +1,6 @@
 import '@timlassiter11/yatl';
 import '@timlassiter11/yatl/theme.css';
+import '@timlassiter11/yatl-ui';
 
 import {
   YatlButton,

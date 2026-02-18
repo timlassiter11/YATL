@@ -16,6 +16,7 @@
   "sideEffects": [
     "./dist/index.mjs",
     "./dist/index.js",
+    "./src/components/**/*.ts",
     "./src/setup-context.ts"
   ],
   "keywords": [

@@ -21,6 +21,9 @@ export class YatlNumberInput extends YatlFormControl<number> {
   @property({ type: Number })
   public max?: number;
 
+  @property({ type: Number })
+  public step?: number;
+
   @property({ type: Number, attribute: 'value' })
   public defaultValue?: number;
 
@@ -41,6 +44,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
         .value=${live(this.formValue)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
+        step=${ifDefined(this.step)}
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}

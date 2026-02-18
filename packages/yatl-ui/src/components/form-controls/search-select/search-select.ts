@@ -67,12 +67,12 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   public override connectedCallback() {
     super.connectedCallback();
-    document.addEventListener('focusin', this.handleFocus);
+    document.addEventListener('pointerdown', this.handleFocus);
   }
 
   public override disconnectedCallback() {
     super.disconnectedCallback();
-    document.removeEventListener('focusin', this.handleFocus);
+    document.removeEventListener('pointerdown', this.handleFocus);
   }
 
   public toggleOption(value: string, state?: boolean) {

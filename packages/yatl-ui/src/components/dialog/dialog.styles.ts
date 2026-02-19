@@ -11,8 +11,6 @@ export default css`
       --yatl-dialog-border-color,
       var(--yatl-border-color)
     );
-    --dialog-width: var(--yatl-dialog-width, fit-content);
-    --dialog-max-width: var(--yatl-dialog-max-width, 90%);
     --dialog-padding: var(--yatl-dialog-padding, var(--yatl-spacing-s));
     --dialog-margin: var(--yatl-dialog-margin, var(--yatl-spacing-l));
     --dialog-header-font-size: var(--yatl-dialog-header-font-size, medium);
@@ -29,14 +27,17 @@ export default css`
     --dialog-show-duration: var(--yatl-dialog-show-duration, 250ms);
     --dialog-hide-duration: var(--yatl-dialog-hide-duration, 250ms);
     --dialog-pulse-duration: var(--yatl-dialog-pulse-duration, 250ms);
+
+    display: contents;
   }
 
   dialog {
     border: none;
     background: none;
 
-    width: var(--dialog-width);
-    max-width: var(--dialog-max-width);
+    display: flex;
+    flex-direction: column;
+
     padding: var(--dialog-margin);
 
     &.show {
@@ -69,9 +70,9 @@ export default css`
   }
 
   :host([fullscreen]) dialog {
-    width: 100vw;
+    width: 100vw !important;
     max-width: 100vw;
-    height: 100vh;
+    height: 100vh !important;
     max-height: 100vh;
     padding: 0;
     margin: 0;
@@ -88,7 +89,8 @@ export default css`
     --card-header-font-weight: var(--dialog-header-font-weight);
     --card-header-padding: var(--dialog-header-padding);
 
-    height: 100%;
+    flex: 1;
+    overflow: hidden;
     padding: var(--dialog-padding);
   }
 
@@ -113,10 +115,13 @@ export default css`
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--yatl-spacing-s);
   }
 
   [part='body'] {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
     padding: var(--dialog-body-padding);
   }
 

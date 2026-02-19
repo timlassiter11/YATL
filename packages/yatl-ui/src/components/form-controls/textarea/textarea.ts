@@ -32,10 +32,20 @@ export class YatlTextArea extends YatlFormControl {
     return this.value;
   }
 
+  protected override render() {
+    return html`
+      ${this.renderLabel()}
+      <div part="base">${this.renderInput()}</div>
+      ${this.renderHint()} ${this.renderErrorText()}
+    `;
+  }
+
   protected override renderInput() {
     return html`
       <textarea
         part="input"
+        class="text-input"
+        id=${this.inputId}
         name=${this.name}
         placeholder=${this.placeholder}
         minlength=${ifDefined(this.minlength)}

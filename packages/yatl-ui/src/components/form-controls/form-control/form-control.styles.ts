@@ -65,7 +65,9 @@ export default css`
   }
 
   .text-input:focus,
-  .text:focus-visible {
+  .text:focus-visible,
+  .text-input:has(input:focus),
+  .text-input:has(input:focus-visible) {
     outline: var(--input-outline-width) solid var(--input-outline-color);
     outline-offset: calc(var(--input-outline-width) * -1);
   }

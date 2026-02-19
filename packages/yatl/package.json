@@ -67,6 +67,7 @@
   },
   "dependencies": {
     "@lit-labs/virtualizer": "^2.1.1",
-    "lit": "^3.3.2"
+    "lit": "^3.3.2",
+    "open-props": "^1.7.23"
   }
 }

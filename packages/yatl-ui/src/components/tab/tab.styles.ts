@@ -26,4 +26,9 @@ export default css`
     border-bottom-style: solid;
     border-bottom-color: var(--active-separator-color);
   }
+
+  :host([disabled]) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;

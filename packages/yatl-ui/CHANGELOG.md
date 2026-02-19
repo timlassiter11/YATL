@@ -1,5 +1,46 @@
 # @timlassiter11/yatl-ui
 
+## 1.0.5
+
+### Patch Changes
+
+- 1203b04: Fixed select values overflowing
+- d408806: Better default value logic for form controls
+- 6c466a8: Allow select value attribute to accept string for better DX in Lit templates
+- 533b6e7: Added new details component
+- 6f052a9: Fixed focus ring not showing on form controls
+- d22ba92: Added new group filter component to group multiple switch filters
+- d5e0a42: Allow date input values to be set with a string
+- 93cc9af: Added event to table view when filters are cleared
+- 1d750b9: Fixed types not being exported
+- 7094b57: Visually show when a tab is disabled
+- f77a1ac: Added new tab, tab-panel, and tab-group components
+- 55cec2e: Better fetch customization for table-view
+- d592880: Added textarea component
+- de850c9: Fixed dropdowns not always dispatching select events
+- a6dd046: Fixed search select not switching to closed mode on focus loss
+- 74c8698: Fixed details with same name not closing automatically
+- 8095637: Added a display precision attribute to number inputs
+- e51fb04: Fixed typeahead form value not updating on select
+- 89c6785: Sort filter options
+- 0913b10: Added a header and clear button to the filters pane in the table view
+- 1a5cd7a: Fixed filters not working due to incorrect context
+- 81d6318: Added table-view attribute for auto loading data before first render
+- f14301d: Fixed number-input not displaying anything when display precision is set
+- 1f75f43: Added a fullscreen attribute to dialogs
+- 2f0c5f5: Fixed switch filters not unchecking when filters externally reset
+- 37d4963: Fixed submit and reset buttons not working
+- 26cddfb: Fixed error in filter components when filters contain functions
+- 28ac414: Added setup attribute to number input
+- 97fc7bf: Fixed textarea not properly resizing
+- 736884a: Fixed dropdowns not closing on focus loss
+- ba3dc80: Fixed number input not displaying 0 values
+- bb2ef86: Added ability to hide filter pane in table view
+- Updated dependencies [847e4ad]
+- Updated dependencies [7b0a774]
+- Updated dependencies [6f88bea]
+  - @timlassiter11/yatl@1.2.3
+
 ## 1.0.4
 
 ### Patch Changes

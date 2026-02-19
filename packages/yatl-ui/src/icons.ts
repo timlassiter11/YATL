@@ -9,6 +9,19 @@ export const moonIcon = svg`
   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
 `;
 
+export const sunMoonIcon = svg`
+  <line x1="12" y1="2" x2="12" y2="4" />
+  <line x1="12" y1="20" x2="12" y2="22" />
+  
+  <line x1="4.93" y1="4.93" x2="6.34" y2="6.34" />
+  <line x1="2" y1="12" x2="4" y2="12" />
+  <line x1="4.93" y1="19.07" x2="6.34" y2="17.66" />
+
+  <path d="M12 18 a 6 6 0 0 1 0 -12" />
+
+  <path d="M12 6 a 6 6 0 0 1 0 12 a 8 8 0 0 0 0 -12 z" fill="currentColor" stroke="none" />
+`;
+
 export const trashIcon = svg`
   <path d="M3 6h18" />
   <path d="M19 6v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6" />
@@ -18,7 +31,8 @@ export const trashIcon = svg`
 `;
 
 export const closeIcon = svg`
-  <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+  <line x1="4" y1="4" x2="20" y2="20" stroke-linecap="round" stroke-linejoin="round" />
+  <line x1="20" y1="4" x2="4" y2="20" stroke-linecap="round" stroke-linejoin="round" />
 `;
 
 export const chevronDownIcon = svg`
@@ -49,9 +63,35 @@ export const spinnerIcon = svg`
   <circle part="indicator" cx="12" cy="12" r="10" stroke-linecap="round" pathLength="100" ></circle>
 `;
 
+export const expandIcon = svg`
+  <path d="M3 8V3h5" />
+  <path d="M21 8V3h-5" />
+  <path d="M21 16v5h-5" />
+  <path d="M3 16v5h5" />
+`;
+
+export const contractIcon = svg`
+  <path d="M8 3v5H3" />
+  <path d="M16 3v5h5" />
+  <path d="M16 21v-5h5" />
+  <path d="M8 21v-5H3" />
+`;
+
+export const shareIcon = svg`
+  <circle cx="18" cy="5" r="3" />
+  <circle cx="6" cy="12" r="3" />
+  <circle cx="18" cy="19" r="3" />
+  
+  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+`;
+
 export const icons: Record<string, TemplateResult<2>> = {
+  expand: expandIcon,
+  contract: contractIcon,
   sun: sunIcon,
   moon: moonIcon,
+  'sun-moon': sunMoonIcon,
   trash: trashIcon,
   close: closeIcon,
   'chevron-down': chevronDownIcon,
@@ -60,4 +100,5 @@ export const icons: Record<string, TemplateResult<2>> = {
   download: downloadIcon,
   reload: reloadIcon,
   spinner: spinnerIcon,
+  share: shareIcon,
 };

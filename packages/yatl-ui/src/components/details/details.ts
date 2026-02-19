@@ -19,10 +19,17 @@ export class YatlDetails extends YatlBase {
   protected override willUpdate(
     changedProperties: PropertyValues<YatlDetails>,
   ): void {
-    if (changedProperties.has('open') && this.open && this.name) {
-      document
-        .querySelectorAll<YatlDetails>(`yatl-details[name="${this.name}"]`)
-        .forEach(element => (element.open = false));
+    if (changedProperties.has('open')) {
+      if (this.open && this.name) {
+        // Close others
+        (this.getRootNode() as Document | ShadowRoot)
+          .querySelectorAll<YatlDetails>(`yatl-details[name="${this.name}"]`)
+          .forEach(element => {
+            if (element !== this && element.open) {
+              element.open = false;
+            }
+          });
+      }
     }
   }
 

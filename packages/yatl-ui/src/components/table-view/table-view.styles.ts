@@ -22,8 +22,13 @@ export default css`
     --column-gap: var(--yatl-table-view-column-gap, var(--yatl-spacing-l));
   }
 
+  .scroller {
+    position: relative;
+  }
+
   yatl-loading-overlay {
     --yatl-loading-overlay-bg: var(--table-bg);
+    z-index: 1;
   }
 
   [part='view'] {

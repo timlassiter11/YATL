@@ -38,8 +38,11 @@ export class YatlNumberInput extends YatlFormControl<number> {
   }
 
   protected renderInput() {
+    // Only use the display value if the user isn't editing.
+    // Don't want to cut off part of the number and then submit that.
+    const editing = !this.disabled && !this.readonly;
     let value = this.formValue;
-    if (this.value !== undefined && this.displayPrecision) {
+    if (!editing && this.value !== undefined && this.displayPrecision) {
       const formatter = Intl.NumberFormat(undefined, {
         maximumFractionDigits: this.displayPrecision,
         minimumFractionDigits: this.displayPrecision,
@@ -51,7 +54,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
       <input
         part="input"
         name=${this.name}
-        type="number"
+        type=${editing ? 'number' : 'text'}
         size=${this.size}
         .value=${live(value)}
         min=${ifDefined(this.min)}

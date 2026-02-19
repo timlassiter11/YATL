@@ -2,6 +2,7 @@ export * from './button/button';
 export * from './button-group/button-group';
 export * from './card/card';
 export * from './confirmation-dialog/confirmation-dialog';
+export * from './details/details';
 export * from './dialog/dialog';
 export * from './dropdown/dropdown';
 export * from './icon/icon';

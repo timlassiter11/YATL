@@ -24,6 +24,11 @@ export default css`
       var(--yatl-spacing-l)
     );
 
+    --dialog-footer-actions-gap: var(
+      --yatl-dialog-footer-actions-gap,
+      var(--yatl-spacing-s)
+    );
+
     --dialog-show-duration: var(--yatl-dialog-show-duration, 250ms);
     --dialog-hide-duration: var(--yatl-dialog-hide-duration, 250ms);
     --dialog-pulse-duration: var(--yatl-dialog-pulse-duration, 250ms);
@@ -115,6 +120,7 @@ export default css`
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
+    gap: var(--dialog-footer-actions-gap);
   }
 
   [part='body'] {

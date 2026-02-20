@@ -332,13 +332,13 @@ async function showDialog(title: string, body: string) {
   const dialog = document.createElement('yatl-confirmation-dialog');
 
   const acceptButton = document.createElement('yatl-button');
-  acceptButton.slot = 'actions';
+  acceptButton.slot = 'footer-actions';
   acceptButton.color = 'danger';
   acceptButton.innerText = 'Yes';
   acceptButton.onclick = () => dialog.accept();
 
   const rejectButton = document.createElement('yatl-button');
-  rejectButton.slot = 'actions';
+  rejectButton.slot = 'footer-actions';
   rejectButton.color = 'muted';
   rejectButton.innerText = 'No';
   rejectButton.onclick = () => dialog.reject();

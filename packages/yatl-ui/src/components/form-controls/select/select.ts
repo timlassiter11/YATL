@@ -38,9 +38,9 @@ export class YatlSelect extends YatlFormControl<
   public get value() {
     return this.multi ? [...this._value] : this._value[0];
   }
-  @property({ attribute: false })
+  @property({ type: String, attribute: false })
   public set value(value) {
-    this._value = typeof value === 'string' ? [value] : [...value];
+    this._value = Array.isArray(value) ? [...value] : [String(value)];
     this.updateSelectedOptions();
     this.setFormValue(this.formValue);
   }

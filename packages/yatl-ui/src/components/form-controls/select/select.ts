@@ -210,6 +210,19 @@ export class YatlSelect extends YatlFormControl<
     }
 
     const item = event.item;
+    // this handles a case where options are slotted later
+    // and don't fire the slotchange event.
+    if (!item.checkable) {
+      item.checkable = true;
+      item.checked = true;
+    }
+
+    if (!item.checked && this.required) {
+      item.checked = true;
+      event.preventDefault();
+      return;
+    }
+
     this.toggleOption(item.value, item.checked);
     this.dispatchChange();
   }

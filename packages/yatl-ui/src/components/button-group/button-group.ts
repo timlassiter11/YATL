@@ -1,5 +1,5 @@
 import { html } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { customElement, query } from 'lit/decorators.js';
 import { getEffectiveChildren } from '../../utils';
 import { YatlBase } from '../base/base';
 import { YatlButton } from '../button/button';
@@ -10,6 +10,9 @@ import styles from './button-group.styles';
 export class YatlButtonGroup extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  @query('slot')
+  private defaultSlot!: HTMLSlotElement;
+
   protected override render() {
     return html`
       <div part="base">
@@ -18,9 +21,8 @@ export class YatlButtonGroup extends YatlBase {
     `;
   }
 
-  private handleSlotChange(event: Event) {
-    const slot = event.target as HTMLSlotElement;
-    const elements = getEffectiveChildren(slot);
+  private handleSlotChange() {
+    const elements = getEffectiveChildren(this.defaultSlot);
     const count = elements.length;
     elements.forEach((element, index) => {
       // This is annoying but it handles when dropdowns are in the button group.

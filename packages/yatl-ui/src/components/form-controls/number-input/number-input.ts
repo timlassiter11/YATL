@@ -13,7 +13,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
   public placeholder = '';
 
   @property({ type: Number })
-  public size = 4;
+  public size?: number;
 
   @property({ type: Number })
   public min?: number;
@@ -55,11 +55,11 @@ export class YatlNumberInput extends YatlFormControl<number> {
         part="input"
         name=${this.name}
         type=${editing ? 'number' : 'text'}
-        size=${this.size}
-        .value=${live(value)}
+        size=${ifDefined(this.size)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
         step=${ifDefined(this.step)}
+        .value=${live(value)}
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}

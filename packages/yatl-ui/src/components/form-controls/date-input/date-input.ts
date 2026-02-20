@@ -15,7 +15,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
   public placeholder = '';
 
   @property({ type: Number })
-  public size = 10;
+  public size?: number;
 
   @property({ converter: dateConverter, reflect: true })
   public min?: Date;
@@ -59,11 +59,11 @@ export class YatlDateInput extends YatlFormControl<Date> {
         part="input"
         name=${this.name}
         type="date"
-        size=${this.size}
-        .value=${live(this.formValue ?? '')}
+        size=${ifDefined(this.size)}
         min=${ifDefined(min)}
         max=${ifDefined(max)}
         placeholder=${this.placeholder}
+        .value=${live(this.formValue ?? '')}
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}

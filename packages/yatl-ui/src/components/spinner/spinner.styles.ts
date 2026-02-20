@@ -14,7 +14,8 @@ export default css`
     );
     --spinner-track-width: var(--yatl-spinner-track-width, 3px);
     --spinner-indicator-width: var(--yatl-spinner-indicator-width, 3px);
-    --spinner-indicator-length: var(--yatl--spinner-indicator-length, 25);
+    /* Firefox requires a unit so use px */
+    --spinner-indicator-length: var(--yatl--spinner-indicator-length, 25px);
 
     width: var(--spinner-size);
     height: var(--spinner-size);
@@ -47,7 +48,7 @@ export default css`
         25% colored stroke, 75% empty gap.
       */
     stroke-dasharray: var(--spinner-indicator-length)
-      calc(100 - var(--spinner-indicator-length));
+      calc(100px - var(--spinner-indicator-length));
   }
 
   @keyframes spin {

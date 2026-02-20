@@ -37,6 +37,7 @@ export default css`
   }
 
   :host([inline]) {
+    display: flex;
     flex-direction: row;
     align-items: flex-start;
     gap: var(--yatl-spacing-s);
@@ -105,8 +106,13 @@ export default css`
   textarea,
   input {
     height: 100%;
-    min-width: 0px;
-    flex: 1 1 auto;
+
+    width: 100%;
+    min-width: 0;
+
+    flex: 1 1 0%;
+
+    box-sizing: border-box;
 
     margin: 0px;
     padding: 0px;
@@ -123,6 +129,10 @@ export default css`
     cursor: inherit;
     font: inherit;
     transition: inherit;
+  }
+
+  input {
+    min-width: 0;
   }
 
   [part='hint'] {

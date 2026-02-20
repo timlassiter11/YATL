@@ -110,7 +110,14 @@ export class YatlSelect extends YatlFormControl<
     const selectedOption = this.getSelectedOptions().at(0);
     const displayValue = selectedOption?.label;
     return html`
-      <span part="input">${displayValue ?? this.placeholder}</span>
+      <input
+        part="input"
+        type="text"
+        value=${displayValue ?? ''}
+        placeholder=${this.placeholder}
+        ?disabled=${this.disabled}
+        ?readonly=${this.readonly}
+      />
     `;
   }
 

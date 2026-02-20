@@ -86,6 +86,11 @@ export const shareIcon = svg`
   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
 `;
 
+export const linkIcon = svg`
+  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+`;
+
 export const icons: Record<string, TemplateResult<2>> = {
   expand: expandIcon,
   contract: contractIcon,
@@ -101,4 +106,5 @@ export const icons: Record<string, TemplateResult<2>> = {
   reload: reloadIcon,
   spinner: spinnerIcon,
   share: shareIcon,
+  link: linkIcon,
 };

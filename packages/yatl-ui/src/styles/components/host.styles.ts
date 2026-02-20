@@ -21,4 +21,8 @@ export default css`
     --button-radius: 0 var(--button-group-radius) var(--button-group-radius) 0;
     margin-right: 0;
   }
+
+  :host([data-group-position='single']) {
+    --button-radius: var(--button-group-radius);
+  }
 `;

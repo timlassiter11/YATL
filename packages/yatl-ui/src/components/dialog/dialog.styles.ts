@@ -120,6 +120,9 @@ export default css`
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
+  }
+
+  [part='footer-actions'] {
     gap: var(--dialog-footer-actions-gap);
   }
 

@@ -4,6 +4,7 @@ export * from './card/card';
 export * from './confirmation-dialog/confirmation-dialog';
 export * from './details/details';
 export * from './dialog/dialog';
+export * from './divider/divider';
 export * from './dropdown/dropdown';
 export * from './icon/icon';
 export * from './loading-overlay/loading-overlay';

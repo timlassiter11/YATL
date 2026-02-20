@@ -185,6 +185,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     for (const column of columns) {
       this._columnDefinitionMap.set(column.field, column);
     }
+    this.createMetadata();
     this.requestUpdate('columns');
   }
 

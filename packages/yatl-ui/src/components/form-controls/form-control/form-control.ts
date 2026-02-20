@@ -1,5 +1,5 @@
 import { html, LitElement, PropertyValues } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { HasSlotController } from '../../../utils/slot-controller';
 import { classMap } from 'lit/directives/class-map.js';
 import { YatlBase } from '../../base/base';
@@ -32,6 +32,8 @@ export abstract class YatlFormControl<
     'error',
   );
 
+  // Used to report validity
+  @state() private currentValidationText = '';
   protected readonly internals: ElementInternals;
 
   /** Indicates if the user made any changes */
@@ -53,6 +55,12 @@ export abstract class YatlFormControl<
 
   @property({ type: String })
   public hint = '';
+
+  @property({ type: String, attribute: 'error-text' })
+  public errorText = '';
+
+  @property({ type: String, attribute: 'required-text' })
+  public requiredText = 'This field is required';
 
   @property({ type: Boolean, reflect: true })
   public disabled = false;
@@ -79,23 +87,6 @@ export abstract class YatlFormControl<
    */
   protected isValidChangeEvent(_event: Event): boolean | void {}
 
-  private _errorText = '';
-  @property({ type: String, attribute: 'error-text' })
-  public get errorText() {
-    return this._errorText || this.validationMessage;
-  }
-
-  @property({ type: String, attribute: 'required-text' })
-  public requiredText = 'This field is required';
-
-  public set errorText(newValue) {
-    const oldValue = this.errorText;
-    if (newValue === oldValue) return;
-    this._errorText = newValue;
-    this.updateValidity();
-    this.requestUpdate('errorText', oldValue);
-  }
-
   protected get hasLabel() {
     return this.label ? true : this.slotController.test('label');
   }
@@ -105,7 +96,11 @@ export abstract class YatlFormControl<
   }
 
   protected get hasError() {
-    return this.errorText ? true : this.slotController.test('error');
+    return (
+      this.currentValidationText ||
+      this.errorText ||
+      this.slotController.test('error')
+    );
   }
 
   constructor() {
@@ -193,9 +188,14 @@ export abstract class YatlFormControl<
   }
 
   protected renderErrorText(): unknown {
+    const error = this.errorText || this.currentValidationText;
+    const classes = {
+      'has-error': this.hasError,
+    };
+
     return html`
-      <slot name="error" class=${classMap({ 'has-error': this.hasError })}>
-        <span part="error">${this.errorText}</span>
+      <slot name="error">
+        <span part="error" class=${classMap(classes)}>${error}</span>
       </slot>
     `;
   }
@@ -253,7 +253,10 @@ export abstract class YatlFormControl<
   public reportValidity() {
     const valid = this.checkValidity();
     if (!valid) {
+      this.currentValidationText = this.validationMessage;
       this.focus();
+    } else {
+      this.currentValidationText = '';
     }
     return valid;
   }
@@ -269,9 +272,9 @@ export abstract class YatlFormControl<
   }
 
   private updateValidity() {
-    if (this._errorText) {
+    if (this.errorText) {
       // If the user set an error, that will always take precedence.
-      this.setValidity({ customError: true }, this._errorText);
+      this.setValidity({ customError: true }, this.errorText);
     } else if (this.required && !this.value) {
       this.setValidity({ valueMissing: true }, this.requiredText);
     } else if (this.formControl && !this.formControl.checkValidity()) {

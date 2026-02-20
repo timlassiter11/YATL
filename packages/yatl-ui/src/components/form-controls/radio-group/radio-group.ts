@@ -44,7 +44,7 @@ export class YatlRadioGroup extends YatlFormControl<string> {
 
       const defaultValue = defaultChild?.getAttribute('value');
       if (defaultValue) {
-        this.value = defaultValue;
+        this.setAttribute('value', defaultValue);
       }
 
       for (const child of children) {

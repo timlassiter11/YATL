@@ -1,4 +1,4 @@
-import { html, nothing } from 'lit';
+import { html, nothing, PropertyValueMap } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import styles from './button.styles';
 import { YatlFormControl } from '../form-controls/form-control/form-control';
@@ -34,8 +34,11 @@ export class YatlButton extends YatlFormControl {
   @property({ type: String, reflect: true })
   public color: YatlButtonColor = 'neutral';
 
-  @property({ type: Boolean, reflect: true })
-  public loading = false;
+  @property({ type: String, reflect: true })
+  public state: 'idle' | 'loading' | 'success' = 'idle';
+
+  @property({ type: Number, attribute: 'success-duration' })
+  public successDuration = 2000;
 
   /** Used to override the form owner's `action` attribute. */
   @property({ attribute: 'formaction' })
@@ -64,22 +67,43 @@ export class YatlButton extends YatlFormControl {
     return this.value;
   }
 
+  protected override willUpdate(
+    changedProperties: PropertyValueMap<YatlButton>,
+  ): void {
+    if (changedProperties.has('state')) {
+      if (this.state === 'success') {
+        setTimeout(() => (this.state = 'idle'), this.successDuration);
+      }
+    }
+  }
+
   protected override render() {
     return html`
       <button
         part="base"
         type=${this.type}
-        ?disabled=${this.disabled || this.loading}
-        aria-busy=${this.loading ? 'true' : 'false'}
-        aria-disabled=${this.loading ? 'true' : 'false'}
+        ?disabled=${this.disabled || this.state === 'loading'}
+        aria-busy=${this.state === 'loading' ? 'true' : 'false'}
+        aria-disabled=${this.state === 'loading' ? 'true' : 'false'}
         @click=${this.handleClick}
       >
         <slot name="start"></slot>
         <slot></slot>
         <slot name="end"></slot>
-        ${this.loading
-          ? html`<yatl-spinner part="spinner"></yatl-spinner>`
-          : nothing}
+        <div class="state-icon">
+          <yatl-spinner class="icon spinner" part="spinner"></yatl-spinner>
+          <svg
+            class="icon checkmark"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
       </button>
     `;
   }

@@ -1,5 +1,27 @@
 # @timlassiter11/yatl-ui
 
+## 1.0.6
+
+### Patch Changes
+
+- a7bcb4e: Added new link icon
+- e24dd7a: Improved width handling of all form controls
+- d09ec8b: Fixed radio group not honoring initial checked state of children
+- e6ed560: Fixed select ignoring first selection
+- 658ee18: Added default gap to dialog footer actions
+- a2c3a24: Added new divider component
+- b898052: Moved button state to spinner
+- 7320715: Fixed single element button groups not honoring radius
+- 9d4aa4a: Fixed spinner not animating in Firefox
+- 2b45b8b: Fixed form-control validation messages not showing
+- ad43ec1: Fixed error when setting the select value attribute to a number-like string. E.g. "-1"
+- 4ce8dee: Added new cancellable toggle request event for checkable options
+- 53499cf: Fixed dialog hide promise never resolving
+- b423a19: Fixed button group styling issues
+- 37ba8be: Added new state prop to button for idle, loading, and success
+- Updated dependencies [8b8cf2c]
+  - @timlassiter11/yatl@1.2.4
+
 ## 1.0.5
 
 ### Patch Changes

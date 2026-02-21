@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.2.4
+
+### Patch Changes
+
+- 8b8cf2c: Fixed search and sorting not working when controller data is set before columns
+
 ## 1.2.3
 
 ### Patch Changes

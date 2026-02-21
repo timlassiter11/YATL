@@ -23,6 +23,7 @@ export default css`
   }
 
   [part='base'] {
+    position: relative;
     box-sizing: border-box;
     width: 100%;
     height: 100%;
@@ -44,28 +45,10 @@ export default css`
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    display: grid;
   }
 
-  .icon {
-    grid-area: 1 / 1; /* Forces both icons into the exact same spot */
-    width: 1.2em;
-    height: 1.2em;
-    opacity: 0;
-    transform: scale(0.5); /* Start them shrunken */
-    transition: opacity 0.3s ease, transform 0.3s ease;
-  }
-
-  /* Set up the hidden stroke (24px is roughly the length of the checkmark path) */
-  .checkmark polyline {
-    stroke-dasharray: 24px;
-    stroke-dashoffset: 24px;
-  }
-
-  :host([state='idle']) {
-    .state-icon {
-      display: none;
-    }
+  ::slotted(*) {
+    transition: opacity 0.2s ease;
   }
 
   :host([state='loading']) {
@@ -73,34 +56,17 @@ export default css`
 
     [part='base'] {
       cursor: wait;
-      position: relative;
       opacity: 0.8;
     }
 
-    slot {
-      visibility: hidden;
-    }
-
-    .spinner {
-      opacity: 1;
-      transform: scale(1);
+    ::slotted(*) {
+      opacity: 0;
     }
   }
 
   :host([state='success']) {
-    slot {
-      visibility: hidden;
-    }
-
-    .checkmark {
-      opacity: 1;
-      transform: scale(1);
-      color: var(--yatl-color-success);
-    }
-    .checkmark polyline {
-      animation: draw-check 0.4s ease-out forwards;
-      /* Add a slight delay so the spinner fades out before the check draws */
-      animation-delay: 0.1s;
+    ::slotted(*) {
+      opacity: 0;
     }
   }
 
@@ -154,11 +120,5 @@ export default css`
     --button-text: var(--appearance-color);
     --button-bg: transparent;
     --button-border-width: 0;
-  }
-
-  @keyframes draw-check {
-    to {
-      stroke-dashoffset: 0;
-    }
   }
 `;

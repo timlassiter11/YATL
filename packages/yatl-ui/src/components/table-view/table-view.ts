@@ -7,6 +7,7 @@ import styles from './table-view.styles';
 import { UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
 import { YatlTableFetchContext, YatlTableFetchTask } from '../../types';
 import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
+import { SpinnerState } from '../spinner/spinner';
 
 @customElement('yatl-table-view')
 export class YatlTableView<
@@ -20,7 +21,7 @@ export class YatlTableView<
   });
 
   /** When the user requests a silent reload, show the loading icon in the button. */
-  @state() private isButtonLoading = false;
+  @state() private buttonState: SpinnerState = 'idle';
 
   /** Text to be display above the filters slot. */
   @property({ type: String })
@@ -143,8 +144,8 @@ export class YatlTableView<
         slot="button-group"
         title="Reload data"
         ?disabled=${this.loading}
-        state=${this.isButtonLoading ? 'loading' : 'idle'}
-        @click=${this.handleReloadClick}
+        state=${this.buttonState}
+        .action=${() => this.reloadData(true)}
       >
         <yatl-icon name="reload"></yatl-icon>
       </yatl-button>
@@ -154,7 +155,10 @@ export class YatlTableView<
   protected override renderBodyContents() {
     return html`
       ${super.renderBodyContents()}
-      <yatl-loading-overlay ?show=${this.loading}></yatl-loading-overlay>
+      <yatl-loading-overlay
+        ?show=${this.loading}
+        state=${this.loading ? 'loading' : 'idle'}
+      ></yatl-loading-overlay>
     `;
   }
 
@@ -179,7 +183,7 @@ export class YatlTableView<
     const fetchTask = this.fetchTask(context);
 
     if (context.options.silent) {
-      this.isButtonLoading = true;
+      this.buttonState = 'loading';
     } else {
       this.loading = true;
     }
@@ -191,7 +195,7 @@ export class YatlTableView<
       }
     } finally {
       this.loading = false;
-      this.isButtonLoading = false;
+      this.buttonState = 'success';
     }
   }
 }

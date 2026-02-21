@@ -1,8 +1,9 @@
-import { html, nothing, PropertyValueMap } from 'lit';
+import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import styles from './button.styles';
 import { YatlFormControl } from '../form-controls/form-control/form-control';
 import { YatlBase } from '../base/base';
+import { SpinnerState } from '../spinner/spinner';
 
 export type YatlButtonVariant = 'neutral' | 'outline' | 'plain';
 export type YatlButtonColor =
@@ -35,10 +36,13 @@ export class YatlButton extends YatlFormControl {
   public color: YatlButtonColor = 'neutral';
 
   @property({ type: String, reflect: true })
-  public state: 'idle' | 'loading' | 'success' = 'idle';
+  public state: SpinnerState = 'idle';
 
   @property({ type: Number, attribute: 'success-duration' })
   public successDuration = 2000;
+
+  @property({ attribute: false })
+  public action?: () => Promise<unknown>;
 
   /** Used to override the form owner's `action` attribute. */
   @property({ attribute: 'formaction' })
@@ -67,16 +71,6 @@ export class YatlButton extends YatlFormControl {
     return this.value;
   }
 
-  protected override willUpdate(
-    changedProperties: PropertyValueMap<YatlButton>,
-  ): void {
-    if (changedProperties.has('state')) {
-      if (this.state === 'success') {
-        setTimeout(() => (this.state = 'idle'), this.successDuration);
-      }
-    }
-  }
-
   protected override render() {
     return html`
       <button
@@ -90,19 +84,9 @@ export class YatlButton extends YatlFormControl {
         <slot name="start"></slot>
         <slot></slot>
         <slot name="end"></slot>
-        <div class="state-icon">
-          <yatl-spinner class="icon spinner" part="spinner"></yatl-spinner>
-          <svg
-            class="icon checkmark"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+        <yatl-spinner state=${
+          this.state
+        } class="state-icon" part="spinner"></yatl-spinner>
         </div>
       </button>
     `;
@@ -111,10 +95,27 @@ export class YatlButton extends YatlFormControl {
   // Satisfy the base class
   protected override renderInput() {}
 
-  private handleClick(event: MouseEvent) {
-    // We only need to hijack clicks if this is a
-    // form associated button that is not disabled.
-    if (this.disabled || this.type === 'button') {
+  private async handleClick(event: MouseEvent) {
+    if (this.disabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    // Only hijack clicks if this is a form associated button.
+    if (this.type === 'button') {
+      if (this.action) {
+        this.state = 'loading';
+        try {
+          await this.action();
+          this.state = 'success';
+          if (this.successDuration) {
+            setTimeout(() => (this.state = 'idle'), this.successDuration);
+          }
+        } catch (e) {
+          this.state = 'error';
+          throw e;
+        }
+      }
       return;
     }
 

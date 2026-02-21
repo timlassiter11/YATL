@@ -11,6 +11,15 @@ export type FormControl =
   | HTMLTextAreaElement
   | YatlFormControl;
 
+/**
+ * Abstract base class for all form-associated YATL components.
+ * Provides standard boilerplate for ElementInternals, validation, and layout.
+ * @slot label - The label content. Replaces the `label` property.
+ * @slot hint - Helper text displayed below the input. Replaces the `hint` property.
+ * @slot error - Error text displayed when the input is invalid. Replaces the `error-text` property.
+ * @slot start - Content to place at the start of the input block (e.g., icons).
+ * @slot end - Content to place at the end of the input block.
+ */
 export abstract class YatlFormControl<
     TData = string,
     TInput extends FormControl = HTMLInputElement,
@@ -42,35 +51,52 @@ export abstract class YatlFormControl<
   /** Used to associate the label with the control element */
   public readonly inputId = 'input';
 
-  @query('input')
-  protected formControl?: TInput;
-  @query('slot[name="label"]')
-  protected labelSlot?: HTMLSlotElement;
+  /**
+   * A reference to the internal native form control.
+   * Subclasses should ensure they either use an input
+   * element, or override this with their own query.
+   */
+  @query('input') protected formControl?: TInput;
 
+  @query('slot[name="label"]') protected labelSlot?: HTMLSlotElement;
+
+  /** The name of the form control, submitted as a pair with the control's value. */
   @property({ type: String, reflect: true })
   public name = '';
 
+  /** The label text displayed above or beside the input. */
   @property({ type: String })
   public label = '';
 
+  /** Helper text displayed below the input. */
   @property({ type: String })
   public hint = '';
 
+  /**
+   * Custom error message to display when the control is invalid.
+   * Setting this explicitly overrides native validation messages
+   * and marks the input as invalid for form submission.
+   */
   @property({ type: String, attribute: 'error-text' })
   public errorText = '';
 
+  /** The default message displayed when the `required` constraint is violated. */
   @property({ type: String, attribute: 'required-text' })
   public requiredText = 'This field is required';
 
+  /** Disables the form control, preventing interaction and form submission. */
   @property({ type: Boolean, reflect: true })
   public disabled = false;
 
+  /** Makes the form control readonly. The value can still be submitted. */
   @property({ type: Boolean, reflect: true })
   public readonly = false;
 
+  /** Requires the user to fill in the field before submitting the form. */
   @property({ type: Boolean, reflect: true })
   public required = false;
 
+  /** Renders the label and input on the same line. */
   @property({ type: Boolean, reflect: true })
   public inline = false;
 
@@ -87,14 +113,20 @@ export abstract class YatlFormControl<
    */
   protected isValidChangeEvent(_event: Event): boolean | void {}
 
+  /** Indicates if the user has provided a label via the property or slot*/
   protected get hasLabel() {
     return this.label ? true : this.slotController.test('label');
   }
 
+  /** Indicates if the user has provided a hint via the property or slot*/
   protected get hasHint() {
     return this.hint ? true : this.slotController.test('hint');
   }
 
+  /**
+   * Indicates if there is any error text to display.
+   * Includes user error messages, slotted error messages and validation messages.
+   */
   protected get hasError() {
     return (
       this.currentValidationText ||
@@ -200,11 +232,13 @@ export abstract class YatlFormControl<
     `;
   }
 
+  /**
+   * Subclasses must implement this to render their specific native form control.
+   * Ensure `id=${this.inputId}` is applied to the native input element.
+   */
   protected abstract renderInput(): unknown;
 
-  protected get hasErrorText() {
-    return !!this.errorText;
-  }
+  // --- ElementInternals Implementation ---
 
   public get labels() {
     return this.internals.labels;
@@ -264,6 +298,7 @@ export abstract class YatlFormControl<
   /** DON'T OVERRIDE THIS. Use onFormReset instead */
   public formResetCallback() {
     this.onFormReset();
+    this.setFormValue(this.formValue);
     this.hasUserInteracted = false;
   }
 

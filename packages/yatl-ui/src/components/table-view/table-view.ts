@@ -143,7 +143,7 @@ export class YatlTableView<
         slot="button-group"
         title="Reload data"
         ?disabled=${this.loading}
-        ?loading=${this.isButtonLoading}
+        state=${this.isButtonLoading ? 'loading' : 'idle'}
         @click=${this.handleReloadClick}
       >
         <yatl-icon name="reload"></yatl-icon>

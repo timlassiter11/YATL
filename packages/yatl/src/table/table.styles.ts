@@ -23,10 +23,7 @@ export default css`
     --table-bg: var(--yatl-table-bg, var(--yatl-surface-1));
     --table-radius: var(--yatl-table-radius, var(--yatl-radius-m));
     --table-border-width: var(--yatl-table-border-width, 1px);
-    --table-border-color: var(
-      --yatl-table-border-color,
-      var(--yatl-border-color)
-    );
+    --table-border-color: var(--yatl-surface-3, var(--yatl-border-color));
 
     --table-header-text: var(--yatl-table-header-text, var(--yatl-text-1));
     --table-header-bg: var(

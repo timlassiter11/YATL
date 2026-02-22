@@ -58,13 +58,11 @@ export default css`
       cursor: wait;
       opacity: 0.8;
     }
-
-    ::slotted(*) {
-      opacity: 0;
-    }
   }
 
-  :host([state='success']) {
+  :host([state='loading']),
+  :host([state='success']),
+  :host([state='error']) {
     ::slotted(*) {
       opacity: 0;
     }

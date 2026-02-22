@@ -17,11 +17,12 @@ export class YatlSpinner extends YatlBase {
   public override render() {
     const spinnerIcon = icons['spinner'];
     const checkIcon = icons['check'];
+    const closeIcon = icons['close'];
     return html`
       <div part="base" role="status" aria-busy=${this.state === 'loading'}>
         <svg viewBox="0 0 24 24" fill="none">
           <!-- put check first so the animation looks better -->
-          ${checkIcon} ${spinnerIcon}
+          ${checkIcon} ${spinnerIcon} ${closeIcon}
         </svg>
         <span class="sr-only">Loading...</span>
       </div>

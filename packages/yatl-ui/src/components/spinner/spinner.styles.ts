@@ -17,8 +17,12 @@ export default css`
     /* Firefox requires a unit so use px */
     --spinner-indicator-length: var(--yatl--spinner-indicator-length, 25px);
     --spinner-transition-time: var(--yatl-spinner-transition-time, 0.2s);
+
     --check-width: var(--yatl-spinner-check-width, 2px);
     --check-color: var(--yatl-spinner-check-color, var(--yatl-color-success));
+
+    --error-width: var(--yatl-spinner-error-width, 2px);
+    --error-color: var(--yatl-spinner-error-color, var(--yatl-color-danger));
 
     width: var(--spinner-size);
     height: var(--spinner-size);
@@ -46,12 +50,12 @@ export default css`
     border-width: 0;
   }
 
-  [part='track'] {
+  .track {
     stroke: var(--spinner-track-color);
     stroke-width: var(--spinner-track-width);
   }
 
-  [part='indicator'] {
+  .indicator {
     animation: spin 1s linear infinite;
     stroke: var(--spinner-indicator-color);
     stroke-width: var(--spinner-indicator-width);
@@ -65,8 +69,7 @@ export default css`
       calc(100px - var(--spinner-indicator-length));
   }
 
-  [part='track'],
-  [part='indicator'] {
+  .spinner {
     opacity: 0;
     scale: 0;
     transform: rotate(90deg);
@@ -75,7 +78,7 @@ export default css`
       scale var(--spinner-transition-time) ease;
   }
 
-  [part='check'] {
+  .check {
     opacity: 0;
     stroke: var(--check-color);
     stroke-width: var(--check-width);
@@ -84,23 +87,38 @@ export default css`
     transition: opacity 0.4s ease, stroke-dashoffset 0.4s ease-in-out;
   }
 
+  .close {
+    opacity: 0;
+    stroke: var(--error-color);
+    stroke-width: var(--error-width);
+    stroke-dasharray: 100px;
+    stroke-dashoffset: 100px;
+    transition: opacity 0.4s ease, stroke-dashoffset 0.4s ease-in-out;
+  }
+
   :host([state='loading']) {
-    [part='track'] {
+    .track {
       opacity: 0.25;
       scale: 1;
     }
 
-    [part='indicator'] {
+    .indicator {
       opacity: 1;
       scale: 1;
     }
   }
 
   :host([state='success']) {
-    [part='check'] {
+    .check {
       opacity: 1;
       stroke-dashoffset: 0px;
-      color: var(--check-color);
+    }
+  }
+
+  :host([state='error']) {
+    .close {
+      opacity: 1;
+      stroke-dashoffset: 0px;
     }
   }
 

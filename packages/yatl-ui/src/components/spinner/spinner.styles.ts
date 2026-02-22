@@ -127,7 +127,7 @@ export default css`
       opacity: 1;
       scale: 1;
       stroke-dashoffset: 0px;
-      animation: shake-x 1s linear;
+      animation: shake-x 0.5s linear;
       animation-delay: var(--spinner-transition-time);
     }
   }
@@ -147,16 +147,16 @@ export default css`
       transform: translateX(0%);
     }
     20% {
-      transform: translateX(min(-2%, -2px));
+      transform: translateX(max(-2%, -2px));
     }
     40% {
-      transform: translateX(min(2%, 2px));
+      transform: translateX(max(2%, 2px));
     }
     60% {
-      transform: translateX(min(-2%, -2px));
+      transform: translateX(max(-2%, -2px));
     }
     80% {
-      transform: translateX(min(2%, 2px));
+      transform: translateX(max(2%, 2px));
     }
   }
 `;

@@ -86,22 +86,37 @@ export function* activeElements(
 export async function animateWithClass(
   element: HTMLElement,
   className: string,
+  animationName?: string,
+  timeout = 350,
+) {
+  const promise = getAnimationPromise(element, animationName, timeout);
+  if (!element.classList.contains(className)) {
+    element.classList.remove(className);
+    element.classList.add(className);
+  }
+  return await promise;
+}
+
+export async function getAnimationPromise(
+  element: HTMLElement,
+  animationName?: string,
   timeout = 350,
 ) {
   await new Promise<void>(resolve => {
     const controller = new AbortController();
     const { signal } = controller;
 
-    if (element.classList.contains(className)) {
-      return;
-    }
-    element.classList.remove(className);
-    element.classList.add(className);
-
     let timer = 0;
-    const onEnd = () => {
+    const onEnd = (event?: AnimationEvent) => {
+      // No event means the timeout triggered so we want to abort.
+      // If the user provided an animation name, only cancel if it matches the event.
+      if (!event || (animationName && animationName !== event.animationName)) {
+        return;
+      }
+
       clearTimeout(timer);
-      element.classList.remove(className);
+      element.removeEventListener('animationend', onEnd);
+      element.removeEventListener('animationcancel', onEnd);
       resolve();
       controller.abort();
     };
@@ -110,7 +125,7 @@ export async function animateWithClass(
       onEnd();
     }, timeout);
 
-    element.addEventListener('animationend', onEnd, { once: true, signal });
-    element.addEventListener('animationcancel', onEnd, { once: true, signal });
+    element.addEventListener('animationend', onEnd, { signal });
+    element.addEventListener('animationcancel', onEnd, { signal });
   });
 }

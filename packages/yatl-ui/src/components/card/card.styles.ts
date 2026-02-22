@@ -35,14 +35,26 @@ export default css`
       var(--card-border-width)
     );
 
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: 100%;
+
     color: var(--card-text);
     background-color: var(--card-bg);
     border-width: var(--card-border-width);
     border-style: var(--card-border-style);
     border-color: var(--card-border-color);
     border-radius: var(--card-border-radius);
+  }
+
+  [part='body'] {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   [part='header'],
@@ -65,6 +77,8 @@ export default css`
     font-size: var(--card-footer-font-size);
     font-weight: var(--card-footer-font-weight);
     padding: var(--card-footer-padding);
+    /** Force the footer to the bottom */
+    margin-top: auto;
     border-block-start: var(--card-footer-border-width) var(--card-border-style)
       var(--card-border-color);
   }

@@ -1,5 +1,13 @@
 # @timlassiter11/yatl
 
+## 1.2.3
+
+### Patch Changes
+
+- 847e4ad: Fixed striped rows jumping when scrolling
+- 7b0a774: Fixed inconsistent row borders
+- 6f88bea: Allow row and cell parts callbacks to not return anything
+
 ## 1.2.2
 
 ### Patch Changes

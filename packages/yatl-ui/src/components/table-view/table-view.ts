@@ -6,6 +6,8 @@ import { getTableContext } from '../../context';
 import styles from './table-view.styles';
 import { UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
 import { YatlTableFetchContext, YatlTableFetchTask } from '../../types';
+import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
+import { SpinnerState } from '../spinner/spinner';
 
 @customElement('yatl-table-view')
 export class YatlTableView<
@@ -19,29 +21,35 @@ export class YatlTableView<
   });
 
   /** When the user requests a silent reload, show the loading icon in the button. */
-  @state() private isButtonLoading = false;
+  @state() private buttonState: SpinnerState = 'idle';
 
   /** Text to be display above the filters slot. */
   @property({ type: String })
   public filtersLabel = 'Filters';
 
   /**
+   * Toggles the visibility of the left filters pane and header. Defaults to `false`.
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'hide-filters' })
+  public hideFilters = false;
+
+  /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showColumnPicker = true;
+  @property({ type: Boolean, attribute: 'hide-column-picker' })
+  public hideColumnPicker = false;
 
   /**
    * Toggles the visibility of the CSV export button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showExportButton = true;
+  @property({ type: Boolean, attribute: 'hide-export-button' })
+  public hideExportButton = false;
 
   /**
    * Toggles the visibility of the reload button in the toolbar. Defaults to `true`.
    */
-  @property({ type: Boolean })
-  public showReloadButton = true;
+  @property({ type: Boolean, attribute: 'hide-reload-button' })
+  public hideReloadButton = false;
 
   /**
    * When set, displays the loading indicator inside the table.
@@ -90,7 +98,7 @@ export class YatlTableView<
 
   protected override render() {
     // No point in showing the reload button if there is no fetch task
-    const showReload = this.fetchTask && this.showReloadButton;
+    const showReload = this.fetchTask && !this.hideReloadButton;
 
     return html`
       <div part="view">
@@ -115,8 +123,8 @@ export class YatlTableView<
         </div>
         <yatl-toolbar
           part="toolbar"
-          ?showColumnPicker=${this.showColumnPicker}
-          ?showExportButton=${this.showExportButton}
+          ?hide-column-picker=${this.hideColumnPicker}
+          ?hide-export-button=${this.hideExportButton}
           .controller=${this.controller}
           @yatl-toolbar-export-click=${this.handleTableExportClick}
         >
@@ -136,8 +144,8 @@ export class YatlTableView<
         slot="button-group"
         title="Reload data"
         ?disabled=${this.loading}
-        ?loading=${this.isButtonLoading}
-        @click=${this.handleReloadClick}
+        state=${this.buttonState}
+        .action=${() => this.reloadData(true)}
       >
         <yatl-icon name="reload"></yatl-icon>
       </yatl-button>
@@ -147,12 +155,16 @@ export class YatlTableView<
   protected override renderBodyContents() {
     return html`
       ${super.renderBodyContents()}
-      <yatl-loading-overlay ?show=${this.loading}></yatl-loading-overlay>
+      <yatl-loading-overlay
+        ?show=${this.loading}
+        state=${this.loading ? 'loading' : 'idle'}
+      ></yatl-loading-overlay>
     `;
   }
 
   private handleClearFiltersClick() {
     this.filters = null;
+    this.dispatchEvent(new YatlTableViewFiltersClearEvent());
   }
 
   private handleReloadClick() {
@@ -171,7 +183,7 @@ export class YatlTableView<
     const fetchTask = this.fetchTask(context);
 
     if (context.options.silent) {
-      this.isButtonLoading = true;
+      this.buttonState = 'loading';
     } else {
       this.loading = true;
     }
@@ -183,7 +195,7 @@ export class YatlTableView<
       }
     } finally {
       this.loading = false;
-      this.isButtonLoading = false;
+      this.buttonState = 'success';
     }
   }
 }

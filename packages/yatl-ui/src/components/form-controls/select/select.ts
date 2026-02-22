@@ -8,7 +8,10 @@ import { YatlOption } from '../../option/option';
 import styles from './select.styles';
 
 @customElement('yatl-select')
-export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
+export class YatlSelect extends YatlFormControl<
+  string | string[],
+  YatlFormControl
+> {
   public static override styles = [...super.styles, styles];
 
   @property({ type: String })
@@ -21,7 +24,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   public maxTags = 3;
 
   @property({ type: Array, attribute: 'value' })
-  public defaultValue = [];
+  public defaultValue: string | string[] = '';
 
   @property({ type: Boolean, reflect: true })
   public open = false;
@@ -32,21 +35,19 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   // Mutable value types need to be copied
   // so the user's changes don't mess things up.
   private _value: string[] = [];
-  @property({ attribute: false })
   public get value() {
-    return [...this._value];
+    return this.multi ? [...this._value] : this._value[0];
   }
+  @property({ type: String, attribute: false })
   public set value(value) {
-    const oldValue = this._value;
-    this._value = [...value];
+    this._value = Array.isArray(value) ? [...value] : [String(value)];
     this.updateSelectedOptions();
     this.setFormValue(this.formValue);
-    this.requestUpdate('value', oldValue);
   }
 
   public get formValue() {
     const data = new FormData();
-    for (const value of this.value) {
+    for (const value of this._value) {
       data.append(this.name, value);
     }
     return data;
@@ -85,7 +86,12 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
         @yatl-dropdown-open=${this.handleDropdownToggle}
         @yatl-dropdown-close=${this.handleDropdownToggle}
       >
-        <div class="text-input" slot="trigger" tabindex="0">
+        <div
+          class="text-input"
+          slot="trigger"
+          tabindex="0"
+          @click=${this.handleTriggerClick}
+        >
           <div class="input-row">
             ${this.renderDisplayValue()}${this.renderTags()}
             ${this.renderClearIcon()} ${this.renderArrowIcon()}
@@ -104,7 +110,14 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     const selectedOption = this.getSelectedOptions().at(0);
     const displayValue = selectedOption?.label;
     return html`
-      <span part="input">${displayValue ?? this.placeholder}</span>
+      <input
+        part="input"
+        type="text"
+        value=${displayValue ?? ''}
+        placeholder=${this.placeholder}
+        ?disabled=${this.disabled}
+        ?readonly=${this.readonly}
+      />
     `;
   }
 
@@ -164,6 +177,13 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     `;
   }
 
+  private handleTriggerClick(event: Event) {
+    if (this.disabled || this.readonly) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+  }
+
   private handleTagDissmiss(option: YatlOption, event: Event) {
     (event.target as HTMLElement).remove();
     this.toggleOption(option.value, false);
@@ -197,6 +217,19 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     }
 
     const item = event.item;
+    // this handles a case where options are slotted later
+    // and don't fire the slotchange event.
+    if (!item.checkable) {
+      item.checkable = true;
+      item.checked = true;
+    }
+
+    if (!item.checked && this.required) {
+      item.checked = true;
+      event.preventDefault();
+      return;
+    }
+
     this.toggleOption(item.value, item.checked);
     this.dispatchChange();
   }
@@ -204,7 +237,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
   private updateSelectedOptions() {
     for (const option of this.getAllOptions()) {
       option.checkable = true;
-      option.checked = this.value.includes(option.value);
+      option.checked = this._value.includes(option.value);
     }
   }
 
@@ -212,7 +245,7 @@ export class YatlSelect extends YatlFormControl<string[], YatlFormControl> {
     const options = this.getAllOptions().filter(o => o.checked);
     const optionMap = new Map(options.map(o => [o.value, o]));
     // Map this.value to keep the order they were added
-    return this.value.map(v => optionMap.get(v)).filter(o => o !== undefined);
+    return this._value.map(v => optionMap.get(v)).filter(o => o !== undefined);
   }
 
   private getAllOptions() {

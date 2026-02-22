@@ -2,6 +2,7 @@ import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './option.styles';
+import { YatlOptionToggleRequest } from '../../events/option';
 
 @customElement('yatl-option')
 export class YatlOption extends YatlBase {
@@ -61,7 +62,13 @@ export class YatlOption extends YatlBase {
     }
 
     if (this.checkable) {
-      this.checked = !this.checked;
+      const newState = !this.checked;
+      const requestEvent = new YatlOptionToggleRequest(this.value, newState);
+      this.dispatchEvent(requestEvent);
+      if (requestEvent.defaultPrevented) {
+        return;
+      }
+      this.checked = newState;
     }
   };
 }

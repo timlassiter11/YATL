@@ -37,11 +37,16 @@ export default css`
   }
 
   :host([inline]) {
+    display: flex;
     flex-direction: row;
     align-items: flex-start;
     gap: var(--yatl-spacing-s);
   }
 
+  /** 
+  * Concrete classes should apply this to the input element
+  * or the element that is meant to look like the input.
+  */
   .text-input {
     display: flex;
     flex-direction: row;
@@ -61,7 +66,9 @@ export default css`
   }
 
   .text-input:focus,
-  .text:focus-visible {
+  .text:focus-visible,
+  .text-input:has(input:focus),
+  .text-input:has(input:focus-visible) {
     outline: var(--input-outline-width) solid var(--input-outline-color);
     outline-offset: calc(var(--input-outline-width) * -1);
   }
@@ -80,10 +87,32 @@ export default css`
     margin-block-end: var(--yatl-spacing-s);
   }
 
-  input:not([type='checkbox']):not([type='radio']) {
+  :host(:state(disabled)) .text-input {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  :host(:state(readonly)) .text-input {
+    opacity: 0.8;
+  }
+
+  :host(:state(disabled)) .text-input:focus,
+  :host(:state(readonly)) .text-input:focus,
+  :host(:state(disabled)) .text-input:focus-visible,
+  :host(:state(readonly)) .text-input:focus-visible {
+    outline: none;
+  }
+
+  textarea,
+  input {
     height: 100%;
-    min-width: 0px;
-    flex: 1 1 auto;
+
+    width: 100%;
+    min-width: 0;
+
+    flex: 1 1 0%;
+
+    box-sizing: border-box;
 
     margin: 0px;
     padding: 0px;
@@ -100,6 +129,10 @@ export default css`
     cursor: inherit;
     font: inherit;
     transition: inherit;
+  }
+
+  input {
+    min-width: 0;
   }
 
   [part='hint'] {

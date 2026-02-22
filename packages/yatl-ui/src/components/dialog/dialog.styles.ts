@@ -11,8 +11,8 @@ export default css`
       --yatl-dialog-border-color,
       var(--yatl-border-color)
     );
-    --dialog-width: var(--yatl-dialog-width, 500px);
     --dialog-padding: var(--yatl-dialog-padding, var(--yatl-spacing-s));
+    --dialog-margin: var(--yatl-dialog-margin, var(--yatl-spacing-l));
     --dialog-header-font-size: var(--yatl-dialog-header-font-size, medium);
     --dialog-header-font-weight: var(--yatl-dialog-header-font-weight, 700);
     --dialog-header-padding: var(
@@ -24,14 +24,26 @@ export default css`
       var(--yatl-spacing-l)
     );
 
+    --dialog-footer-actions-gap: var(
+      --yatl-dialog-footer-actions-gap,
+      var(--yatl-spacing-s)
+    );
+
     --dialog-show-duration: var(--yatl-dialog-show-duration, 250ms);
     --dialog-hide-duration: var(--yatl-dialog-hide-duration, 250ms);
     --dialog-pulse-duration: var(--yatl-dialog-pulse-duration, 250ms);
+
+    display: contents;
   }
 
   dialog {
     border: none;
     background: none;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: var(--dialog-margin);
 
     &.show {
       animation: show-dialog var(--dialog-show-duration) ease;
@@ -62,6 +74,15 @@ export default css`
     background-color: color-mix(in oklab, black 60%, transparent);
   }
 
+  :host([fullscreen]) dialog {
+    width: 100vw !important;
+    max-width: 100vw;
+    height: 100vh !important;
+    max-height: 100vh;
+    padding: 0;
+    margin: 0;
+  }
+
   yatl-card {
     --card-bg: var(--dialog-bg);
     --card-text: var(--dialog-text);
@@ -73,7 +94,13 @@ export default css`
     --card-header-font-weight: var(--dialog-header-font-weight);
     --card-header-padding: var(--dialog-header-padding);
 
+    flex: 1;
+    overflow: hidden;
     padding: var(--dialog-padding);
+  }
+
+  :host([fullscreen]) yatl-card {
+    --card-border-radius: 0;
   }
 
   [part='header'] {
@@ -93,10 +120,17 @@ export default css`
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--yatl-spacing-s);
+  }
+
+  [part='footer-actions'] {
+    gap: var(--dialog-footer-actions-gap);
   }
 
   [part='body'] {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
     padding: var(--dialog-body-padding);
   }
 

@@ -50,7 +50,7 @@ export default css`
 
   /* Need the specificity to override form control styles */
   .text-input > input[part='search'] {
-    flex: 0 0 0%;
+    flex: 0 0 fit-content;
     padding-left: var(--input-padding-left);
     padding-right: var(--input-padding-right);
     padding-top: var(--input-padding-top);

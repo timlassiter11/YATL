@@ -13,7 +13,7 @@ export type CellPartsCallback<T> = (
   value: unknown,
   field: NestedKeyOf<T>,
   row: T,
-) => string | string[];
+) => string | string[] | undefined;
 
 /**
  * Callback for providing the full contents of a rendered cell.

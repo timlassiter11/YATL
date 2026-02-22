@@ -1,5 +1,5 @@
 import { html, LitElement, PropertyValues } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { HasSlotController } from '../../../utils/slot-controller';
 import { classMap } from 'lit/directives/class-map.js';
 import { YatlBase } from '../../base/base';
@@ -11,6 +11,15 @@ export type FormControl =
   | HTMLTextAreaElement
   | YatlFormControl;
 
+/**
+ * Abstract base class for all form-associated YATL components.
+ * Provides standard boilerplate for ElementInternals, validation, and layout.
+ * @slot label - The label content. Replaces the `label` property.
+ * @slot hint - Helper text displayed below the input. Replaces the `hint` property.
+ * @slot error - Error text displayed when the input is invalid. Replaces the `error-text` property.
+ * @slot start - Content to place at the start of the input block (e.g., icons).
+ * @slot end - Content to place at the end of the input block.
+ */
 export abstract class YatlFormControl<
     TData = string,
     TInput extends FormControl = HTMLInputElement,
@@ -25,7 +34,6 @@ export abstract class YatlFormControl<
   };
   public static override styles = [...super.styles, styles];
 
-  protected readonly internals: ElementInternals;
   private slotController = new HasSlotController(
     this,
     'hint',
@@ -33,69 +41,98 @@ export abstract class YatlFormControl<
     'error',
   );
 
-  /**
-   * Used to associate the label with the control element
-   */
+  // Used to report validity
+  @state() private currentValidationText = '';
+  protected readonly internals: ElementInternals;
+
+  /** Indicates if the user made any changes */
+  protected hasUserInteracted = false;
+
+  /** Used to associate the label with the control element */
   public readonly inputId = 'input';
 
-  @query('input')
-  protected formControl?: TInput;
-  @query('slot[name="label"]')
-  protected labelSlot?: HTMLSlotElement;
+  /**
+   * A reference to the internal native form control.
+   * Subclasses should ensure they either use an input
+   * element, or override this with their own query.
+   */
+  @query('input') protected formControl?: TInput;
 
-  @property({ type: String })
+  @query('slot[name="label"]') protected labelSlot?: HTMLSlotElement;
+
+  /** The name of the form control, submitted as a pair with the control's value. */
+  @property({ type: String, reflect: true })
   public name = '';
 
+  /** The label text displayed above or beside the input. */
   @property({ type: String })
   public label = '';
 
+  /** Helper text displayed below the input. */
   @property({ type: String })
   public hint = '';
 
-  @property({ type: Boolean, reflect: true })
-  public disabled = false;
-
-  @property({ type: Boolean, reflect: true })
-  public readonly = false;
-
-  @property({ type: Boolean, reflect: true })
-  public required = false;
-
-  @property({ type: Boolean, reflect: true })
-  public inline = false;
-
-  public abstract value?: TData;
-  public abstract defaultValue?: TData;
-  public abstract formValue: string | File | FormData | null;
-  protected onValueChange(_event: Event): boolean | void {}
-
-  private _errorText = '';
+  /**
+   * Custom error message to display when the control is invalid.
+   * Setting this explicitly overrides native validation messages
+   * and marks the input as invalid for form submission.
+   */
   @property({ type: String, attribute: 'error-text' })
-  public get errorText() {
-    return this._errorText || this.validationMessage;
-  }
+  public errorText = '';
 
+  /** The default message displayed when the `required` constraint is violated. */
   @property({ type: String, attribute: 'required-text' })
   public requiredText = 'This field is required';
 
-  public set errorText(newValue) {
-    const oldValue = this.errorText;
-    if (newValue === oldValue) return;
-    this._errorText = newValue;
-    this.updateValidity();
-    this.requestUpdate('errorText', oldValue);
-  }
+  /** Disables the form control, preventing interaction and form submission. */
+  @property({ type: Boolean, reflect: true })
+  public disabled = false;
 
+  /** Makes the form control readonly. The value can still be submitted. */
+  @property({ type: Boolean, reflect: true })
+  public readonly = false;
+
+  /** Requires the user to fill in the field before submitting the form. */
+  @property({ type: Boolean, reflect: true })
+  public required = false;
+
+  /** Renders the label and input on the same line. */
+  @property({ type: Boolean, reflect: true })
+  public inline = false;
+
+  /** The live data value of this input */
+  public abstract value?: TData;
+  /** The value to revert back to on form reset */
+  public abstract defaultValue?: TData;
+  /** The vlue to be stored in the form data */
+  public abstract formValue: string | File | FormData | null;
+  /**
+   * Override to handle change and input events.
+   * Return false to ignore the provided event.
+   * Return true or nothing (void) to process them as changes.
+   */
+  protected isValidChangeEvent(_event: Event): boolean | void {}
+
+  /** Indicates if the user has provided a label via the property or slot*/
   protected get hasLabel() {
     return this.label ? true : this.slotController.test('label');
   }
 
+  /** Indicates if the user has provided a hint via the property or slot*/
   protected get hasHint() {
     return this.hint ? true : this.slotController.test('hint');
   }
 
+  /**
+   * Indicates if there is any error text to display.
+   * Includes user error messages, slotted error messages and validation messages.
+   */
   protected get hasError() {
-    return this.errorText ? true : this.slotController.test('error');
+    return (
+      this.currentValidationText ||
+      this.errorText ||
+      this.slotController.test('error')
+    );
   }
 
   constructor() {
@@ -110,17 +147,14 @@ export abstract class YatlFormControl<
     return root;
   }
 
-  public override connectedCallback(): void {
-    super.connectedCallback();
-    if (!this.value && this.defaultValue) {
-      this.value = this.defaultValue;
-    }
-    this.setFormValue(this.formValue);
-  }
-
   protected override willUpdate(
     changedProperties: PropertyValues<YatlFormControl<TData, TInput>>,
   ): void {
+    if (!this.hasUserInteracted && changedProperties.has('defaultValue')) {
+      this.value = this.defaultValue;
+      this.setFormValue(this.formValue);
+    }
+
     if (changedProperties.has('required')) {
       // Keep the underlying form control in sync before we update validity.
       // Our validity relies on the form control so if it is out of sync we get a false positive
@@ -134,10 +168,14 @@ export abstract class YatlFormControl<
       this.updateValidity();
     }
 
-    // Update form data when disabled state changes.
-    if (changedProperties.has('disabled')) {
+    // Update form data when disabled or readonly state changes.
+    if (
+      changedProperties.has('disabled') ||
+      changedProperties.has('readonly')
+    ) {
       this.setFormValue(this.formValue);
       this.toggleState('disabled', this.disabled);
+      this.toggleState('readonly', this.readonly);
     }
   }
 
@@ -182,18 +220,25 @@ export abstract class YatlFormControl<
   }
 
   protected renderErrorText(): unknown {
+    const error = this.errorText || this.currentValidationText;
+    const classes = {
+      'has-error': this.hasError,
+    };
+
     return html`
-      <slot name="error" class=${classMap({ 'has-error': this.hasError })}>
-        <span part="error">${this.errorText}</span>
+      <slot name="error">
+        <span part="error" class=${classMap(classes)}>${error}</span>
       </slot>
     `;
   }
 
+  /**
+   * Subclasses must implement this to render their specific native form control.
+   * Ensure `id=${this.inputId}` is applied to the native input element.
+   */
   protected abstract renderInput(): unknown;
 
-  protected get hasErrorText() {
-    return !!this.errorText;
-  }
+  // --- ElementInternals Implementation ---
 
   public get labels() {
     return this.internals.labels;
@@ -242,19 +287,29 @@ export abstract class YatlFormControl<
   public reportValidity() {
     const valid = this.checkValidity();
     if (!valid) {
+      this.currentValidationText = this.validationMessage;
       this.focus();
+    } else {
+      this.currentValidationText = '';
     }
     return valid;
   }
 
+  /** DON'T OVERRIDE THIS. Use onFormReset instead */
   public formResetCallback() {
+    this.onFormReset();
+    this.setFormValue(this.formValue);
+    this.hasUserInteracted = false;
+  }
+
+  protected onFormReset() {
     this.value = this.defaultValue;
   }
 
   private updateValidity() {
-    if (this._errorText) {
+    if (this.errorText) {
       // If the user set an error, that will always take precedence.
-      this.setValidity({ customError: true }, this._errorText);
+      this.setValidity({ customError: true }, this.errorText);
     } else if (this.required && !this.value) {
       this.setValidity({ valueMissing: true }, this.requiredText);
     } else if (this.formControl && !this.formControl.checkValidity()) {
@@ -278,11 +333,12 @@ export abstract class YatlFormControl<
   }
 
   private handleInputChange = (event: Event) => {
-    if (this.onValueChange?.(event)) {
+    if (this.isValidChangeEvent?.(event) === false) {
       return;
     }
 
     event.stopPropagation();
+    this.hasUserInteracted = true;
     this.setFormValue(this.formValue);
     this.dispatchEvent(
       new Event(event.type, { bubbles: true, composed: true }),

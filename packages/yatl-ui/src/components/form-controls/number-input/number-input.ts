@@ -13,13 +13,19 @@ export class YatlNumberInput extends YatlFormControl<number> {
   public placeholder = '';
 
   @property({ type: Number })
-  public size = 4;
+  public size?: number;
 
   @property({ type: Number })
   public min?: number;
 
   @property({ type: Number })
   public max?: number;
+
+  @property({ type: Number })
+  public step?: number;
+
+  @property({ type: Number })
+  public displayPrecision?: number;
 
   @property({ type: Number, attribute: 'value' })
   public defaultValue?: number;
@@ -28,19 +34,32 @@ export class YatlNumberInput extends YatlFormControl<number> {
   public value?: number;
 
   public get formValue() {
-    return this.value ? String(this.value) : '';
+    return this.value !== undefined ? String(this.value) : '';
   }
 
   protected renderInput() {
+    // Only use the display value if the user isn't editing.
+    // Don't want to cut off part of the number and then submit that.
+    const editing = !this.disabled && !this.readonly;
+    let value = this.formValue;
+    if (!editing && this.value !== undefined && this.displayPrecision) {
+      const formatter = Intl.NumberFormat(undefined, {
+        maximumFractionDigits: this.displayPrecision,
+        minimumFractionDigits: this.displayPrecision,
+      });
+      value = formatter.format(this.value);
+    }
+
     return html`
       <input
         part="input"
         name=${this.name}
-        type="number"
-        size=${this.size}
-        .value=${live(this.formValue)}
+        type=${editing ? 'number' : 'text'}
+        size=${ifDefined(this.size)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
+        step=${ifDefined(this.step)}
+        .value=${live(value)}
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}
@@ -48,7 +67,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
     `;
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = Number(input.value);
   }

@@ -1,6 +1,6 @@
 {
   "name": "@timlassiter11/yatl-ui",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "UI Components for @timlassiter11/yatl",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -16,6 +16,7 @@
   "sideEffects": [
     "./dist/index.mjs",
     "./dist/index.js",
+    "./src/components/**/*.ts",
     "./src/setup-context.ts"
   ],
   "keywords": [
@@ -51,7 +52,7 @@
     "provenance": true
   },
   "peerDependencies": {
-    "@timlassiter11/yatl": "^1.2.2",
+    "@timlassiter11/yatl": "^1.2.3",
     "lit": "^3.3.2"
   },
   "devDependencies": {

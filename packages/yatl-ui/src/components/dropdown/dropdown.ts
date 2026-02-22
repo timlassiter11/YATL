@@ -107,13 +107,15 @@ export class YatlDropdown extends YatlBase {
   }
 
   private handleItemClick(event: Event) {
-    const item = event.target;
-    if (!(item instanceof YatlOption)) {
+    const target = event.target as HTMLElement;
+    const item = target.closest('yatl-option');
+    if (!item) {
       return;
     }
 
     const selectEvent = new YatlDropdownItemSelectEvent(item);
-    if (this.dispatchEvent(selectEvent)) {
+    this.dispatchEvent(selectEvent);
+    if (!selectEvent.defaultPrevented) {
       this.open = false;
     }
   }
@@ -194,14 +196,14 @@ export class YatlDropdown extends YatlBase {
   // #region Utilities
   private addListeners() {
     this.startPositioning();
-    document.addEventListener('click', this.handleDocumentFocusin);
+    document.addEventListener('pointerdown', this.handleDocumentFocusin);
     document.addEventListener('focusin', this.handleDocumentFocusin);
     document.addEventListener('keydown', this.handleKeydown);
   }
 
   private removeListeners() {
     this.autoUpdateCleanup?.();
-    document.removeEventListener('click', this.handleDocumentFocusin);
+    document.removeEventListener('pointerdown', this.handleDocumentFocusin);
     document.removeEventListener('focusin', this.handleDocumentFocusin);
     document.removeEventListener('keydown', this.handleKeydown);
   }

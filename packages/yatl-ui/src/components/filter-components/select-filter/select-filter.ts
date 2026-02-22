@@ -6,7 +6,7 @@ import { YatlBaseFilter } from '../base-filter/base-filter';
 import styles from './select-filter.styles';
 
 @customElement('yatl-select-filter')
-export class YatlSelectFilter extends YatlBaseFilter<string[]> {
+export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
   public static override styles = [...super.styles, styles];
 
   @property({ type: String })

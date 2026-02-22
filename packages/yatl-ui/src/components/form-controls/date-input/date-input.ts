@@ -15,7 +15,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
   public placeholder = '';
 
   @property({ type: Number })
-  public size = 10;
+  public size?: number;
 
   @property({ converter: dateConverter, reflect: true })
   public min?: Date;
@@ -29,18 +29,20 @@ export class YatlDateInput extends YatlFormControl<Date> {
   // Mutable value types need to be copied
   // so the user's changes don't mess things up.
   private _value?: Date;
-  @property({ attribute: false })
   public get value() {
     return this._value ? new Date(this._value) : undefined;
   }
+  @property({ attribute: false })
   public set value(value) {
-    const oldValue = this._value;
-    if (oldValue?.getTime() === value?.getTime()) {
+    if (typeof value === 'string') {
+      value = dateConverter.fromAttribute(value);
+    }
+
+    if (this._value?.getTime() === value?.getTime()) {
       return;
     }
 
     this._value = value ? new Date(value) : undefined;
-    this.requestUpdate('value', oldValue);
   }
 
   public get formValue() {
@@ -57,11 +59,11 @@ export class YatlDateInput extends YatlFormControl<Date> {
         part="input"
         name=${this.name}
         type="date"
-        size=${this.size}
-        .value=${live(this.formValue ?? '')}
+        size=${ifDefined(this.size)}
         min=${ifDefined(min)}
         max=${ifDefined(max)}
         placeholder=${this.placeholder}
+        .value=${live(this.formValue ?? '')}
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}
@@ -69,7 +71,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
     `;
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = dateConverter.fromAttribute(input.value);
   }

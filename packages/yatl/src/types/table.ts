@@ -17,7 +17,7 @@ export type RowSelectionMethod = 'single' | 'multi';
  * @param row - The row data.
  * @returns the part string or list of part strings that should be added to this row.
  */
-export type RowPartsCallback<T> = (row: T) => string | string[];
+export type RowPartsCallback<T> = (row: T) => string | string[] | undefined;
 
 /**
  * Options used to configure what state information

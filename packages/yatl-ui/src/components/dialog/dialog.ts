@@ -8,25 +8,36 @@ import {
   YatlDialogShowEvent,
   YatlDialogShowRequest,
 } from '../../events';
-import { animateWithClass } from '../../utils';
+import { animateWithClass, getAnimationPromise } from '../../utils';
 
 @customElement('yatl-dialog')
 export class YatlDialog extends YatlBase {
   public static override styles = [...super.styles, styles];
 
   private _open = false;
-
   private _transitionPromise?: Promise<void>;
   public get transitionComplete() {
+    if (!this._transitionPromise && this.dialogElement) {
+      this._transitionPromise = getAnimationPromise(
+        this.dialogElement!,
+        'show-dialog',
+      );
+      this._transitionPromise.finally(() => {
+        this.dialogElement?.classList.remove('show', 'hide');
+        this._transitionPromise = getAnimationPromise(
+          this.dialogElement!,
+          'show-dialog',
+        );
+      });
+    }
     return this._transitionPromise;
-  }
-  private set transitionComplete(promise) {
-    promise?.then(() => (this._transitionPromise = undefined));
-    this._transitionPromise = promise;
   }
 
   public get isTransitioning() {
-    return !!this._transitionPromise;
+    return (
+      this.dialogElement?.classList.contains('show') ||
+      this.dialogElement?.classList.contains('hide')
+    );
   }
 
   @query('dialog')
@@ -37,6 +48,9 @@ export class YatlDialog extends YatlBase {
 
   @property({ type: Boolean })
   public modal = false;
+
+  @property({ type: Boolean, reflect: true })
+  public fullscreen = false;
 
   @property({ type: Boolean })
   public get open() {
@@ -79,7 +93,7 @@ export class YatlDialog extends YatlBase {
 
     this.dialogElement!.showModal();
     this.open = true;
-    this.transitionComplete = animateWithClass(this.dialogElement!, 'show');
+    this.dialogElement!.classList.add('show');
     await this.transitionComplete;
     const event = new YatlDialogShowEvent();
     this.dispatchEvent(event);
@@ -98,6 +112,7 @@ export class YatlDialog extends YatlBase {
   protected override render() {
     return html`
       <dialog
+        part="dialog"
         popover
         @cancel=${this.handleDialogCancel}
         @pointerdown=${this.handleDialogPointerdown}
@@ -150,8 +165,8 @@ export class YatlDialog extends YatlBase {
       return;
     }
 
-    this.transitionComplete = animateWithClass(this.dialogElement!, 'hide');
     this.open = false;
+    this.dialogElement!.classList.add('hide');
     await this.transitionComplete;
     this.dialogElement!.close();
 

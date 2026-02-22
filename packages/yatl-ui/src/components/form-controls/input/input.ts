@@ -22,7 +22,7 @@ export class YatlInput extends YatlFormControl<string> {
   public type: YatlInputType = 'text';
 
   @property({ type: Number })
-  public size = 15;
+  public size?: number;
 
   /** A regular expression pattern to validate input against. */
   @property()
@@ -62,7 +62,7 @@ export class YatlInput extends YatlFormControl<string> {
         part="input"
         name=${this.name}
         type=${this.type}
-        size=${this.size}
+        size=${ifDefined(this.size)}
         .value=${live(this.value)}
         value=${this.defaultValue}
         placeholder=${this.placeholder}
@@ -98,7 +98,7 @@ export class YatlInput extends YatlFormControl<string> {
     return html`<span part="label-count">${count}</span>`;
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     this.value = (event.target as HTMLInputElement).value;
   }
 }

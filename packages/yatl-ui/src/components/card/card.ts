@@ -34,7 +34,9 @@ export class YatlCard extends YatlBase {
         <slot name="header-end"></slot>
       </header>
 
-      <slot part="body"></slot>
+      <div part="body">
+        <slot></slot>
+      </div>
 
       <footer part="footer" class=${classMap({ 'has-footer': hasFooter })}>
         <slot name="footer-start"></slot>

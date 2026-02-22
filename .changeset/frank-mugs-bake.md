@@ -2,4 +2,4 @@
 '@timlassiter11/yatl-ui': patch
 ---
 
-Fixed types not being exported
+Fixed select ignoring first selection

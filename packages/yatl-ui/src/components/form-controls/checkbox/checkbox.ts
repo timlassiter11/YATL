@@ -76,7 +76,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
     return null;
   }
 
-  public override formResetCallback() {
+  protected override onFormReset() {
     this.checked = this.defaultChecked;
   }
 
@@ -117,7 +117,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
     this.setFormValue(this.formValue);
   }
 
-  protected override onValueChange(event: Event) {
+  protected override isValidChangeEvent(event: Event) {
     this.checked = (event.target as HTMLInputElement).checked;
   }
 

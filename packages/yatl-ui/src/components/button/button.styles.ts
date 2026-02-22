@@ -23,6 +23,7 @@ export default css`
   }
 
   [part='base'] {
+    position: relative;
     box-sizing: border-box;
     width: 100%;
     height: 100%;
@@ -39,25 +40,34 @@ export default css`
     border: var(--button-border-width) solid var(--button-border-color);
   }
 
-  :host([loading]) {
-    pointer-events: none;
-  }
-
-  :host([loading]) slot {
-    visibility: hidden;
-  }
-
-  :host([loading]) [part='base'] {
-    cursor: wait;
-    position: relative;
-    opacity: 0.8;
-  }
-
-  yatl-spinner {
+  .state-icon {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+  }
+
+  ::slotted(*) {
+    transition: opacity 0.2s ease;
+  }
+
+  :host([state='loading']) {
+    pointer-events: none;
+
+    [part='base'] {
+      cursor: wait;
+      opacity: 0.8;
+    }
+
+    ::slotted(*) {
+      opacity: 0;
+    }
+  }
+
+  :host([state='success']) {
+    ::slotted(*) {
+      opacity: 0;
+    }
   }
 
   :host([disabled]) [part='base'] {

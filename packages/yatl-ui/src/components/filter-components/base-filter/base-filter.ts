@@ -37,7 +37,6 @@ export class YatlBaseFilter<
     oldValue?.detach(this);
     controller?.attach(this);
     this._controller = controller;
-    this.updateFilterOptions();
     this.updateFilters();
     this.requestUpdate('controller', oldValue);
   }
@@ -55,7 +54,6 @@ export class YatlBaseFilter<
     }
 
     this._value = value;
-    this.updateFilterOptions();
     this.updateFilters();
     this.requestUpdate('value', oldValue);
   }
@@ -74,7 +72,7 @@ export class YatlBaseFilter<
     if (!this.controller || typeof this.controller.filters === 'function') {
       return undefined;
     }
-    return structuredClone(this.controller.filters);
+    return { ...this.controller.filters };
   }
 
   protected set filters(filters) {
@@ -91,13 +89,24 @@ export class YatlBaseFilter<
   }
 
   protected get options() {
-    return (
-      this._filterOptions ??
-      (this.controller?.getColumnFilterValues(
+    // No controller, just return an empty map.
+    if (!this.controller) {
+      return new Map<T, number>();
+    }
+
+    // If we don't have a value, we want to keep updating
+    // the current options. Once the user sets a value we need
+    // to lock in the current options so we don't filter ourselves.
+    if (!this.value || !this._filterOptions) {
+      const options = this.controller.getColumnFilterValues(
         this.field as NestedKeyOf<TData>,
-      ) as Map<T, number>) ??
-      new Map<T, number>()
-    );
+      ) as Map<T, number>;
+
+      // Sort options. This keeps them consistent when sorting
+      // changes and makes it easier for the user to find things.
+      this._filterOptions = new Map([...options.entries()].sort());
+    }
+    return this._filterOptions;
   }
 
   protected override willUpdate(changedProperties: PropertyValues) {
@@ -132,16 +141,5 @@ export class YatlBaseFilter<
     const filters = this.filters ?? {};
     setNestedValue(filters, this.field, this.value);
     this.filters = filters;
-  }
-
-  private updateFilterOptions() {
-    if (this.value === undefined) {
-      this._filterOptions = undefined;
-    } else if (this._filterOptions === undefined) {
-      // Lock in our filter options as soon as the user selects a value
-      this._filterOptions = this.controller?.getColumnFilterValues(
-        this.field as NestedKeyOf<TData>,
-      ) as Map<T, number>;
-    }
   }
 }

@@ -22,7 +22,7 @@ export class YatlSpinner extends YatlBase {
       <div part="base" role="status" aria-busy=${this.state === 'loading'}>
         <svg viewBox="0 0 24 24" fill="none">
           <!-- put check first so the animation looks better -->
-          ${checkIcon} ${spinnerIcon} ${closeIcon}
+          ${checkIcon} ${closeIcon} ${spinnerIcon}
         </svg>
         <span class="sr-only">Loading...</span>
       </div>

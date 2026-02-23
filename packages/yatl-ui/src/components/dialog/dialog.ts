@@ -16,7 +16,7 @@ export class YatlDialog extends YatlBase {
 
   private _open = false;
   private _transitionPromise?: Promise<void>;
-  public get transitionComplete() {
+  private get transitionComplete() {
     if (!this._transitionPromise && this.dialogElement) {
       this._transitionPromise = getAnimationPromise(
         this.dialogElement!,
@@ -24,10 +24,7 @@ export class YatlDialog extends YatlBase {
       );
       this._transitionPromise.finally(() => {
         this.dialogElement?.classList.remove('show', 'hide');
-        this._transitionPromise = getAnimationPromise(
-          this.dialogElement!,
-          'show-dialog',
-        );
+        this._transitionPromise = undefined;
       });
     }
     return this._transitionPromise;
@@ -52,7 +49,7 @@ export class YatlDialog extends YatlBase {
   @property({ type: Boolean, reflect: true })
   public fullscreen = false;
 
-  @property({ type: Boolean })
+  @property({ type: Boolean, reflect: true })
   public get open() {
     return this._open;
   }
@@ -113,7 +110,7 @@ export class YatlDialog extends YatlBase {
     return html`
       <dialog
         part="dialog"
-        popover
+        ?popover=${this.open}
         @cancel=${this.handleDialogCancel}
         @pointerdown=${this.handleDialogPointerdown}
       >

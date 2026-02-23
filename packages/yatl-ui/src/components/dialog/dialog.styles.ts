@@ -39,13 +39,12 @@ export default css`
   dialog {
     border: none;
     background: none;
-
-    display: flex;
     flex-direction: column;
 
     padding: var(--dialog-margin);
 
     &.show {
+      display: flex;
       animation: show-dialog var(--dialog-show-duration) ease;
 
       &::backdrop {

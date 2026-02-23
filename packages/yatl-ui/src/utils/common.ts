@@ -89,12 +89,10 @@ export async function animateWithClass(
   animationName?: string,
   timeout = 350,
 ) {
-  const promise = getAnimationPromise(element, animationName, timeout);
-  if (!element.classList.contains(className)) {
-    element.classList.remove(className);
-    element.classList.add(className);
-  }
-  return await promise;
+  element.classList.remove(className);
+  element.classList.add(className);
+  await getAnimationPromise(element, animationName, timeout);
+  element.classList.remove(className);
 }
 
 export async function getAnimationPromise(

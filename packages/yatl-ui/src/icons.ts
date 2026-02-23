@@ -100,6 +100,16 @@ export const linkIcon = svg`
   <path class="icon link" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
 `;
 
+export const leftArrow = svg`
+  <line class="icon left-arrow" x1="19" y1="12" x2="5" y2="12"></line>
+  <polyline class="icon left-arrow" points="12 19 5 12 12 5"></polyline>
+`;
+
+export const rightArrow = svg`
+  <line class="icon right-arrow" x1="5" y1="12" x2="19" y2="12"></line>
+  <polyline class="icon right-arrow" points="12 5 19 12 12 19"></polyline>
+`;
+
 export const icons: Record<string, TemplateResult<2>> = {
   expand: expandIcon,
   contract: contractIcon,
@@ -116,4 +126,6 @@ export const icons: Record<string, TemplateResult<2>> = {
   spinner: spinnerIcon,
   share: shareIcon,
   link: linkIcon,
+  'left-arrow': leftArrow,
+  'right-arrow': rightArrow,
 };

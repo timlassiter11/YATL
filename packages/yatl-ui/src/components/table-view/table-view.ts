@@ -145,7 +145,7 @@ export class YatlTableView<
         title="Reload data"
         ?disabled=${this.loading}
         state=${this.buttonState}
-        .action=${() => this.reloadData(true)}
+        @click=${() => this.reloadData(true)}
       >
         <yatl-icon name="reload"></yatl-icon>
       </yatl-button>
@@ -167,10 +167,6 @@ export class YatlTableView<
     this.dispatchEvent(new YatlTableViewFiltersClearEvent());
   }
 
-  private handleReloadClick() {
-    this.reloadData(true);
-  }
-
   private handleTableExportClick() {
     this.controller.export();
   }
@@ -182,9 +178,8 @@ export class YatlTableView<
 
     const fetchTask = this.fetchTask(context);
 
-    if (context.options.silent) {
-      this.buttonState = 'loading';
-    } else {
+    this.buttonState = 'loading';
+    if (!context.options.silent) {
       this.loading = true;
     }
 
@@ -196,6 +191,7 @@ export class YatlTableView<
     } finally {
       this.loading = false;
       this.buttonState = 'success';
+      setTimeout(() => (this.buttonState = 'idle'), 3000);
     }
   }
 }

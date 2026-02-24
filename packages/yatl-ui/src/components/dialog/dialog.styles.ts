@@ -9,7 +9,7 @@ export default css`
     --dialog-border-style: var(--yatl-dialog-border-style, solid);
     --dialog-border-color: var(
       --yatl-dialog-border-color,
-      var(--yatl-border-color)
+      var(--yatl-surface-4)
     );
     --dialog-padding: var(--yatl-dialog-padding, var(--yatl-spacing-s));
     --dialog-margin: var(--yatl-dialog-margin, var(--yatl-spacing-l));
@@ -148,11 +148,11 @@ export default css`
   @keyframes show-dialog {
     from {
       opacity: 0;
-      scale: 0.8;
+      transform: translateY(20px);
     }
     to {
       opacity: 1;
-      scale: 1;
+      transform: translateY(0);
     }
   }
 

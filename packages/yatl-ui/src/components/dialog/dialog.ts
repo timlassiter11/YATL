@@ -1,14 +1,20 @@
+import { YatlTable } from '@timlassiter11/yatl';
 import { html, PropertyValues } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
-import { YatlBase } from '../base/base';
-import styles from './dialog.styles';
 import {
   YatlDialogHideEvent,
   YatlDialogHideRequest,
   YatlDialogShowEvent,
   YatlDialogShowRequest,
 } from '../../events';
-import { animateWithClass, getAnimationPromise } from '../../utils';
+import {
+  animateWithClass,
+  getAnimationPromise,
+  getEffectiveChildren,
+} from '../../utils';
+import { YatlBase } from '../base/base';
+
+import styles from './dialog.styles';
 
 @customElement('yatl-dialog')
 export class YatlDialog extends YatlBase {
@@ -36,6 +42,9 @@ export class YatlDialog extends YatlBase {
       this.dialogElement?.classList.contains('hide')
     );
   }
+
+  @query('slot:not([name])')
+  private defaultSlot?: HTMLSlotElement;
 
   @query('dialog')
   private dialogElement?: HTMLDialogElement;
@@ -94,6 +103,25 @@ export class YatlDialog extends YatlBase {
     await this.transitionComplete;
     const event = new YatlDialogShowEvent();
     this.dispatchEvent(event);
+
+    if (!this.defaultSlot) {
+      return;
+    }
+
+    // This is fixes an issue where row heights are incorrect
+    // when a virtual scroll table is in a dialog. The problem is
+    // that the dialog animation scales (which means its contents scale)
+    // so the virtualizer incorrectly calculates row heights.
+    // We just wait until the animation is done and force a reflow.
+    for (const child of getEffectiveChildren(this.defaultSlot)) {
+      for (const element of child.querySelectorAll('*')) {
+        if (element instanceof YatlTable && element.enableVirtualScroll) {
+          if (element.data.length > 0) {
+            element.reflowVirtualizer();
+          }
+        }
+      }
+    }
   }
 
   public async hide() {

@@ -37,6 +37,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
+import { virtualizerRef } from '@lit-labs/virtualizer/virtualize.js';
 import { YatlEvent } from '../events';
 import {
   ControllerEventMap,
@@ -77,6 +78,13 @@ export class YatlTable<
   private tableElement!: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
+
+  private get virtualizerRef() {
+    if (this.virtualizer) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (this.virtualizer as any)[virtualizerRef];
+    }
+  }
 
   // #region --- State Data ---
 
@@ -747,6 +755,26 @@ export class YatlTable<
 
   public updateRow(rowId: RowId, data: Partial<T>) {
     return this.controller.updateRow(rowId, data);
+  }
+
+  /**
+   * This will force the underlying virtual scroller
+   * to re-calculate row sizes and positions and re-render.
+   * This is specifically here to fix virtual scroll tables
+   * that are affected by scale animations.
+   * E.g. when put in a yatl-dialog.
+   */
+  public reflowVirtualizer() {
+    const virtualizerRef = this.virtualizerRef;
+    if (virtualizerRef) {
+      // trick the virtualizer to thinking
+      // the items changed and force a re-measure.
+      virtualizerRef._itemsChanged = true;
+      virtualizerRef._rangeChanged = true;
+      virtualizerRef._measureChildren();
+      virtualizerRef._itemsChanged = false;
+      virtualizerRef._rangeChanged = false;
+    }
   }
 
   /**

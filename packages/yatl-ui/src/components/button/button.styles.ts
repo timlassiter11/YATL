@@ -27,9 +27,6 @@ export default css`
     box-sizing: border-box;
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
     cursor: pointer;
     padding: var(--button-padding);
     border-radius: var(--button-radius);
@@ -40,15 +37,23 @@ export default css`
     border: var(--button-border-width) solid var(--button-border-color);
   }
 
+  [part='contents'] {
+    box-sizing: border-box;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    transition: opacity 0.2s ease;
+    opacity: 1;
+  }
+
   .state-icon {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-  }
-
-  ::slotted(*) {
-    transition: opacity 0.2s ease;
   }
 
   :host([state='loading']) {
@@ -63,7 +68,7 @@ export default css`
   :host([state='loading']),
   :host([state='success']),
   :host([state='error']) {
-    ::slotted(*) {
+    [part='contents'] {
       opacity: 0;
     }
   }

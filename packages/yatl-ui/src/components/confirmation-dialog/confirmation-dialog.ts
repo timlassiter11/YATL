@@ -78,7 +78,7 @@ export class YatlConfirmationDialog extends YatlBase {
   protected override render() {
     return html`
       <yatl-dialog
-        exportparts="dialog, footer-actions"
+        exportparts="dialog, body, footer-actions"
         label=${this.label}
         ?open=${this.open}
         ?modal=${this.modal}
@@ -88,7 +88,9 @@ export class YatlConfirmationDialog extends YatlBase {
         <slot></slot>
         <slot slot="footer-actions" name="footer-actions">
           <yatl-button @click=${this.reject}> ${this.rejectText} </yatl-button>
-          <yatl-button @click=${this.accept}> ${this.acceptText} </yatl-button>
+          <yatl-button color="brand" @click=${this.accept}>
+            ${this.acceptText}
+          </yatl-button>
         </slot>
       </yatl-dialog>
     `;

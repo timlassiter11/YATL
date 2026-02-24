@@ -110,6 +110,10 @@ export const rightArrow = svg`
   <polyline class="icon right-arrow" points="12 5 19 12 12 19"></polyline>
 `;
 
+export const filtersIcon = svg`
+  <polygon class="icon filters" points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+`;
+
 export const icons: Record<string, TemplateResult<2>> = {
   expand: expandIcon,
   contract: contractIcon,
@@ -128,4 +132,5 @@ export const icons: Record<string, TemplateResult<2>> = {
   link: linkIcon,
   'left-arrow': leftArrow,
   'right-arrow': rightArrow,
+  filters: filtersIcon,
 };

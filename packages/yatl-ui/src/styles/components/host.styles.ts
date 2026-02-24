@@ -6,6 +6,7 @@ export default css`
   }
 
   :host([data-group-position]) {
+    height: 100%;
     margin-right: -1px;
   }
 

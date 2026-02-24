@@ -21,7 +21,13 @@ export function getEffectiveChildren(node: Node): Element[] {
     return fallback.flatMap(getEffectiveChildren);
   }
   if (node instanceof Element) {
-    return [node];
+    // Filter out comments
+    if (node.nodeType !== Node.COMMENT_NODE) {
+      // Filter out empty text nodes
+      if (node.nodeType !== Node.TEXT_NODE || node.textContent!.trim() !== '') {
+        return [node];
+      }
+    }
   }
   return [];
 }

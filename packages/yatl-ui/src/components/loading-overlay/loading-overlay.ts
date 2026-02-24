@@ -12,7 +12,7 @@ export class YatlLoadingOverlay extends YatlBase {
   public show = false;
 
   @property({ type: String, reflect: true })
-  public state: SpinnerState = 'idle';
+  public state: SpinnerState = 'loading';
 
   public override render() {
     return html`

@@ -4,6 +4,7 @@ import styles from './button.styles';
 import { YatlFormControl } from '../form-controls/form-control/form-control';
 import { YatlBase } from '../base/base';
 import { SpinnerState } from '../spinner/spinner';
+import { MaybePromise } from '../../types';
 
 export type YatlButtonVariant = 'neutral' | 'outline' | 'plain';
 export type YatlButtonColor =
@@ -42,7 +43,7 @@ export class YatlButton extends YatlFormControl {
   public successDuration = 2000;
 
   @property({ attribute: false })
-  public action?: () => Promise<unknown>;
+  public action?: () => MaybePromise<unknown>;
 
   /** Used to override the form owner's `action` attribute. */
   @property({ attribute: 'formaction' })
@@ -81,13 +82,16 @@ export class YatlButton extends YatlFormControl {
         aria-disabled=${this.state === 'loading' ? 'true' : 'false'}
         @click=${this.handleClick}
       >
-        <slot name="start"></slot>
-        <slot></slot>
-        <slot name="end"></slot>
-        <yatl-spinner state=${
-          this.state
-        } class="state-icon" part="spinner"></yatl-spinner>
+        <div part="contents">
+          <slot name="start"></slot>
+          <slot></slot>
+          <slot name="end"></slot>
         </div>
+        <yatl-spinner
+          state=${this.state}
+          class="state-icon"
+          part="spinner"
+        ></yatl-spinner>
       </button>
     `;
   }
@@ -104,9 +108,13 @@ export class YatlButton extends YatlFormControl {
     // Only hijack clicks if this is a form associated button.
     if (this.type === 'button') {
       if (this.action) {
-        this.state = 'loading';
         try {
-          await this.action();
+          const action = this.action();
+          if (action instanceof Promise) {
+            this.state = 'loading';
+            await action;
+          }
+
           this.state = 'success';
           if (this.successDuration) {
             setTimeout(() => (this.state = 'idle'), this.successDuration);

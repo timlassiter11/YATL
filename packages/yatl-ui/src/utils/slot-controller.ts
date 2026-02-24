@@ -1,48 +1,34 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { getEffectiveChildren } from './common';
+
+type SlotName = '[default]' | (string & {});
 
 /** A reactive controller that determines when slots exist. */
 export class HasSlotController implements ReactiveController {
-  private host: ReactiveControllerHost & Element;
-  private slotNames: string[] = [];
+  private slotNames: SlotName[] = [];
 
-  constructor(host: ReactiveControllerHost & Element, ...slotNames: string[]) {
-    (this.host = host).addController(this);
+  constructor(
+    private readonly host: ReactiveControllerHost & Element,
+    ...slotNames: SlotName[]
+  ) {
+    host.addController(this);
     this.slotNames = slotNames;
   }
 
-  private hasDefaultSlot() {
-    return [...this.host.childNodes].some(node => {
-      if (node.nodeType === Node.TEXT_NODE && node.textContent!.trim() !== '') {
-        return true;
-      }
+  private hasSlot(name: SlotName | null): boolean {
+    const slotContents = name
+      ? this.host.querySelector(`:scope > [slot="${name}"]`)
+      : this.host.querySelector(`:scope > :not([slot])`);
 
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as HTMLElement;
-        const tagName = el.tagName.toLowerCase();
-
-        // Ignore visually hidden elements since they aren't rendered
-        if (tagName === 'wa-visually-hidden') {
-          return false;
-        }
-
-        // If it doesn't have a slot attribute, it's part of the default slot
-        if (!el.hasAttribute('slot')) {
-          return true;
-        }
-      }
-
+    if (!slotContents) {
       return false;
-    });
+    }
+
+    return getEffectiveChildren(slotContents).length > 0;
   }
 
-  private hasNamedSlot(name: string) {
-    return this.host.querySelector(`:scope > [slot="${name}"]`) !== null;
-  }
-
-  public test(slotName: string) {
-    return slotName === '[default]'
-      ? this.hasDefaultSlot()
-      : this.hasNamedSlot(slotName);
+  public test(slotName: SlotName | null) {
+    return this.hasSlot(slotName);
   }
 
   public hostConnected() {

@@ -17,16 +17,23 @@ export default css`
     --spacing: var(--yatl-details-spacing, var(--yatl-spacing-l));
 
     --open-speed: var(--yatl-details-open-speed, 0.5s);
+    --open-curve: var(--yatl-details-open-curve, var(--ease-spring-3));
     --close-speed: var(--yatl-details-close-speed, 0.2s);
+    --close-curve: var(--yatl-details-close-curve, var(--ease-3));
 
-    /* Allows our anmiation to work */
-    interpolate-size: allow-keywords;
+    flex-grow: 0;
+    transition: flex-grow var(--close-speed) var(--close-curve);
   }
 
-  [part='base'] {
+  :host([open]) {
+    flex-grow: 1;
+    transition: flex-grow var(--open-speed) var(--open-curve);
+  }
+
+  details {
     display: flex;
     flex-direction: column;
-    overflow-anchor: none;
+    height: 100%;
     border-width: var(--border-width);
     border-style: var(--border-style);
     border-color: var(--border-color);
@@ -50,29 +57,32 @@ export default css`
   }
 
   [part='body'] {
-    flex: 1;
     padding: var(--spacing);
+    overflow: hidden;
+    box-sizing: border-box;
+    height: 100%;
   }
 
   [part='arrow-icon'] {
-    transition: transform 200ms ease;
+    transform: rotate(-90deg);
+    transition: transform var(--close-speed) var(--close-curve);
   }
 
-  :host(:not([open])) [part='arrow-icon'] {
-    transform: rotate(-90deg);
+  :host([open]) [part='arrow-icon'] {
+    transform: rotate(0deg);
+    transform: transform var(--open-speed) var(--open-curve);
   }
 
   details::details-content {
-    height: 0;
-    overflow: hidden;
-
-    transition: height var(--close-speed) var(--ease-3),
-      content-visibility 0.4s allow-discrete;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--close-speed) var(--close-curve),
+      content-visibility var(--close-speed) allow-discrete;
   }
 
   details[open]::details-content {
-    height: auto;
-    transition: height var(--open-speed) var(--ease-spring-2),
-      content-visibility 0.5s allow-discrete;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--open-speed) var(--open-curve),
+      content-visibility var(--open-speed) allow-discrete;
   }
 `;

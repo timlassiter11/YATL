@@ -4,7 +4,7 @@ export default css`
   :host {
     --button-border-style: var(--yatl-button-border-style, solid);
     --button-radius: var(--yatl-button-radius, var(--yatl-radius-s));
-    --button-padding: var(--yatl-button-padding, var(--yatl-spacing-s));
+    --button-padding: var(--yatl-button-padding, var(--yatl-spacing-m));
     --button-hover-bg: var(
       --yatl-button-hover-bg,
       color-mix(in srgb, var(--yatl-color-mix) 10%, var(--button-bg))
@@ -13,12 +13,12 @@ export default css`
     display: inline-block;
 
     /* Appearance sets color, variant decides how to use it */
-    --appearance-text: var(--yatl-text-inverse);
+    --appearance-text: var(--yatl-text-1);
     --appearance-color: var(--yatl-color-neutral);
 
     --button-text: var(--yatl-button-text, var(--appearance-text));
     --button-bg: var(--yatl-button-bg, var(--appearance-color));
-    --button-border-width: var(--yatl-button-border-width, 1px);
+    --button-border-width: var(--yatl-button-border-width, 0px);
     --button-border-color: var(--yatl-button-border, var(--appearance-color));
   }
 
@@ -76,7 +76,6 @@ export default css`
   :host([disabled]) [part='base'] {
     opacity: 0.5;
     cursor: not-allowed;
-    filter: grayscale(100%);
   }
 
   :host(:not([disabled])) [part='base']:hover {
@@ -104,7 +103,7 @@ export default css`
   }
 
   :host([color='raised']) {
-    --appearance-color: var(--yatl-surface-2);
+    --appearance-color: var(--yatl-surface-raised-1);
     --appearance-text: var(--yatl-text-1);
   }
 
@@ -123,5 +122,10 @@ export default css`
     --button-text: var(--appearance-color);
     --button-bg: transparent;
     --button-border-width: 0;
+  }
+
+  /* Neutral color is too dim to be used without BG */
+  :host([variant='plain'][color='neutral']) {
+    --appearance-color: var(--yatl-text-2);
   }
 `;

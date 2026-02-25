@@ -9,7 +9,7 @@ export default css`
     --dialog-border-style: var(--yatl-dialog-border-style, solid);
     --dialog-border-color: var(
       --yatl-dialog-border-color,
-      var(--yatl-surface-4)
+      var(--yatl-border-color-strong)
     );
     --dialog-padding: var(--yatl-dialog-padding, var(--yatl-spacing-s));
     --dialog-margin: var(--yatl-dialog-margin, var(--yatl-spacing-l));
@@ -48,7 +48,7 @@ export default css`
       animation: show-dialog var(--dialog-show-duration) ease;
 
       &::backdrop {
-        animation: show-backdrop var(--dialog-show-duration, 200ms) ease;
+        animation: show-backdrop var(--dialog-show-duration) ease;
       }
     }
 
@@ -56,7 +56,7 @@ export default css`
       animation: show-dialog var(--dialog-hide-duration) ease reverse;
 
       &::backdrop {
-        animation: show-backdrop var(--dialog-hide-duration, 200ms) ease reverse;
+        animation: show-backdrop var(--dialog-hide-duration) ease reverse;
       }
     }
 

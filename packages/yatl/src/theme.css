@@ -23,20 +23,23 @@
   --yatl-radius-xl: 16px;
 
   /* Border */
-  --yatl-border-color-light: var(--gray-4);
-  --yatl-border-color-dark: var(--gray-7);
-  --yatl-border-color: light-dark(
-    var(--yatl-border-color-light),
-    var(--yatl-border-color-dark)
+  --yatl-border-color: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
+  --yatl-border-color-subtle: light-dark(
+    rgba(0, 0, 0, 0.05),
+    rgba(255, 255, 255, 0.05)
+  );
+  --yatl-border-color-strong: light-dark(
+    rgba(0, 0, 0, 0.25),
+    rgba(255, 255, 255, 0.25)
   );
 
   /* Colors */
   --yatl-color-brand: #7531ae;
-  --yatl-color-danger: #ef4444;
-  --yatl-color-warning: #9b5300;
-  --yatl-color-success: #227931;
-  --yatl-color-neutral-light: #2f323f;
-  --yatl-color-neutral-dark: #e4e5e9;
+  --yatl-color-danger: var(--red-4);
+  --yatl-color-warning: var(--yellow-4);
+  --yatl-color-success: var(--green-4);
+  --yatl-color-neutral-light: rgba(0, 0, 0, 0.15);
+  --yatl-color-neutral-dark: rgba(255, 255, 255, 0.25);
   --yatl-color-neutral: light-dark(
     var(--yatl-color-neutral-light),
     var(--yatl-color-neutral-dark)
@@ -53,25 +56,50 @@
     var(--yatl-surface-1-dark)
   );
 
-  --yatl-surface-2-light: var(--gray-2);
+  --yatl-surface-2-light: #fff;
   --yatl-surface-2-dark: var(--gray-9);
   --yatl-surface-2: light-dark(
     var(--yatl-surface-2-light),
     var(--yatl-surface-2-dark)
   );
 
-  --yatl-surface-3-light: var(--gray-3);
+  --yatl-surface-3-light: #fff;
   --yatl-surface-3-dark: var(--gray-8);
   --yatl-surface-3: light-dark(
     var(--yatl-surface-3-light),
     var(--yatl-surface-3-dark)
   );
 
-  --yatl-surface-4-light: var(--gray-4);
+  --yatl-surface-4-light: #fff;
   --yatl-surface-4-dark: var(--gray-7);
   --yatl-surface-4: light-dark(
     var(--yatl-surface-4-light),
     var(--yatl-surface-4-dark)
+  );
+
+  --yatl-surface-lowered-light: color-mix(in oklab, black 5%, transparent);
+  --yatl-surface-lowered-dark: color-mix(in oklab, black 15%, transparent);
+  --yatl-surface-lowered: light-dark(
+    var(--yatl-surface-lowered-light),
+    var(--yatl-surface-lowered-dark)
+  );
+
+  --yatl-surface-raised-1-light: #fff;
+  --yatl-surface-raised-1-dark: color-mix(in oklab, white 6%, transparent);
+  --yatl-surface-raised-1: light-dark(
+    var(--yatl-surface-raised-1-light),
+    var(--yatl-surface-raised-1-dark)
+  );
+
+  --yatl-surface-raised-2: color-mix(
+    in oklab,
+    white 10%,
+    var(--yatl-surface-raised-1)
+  );
+  --yatl-surface-raised-3: color-mix(
+    in oklab,
+    white 10%,
+    var(--yatl-surface-raised-2)
   );
 
   /* Text colors */

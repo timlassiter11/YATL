@@ -14,12 +14,12 @@ export default css`
     );
   }
 
-  .text-input {
+  :host([multi]) .text-input {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     position: relative;
-    padding: 0 var(--input-padding);
+    padding: 5px var(--input-padding);
   }
 
   [part='input'] {
@@ -77,6 +77,7 @@ export default css`
   }
 
   [part='arrow-icon'] {
+    transform: rotate(-90deg);
     transition: transform 0.2s ease-in-out;
     pointer-events: none;
     color: var(--select-arrow-color);
@@ -96,6 +97,6 @@ export default css`
 
   :host(:state(open)) [part='arrow-icon'],
   :host([open]) [part='arrow-icon'] {
-    transform: rotate(-180deg);
+    transform: rotate(0deg);
   }
 `;

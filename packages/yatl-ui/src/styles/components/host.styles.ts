@@ -7,7 +7,6 @@ export default css`
 
   :host([data-group-position]) {
     height: 100%;
-    margin-right: -1px;
   }
 
   :host([data-group-position='middle']) {
@@ -20,7 +19,6 @@ export default css`
 
   :host([data-group-position='last']) {
     --button-radius: 0 var(--button-group-radius) var(--button-group-radius) 0;
-    margin-right: 0;
   }
 
   :host([data-group-position='single']) {

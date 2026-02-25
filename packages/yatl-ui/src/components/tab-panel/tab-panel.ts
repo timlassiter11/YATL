@@ -27,7 +27,7 @@ export class YatlTabPanel extends YatlBase {
   }
 
   protected override render() {
-    return html` <slot></slot> `;
+    return html`<div part="base"><slot></slot></div>`;
   }
 }
 

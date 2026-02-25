@@ -2,9 +2,15 @@ import { css } from 'lit';
 
 export default css`
   :host {
+    --input-border-width: var(--yatl-input-border-width, 1px);
+    --input-border-style: var(--yatl-input-border-style, solid);
+    --input-border-color: var(
+      --yatl-input-border-color,
+      var(--yatl-border-color)
+    );
     --input-radius: var(--yatl-input-radius, var(--yatl-radius-m));
     --input-padding: var(--yatl-input-padding, var(--yatl-spacing-m));
-    --input-bg: var(--yatl-input-bg, var(--yatl-surface-2));
+    --input-bg: var(--yatl-input-bg, var(--yatl-surface-lowered));
     --input-text: var(--yatl-input-text, var(--yatl-text-1));
     --input-line-height: var(--yatl-input-line-height, 1.2);
     --input-min-height: var(
@@ -53,11 +59,13 @@ export default css`
     gap: 0;
 
     box-sizing: border-box;
+    border-width: var(--input-border-width);
+    border-style: var(--input-border-style);
+    border-color: var(--input-border-color);
     border-radius: var(--input-radius);
     color: var(--input-text);
     background-color: var(--input-bg);
     line-height: var(--input-line-height);
-    border: none;
     font-size: large;
     padding: var(--input-padding);
     width: 100%;
@@ -87,13 +95,17 @@ export default css`
     margin-block-end: var(--yatl-spacing-s);
   }
 
-  :host(:state(disabled)) .text-input {
-    cursor: not-allowed;
-    opacity: 0.6;
+  :host(:state(disabled)) {
+    .text-input {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   }
 
-  :host(:state(readonly)) .text-input {
-    opacity: 0.8;
+  :host(:state(readonly)) {
+    .text-input {
+      opacity: 0.8;
+    }
   }
 
   :host(:state(disabled)) .text-input:focus,

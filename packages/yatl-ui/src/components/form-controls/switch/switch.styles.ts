@@ -5,10 +5,7 @@ export default css`
     --switch-color: var(--yatl-switch-color, var(--yatl-text-1));
     --switch-bg: var(--yatl-switch-bg, var(--yatl-surface-1));
     --switch-accent: var(--yatl-switch-accent, var(--yatl-color-brand));
-    --switch-border-color: var(
-      --yatl-switch-border-color,
-      var(--yatl-border-color)
-    );
+    --switch-border-color: var(--yatl-switch-border-color, var(--yatl-text-3));
 
     --height: var(--yatl-switch-size, 1rem);
     --width: calc(var(--height) * 1.75);

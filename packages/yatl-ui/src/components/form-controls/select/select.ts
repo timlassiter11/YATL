@@ -116,7 +116,7 @@ export class YatlSelect extends YatlFormControl<
         value=${displayValue ?? ''}
         placeholder=${this.placeholder}
         ?disabled=${this.disabled}
-        ?readonly=${this.readonly}
+        readonly
       />
     `;
   }

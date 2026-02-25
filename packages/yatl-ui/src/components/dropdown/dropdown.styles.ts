@@ -13,12 +13,13 @@ export default css`
     );
     --dropdown-menu-border: var(
       --yatl-dropdown-menu-border,
-      var(--yatl-border-color)
+      var(--yatl-border-color-strong)
     );
     --dropdown-menu-open-bg: var(
       --yatl-dropdown-menu-open-bg,
       var(--yatl-color-brand)
     );
+    --dropdown-menu-shadow: var(--yatl-dropdown-menu-shadow, var(--shadow-4));
 
     overflow: visible !important;
   }
@@ -38,7 +39,7 @@ export default css`
     background: var(--dropdown-menu-bg);
     border: 1px solid var(--dropdown-menu-border);
     border-radius: var(--dropdown-menu-radius);
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 50%);
+    box-shadow: var(--dropdown-menu-shadow);
     padding: var(--dropdown-menu-padding);
     display: none;
     flex-direction: column;

@@ -133,7 +133,7 @@ export class YatlTable<
   }
 
   @property({ type: Boolean, reflect: true })
-  public striped = true;
+  public striped = false;
 
   /**
    * Default sortability for all columns.

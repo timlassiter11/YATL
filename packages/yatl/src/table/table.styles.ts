@@ -23,13 +23,13 @@ export default css`
     --table-bg: var(--yatl-table-bg, var(--yatl-surface-1));
     --table-radius: var(--yatl-table-radius, var(--yatl-radius-m));
     --table-border-width: var(--yatl-table-border-width, 1px);
-    --table-border-color: var(--yatl-surface-3, var(--yatl-border-color));
+    --table-border-color: var(
+      --yatl-table-border-color,
+      var(--yatl-border-color)
+    );
 
     --table-header-text: var(--yatl-table-header-text, var(--yatl-text-1));
-    --table-header-bg: var(
-      --yatl-table-header-bg,
-      color-mix(in srgb, var(--yatl-color-mix) 4%, var(--table-bg))
-    );
+    --table-header-bg: var(--yatl-table-header-bg, var(--yatl-surface-lowered));
     --table-header-hover-bg: var(
       --yatl-table-header-hover-bg,
       color-mix(in srgb, var(--yatl-color-mix) 4%, var(--table-header-bg))
@@ -47,6 +47,10 @@ export default css`
     --table-row-hover-bg: var(
       --yatl-table-row-hover-bg,
       var(--table-header-bg)
+    );
+    --table-row-border-color: var(
+      --yatl-table-row-border-color,
+      var(--yatl-border-color-subtle)
     );
     --table-row-stripe-bg: var(
       --yatl-table-row-stripe-bg,
@@ -94,12 +98,8 @@ export default css`
       position: relative;
       background-color: var(--table-row-bg);
       /** Use box-shadow to mimic borders. It works better when virtualized */
-      box-shadow: inset 0 -1px 0 0 var(--table-border-color);
+      box-shadow: inset 0 -1px 0 0 var(--table-row-border-color);
       transition: background-color 50ms;
-    }
-
-    .row-number-cell {
-      box-shadow: inset 0 -1px 0 0 var(--table-border-color);
     }
 
     .row.header-row {
@@ -129,6 +129,10 @@ export default css`
 
     .table.resizing * {
       cursor: col-resize !important;
+    }
+
+    .header {
+      background-color: var(--table-bg);
     }
 
     .header .cell {

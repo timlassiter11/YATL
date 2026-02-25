@@ -4,8 +4,10 @@
   color-scheme: light dark;
 
   /* Typography */
-  --yatl-font-family: var(--font-sans);
   --yatl-font-size: var(--font-size-2);
+  --yatl-font-size-s: var(--font-size-1);
+  --yatl-font-size-l: var(--font-size-3);
+  --yatl-font-family: var(--font-sans);
   --yatl-line-height: var(--font-lineheight-2);
 
   /* Spacing */

@@ -1,10 +1,12 @@
 import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import styles from './button.styles';
 import { YatlFormControl } from '../form-controls/form-control/form-control';
 import { YatlBase } from '../base/base';
 import { SpinnerState } from '../spinner/spinner';
 import { MaybePromise } from '../../types';
+
+import styles from './button.styles';
+import sizeStyles from '../../styles/components/size.styles';
 
 export type YatlButtonVariant = 'neutral' | 'outline' | 'plain';
 export type YatlButtonColor =
@@ -19,7 +21,7 @@ export type YatlButtonColor =
 @customElement('yatl-button')
 export class YatlButton extends YatlFormControl {
   // We don't need the form control styles but we still want the base styles
-  public static override styles = [...YatlBase.styles, styles];
+  public static override styles = [...YatlBase.styles, sizeStyles, styles];
 
   @property({ type: String, attribute: 'value' })
   public defaultValue = this.getAttribute('value') ?? '';
@@ -29,6 +31,9 @@ export class YatlButton extends YatlFormControl {
 
   @property({ type: String, reflect: true })
   public type: 'button' | 'submit' | 'reset' = 'button';
+
+  @property({ type: String, reflect: true })
+  public size: 'small' | 'medium' | 'large' = 'medium';
 
   @property({ type: String, reflect: true })
   public variant: YatlButtonVariant = 'neutral';

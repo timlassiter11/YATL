@@ -4,7 +4,11 @@ export default css`
   :host {
     --button-border-style: var(--yatl-button-border-style, solid);
     --button-radius: var(--yatl-button-radius, var(--yatl-radius-s));
-    --button-padding: var(--yatl-button-padding, var(--yatl-spacing-m));
+    --button-padding: var(--yatl-button-padding, var(--yatl-size-padding));
+    --button-font-size: var(
+      --yatl-button-font-size,
+      var(--yatl-size-font-size)
+    );
     --button-hover-bg: var(
       --yatl-button-hover-bg,
       color-mix(in srgb, var(--yatl-color-mix) 10%, var(--button-bg))
@@ -31,7 +35,7 @@ export default css`
     padding: var(--button-padding);
     border-radius: var(--button-radius);
     color: var(--button-text);
-    font-size: large;
+    font-size: var(--button-font-size);
     font-weight: 500;
     background-color: var(--button-bg);
     border: var(--button-border-width) solid var(--button-border-color);

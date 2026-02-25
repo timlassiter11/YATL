@@ -955,6 +955,12 @@ export class YatlTable<
       userParts = userParts.join(' ');
     }
 
+    const isNumber = typeof value === 'bigint' || typeof value === 'number';
+    const classes = {
+      cell: true,
+      'is-number': isNumber,
+    };
+
     if (typeof column.valueFormatter === 'function') {
       value = column.valueFormatter(value, row);
     }
@@ -964,7 +970,7 @@ export class YatlTable<
         role="cell"
         part="cell body-cell cell-${column.field} ${userParts}"
         data-field=${column.field}
-        class="cell"
+        class=${classMap(classes)}
         title=${ifDefined(value ? String(value) : undefined)}
         @click=${(event: MouseEvent) =>
           this.handleCellClick(event, row, column.field)}

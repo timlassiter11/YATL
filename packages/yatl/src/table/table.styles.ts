@@ -4,7 +4,7 @@ import { css } from 'lit';
  * we separate the CSS variable names between internal '--yatl' and external '--yatl-table'
  * so that way users can more easily customize the table. Instead of having to apply the
  * overrides to the element itself, they can apply them to the root. So DON'T think this
- * is overly complicated and should be cleaned up by combining the --yatl-* and --yatl-table-* variables.
+ * is overly complicated and should be cleaned up by combining the --table-* and --yatl-table-* variables.
  */
 export default css`
   @layer base, striped, hover, selected;
@@ -125,6 +125,10 @@ export default css`
     .cell {
       align-items: center;
       padding: var(--table-cell-padding);
+    }
+
+    .cell.is-number {
+      justify-content: flex-end;
     }
 
     .table.resizing * {

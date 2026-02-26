@@ -112,6 +112,7 @@ export class YatlSelect extends YatlFormControl<
     return html`
       <input
         part="input"
+        id=${this.inputId}
         type="text"
         value=${displayValue ?? ''}
         placeholder=${this.placeholder}

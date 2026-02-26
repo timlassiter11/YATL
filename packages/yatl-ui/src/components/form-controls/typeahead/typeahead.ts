@@ -110,7 +110,7 @@ export class YatlTypeahead extends YatlFormControl {
           <input
             slot="trigger"
             part="input"
-            id="input"
+            id=${this.inputId}
             name=${this.name}
             type="text"
             .value=${live(this.value)}

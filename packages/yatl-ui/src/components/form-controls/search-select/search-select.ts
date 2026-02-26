@@ -103,6 +103,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
       <div class="text-input" style=${`--size: ${this.size + 1}`}>
         <input
           part="search"
+          id=${this.inputId}
           type="search"
           placeholder=${this.placeholder}
           @input=${this.handleInput}

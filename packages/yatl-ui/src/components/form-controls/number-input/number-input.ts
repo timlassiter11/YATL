@@ -61,6 +61,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
     return html`
       <input
         part="input"
+        id=${this.inputId}
         name=${this.name}
         type=${type}
         size=${ifDefined(this.size)}

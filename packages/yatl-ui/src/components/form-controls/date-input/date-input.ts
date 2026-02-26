@@ -57,6 +57,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
     return html`
       <input
         part="input"
+        id=${this.inputId}
         name=${this.name}
         type="date"
         size=${ifDefined(this.size)}

@@ -144,6 +144,7 @@ export abstract class YatlFormControl<
     const root = super.createRenderRoot();
     root.addEventListener('input', this.handleInputChange);
     root.addEventListener('change', this.handleInputChange);
+    root.addEventListener('keydown', this.handleKeyDown as EventListener);
     return root;
   }
 
@@ -343,5 +344,11 @@ export abstract class YatlFormControl<
     this.dispatchEvent(
       new Event(event.type, { bubbles: true, composed: true }),
     );
+  };
+
+  private handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' && event.target === this.formControl) {
+      this.form?.requestSubmit();
+    }
   };
 }

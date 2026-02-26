@@ -74,6 +74,7 @@ export default css`
   ::slotted(yatl-option) {
     flex-shrink: 0;
     height: var(--option-height);
+    --yatl-option-radius: 0px;
   }
 
   yatl-option::part(check) {

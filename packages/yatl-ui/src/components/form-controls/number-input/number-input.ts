@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { YatlFormControl } from '../form-control/form-control';
@@ -27,6 +27,12 @@ export class YatlNumberInput extends YatlFormControl<number> {
   @property({ type: Number })
   public displayPrecision?: number;
 
+  @property({ type: Boolean, attribute: 'visibility-toggle' })
+  public visibilityToggle = false;
+
+  @property({ type: Boolean, attribute: 'hide-text' })
+  public hideText = false;
+
   @property({ type: Number, attribute: 'value' })
   public defaultValue?: number;
 
@@ -50,11 +56,13 @@ export class YatlNumberInput extends YatlFormControl<number> {
       value = formatter.format(this.value);
     }
 
+    const type = this.hideText ? 'password' : editing ? 'number' : 'text';
+
     return html`
       <input
         part="input"
         name=${this.name}
-        type=${editing ? 'number' : 'text'}
+        type=${type}
         size=${ifDefined(this.size)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
@@ -64,12 +72,33 @@ export class YatlNumberInput extends YatlFormControl<number> {
         ?disabled=${this.disabled}
         ?required=${this.required}
       />
+      ${this.renderVisibilityToggle()}
+    `;
+  }
+
+  protected renderVisibilityToggle() {
+    if (!this.visibilityToggle) {
+      return nothing;
+    }
+
+    return html`
+      <yatl-button
+        size="small"
+        variant="plain"
+        @click=${this.handleVisibilityToggleClick}
+      >
+        <yatl-icon name=${this.hideText ? 'eye' : 'eye-slash'}></yatl-icon>
+      </yatl-button>
     `;
   }
 
   protected override isValidChangeEvent(event: Event) {
     const input = event.target as HTMLInputElement;
     this.value = Number(input.value);
+  }
+
+  private handleVisibilityToggleClick() {
+    this.hideText = !this.hideText;
   }
 }
 

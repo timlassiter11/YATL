@@ -114,6 +114,18 @@ export const filtersIcon = svg`
   <polygon class="icon filters" points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
 `;
 
+export const eyeIcon = svg`
+  <path class="icon eye" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+  <circle class="icon eye" cx="12" cy="12" r="3"></circle>
+`;
+
+export const eyeSlashIcon = svg`
+  <path class="icon eye-slash" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+  <path class="icon eye-slash" d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+  <path class="icon eye-slash" d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+  <line class="icon eye-slash" x1="1" y1="1" x2="23" y2="23"></line>
+`;
+
 export const icons: Record<string, TemplateResult<2>> = {
   expand: expandIcon,
   contract: contractIcon,
@@ -133,4 +145,6 @@ export const icons: Record<string, TemplateResult<2>> = {
   'left-arrow': leftArrow,
   'right-arrow': rightArrow,
   filters: filtersIcon,
+  eye: eyeIcon,
+  'eye-slash': eyeSlashIcon,
 };

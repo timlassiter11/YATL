@@ -35,6 +35,9 @@ export class YatlInput extends YatlFormControl<string> {
   @property({ type: Boolean, attribute: 'password-toggle' })
   public passwordToggle = false;
 
+  @property({ type: Boolean, attribute: 'hide-text' })
+  public hideText = true;
+
   /** The minimum length of input that will be considered valid. */
   @property({ type: Number })
   public minlength?: number;
@@ -57,11 +60,14 @@ export class YatlInput extends YatlFormControl<string> {
   }
 
   protected override renderInput() {
+    const type =
+      this.type === 'password' && !this.hideText ? 'text' : this.type;
+
     return html`
       <input
         part="input"
         name=${this.name}
-        type=${this.type}
+        type=${type}
         size=${ifDefined(this.size)}
         .value=${live(this.value)}
         value=${this.defaultValue}
@@ -73,6 +79,7 @@ export class YatlInput extends YatlFormControl<string> {
         ?disabled=${this.disabled}
         ?required=${this.required}
       />
+      ${this.renderPasswordToggle()}
     `;
   }
 
@@ -98,8 +105,28 @@ export class YatlInput extends YatlFormControl<string> {
     return html`<span part="label-count">${count}</span>`;
   }
 
+  protected renderPasswordToggle() {
+    if (!this.passwordToggle) {
+      return nothing;
+    }
+
+    return html`
+      <yatl-button
+        size="small"
+        variant="plain"
+        @click=${this.handlePasswordToggleClick}
+      >
+        <yatl-icon name=${this.hideText ? 'eye' : 'eye-slash'}></yatl-icon>
+      </yatl-button>
+    `;
+  }
+
   protected override isValidChangeEvent(event: Event) {
     this.value = (event.target as HTMLInputElement).value;
+  }
+
+  private handlePasswordToggleClick() {
+    this.hideText = !this.hideText;
   }
 }
 

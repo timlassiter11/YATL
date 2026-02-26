@@ -39,6 +39,7 @@ export default css`
   dialog {
     border: none;
     background: none;
+    display: flex;
     flex-direction: column;
 
     padding: var(--dialog-margin);

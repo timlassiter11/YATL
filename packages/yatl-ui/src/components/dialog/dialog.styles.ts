@@ -39,7 +39,6 @@ export default css`
   dialog {
     border: none;
     background: none;
-    display: flex;
     flex-direction: column;
 
     padding: var(--dialog-margin);
@@ -64,6 +63,10 @@ export default css`
     &.pulse {
       animation: pulse var(--dialog-pulse-duration) ease;
     }
+  }
+
+  dialog[open] {
+    display: flex;
   }
 
   dialog:focus-visible {

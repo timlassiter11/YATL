@@ -44,6 +44,8 @@ export class YatlToolbar<
 > extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  private searchDebounceTimer = 0;
+
   private _controller?: YatlTableController<T>;
   @property({ attribute: false })
   public get controller() {
@@ -63,6 +65,9 @@ export class YatlToolbar<
 
   @property({ type: Boolean, attribute: 'hide-export-button' })
   public hideExportButton = false;
+
+  @property({ type: Number })
+  public searchDebounce = 250;
 
   protected override render() {
     return html`
@@ -150,7 +155,10 @@ export class YatlToolbar<
 
   private onSearchInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
-    this.controller?.search(input.value);
+    clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = window.setTimeout(() => {
+      this.controller?.search(input.value);
+    }, this.searchDebounce);
     this.dispatchEvent(new YatlToolbarSearchInput(input.value));
   };
 

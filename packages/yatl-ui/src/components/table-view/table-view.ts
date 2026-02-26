@@ -168,7 +168,7 @@ export class YatlTableView<
   }
 
   private handleTableExportClick() {
-    this.controller.export();
+    this.export(document.title);
   }
 
   private async requestReload(context: YatlTableFetchContext) {

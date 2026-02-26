@@ -6,6 +6,7 @@ export * from './details/details';
 export * from './dialog/dialog';
 export * from './divider/divider';
 export * from './dropdown/dropdown';
+export * from './dropzone/dropzone';
 export * from './icon/icon';
 export * from './loading-overlay/loading-overlay';
 export * from './option/option';

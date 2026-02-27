@@ -27,7 +27,6 @@ export class YatlDropzone extends YatlBase {
 
   private dragCounter = 0;
   private isValidDrop = false;
-  private target?: HTMLElement;
   @state() private rejectReason?: string;
 
   @property({ type: String, reflect: true })
@@ -50,19 +49,10 @@ export class YatlDropzone extends YatlBase {
     window.addEventListener('dragend', this.dragEnd, { capture });
     window.addEventListener('drop', this.dragEnd, { capture });
 
-    queueMicrotask(() => {
-      if (this.parentElement) {
-        this.target = this.parentElement;
-      } else {
-        const root = this.getRootNode() as ShadowRoot;
-        this.target = root.host as HTMLElement;
-      }
-
-      this.target.addEventListener('dragenter', this.handleDragEnter);
-      this.target.addEventListener('dragleave', this.handleDragLeave);
-      this.target.addEventListener('dragover', this.handleDragOver);
-      this.target.addEventListener('drop', this.handleDrop);
-    });
+    this.addEventListener('dragenter', this.handleDragEnter);
+    this.addEventListener('dragleave', this.handleDragLeave);
+    this.addEventListener('dragover', this.handleDragOver);
+    this.addEventListener('drop', this.handleDrop);
   }
 
   public override disconnectedCallback() {
@@ -75,12 +65,10 @@ export class YatlDropzone extends YatlBase {
     window.removeEventListener('dragend', this.dragEnd, { capture });
     window.removeEventListener('drop', this.dragEnd, { capture });
 
-    if (this.target) {
-      this.target.removeEventListener('dragenter', this.handleDragEnter);
-      this.target.removeEventListener('dragleave', this.handleDragLeave);
-      this.target.removeEventListener('dragover', this.handleDragOver);
-      this.target.removeEventListener('drop', this.handleDrop);
-    }
+    this.removeEventListener('dragenter', this.handleDragEnter);
+    this.removeEventListener('dragleave', this.handleDragLeave);
+    this.removeEventListener('dragover', this.handleDragOver);
+    this.removeEventListener('drop', this.handleDrop);
   }
 
   private handleDragEnter = (event: DragEvent) => {
@@ -91,7 +79,6 @@ export class YatlDropzone extends YatlBase {
     if (this.dragCounter === 1) {
       const requestEvent = new YatlDropzoneDropRequest(
         event.dataTransfer,
-        this.target!,
         this.context,
       );
       this.dispatchEvent(requestEvent);
@@ -138,7 +125,7 @@ export class YatlDropzone extends YatlBase {
     this.resetState();
 
     this.dispatchEvent(
-      new YatlDropzoneDropEvent(event.dataTransfer, this.target!, this.context),
+      new YatlDropzoneDropEvent(event.dataTransfer, this.context),
     );
   };
 

@@ -11,7 +11,6 @@ export class YatlDropzoneDropRequest extends YatlEvent {
 
   constructor(
     public readonly dataTransfer: DataTransfer | null,
-    public dropTarget: HTMLElement,
     public context: unknown,
   ) {
     super(YatlDropzoneDropRequest.EVENT_NAME, { cancelable: true });
@@ -23,11 +22,7 @@ export class YatlDropzoneDropRequest extends YatlEvent {
   }
 
   public override clone() {
-    return new YatlDropzoneDropRequest(
-      this.dataTransfer,
-      this.dropTarget,
-      this.context,
-    );
+    return new YatlDropzoneDropRequest(this.dataTransfer, this.context);
   }
 }
 
@@ -35,18 +30,13 @@ export class YatlDropzoneDropEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-dropzone-drop';
   constructor(
     public readonly dataTransfer: DataTransfer | null,
-    public dropTarget: HTMLElement,
     public context: unknown,
   ) {
     super(YatlDropzoneDropEvent.EVENT_NAME);
   }
 
   public override clone() {
-    return new YatlDropzoneDropEvent(
-      this.dataTransfer,
-      this.dropTarget,
-      this.context,
-    );
+    return new YatlDropzoneDropEvent(this.dataTransfer, this.context);
   }
 }
 

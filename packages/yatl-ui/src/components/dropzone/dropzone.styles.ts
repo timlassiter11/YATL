@@ -65,6 +65,8 @@ export default css`
   }
 
   :host([show-hint]) {
+    /* Only recieve events if the user is actively dragging something */
+    pointer-events: all;
     background-color: var(--dropzone-hint-bg);
     outline-color: var(--dropzone-hint-outline-color);
 

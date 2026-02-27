@@ -1,3 +1,5 @@
+export * from './confirmation-dialog';
+export * from './details';
 export * from './dialog';
 export * from './dropdown';
 export * from './dropzone';

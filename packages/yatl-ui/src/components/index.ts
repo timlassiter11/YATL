@@ -10,6 +10,7 @@ export * from './dropzone/dropzone';
 export * from './icon/icon';
 export * from './loading-overlay/loading-overlay';
 export * from './option/option';
+export * from './remote-options/remote-options';
 export * from './spinner/spinner';
 export * from './tab/tab';
 export * from './tab-group/tab-group';

@@ -1,5 +1,9 @@
 import { html, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import {
+  customElement,
+  property,
+  queryAssignedElements,
+} from 'lit/decorators.js';
 import { YatlFormControl } from '../form-control/form-control';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../../events';
@@ -13,6 +17,9 @@ export class YatlSelect extends YatlFormControl<
   YatlFormControl
 > {
   public static override styles = [...super.styles, styles];
+
+  @queryAssignedElements({ flatten: true })
+  private assignedElements!: Array<HTMLElement>;
 
   @property({ type: String })
   public placeholder = '';
@@ -193,6 +200,8 @@ export class YatlSelect extends YatlFormControl<
 
   private handleSlotChange() {
     this.updateSelectedOptions();
+    this.dispatchChange();
+    this.requestUpdate();
   }
 
   private handleClearButtonClick(event: Event) {
@@ -249,8 +258,12 @@ export class YatlSelect extends YatlFormControl<
     return this._value.map(v => optionMap.get(v)).filter(o => o !== undefined);
   }
 
-  private getAllOptions() {
-    return [...this.querySelectorAll('yatl-option')];
+  private getAllOptions(): YatlOption[] {
+    return this.assignedElements.flatMap(e => {
+      return e instanceof YatlOption
+        ? [e]
+        : [...e.querySelectorAll('yatl-option')];
+    });
   }
 
   private dispatchChange() {

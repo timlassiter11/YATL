@@ -5,7 +5,7 @@ import { YatlDropzoneDropEvent, YatlDropzoneDropRequest } from '../../events';
 
 import styles from './dropzone.styles';
 
-export type DropzoneState = 'idle' | 'valid' | 'invalid';
+export type DropzoneState = 'none' | 'valid' | 'invalid';
 
 /**
  * @fires yatl-dropzone-drop-request - Fired when a drag operation enters this element. Cancellable.
@@ -20,13 +20,24 @@ export class YatlDropzone extends YatlBase {
   private target?: HTMLElement;
 
   @property({ type: String, reflect: true })
-  public state: DropzoneState = 'idle';
+  public state: DropzoneState = 'none';
+
+  @property({ type: Boolean, reflect: true, attribute: 'show-hint' })
+  public showHint = false;
 
   @property({ attribute: false })
   public context: unknown;
 
   public override connectedCallback() {
     super.connectedCallback();
+    const capture = true;
+    // Covers a drag starting anywhere in the window
+    window.addEventListener('dragstart', this.dragStart, { capture });
+    // Covers a drag started outside the window
+    window.addEventListener('dragenter', this.dragStart, { capture });
+    window.addEventListener('dragleave', this.dragEnd, { capture });
+    window.addEventListener('dragend', this.dragEnd, { capture });
+    window.addEventListener('drop', this.dragEnd, { capture });
 
     queueMicrotask(() => {
       if (this.parentElement) {
@@ -45,6 +56,14 @@ export class YatlDropzone extends YatlBase {
 
   public override disconnectedCallback() {
     super.disconnectedCallback();
+
+    const capture = true;
+    window.removeEventListener('dragstart', this.dragStart, { capture });
+    window.removeEventListener('dragenter', this.dragStart, { capture });
+    window.removeEventListener('dragleave', this.dragEnd, { capture });
+    window.removeEventListener('dragend', this.dragEnd, { capture });
+    window.removeEventListener('drop', this.dragEnd, { capture });
+
     if (this.target) {
       this.target.removeEventListener('dragenter', this.handleDragEnter);
       this.target.removeEventListener('dragleave', this.handleDragLeave);
@@ -95,8 +114,8 @@ export class YatlDropzone extends YatlBase {
 
     this.dragCounter--;
     if (this.dragCounter === 0) {
-      this.state = 'idle';
       this.isValidDrop = false;
+      this.state = 'none';
     }
   };
 
@@ -104,10 +123,20 @@ export class YatlDropzone extends YatlBase {
     event.preventDefault();
     event.stopPropagation();
     this.dragCounter = 0;
-    this.state = 'idle';
+    this.state = 'none';
+    this.showHint = false;
     this.dispatchEvent(
       new YatlDropzoneDropEvent(event.dataTransfer, this.target!, this.context),
     );
+  };
+
+  private dragStart = () => {
+    this.showHint = true;
+  };
+
+  private dragEnd = () => {
+    this.state = 'none';
+    this.showHint = false;
   };
 
   protected override render() {

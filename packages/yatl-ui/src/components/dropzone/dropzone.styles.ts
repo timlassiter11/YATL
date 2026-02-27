@@ -7,6 +7,11 @@ export default css`
     --dropzone-outline-width: var(--yatl-dropzone-outline-width, 2px);
     --dropzone-outline-style: var(--yatl-dropzone-outline-style, solid);
     --dropzone-outline-offset: var(--yatl-dropzone-outline-offset, -2px);
+
+    --dropzone-hint-outline-color: var(
+      --yatl-dropzone-hint-outline-color,
+      transparent
+    );
     --dropzone-valid-outline-color: var(
       --yatl-dropzone-valid-outline-color,
       var(--yatl-color-brand)
@@ -16,6 +21,7 @@ export default css`
       var(--yatl-color-danger)
     );
 
+    --dropzone-hint-bg: var(--yatl-dropzone-hint-bg, transparent);
     --dropzone-valid-bg: var(
       --yatl-dropzone-valid-bg,
       color-mix(in oklab, var(--yatl-color-brand) 20%, transparent)
@@ -48,6 +54,11 @@ export default css`
 
   [part='contents'] {
     margin: auto;
+  }
+
+  :host([show-hint]) {
+    background-color: var(--dropzone-hint-bg);
+    outline-color: var(--dropzone-hint-outline-color);
   }
 
   :host([state='valid']) {

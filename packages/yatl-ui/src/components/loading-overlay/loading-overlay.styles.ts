@@ -11,6 +11,7 @@ export default css`
       var(--yatl-color-brand)
     );
     --overlay-text: var(--yatl-loading-overlay-text, var(--yatl-text-1));
+    --overlay-fade-duration: var(--yatl-loading-overlay-fade-duration, 0.3s);
     --overlay-z-index: 10;
 
     display: flex;
@@ -25,7 +26,8 @@ export default css`
     z-index: var(--overlay-z-index);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity var(--overlay-fade-duration) ease,
+      visibility var(--overlay-fade-duration) ease;
     pointer-events: none;
   }
 

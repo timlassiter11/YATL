@@ -2,6 +2,7 @@ import { html, PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './details.styles';
+import { YatlDetailsOpenEvent } from '../../events/details';
 
 @customElement('yatl-details')
 export class YatlDetails extends YatlBase {
@@ -54,6 +55,8 @@ export class YatlDetails extends YatlBase {
   private handleDetailsToggle(event: Event) {
     const details = event.target as HTMLDetailsElement;
     this.open = details.open;
+
+    this.dispatchEvent(new YatlDetailsOpenEvent());
   }
 }
 

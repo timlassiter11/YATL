@@ -130,7 +130,7 @@ export class YatlDialog extends YatlBase {
 
   protected override firstUpdated(_changedProperties: PropertyValues): void {
     if (this.open) {
-      this.dialogElement?.showModal();
+      this.show();
     }
   }
 

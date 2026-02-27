@@ -23,6 +23,7 @@ export default css`
 
     flex-grow: 0;
     transition: flex-grow var(--close-speed) var(--close-curve);
+    overflow: hidden;
   }
 
   :host([open]) {
@@ -58,7 +59,8 @@ export default css`
 
   [part='body'] {
     padding: var(--spacing);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     box-sizing: border-box;
     height: 100%;
   }
@@ -76,6 +78,7 @@ export default css`
   details::details-content {
     display: grid;
     grid-template-rows: 0fr;
+    overflow: hidden;
     transition: grid-template-rows var(--close-speed) var(--close-curve),
       content-visibility var(--close-speed) allow-discrete;
   }

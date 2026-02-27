@@ -14,7 +14,7 @@ export class YatlButtonGroup extends YatlBase {
   private defaultSlot!: HTMLSlotElement;
 
   @property({ type: Boolean })
-  public disabled = false;
+  public disabled?: boolean;
 
   protected override willUpdate(
     changedProperties: PropertyValues<YatlButtonGroup>,
@@ -46,6 +46,10 @@ export class YatlButtonGroup extends YatlBase {
   }
 
   private updateChildStates() {
+    if (this.disabled === undefined) {
+      return;
+    }
+
     for (const child of this.getAllChildren()) {
       if ('disabled' in child) {
         child.disabled = this.disabled;

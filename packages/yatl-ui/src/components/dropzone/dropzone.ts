@@ -1,9 +1,11 @@
-import { html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { html, nothing } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import { YatlDropzoneDropEvent, YatlDropzoneDropRequest } from '../../events';
 
 import styles from './dropzone.styles';
+import { HasSlotController } from '../../utils';
+import { classMap } from 'lit/directives/class-map.js';
 
 export type DropzoneState = 'none' | 'valid' | 'invalid';
 
@@ -15,9 +17,18 @@ export type DropzoneState = 'none' | 'valid' | 'invalid';
 export class YatlDropzone extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  private slotController = new HasSlotController(
+    this,
+    '[default]',
+    'hint',
+    'valid',
+    'invalid',
+  );
+
   private dragCounter = 0;
   private isValidDrop = false;
   private target?: HTMLElement;
+  @state() private rejectReason?: string;
 
   @property({ type: String, reflect: true })
   public state: DropzoneState = 'none';
@@ -84,6 +95,7 @@ export class YatlDropzone extends YatlBase {
         this.context,
       );
       this.dispatchEvent(requestEvent);
+      this.rejectReason = requestEvent.rejectReason;
       this.isValidDrop = !requestEvent.defaultPrevented;
       this.state = this.isValidDrop ? 'valid' : 'invalid';
     }
@@ -114,17 +126,17 @@ export class YatlDropzone extends YatlBase {
 
     this.dragCounter--;
     if (this.dragCounter === 0) {
-      this.isValidDrop = false;
-      this.state = 'none';
+      this.resetState();
     }
   };
 
   private handleDrop = (event: DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    this.dragCounter = 0;
-    this.state = 'none';
+
     this.showHint = false;
+    this.resetState();
+
     this.dispatchEvent(
       new YatlDropzoneDropEvent(event.dataTransfer, this.target!, this.context),
     );
@@ -135,12 +147,40 @@ export class YatlDropzone extends YatlBase {
   };
 
   private dragEnd = () => {
-    this.state = 'none';
     this.showHint = false;
+    this.resetState();
   };
 
+  private resetState() {
+    this.dragCounter = 0;
+    this.state = 'none';
+    this.rejectReason = undefined;
+    this.isValidDrop = false;
+  }
+
   protected override render() {
-    return html`<div part="contents"><slot></slot></div>`;
+    const hasDefault = this.slotController.test(null);
+    const hasHint = this.slotController.test('hint');
+    const hasValid = this.slotController.test('valid');
+    const hasInvalid = this.slotController.test('invalid');
+
+    const classes = {
+      'has-default': hasDefault,
+      'has-hint': hasHint,
+      'has-valid': hasValid,
+      'has-invalid': hasInvalid || !!this.rejectReason,
+    };
+
+    return html`
+      <div part="contents" class=${classMap(classes)}>
+        <slot></slot>
+        <slot name="hint"></slot>
+        <slot name="valid"></slot>
+        <slot name="invalid"
+          >${this.rejectReason ? this.rejectReason : nothing}</slot
+        >
+      </div>
+    `;
   }
 }
 

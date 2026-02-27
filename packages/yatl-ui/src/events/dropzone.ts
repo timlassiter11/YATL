@@ -2,12 +2,24 @@ import { YatlEvent } from '@timlassiter11/yatl';
 
 export class YatlDropzoneDropRequest extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-dropzone-drop-request';
+
+  private _rejectReason?: string;
+
+  public get rejectReason() {
+    return this._rejectReason;
+  }
+
   constructor(
     public readonly dataTransfer: DataTransfer | null,
     public dropTarget: HTMLElement,
     public context: unknown,
   ) {
     super(YatlDropzoneDropRequest.EVENT_NAME, { cancelable: true });
+  }
+
+  public reject(reason?: string) {
+    this.preventDefault();
+    this._rejectReason = reason;
   }
 
   public override clone() {

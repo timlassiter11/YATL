@@ -1,5 +1,56 @@
 # @timlassiter11/yatl-ui
 
+## 1.0.6
+
+### Patch Changes
+
+- 494a70c: Submit form when enter pressed within form controls
+- aa2199f: Fixed dialog not showing and hiding properly
+- fe8327b: Made details body scrollable by default
+- a1de202: Added a new disabled property to button group to allow disabling all children
+- e06377c: Improved dropzone logic for more relaiable state
+- a7bcb4e: Added new link icon
+- d170447: Fixed dialog not properly handling overflow
+- 885608e: Added new size property to button
+- e24dd7a: Improved width handling of all form controls
+- d09ec8b: Fixed radio group not honoring initial checked state of children
+- e6ed560: Fixed select ignoring first selection
+- 658ee18: Added default gap to dialog footer actions
+- ec09643: Fixed icon icon missing for spinner error state
+- a2c3a24: Added new divider component
+- 592994b: Added new remote-options component for fetching select options from a remote endpoint
+- 14ddebf: Removed dropzone reliance on parent for drag events
+- bce14ed: Fixed button groups not properly applying border radius
+- 5e96167: Fixed dialog not showing animation when attaching to DOM with open attribute set
+- b898052: Moved button state to spinner
+- 7320715: Fixed single element button groups not honoring radius
+- f28e13e: Fixed footer in card rendering when nothing slotted
+- 9d4aa4a: Fixed spinner not animating in Firefox
+- 20deed4: Added search debounce property to toolbar
+- 9146fc8: Fixed single buttons in button group not taking up full height
+- 99580d3: Fixed button groups re-enabling children
+- 57acbdc: Added open event for details
+- 9f24f5b: Fixed export not working in table view
+- 706a80e: Added slots to dropzone for each state
+- 2b45b8b: Fixed form-control validation messages not showing
+- ad43ec1: Fixed error when setting the select value attribute to a number-like string. E.g. "-1"
+- a0b0bd4: Added hint state to dropzone that starts whenever a drag starts
+- 4ce8dee: Added new cancellable toggle request event for checkable options
+- 53499cf: Fixed dialog hide promise never resolving
+- b423a19: Fixed button group styling issues
+- 5a873ae: Added new dropzone component
+- 37ba8be: Added new state prop to button for idle, loading, and success
+- 314e5da: Fixed table view reload button stuck on success state
+- 1fda21c: Fixed dialog showing when not open
+- 52d8fb7: Fixed visual bug when virtualized table is put inside dialog causing rows to be rendered incorrectly
+- ba01321: Added visibility toggle to password and number inputs
+- dab0b40: Fixed button contents being shown under loading or check icon
+- Updated dependencies [be235f2]
+- Updated dependencies [885608e]
+- Updated dependencies [8b8cf2c]
+- Updated dependencies [52d8fb7]
+  - @timlassiter11/yatl@1.2.4
+
 ## 1.0.5
 
 ### Patch Changes

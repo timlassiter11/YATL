@@ -58,6 +58,7 @@ export default css`
 
   [part='contents'] {
     margin: auto;
+    pointer-events: none;
   }
 
   slot[name] {

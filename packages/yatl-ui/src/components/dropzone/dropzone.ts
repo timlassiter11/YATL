@@ -26,6 +26,7 @@ export class YatlDropzone extends YatlBase {
   );
 
   private dragCounter = 0;
+  private globalDragCounter = 0;
   private isValidDrop = false;
   @state() private rejectReason?: string;
 
@@ -72,8 +73,10 @@ export class YatlDropzone extends YatlBase {
   }
 
   private handleDragEnter = (event: DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
+    // Just in case
+    if (this.dragCounter < 0) {
+      this.dragCounter = 0;
+    }
 
     this.dragCounter++;
     if (this.dragCounter === 1) {
@@ -86,30 +89,33 @@ export class YatlDropzone extends YatlBase {
       this.isValidDrop = !requestEvent.defaultPrevented;
       this.state = this.isValidDrop ? 'valid' : 'invalid';
     }
+
+    if (this.isValidDrop) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
 
   private handleDragOver = (event: DragEvent) => {
-    event.stopPropagation();
-
     if (!this.isValidDrop) {
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'none';
-      }
       return;
     }
 
+    event.stopPropagation();
     event.preventDefault();
-    if (
-      event.dataTransfer &&
-      isValidDropEffect(event.dataTransfer.effectAllowed)
-    ) {
-      event.dataTransfer.dropEffect = event.dataTransfer.effectAllowed;
+    if (event.dataTransfer) {
+      if (isValidDropEffect(event.dataTransfer.effectAllowed)) {
+        event.dataTransfer.dropEffect = event.dataTransfer.effectAllowed;
+      } else {
+        event.dataTransfer.dropEffect = 'copy';
+      }
     }
   };
 
   private handleDragLeave = (event: DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
+    if (this.isValidDrop) {
+      event.stopPropagation();
+    }
 
     this.dragCounter--;
     if (this.dragCounter === 0) {
@@ -118,24 +124,45 @@ export class YatlDropzone extends YatlBase {
   };
 
   private handleDrop = (event: DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
+    if (this.isValidDrop) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.dispatchEvent(
+        new YatlDropzoneDropEvent(event.dataTransfer, this.context),
+      );
+    }
 
     this.showHint = false;
     this.resetState();
-
-    this.dispatchEvent(
-      new YatlDropzoneDropEvent(event.dataTransfer, this.context),
-    );
   };
 
-  private dragStart = () => {
+  private dragStart = (event: Event) => {
+    if (event.type === 'dragstart') {
+      this.globalDragCounter = 1;
+    } else {
+      this.globalDragCounter++;
+    }
+
     this.showHint = true;
   };
 
-  private dragEnd = () => {
-    this.showHint = false;
-    this.resetState();
+  private dragEnd = (event: DragEvent) => {
+    if (event.type === 'dragend' || event.type === 'drop') {
+      // Don't reset our state if this is a drop event and we are in the path.
+      // The global drop event fires before the local one
+      // so if we reset the state now, it won't be a valid drop.
+      // Rely on our drop handler to cleanup.
+      if (event.type !== 'drop' || !event.composedPath().includes(this)) {
+        this.globalDragCounter = 0;
+      }
+    } else {
+      this.globalDragCounter--;
+    }
+
+    if (this.globalDragCounter < 1) {
+      this.showHint = false;
+      this.resetState();
+    }
   };
 
   private resetState() {

@@ -7,7 +7,7 @@ import styles from './table-view.styles';
 import { UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
 import { YatlTableFetchContext, YatlTableFetchTask } from '../../types';
 import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
-import { SpinnerState } from '../spinner/spinner';
+import { YatlSpinnerState } from '../spinner/spinner';
 
 @customElement('yatl-table-view')
 export class YatlTableView<
@@ -21,7 +21,7 @@ export class YatlTableView<
   });
 
   /** When the user requests a silent reload, show the loading icon in the button. */
-  @state() private buttonState: SpinnerState = 'idle';
+  @state() private buttonState: YatlSpinnerState = 'idle';
 
   /** Text to be display above the filters slot. */
   @property({ type: String })

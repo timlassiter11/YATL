@@ -2,7 +2,7 @@ import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../form-controls/form-control/form-control';
 import { YatlBase } from '../base/base';
-import { SpinnerState } from '../spinner/spinner';
+import { YatlSpinnerState } from '../spinner/spinner';
 import { MaybePromise } from '../../types';
 
 import styles from './button.styles';
@@ -42,7 +42,7 @@ export class YatlButton extends YatlFormControl {
   public color: YatlButtonColor = 'neutral';
 
   @property({ type: String, reflect: true })
-  public state: SpinnerState = 'idle';
+  public state: YatlSpinnerState = 'idle';
 
   @property({ type: Number, attribute: 'success-duration' })
   public successDuration = 2000;

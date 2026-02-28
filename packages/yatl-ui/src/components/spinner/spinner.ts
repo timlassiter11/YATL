@@ -5,14 +5,14 @@ import { YatlBase } from '../base/base';
 import styles from './spinner.styles';
 import { icons } from '../../icons';
 
-export type SpinnerState = 'idle' | 'loading' | 'success' | 'error';
+export type YatlSpinnerState = 'idle' | 'loading' | 'success' | 'error';
 
 @customElement('yatl-spinner')
 export class YatlSpinner extends YatlBase {
   public static override styles = [...super.styles, styles];
 
   @property({ type: String, reflect: true })
-  public state: SpinnerState = 'loading';
+  public state: YatlSpinnerState = 'loading';
 
   public override render() {
     const spinnerIcon = icons['spinner'];

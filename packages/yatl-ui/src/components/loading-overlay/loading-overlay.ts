@@ -2,7 +2,7 @@ import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './loading-overlay.styles';
-import { SpinnerState } from '../spinner/spinner';
+import { YatlSpinnerState } from '../spinner/spinner';
 
 @customElement('yatl-loading-overlay')
 export class YatlLoadingOverlay extends YatlBase {
@@ -12,7 +12,7 @@ export class YatlLoadingOverlay extends YatlBase {
   public show = false;
 
   @property({ type: String, reflect: true })
-  public state: SpinnerState = 'loading';
+  public state: YatlSpinnerState = 'loading';
 
   public override render() {
     return html`

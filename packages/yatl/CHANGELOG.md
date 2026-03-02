@@ -1,5 +1,14 @@
 # @timlassiter11/yatl
 
+## 1.2.4
+
+### Patch Changes
+
+- be235f2: Automatically right align numbers in table
+- 885608e: Added new size property to button
+- 8b8cf2c: Fixed search and sorting not working when controller data is set before columns
+- 52d8fb7: Fixed visual bug when virtualized table is put inside dialog causing rows to be rendered incorrectly
+
 ## 1.2.3
 
 ### Patch Changes

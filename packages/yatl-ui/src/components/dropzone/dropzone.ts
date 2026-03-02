@@ -1,16 +1,21 @@
 import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
-import { YatlDropzoneDropEvent, YatlDropzoneDropRequest } from '../../events';
-
-import styles from './dropzone.styles';
+import {
+  YatlDropzoneDragRequest,
+  YatlDropzoneDropEvent,
+  YatlDropzoneDropRequest,
+} from '../../events';
 import { HasSlotController } from '../../utils';
 import { classMap } from 'lit/directives/class-map.js';
+
+import styles from './dropzone.styles';
 
 export type DropzoneState = 'none' | 'valid' | 'invalid';
 
 /**
- * @fires yatl-dropzone-drop-request - Fired when a drag operation enters this element. Cancellable.
+ * @fires yatl-dropzone-drag-request - Fired when a drag operation starts anywhere in the window. Cancel to not show the hint.
+ * @fires yatl-dropzone-drop-request - Fired when a drag operation enters this element. Cancel to set the state to invalid.
  * @fires yatl-dropzone-drop - Fired when an item is dropped on this element.
  */
 @customElement('yatl-dropzone')
@@ -27,6 +32,7 @@ export class YatlDropzone extends YatlBase {
 
   private dragCounter = 0;
   private globalDragCounter = 0;
+  private isValidDrag = false;
   private isValidDrop = false;
   @state() private rejectReason?: string;
 
@@ -79,7 +85,7 @@ export class YatlDropzone extends YatlBase {
     }
 
     this.dragCounter++;
-    if (this.dragCounter === 1) {
+    if (this.isValidDrag && this.dragCounter === 1) {
       const requestEvent = new YatlDropzoneDropRequest(
         event.dataTransfer,
         this.context,
@@ -136,14 +142,25 @@ export class YatlDropzone extends YatlBase {
     this.resetState();
   };
 
-  private dragStart = (event: Event) => {
+  private dragStart = (event: DragEvent) => {
+    if (this.globalDragCounter === 0) {
+      const requestEvent = new YatlDropzoneDragRequest(
+        event.dataTransfer,
+        this.context,
+      );
+      this.dispatchEvent(requestEvent);
+      this.isValidDrag = !requestEvent.defaultPrevented;
+    }
+
     if (event.type === 'dragstart') {
       this.globalDragCounter = 1;
     } else {
       this.globalDragCounter++;
     }
 
-    this.showHint = true;
+    if (!this.showHint && this.isValidDrag) {
+      this.showHint = true;
+    }
   };
 
   private dragEnd = (event: DragEvent) => {
@@ -161,6 +178,7 @@ export class YatlDropzone extends YatlBase {
 
     if (this.globalDragCounter < 1) {
       this.showHint = false;
+      this.isValidDrag = false;
       this.resetState();
     }
   };

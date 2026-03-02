@@ -47,7 +47,14 @@ export class YatlSelect extends YatlFormControl<
   }
   @property({ type: String, attribute: false })
   public set value(value) {
-    this._value = Array.isArray(value) ? [...value] : [String(value)];
+    if (Array.isArray(value)) {
+      this._value = [...value];
+    } else if (typeof value === 'string' && value) {
+      this._value = [String(value)];
+    } else {
+      this._value = [];
+    }
+
     this.updateSelectedOptions();
     this.setFormValue(this.formValue);
   }

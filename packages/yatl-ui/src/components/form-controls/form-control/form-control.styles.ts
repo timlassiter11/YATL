@@ -96,6 +96,13 @@ export default css`
   }
 
   :host(:state(disabled)) {
+    /* 
+     * Without this, if a user drags a file from their computer 
+     * and it starts on a disabled input, Firefox will just 
+     * swallow the event and no drag operations will happen.
+     */
+    pointer-events: none;
+
     .text-input {
       opacity: 0.6;
       cursor: not-allowed;

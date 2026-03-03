@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.2.5
+
+### Patch Changes
+
+- 84ad70a: Fixed table export including undefined and null values as string literals
+
 ## 1.2.4
 
 ### Patch Changes

@@ -48,15 +48,21 @@ export class YatlNumberInput extends YatlFormControl<number> {
     // Don't want to cut off part of the number and then submit that.
     const editing = !this.disabled && !this.readonly;
     let value = this.formValue;
-    if (!editing && this.value !== undefined && this.displayPrecision) {
-      const formatter = Intl.NumberFormat(undefined, {
-        maximumFractionDigits: this.displayPrecision,
-        minimumFractionDigits: this.displayPrecision,
-      });
-      value = formatter.format(this.value);
+    if (!editing && this.value !== undefined) {
+      if (this.displayPrecision !== undefined) {
+        const formatter = Intl.NumberFormat(undefined, {
+          maximumFractionDigits: this.displayPrecision,
+          minimumFractionDigits: this.displayPrecision,
+        });
+        value = formatter.format(this.value);
+      }
+
+      if (this.hideText) {
+        value = '•'.repeat(this.formValue.length);
+      }
     }
 
-    const type = this.hideText ? 'password' : editing ? 'number' : 'text';
+    const type = editing ? 'number' : 'text';
 
     return html`
       <input
@@ -86,6 +92,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
       <yatl-button
         size="small"
         variant="plain"
+        part="visibility-toggle"
         @click=${this.handleVisibilityToggleClick}
       >
         <yatl-icon name=${this.hideText ? 'eye' : 'eye-slash'}></yatl-icon>

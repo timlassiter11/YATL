@@ -782,7 +782,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
             ) {
               value = column.valueFormatter(value, row);
             }
-            value = String(value).replace('"', '""');
+            value = String(value ?? '').replace('"', '""');
             list.push(`"${value}"`);
           }
         }

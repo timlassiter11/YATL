@@ -34,7 +34,6 @@ export default css`
   details {
     display: flex;
     flex-direction: column;
-    height: 100%;
     border-width: var(--border-width);
     border-style: var(--border-style);
     border-color: var(--border-color);

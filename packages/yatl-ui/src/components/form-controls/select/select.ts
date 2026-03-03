@@ -43,7 +43,12 @@ export class YatlSelect extends YatlFormControl<
   // so the user's changes don't mess things up.
   private _value: string[] = [];
   public get value() {
-    return this.multi ? [...this._value] : this._value[0];
+    if (this.multi) {
+      return [...this._value];
+    } else if (this._value.length > 0) {
+      return this._value[0];
+    }
+    return '';
   }
   @property({ type: String, attribute: false })
   public set value(value) {

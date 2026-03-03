@@ -58,7 +58,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
       }
 
       if (this.hideText) {
-        value = '•'.repeat(this.formValue.length);
+        value = '•'.repeat(value.length);
       }
     }
 

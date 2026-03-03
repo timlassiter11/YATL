@@ -1,5 +1,17 @@
 # @timlassiter11/yatl-ui
 
+## 1.0.7
+
+### Patch Changes
+
+- 273fad1: Fixed details summary growing to full height
+- d895141: Fixed unable to toggle number input value visibility when disabled
+- 4cf0ed6: Fixed hidden number input triggering password save prompts
+- e12e942: Fix filter switches not working when setting undefined as onValue
+- 468f917: Fixed select returning undefined value instead of empty string or empty list
+- Updated dependencies [84ad70a]
+  - @timlassiter11/yatl@1.2.5
+
 ## 1.0.6
 
 ### Patch Changes

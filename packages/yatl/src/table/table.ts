@@ -17,18 +17,21 @@ import {
   getColumnStateChanges,
   getNestedValue,
   isDisplayColumn,
+  setNestedValue,
 } from '../utils';
 
 import { highlightText, toHumanReadable } from './utils';
 
 import {
+  YatlCellEditEvent,
   YatlColumnReorderRequest,
   YatlColumnSortRequest,
   YatlRowClickEvent,
   YatlRowSelectRequest,
+  YatlTableControllerEvent,
 } from '../events';
 
-import { html, LitElement, nothing, TemplateResult } from 'lit';
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -38,12 +41,12 @@ import { styleMap } from 'lit/directives/style-map.js';
 import '@lit-labs/virtualizer';
 import { LitVirtualizer } from '@lit-labs/virtualizer';
 import { virtualizerRef } from '@lit-labs/virtualizer/virtualize.js';
-import { YatlEvent } from '../events';
 import {
   ControllerEventMap,
   YatlTableController,
 } from '../table-controller/table-controller';
 import styles from './table.styles';
+import { live } from 'lit/directives/live.js';
 
 // #region --- Constants ---
 
@@ -55,6 +58,7 @@ import styles from './table.styles';
  * @element yatl-table
  * @summary A high-performance grid engine for rugged environments.
  *
+ * @fires yatl-cell-edit - Fired after a cell value has been edited.
  * @fires yatl-row-click - Fired when a user clicks a row.
  * @fires yatl-row-select-request - Fired before the row selection changes. Cancellable
  * @fires yatl-row-select - Fired when the row selection changes.
@@ -78,6 +82,8 @@ export class YatlTable<
   private tableElement!: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
+  @query('.input')
+  private cellInput?: HTMLInputElement;
 
   private get virtualizerRef() {
     if (this.virtualizer) {
@@ -102,7 +108,15 @@ export class YatlTable<
   // Column drag & drop state
   private dragColumn: NestedKeyOf<T> | null = null;
 
-  @state() private useYatlUi = false;
+  @state()
+  private useYatlUi = false;
+
+  @state()
+  private editingState: {
+    id: RowId;
+    field: NestedKeyOf<T>;
+    originalValue: unknown;
+  } | null = null;
 
   // #endregion
 
@@ -926,6 +940,40 @@ export class YatlTable<
     `;
   }
 
+  protected renderCellInput(value: unknown) {
+    const inputType = this.getInputTypeFromValue(value);
+    let cellContents: unknown;
+    if (inputType === 'date') {
+      cellContents = html`
+        <input
+          part="input"
+          class="input"
+          type=${inputType}
+          .valueAsDate=${live(value as Date)}
+        />
+      `;
+    } else if (inputType === 'checkbox') {
+      cellContents = html`
+        <input
+          part="input"
+          class="input"
+          type=${inputType}
+          .checked=${live(value as boolean)}
+        />
+      `;
+    } else {
+      cellContents = html`
+        <input
+          part="input"
+          class="input"
+          type=${inputType}
+          .value=${live(value as string)}
+        />
+      `;
+    }
+    return this.renderCellWrapper(cellContents);
+  }
+
   protected renderCellContents(
     value: unknown,
     column: DisplayColumnOptions<T>,
@@ -955,11 +1003,21 @@ export class YatlTable<
       userParts = userParts.join(' ');
     }
 
-    const isNumber = typeof value === 'bigint' || typeof value === 'number';
+    const inputType = this.getInputTypeFromValue(value);
     const classes = {
       cell: true,
-      'is-number': isNumber,
+      'is-number': inputType === 'number',
     };
+
+    const rowId = this.controller.getRowId(row);
+    const field = column.field;
+    if (
+      this.editingState &&
+      this.editingState.id === rowId &&
+      this.editingState.field === field
+    ) {
+      return this.renderCellInput(value);
+    }
 
     if (typeof column.valueFormatter === 'function') {
       value = column.valueFormatter(value, row);
@@ -972,8 +1030,8 @@ export class YatlTable<
         data-field=${column.field}
         class=${classMap(classes)}
         title=${ifDefined(value ? String(value) : undefined)}
-        @click=${(event: MouseEvent) =>
-          this.handleCellClick(event, row, column.field)}
+        @click=${(event: MouseEvent) => this.handleCellClick(event, row, field)}
+        @dblclick=${() => this.handleCellDoubleClick(row, field)}
       >
         <span class="truncate">
           ${this.renderCellContents(value, column, row)}
@@ -1153,7 +1211,7 @@ export class YatlTable<
     `;
   }
 
-  private renderCellWrapper(content: TemplateResult | typeof nothing) {
+  private renderCellWrapper(content: unknown) {
     return html` <div class="cell-wrapper">${content}</div> `;
   }
 
@@ -1163,6 +1221,8 @@ export class YatlTable<
   public override connectedCallback(): void {
     super.connectedCallback();
     this.addControllerListeners(this.controller);
+    this.addEventListener('mousedown', this.handleMouseDown);
+    this.addEventListener('keydown', this.handleCellInputKeypress);
 
     // We want to use the checkbox from yatl-ui if it is available.
     // If it gets defined, rerender with it.
@@ -1176,10 +1236,22 @@ export class YatlTable<
   public override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.removeControllerListeners(this.controller);
+    this.removeEventListener('mousedown', this.handleMouseDown);
+    this.removeEventListener('keydown', this.handleCellInputKeypress);
 
     // Clean up just in case
     window.addEventListener('mousemove', this.handleResizeMouseMove);
     window.addEventListener('mouseup', this.handleResizeMouseUp);
+  }
+
+  protected override updated(changedProperties: PropertyValues) {
+    super.updated(changedProperties);
+    if (this.cellInput) {
+      setTimeout(() => {
+        this.cellInput?.focus();
+        this.cellInput?.select();
+      });
+    }
   }
 
   // #endregion
@@ -1209,7 +1281,7 @@ export class YatlTable<
   }
 
   private redispatchControllerEvent = (event: Event) => {
-    if (event instanceof YatlEvent) {
+    if (event instanceof YatlTableControllerEvent) {
       this.dispatchEvent(event.clone());
     }
   };
@@ -1268,6 +1340,47 @@ export class YatlTable<
     return widths;
   }
 
+  private getInputTypeFromValue(
+    value: unknown,
+  ): 'text' | 'number' | 'date' | 'checkbox' {
+    const valueType = typeof value;
+    if (valueType === 'bigint' || valueType === 'number') {
+      return 'number';
+    }
+    if (valueType === 'boolean') {
+      return 'checkbox';
+    }
+    if (value instanceof Date) {
+      return 'date';
+    }
+    return 'text';
+  }
+
+  private saveEdits() {
+    if (!this.editingState || !this.cellInput) {
+      return;
+    }
+
+    let value;
+    if (this.cellInput.type === 'date') {
+      value = this.cellInput.valueAsDate;
+    } else if (this.cellInput.type === 'number') {
+      value = this.cellInput.valueAsNumber;
+    } else if (this.cellInput.type === 'checkbox') {
+      value = this.cellInput.checked;
+    } else {
+      value = this.cellInput.value;
+    }
+
+    const { id: rowId, field, originalValue } = this.editingState;
+    const row = this.getRow(rowId)!;
+    setNestedValue(row, field, value);
+    this.dispatchEvent(
+      new YatlCellEditEvent(row, rowId, field, originalValue, value),
+    );
+    this.controller.requestUpdate('data');
+  }
+
   // #endregion
 
   // #region --- Event Handlers ---
@@ -1317,6 +1430,57 @@ export class YatlTable<
       new YatlRowClickEvent(row, rowId, rowIndex, field, event),
     );
   };
+
+  private handleCellDoubleClick(row: T, field: NestedKeyOf<T>) {
+    const column = this.getDisplayColumn(field);
+    if (!column || !column.editable) {
+      return;
+    }
+
+    const value = getNestedValue(row, field);
+    this.editingState = {
+      id: this.controller.getRowId(row),
+      field: field,
+      originalValue: value,
+    };
+  }
+
+  private handleCellInputKeypress(event: KeyboardEvent) {
+    if (!this.editingState) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      this.editingState = null;
+    } else if (event.key === 'Enter') {
+      this.saveEdits();
+      this.editingState = null;
+    } else if (event.key === 'Tab') {
+      this.saveEdits();
+      const { id: rowId } = this.editingState;
+      const row = this.getRow(rowId)!;
+
+      let foundColumn = false;
+      for (const col of this.displayColumns) {
+        if (!foundColumn && col.field === this.editingState.field) {
+          foundColumn = true;
+        } else if (foundColumn && col.editable) {
+          return this.handleCellDoubleClick(row, col.field);
+        }
+      }
+
+      const rowIndex = this.controller.getRowIndex(row) + 1;
+      const nextRow = this.data[rowIndex];
+      this.handleCellDoubleClick(nextRow, this.editingState.field);
+    }
+  }
+
+  private handleMouseDown(event: Event) {
+    if (!this.cellInput || !event.composedPath().includes(this.cellInput)) {
+      this.saveEdits();
+      this.editingState = null;
+    }
+  }
 
   private handleResizeMouseDown(event: MouseEvent, field: NestedKeyOf<T>) {
     event.preventDefault();

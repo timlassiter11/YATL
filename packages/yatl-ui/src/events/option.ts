@@ -9,10 +9,6 @@ export class YatlOptionToggleRequest extends YatlEvent {
   ) {
     super(YatlOptionToggleRequest.EVENT_NAME, { cancelable: true });
   }
-
-  public override clone() {
-    return new YatlOptionToggleRequest(this.value, this.checked);
-  }
 }
 
 declare global {

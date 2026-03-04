@@ -117,6 +117,11 @@ export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
   resizable?: boolean;
 
   /**
+   * Wheter the column's cells can be edited or not.
+   */
+  editable?: boolean;
+
+  /**
    * A function to format the value for display.
    */
   valueFormatter?: ValueFormatterCallback<T>;

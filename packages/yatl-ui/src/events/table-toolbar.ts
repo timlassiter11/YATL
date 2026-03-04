@@ -5,10 +5,6 @@ export class YatlToolbarSearchInput extends YatlEvent {
   constructor(public readonly value: string) {
     super(YatlToolbarSearchInput.EVENT_NAME);
   }
-
-  public override clone() {
-    return new YatlToolbarSearchInput(this.value);
-  }
 }
 
 export class YatlToolbarSearchChange extends YatlEvent {
@@ -16,20 +12,12 @@ export class YatlToolbarSearchChange extends YatlEvent {
   constructor(public readonly value: string) {
     super(YatlToolbarSearchChange.EVENT_NAME);
   }
-
-  public override clone() {
-    return new YatlToolbarSearchChange(this.value);
-  }
 }
 
 export class YatlToolbarExportClick extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-toolbar-export-click';
   constructor() {
     super(YatlToolbarExportClick.EVENT_NAME);
-  }
-
-  public override clone() {
-    return new YatlToolbarExportClick();
   }
 }
 
@@ -42,10 +30,6 @@ export class YatlColumnToggleRequest<
     public readonly visibility: boolean,
   ) {
     super(YatlColumnToggleRequest.EVENT_NAME, { cancelable: true });
-  }
-
-  public override clone() {
-    return new YatlColumnToggleRequest<T>(this.field, this.visibility);
   }
 }
 

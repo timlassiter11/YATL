@@ -8,10 +8,6 @@ export class YatlDropzoneDragRequest extends YatlEvent {
   ) {
     super(YatlDropzoneDragRequest.EVENT_NAME, { cancelable: true });
   }
-
-  public override clone() {
-    return new YatlDropzoneDragRequest(this.dataTransfer, this.context);
-  }
 }
 
 export class YatlDropzoneDropRequest extends YatlEvent {
@@ -34,10 +30,6 @@ export class YatlDropzoneDropRequest extends YatlEvent {
     this.preventDefault();
     this._rejectReason = reason;
   }
-
-  public override clone() {
-    return new YatlDropzoneDropRequest(this.dataTransfer, this.context);
-  }
 }
 
 export class YatlDropzoneDropEvent extends YatlEvent {
@@ -47,10 +39,6 @@ export class YatlDropzoneDropEvent extends YatlEvent {
     public context: unknown,
   ) {
     super(YatlDropzoneDropEvent.EVENT_NAME);
-  }
-
-  public override clone() {
-    return new YatlDropzoneDropEvent(this.dataTransfer, this.context);
   }
 }
 

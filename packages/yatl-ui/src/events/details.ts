@@ -5,10 +5,6 @@ export class YatlDetailsOpenEvent extends YatlEvent {
   constructor() {
     super(YatlDetailsOpenEvent.EVENT_NAME);
   }
-
-  public override clone() {
-    return new YatlDetailsOpenEvent();
-  }
 }
 
 declare global {

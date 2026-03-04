@@ -131,6 +131,16 @@ export default css`
       justify-content: flex-end;
     }
 
+    .input {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      outline: none;
+      padding: var(--yatl-spacing-m);
+      border: 1px solid var(--yatl-color-brand);
+      border-radius: var(--yatl-radius-xs);
+    }
+
     .table.resizing * {
       cursor: col-resize !important;
     }
@@ -206,11 +216,10 @@ export default css`
   }
 
   /* Layout stuff
-  * Most of this is functional and needed
-  * for the table to work properly. 
-  * Modify with caution!
-  */
-  /* stylelint-disable-next-line no-duplicate-selectors */
+   * Most of this is functional and needed
+   * for the table to work properly. 
+   * Modify with caution!
+   */
   :host {
     display: block;
     width: 100%;

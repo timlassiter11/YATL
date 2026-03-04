@@ -1,9 +1,9 @@
 import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
+import { icons } from '../../icons';
 
 import styles from './spinner.styles';
-import { icons } from '../../icons';
 
 export type YatlSpinnerState = 'idle' | 'loading' | 'success' | 'error';
 

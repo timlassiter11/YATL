@@ -18,7 +18,9 @@ export abstract class YatlEvent extends Event {
       ...options,
     });
   }
+}
 
+export abstract class YatlTableControllerEvent extends YatlEvent {
   public abstract clone(): YatlEvent;
 }
 
@@ -36,16 +38,6 @@ export class YatlRowClickEvent<
   ) {
     super(YatlRowClickEvent.EVENT_NAME);
   }
-
-  public override clone() {
-    return new YatlRowClickEvent<T>(
-      this.row,
-      this.rowId,
-      this.index,
-      this.field,
-      this.originalEvent,
-    );
-  }
 }
 
 export class YatlRowSelectRequest extends YatlEvent {
@@ -58,17 +50,9 @@ export class YatlRowSelectRequest extends YatlEvent {
   ) {
     super(YatlRowSelectRequest.EVENT_NAME, { cancelable: true });
   }
-
-  public override clone() {
-    return new YatlRowSelectRequest(
-      this.rowId,
-      this.selected,
-      this.currentlySelectedRows,
-    );
-  }
 }
 
-export class YatlRowSelectEvent extends YatlEvent {
+export class YatlRowSelectEvent extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-row-select';
 
   constructor(
@@ -98,15 +82,11 @@ export class YatlColumnSortRequest<
   ) {
     super(YatlColumnSortRequest.EVENT_NAME, { cancelable: true });
   }
-
-  public override clone() {
-    return new YatlColumnSortRequest<T>(this.field, this.order, this.multisort);
-  }
 }
 
 export class YatlColumnSortEvent<
   T extends object = UnspecifiedRecord,
-> extends YatlEvent {
+> extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-column-sort';
 
   constructor(
@@ -124,7 +104,7 @@ export class YatlColumnSortEvent<
 
 export class YatlColumnToggleEvent<
   T extends object = UnspecifiedRecord,
-> extends YatlEvent {
+> extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-column-toggle';
 
   constructor(
@@ -141,7 +121,7 @@ export class YatlColumnToggleEvent<
 
 export class YatlColumnResizeEvent<
   T extends object = UnspecifiedRecord,
-> extends YatlEvent {
+> extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-column-resize';
 
   constructor(
@@ -168,19 +148,11 @@ export class YatlColumnReorderRequest<
   ) {
     super(YatlColumnReorderRequest.EVENT_NAME, { cancelable: true });
   }
-
-  public override clone() {
-    return new YatlColumnReorderRequest<T>(
-      this.movedColumn,
-      this.originalIndex,
-      this.newIndex,
-    );
-  }
 }
 
 export class YatlColumnReorderEvent<
   T extends object = UnspecifiedRecord,
-> extends YatlEvent {
+> extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-column-reorder';
 
   constructor(public readonly order: NestedKeyOf<T>[]) {
@@ -192,7 +164,23 @@ export class YatlColumnReorderEvent<
   }
 }
 
-export class YatlTableSearchEvent extends YatlEvent {
+export class YatlCellEditEvent<
+  T extends object = UnspecifiedRecord,
+> extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-cell-edit';
+
+  constructor(
+    public readonly row: T,
+    public readonly rowId: RowId,
+    public readonly field: NestedKeyOf<T>,
+    public readonly originalValue: unknown,
+    public readonly currentValue: unknown,
+  ) {
+    super(YatlCellEditEvent.EVENT_NAME);
+  }
+}
+
+export class YatlTableSearchEvent extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-table-search';
 
   constructor(public readonly query: string) {
@@ -206,7 +194,7 @@ export class YatlTableSearchEvent extends YatlEvent {
 
 export class YatlTableViewChangeEvent<
   T extends object = UnspecifiedRecord,
-> extends YatlEvent {
+> extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-table-view-change';
 
   constructor(public readonly data: T[]) {
@@ -214,13 +202,13 @@ export class YatlTableViewChangeEvent<
   }
 
   public override clone() {
-    return new YatlTableViewChangeEvent<T>(this.data);
+    return new YatlTableViewChangeEvent(this.data);
   }
 }
 
 export class YatlTableStateChangeEvent<
   T extends object = UnspecifiedRecord,
-> extends YatlEvent {
+> extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-table-state-change';
 
   constructor(

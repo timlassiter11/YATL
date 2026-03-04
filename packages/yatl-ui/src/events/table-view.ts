@@ -5,10 +5,6 @@ export class YatlTableViewFiltersClearEvent extends YatlEvent {
   constructor() {
     super(YatlTableViewFiltersClearEvent.EVENT_NAME);
   }
-
-  public override clone() {
-    return new YatlTableViewFiltersClearEvent();
-  }
 }
 
 declare global {

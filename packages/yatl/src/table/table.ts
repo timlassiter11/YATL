@@ -1251,7 +1251,10 @@ export class YatlTable<
         if (hasPixelWidth) {
           widths.push(`${state.width}px`);
         } else {
-          widths.push('minmax(0, 1fr)');
+          // If we don't have a fixed pixel width it means this column
+          // was added after the table already had a saved state.
+          // Give it a min width to ensure it gets some space.
+          widths.push('minmax(50px, 1fr)');
         }
       } else {
         if (hasPixelWidth) {

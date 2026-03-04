@@ -31,7 +31,7 @@ export class YatlRemoteOptions extends YatlBase {
   public parser?: (data: unknown) => YatlOptionData[];
 
   @property({ attribute: false })
-  public fetchClient: FetchApi = fetch;
+  public fetchClient: FetchApi = uri => window.fetch(uri);
 
   // We don't want this to be shadow DOM
   // so the selects can find the options.
@@ -69,6 +69,10 @@ export class YatlRemoteOptions extends YatlBase {
   }
 
   private async fetchOptions() {
+    if (!this.uri) {
+      return;
+    }
+
     this.isLoading = true;
     try {
       const response = await this.fetchClient(this.uri);

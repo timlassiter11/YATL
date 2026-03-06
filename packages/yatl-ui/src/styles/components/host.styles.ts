@@ -5,23 +5,29 @@ export default css`
     box-sizing: border-box;
   }
 
+  :host([hidden]) {
+    display: none !important;
+  }
+
   :host([data-group-position]) {
     height: 100%;
   }
 
   :host([data-group-position='middle']) {
-    --button-radius: 0 !important;
+    --yatl-button-radius: 0 !important;
   }
 
   :host([data-group-position='first']) {
-    --button-radius: var(--button-group-radius) 0 0 var(--button-group-radius);
+    --yatl-button-radius: var(--button-group-radius) 0 0
+      var(--button-group-radius);
   }
 
   :host([data-group-position='last']) {
-    --button-radius: 0 var(--button-group-radius) var(--button-group-radius) 0;
+    --yatl-button-radius: 0 var(--button-group-radius)
+      var(--button-group-radius) 0;
   }
 
   :host([data-group-position='single']) {
-    --button-radius: var(--button-group-radius);
+    --yatl-button-radius: var(--button-group-radius);
   }
 `;

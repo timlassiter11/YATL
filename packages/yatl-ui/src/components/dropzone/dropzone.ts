@@ -49,7 +49,7 @@ export class YatlDropzone extends YatlBase {
     super.connectedCallback();
     const capture = true;
     // Covers a drag starting anywhere in the window
-    window.addEventListener('dragstart', this.dragStart, { capture });
+    window.addEventListener('dragstart', this.dragStart);
     // Covers a drag started outside the window
     window.addEventListener('dragenter', this.dragStart, { capture });
     window.addEventListener('dragleave', this.dragEnd, { capture });
@@ -66,7 +66,7 @@ export class YatlDropzone extends YatlBase {
     super.disconnectedCallback();
 
     const capture = true;
-    window.removeEventListener('dragstart', this.dragStart, { capture });
+    window.removeEventListener('dragstart', this.dragStart);
     window.removeEventListener('dragenter', this.dragStart, { capture });
     window.removeEventListener('dragleave', this.dragEnd, { capture });
     window.removeEventListener('dragend', this.dragEnd, { capture });
@@ -143,13 +143,14 @@ export class YatlDropzone extends YatlBase {
   };
 
   private dragStart = (event: DragEvent) => {
+    let isValidDrag = this.isValidDrag;
     if (this.globalDragCounter === 0) {
       const requestEvent = new YatlDropzoneDragRequest(
         event.dataTransfer,
         this.context,
       );
       this.dispatchEvent(requestEvent);
-      this.isValidDrag = !requestEvent.defaultPrevented;
+      isValidDrag = !requestEvent.defaultPrevented;
     }
 
     if (event.type === 'dragstart') {
@@ -158,8 +159,14 @@ export class YatlDropzone extends YatlBase {
       this.globalDragCounter++;
     }
 
-    if (!this.showHint && this.isValidDrag) {
-      this.showHint = true;
+    if (!this.showHint && isValidDrag) {
+      // This is a hack to fix dragging issues in Chrome.
+      // Chrome doesn't like when you update things right
+      // when the drag event starts so just wait...
+      setTimeout(() => {
+        this.isValidDrag = true;
+        this.showHint = true;
+      });
     }
   };
 

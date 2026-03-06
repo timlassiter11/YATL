@@ -76,6 +76,9 @@ export class YatlConfirmationDialog extends YatlBase {
   }
 
   protected override render() {
+    const hideAcceptButton = this.acceptText === '';
+    const hideRejectButton = this.rejectText === '';
+
     return html`
       <yatl-dialog
         exportparts="dialog, body, footer-actions"
@@ -87,8 +90,14 @@ export class YatlConfirmationDialog extends YatlBase {
       >
         <slot></slot>
         <slot slot="footer-actions" name="footer-actions">
-          <yatl-button @click=${this.reject}> ${this.rejectText} </yatl-button>
-          <yatl-button color="brand" @click=${this.accept}>
+          <yatl-button @click=${this.reject} ?hidden=${hideRejectButton}>
+            ${this.rejectText}
+          </yatl-button>
+          <yatl-button
+            color="brand"
+            @click=${this.accept}
+            ?hidden=${hideAcceptButton}
+          >
             ${this.acceptText}
           </yatl-button>
         </slot>

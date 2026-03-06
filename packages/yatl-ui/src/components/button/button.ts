@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../form-controls/form-control/form-control';
 import { YatlBase } from '../base/base';
 import { YatlSpinnerState } from '../spinner/spinner';
-import { MaybePromise } from '../../types';
+import { MaybePromise, YatlSize } from '../../types';
 
 import styles from './button.styles';
 import sizeStyles from '../../styles/components/size.styles';
@@ -33,7 +33,7 @@ export class YatlButton extends YatlFormControl {
   public type: 'button' | 'submit' | 'reset' = 'button';
 
   @property({ type: String, reflect: true })
-  public size: 'small' | 'medium' | 'large' = 'medium';
+  public size: YatlSize = 'medium';
 
   @property({ type: String, reflect: true })
   public variant: YatlButtonVariant = 'neutral';

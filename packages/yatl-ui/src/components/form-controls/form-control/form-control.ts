@@ -4,6 +4,7 @@ import { HasSlotController } from '../../../utils/slot-controller';
 import { classMap } from 'lit/directives/class-map.js';
 import { YatlBase } from '../../base/base';
 import styles from './form-control.styles';
+import sizeStyles from '../../../styles/components/size.styles';
 
 export type FormControl =
   | HTMLInputElement
@@ -32,7 +33,7 @@ export abstract class YatlFormControl<
     ...LitElement.shadowRootOptions,
     delegatesFocus: true,
   };
-  public static override styles = [...super.styles, styles];
+  public static override styles = [...super.styles, sizeStyles, styles];
 
   private slotController = new HasSlotController(
     this,

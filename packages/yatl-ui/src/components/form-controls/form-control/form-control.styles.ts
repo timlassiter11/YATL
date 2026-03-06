@@ -9,7 +9,15 @@ export default css`
       var(--yatl-border-color)
     );
     --input-radius: var(--yatl-input-radius, var(--yatl-radius-m));
-    --input-padding: var(--yatl-input-padding, var(--yatl-spacing-m));
+    --input-padding: var(
+      --yatl-input-padding,
+      var(--yatl-size-padding, var(--yatl-spacing-m))
+    );
+    --input-font-size: var(
+      --yatl-input-font-size,
+      var(--yatl-size-font-size),
+      var(--yatl-font-size-m)
+    );
     --input-bg: var(--yatl-input-bg, var(--yatl-surface-lowered));
     --input-text: var(--yatl-input-text, var(--yatl-text-1));
     --input-line-height: var(--yatl-input-line-height, 1.2);

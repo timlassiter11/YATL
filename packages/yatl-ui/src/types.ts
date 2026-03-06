@@ -21,3 +21,5 @@ export interface YatlTableFetchContext {
 export type YatlTableFetchTask<T> = (
   context: YatlTableFetchContext,
 ) => MaybePromise<T[] | undefined>;
+
+export type YatlSize = 'small' | 'medium' | 'large';

@@ -38,6 +38,8 @@ export default css`
     border-style: var(--border-style);
     border-color: var(--border-color);
     border-radius: var(--border-radius);
+    overflow: hidden;
+    height: 100%;
   }
 
   [part='header'] {

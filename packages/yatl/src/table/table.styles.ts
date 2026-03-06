@@ -29,7 +29,7 @@ export default css`
     );
 
     --table-header-text: var(--yatl-table-header-text, var(--yatl-text-1));
-    --table-header-bg: var(--yatl-table-header-bg, var(--yatl-surface-lowered));
+    --table-header-bg: var(--yatl-table-header-bg, var(--yatl-surface-2));
     --table-header-hover-bg: var(
       --yatl-table-header-hover-bg,
       color-mix(in srgb, var(--yatl-color-mix) 4%, var(--table-header-bg))

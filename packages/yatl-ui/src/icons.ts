@@ -126,6 +126,62 @@ export const eyeSlashIcon = svg`
   <line class="icon eye-slash" x1="1" y1="1" x2="23" y2="23"></line>
 `;
 
+export const grabberIcon = svg`
+  <circle cx="9" cy="12" r="1" />
+  <circle cx="9" cy="5" r="1" />
+  <circle cx="9" cy="19" r="1" />
+  <circle cx="15" cy="12" r="1" />
+  <circle cx="15" cy="5" r="1" />
+  <circle cx="15" cy="19" r="1" />
+`;
+
+export const nodeShallow = svg`
+  <rect x="10" y="2" width="4" height="4" rx="1"/>
+  <path d="M12 6v3"/>
+  <path d="M5 9h14"/>
+  <path d="M5 9v3"/>
+  <path d="M12 9v3"/>
+  <path d="M19 9v3"/>
+  <rect x="3" y="12" width="4" height="4" rx="1"/>
+  <rect x="10" y="12" width="4" height="4" rx="1"/>
+  <rect x="17" y="12" width="4" height="4" rx="1"/>
+`;
+
+export const nodeDeep = svg`
+  <rect x="10" y="2" width="4" height="4" rx="1"/>
+  <path d="M12 6v2"/>
+  <path d="M6 8h10"/>
+  <path d="M6 8v2"/>
+  <path d="M16 8v2"/>
+  <rect x="4" y="10" width="4" height="4" rx="1"/>
+  <rect x="14" y="10" width="4" height="4" rx="1"/>
+  <path d="M16 14v2"/>
+  <path d="M12 16h8"/>
+  <path d="M12 16v2"/>
+  <path d="M20 16v2"/>
+  <rect x="10" y="18" width="4" height="4" rx="1"/>
+  <rect x="18" y="18" width="4" height="4" rx="1"/>
+`;
+
+export const listFlat = svg`
+  <path d="M4 6h16"/>
+  <path d="M10 12h10"/>
+  <path d="M10 18h10"/>
+  <path d="M6 6v12"/>
+  <path d="M6 12h2"/>
+  <path d="M6 18h2"/>
+`;
+
+export const listNested = svg`
+  <path d="M4 6h16"/>
+  <path d="M10 12h10"/>
+  <path d="M16 18h4"/>
+  <path d="M6 6v6"/>
+  <path d="M6 12h2"/>
+  <path d="M12 12v6"/>
+  <path d="M12 18h2"/>
+`;
+
 export const icons: Record<string, TemplateResult<2>> = {
   expand: expandIcon,
   contract: contractIcon,
@@ -147,4 +203,9 @@ export const icons: Record<string, TemplateResult<2>> = {
   filters: filtersIcon,
   eye: eyeIcon,
   'eye-slash': eyeSlashIcon,
+  grabber: grabberIcon,
+  'node-shallow': nodeShallow,
+  'node-deep': nodeDeep,
+  'list-flat': listFlat,
+  'list-nested': listNested,
 };

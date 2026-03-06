@@ -33,6 +33,13 @@ export class YatlTableView<
   @property({ type: Boolean, reflect: true, attribute: 'hide-filters' })
   public hideFilters = false;
 
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: 'hide-filters-clear-button',
+  })
+  public hideFiltersClearButton = false;
+
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
    */
@@ -107,6 +114,7 @@ export class YatlTableView<
             <span part="filters-label"> ${this.filtersLabel} </span>
           </slot>
           <yatl-button
+            part="filters-clear-button"
             variant="plain"
             title="Clear Filters"
             @click=${this.handleClearFiltersClick}

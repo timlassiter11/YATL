@@ -51,6 +51,12 @@ export default css`
     grid-column-gap: 0;
   }
 
+  :host([hide-filters-clear-button]) {
+    [part='filters-clear-button'] {
+      display: none;
+    }
+  }
+
   [part='filters-header'] {
     grid-row: 1;
     grid-column: 1;

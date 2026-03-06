@@ -889,6 +889,7 @@ export class YatlTable<
         aria-label=${title}
         part="cell header-cell"
         class=${classMap(classes)}
+        title=${title}
         draggable=${ifDefined(this.enableColumnReorder ? true : undefined)}
         data-field=${column.field}
         @dragstart=${(event: DragEvent) =>

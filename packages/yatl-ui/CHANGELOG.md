@@ -1,5 +1,25 @@
 # @timlassiter11/yatl-ui
 
+## 1.0.8
+
+### Patch Changes
+
+- f32af15: Added ability to edit cells within table
+- 3c1683f: Fixed detail body not scrolling
+- d16ba0e: Fixed components not honoring hidden attribute
+- d0aaa1f: Added new icons for lists and nodes
+- 3549add: Fixed details layout issue when stacked in a flex container
+- f7ca428: Fixed dropzones not always working in Chrome
+- 06856f6: Hide confirmation dialog buttons when text is empty
+- 3b82458: Fixed number inputs masked characters not matching length of display value
+- 9590c25: Added new property to table view for hiding the clear filters button
+- f202b12: Fixed crash in remote options when using default fetch client
+- Updated dependencies [f32af15]
+- Updated dependencies [56df7fd]
+- Updated dependencies [ceae989]
+- Updated dependencies [89263d8]
+  - @timlassiter11/yatl@1.2.6
+
 ## 1.0.7
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @timlassiter11/yatl
 
+## 1.2.6
+
+### Patch Changes
+
+- f32af15: Added ability to edit cells within table
+- 56df7fd: Show column title on header hover
+- ceae989: Fixed columns missing from storage data not displaying
+- 89263d8: Properly handle array values when creating column options
+
 ## 1.2.5
 
 ### Patch Changes

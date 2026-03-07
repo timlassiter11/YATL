@@ -26,6 +26,10 @@ export default css`
     overflow: hidden;
   }
 
+  :host(:not([open])) {
+    flex-shrink: 0;
+  }
+
   :host([open]) {
     flex-grow: 1;
     transition: flex-grow var(--open-speed) var(--open-curve);

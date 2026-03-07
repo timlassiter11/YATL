@@ -34,6 +34,7 @@ export default css`
     flex-direction: column;
     gap: var(--options-gap);
     overflow-y: auto;
+    flex-grow: 1;
   }
 
   .text-input {

@@ -535,9 +535,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       if (column?.valueFormatter) {
         value = column.valueFormatter(value, row);
       }
-      if (value != null || includeNull) {
-        const valueCount = values.get(value) ?? 0;
-        values.set(value, valueCount + 1);
+      if (!Array.isArray(value)) {
+        value = [value];
+      }
+      for (const item of value as unknown[]) {
+        if (item != null || includeNull) {
+          const valueCount = values.get(item) ?? 0;
+          values.set(item, valueCount + 1);
+        }
       }
     }
     return values;

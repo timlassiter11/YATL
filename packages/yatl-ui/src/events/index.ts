@@ -7,3 +7,4 @@ export * from './option';
 export * from './table-toolbar';
 export * from './table-view';
 export * from './tag';
+export * from './toast';

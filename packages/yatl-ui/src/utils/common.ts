@@ -1,4 +1,6 @@
 import { ComplexAttributeConverter } from 'lit';
+import { YatlToastData } from '../types';
+import { YatlToastRequest } from '../events/toast';
 
 /**
  * Retrieves the flattened list of elements assigned to a slot.
@@ -132,4 +134,8 @@ export async function getAnimationPromise(
     element.addEventListener('animationend', onEnd, { signal });
     element.addEventListener('animationcancel', onEnd, { signal });
   });
+}
+
+export function toast(data: YatlToastData) {
+  window.dispatchEvent(new YatlToastRequest(data));
 }

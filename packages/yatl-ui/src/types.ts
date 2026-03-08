@@ -1,3 +1,5 @@
+import { TemplateResult } from 'lit';
+
 export type MaybePromise<T> = Promise<T> | T;
 
 /** The reason for a table data fetch task to be called */
@@ -23,3 +25,12 @@ export type YatlTableFetchTask<T> = (
 ) => MaybePromise<T[] | undefined>;
 
 export type YatlSize = 'small' | 'medium' | 'large';
+
+export type YatlToastVariant = 'neutral' | 'success' | 'warning' | 'danger';
+
+export interface YatlToastData {
+  label?: string;
+  message: string | TemplateResult;
+  variant?: YatlToastVariant;
+  duration?: number;
+}

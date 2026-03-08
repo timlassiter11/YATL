@@ -18,6 +18,8 @@ export * from './tab-panel/tab-panel';
 export * from './table-ui/table-ui';
 export * from './table-view/table-view';
 export * from './tag/tag';
+export * from './toast/toast';
+export * from './toast-manager/toast-manager';
 export * from './toolbar/toolbar';
 
 export * from './filter-components/base-filter/base-filter';

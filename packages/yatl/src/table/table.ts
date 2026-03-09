@@ -1374,6 +1374,11 @@ export class YatlTable<
     }
 
     const { id: rowId, field, originalValue } = this.editingState;
+
+    if (value === originalValue) {
+      return;
+    }
+
     const row = this.getRow(rowId)!;
     setNestedValue(row, field, value);
     this.dispatchEvent(

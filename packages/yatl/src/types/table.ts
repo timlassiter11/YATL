@@ -19,6 +19,11 @@ export type RowSelectionMethod = 'single' | 'multi';
  */
 export type RowPartsCallback<T> = (row: T) => string | string[] | undefined;
 
+export interface StorageInterface {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+}
+
 /**
  * Options used to configure what state information
  * should be saved and restored automatically.
@@ -30,12 +35,8 @@ export interface StorageOptions {
    */
   key: string;
 
-  /**
-   * Which storage engine to use.
-   * * 'local': Persists after browser is closed (Default).
-   * * 'session': Cleared when tab is closed.
-   */
-  storage?: 'local' | 'session';
+  /** A storage client for getting and setting values. Defaults to window.localStorage */
+  storage?: StorageInterface;
 
   /** Save the current search query */
   saveSearchQuery?: boolean;

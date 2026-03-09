@@ -52,7 +52,7 @@ import { TypedEventTarget } from '../utils/typed-event-target';
 const STATE_SAVE_DEBOUNCE = 1000;
 
 const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
-  storage: 'local',
+  storage: window.localStorage,
   saveColumnSortOrders: true,
   saveColumnVisibility: true,
   saveColumnWidths: true,
@@ -1396,8 +1396,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       savedTableState.columns?.push(savedColumnState);
     }
 
-    const storage =
-      options.storage === 'session' ? sessionStorage : localStorage;
+    const storage = options.storage ?? window.localStorage;
+
     try {
       storage.setItem(options.key, JSON.stringify(savedTableState));
     } catch (error) {
@@ -1411,7 +1411,9 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     const options = { ...DEFAULT_STORAGE_OPTIONS, ...this.storageOptions };
-    const json = localStorage.getItem(options.key);
+    const storage = options.storage ?? window.localStorage;
+
+    const json = storage.getItem(options.key);
     if (!json) {
       return;
     }

@@ -13,14 +13,24 @@ export default css`
     --toast-width: var(--yatl-toast-width, 300px);
     --toast-max-width: var(--yatl-toast-max-width, 480px);
     --toast-timer-height: var(--yatl-toast-timer-height, 2px);
-    --toast-padding: var(--yatl-toast-padding, var(--yatl-spacing-l));
+    --toast-padding: var(--yatl-toast-padding, var(--yatl-spacing-s));
+
+    --toast-show-animation-duration: var(
+      --yatl-toast-show-animation-duration,
+      0.25s
+    );
+    --toast-hide-animation-duration: var(
+      --yatl-toast-hide-animation-duration,
+      0.5s
+    );
 
     position: relative;
     pointer-events: all;
 
-    padding: var(--toast-padding);
+    padding: 0;
     width: var(--toast-width);
     max-width: var(--toast-max-width);
+    max-height: 100vh;
     background-color: var(--toast-bg);
     border-radius: var(--toast-radius);
     border-width: var(--toast-border-width);
@@ -28,12 +38,16 @@ export default css`
     border-color: var(--toast-border-color);
 
     will-change: transform;
-    animation: slide-in 0.25s var(--ease-elastic-out-5);
-    interpolate-size: allow-keywords;
+    animation: slide-in;
+    animation-duration: var(--toast-show-animation-duration);
+    animation-timing-function: var(--ease-elastic-out-5);
   }
 
   :host(.closing) {
-    animation: fade-and-collapse 0.4s ease-in forwards;
+    animation: fade-and-collapse;
+    animation-duration: var(--toast-hide-animation-duration);
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
   }
 
   :host(:hover) [part='timer'] {
@@ -52,6 +66,7 @@ export default css`
     align-items: center;
     gap: var(--yatl-spacing-s);
     border-bottom: 1px solid var(--toast-border-color);
+    padding: var(--toast-padding);
   }
 
   [part='label'] {
@@ -60,6 +75,10 @@ export default css`
 
   [part='close'] {
     flex: 0 0 0%;
+  }
+
+  [part='message'] {
+    padding: var(--toast-padding);
   }
 
   :host(:not([duration])) [part='timer'],
@@ -123,17 +142,15 @@ export default css`
   @keyframes fade-and-collapse {
     0% {
       opacity: 1;
-      height: auto;
+      max-height: 200px;
     }
     50% {
-      opacity: 0;
-      height: auto;
+      opacity: 0.5;
+      max-height: 200px;
     }
-
     100% {
       opacity: 0;
-      height: 0;
-      border: none;
+      max-height: 0;
     }
   }
 
@@ -142,7 +159,7 @@ export default css`
       width: 100%;
       opacity: 1;
     }
-    80% {
+    90% {
       opacity: 1;
     }
     to {

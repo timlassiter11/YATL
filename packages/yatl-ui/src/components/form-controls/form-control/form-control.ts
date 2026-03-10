@@ -181,6 +181,16 @@ export abstract class YatlFormControl<
     }
   }
 
+  protected override updated(
+    changedProperties: PropertyValues<YatlFormControl>,
+  ): void {
+    // Update the form value of the actual update so the underlying
+    // form control gets updated and we can use its validity.
+    if (changedProperties.has('value')) {
+      this.setFormValue(this.formValue);
+    }
+  }
+
   protected override render() {
     return html`
       ${this.renderLabel()} ${this.renderBase(this.renderInput())}

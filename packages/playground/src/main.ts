@@ -135,7 +135,6 @@ function initTable() {
     saveColumnVisibility: true,
     saveColumnSortOrders: true,
     saveColumnWidths: true,
-    storage: 'local',
   };
 
   table.columns = [

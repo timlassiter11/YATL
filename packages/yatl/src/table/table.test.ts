@@ -443,7 +443,7 @@ describe('YatlTable Component', () => {
       const el = await renderTable({
         storageOptions: {
           key: 'test-table-v1',
-          storage: 'local',
+          storage: window.localStorage,
           saveColumnVisibility: true,
         },
       });
@@ -480,7 +480,7 @@ describe('YatlTable Component', () => {
       const el = await renderTable({
         storageOptions: {
           key: 'test-table-restored',
-          storage: 'local',
+          storage: window.localStorage,
           saveSearchQuery: true,
         },
       });

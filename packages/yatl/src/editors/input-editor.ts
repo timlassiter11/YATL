@@ -50,6 +50,9 @@ export class InputEditor<T extends object = UnspecifiedRecord>
         break;
       case 'number':
         this.currentValue = target.valueAsNumber;
+        if (isNaN(this.currentValue as number)) {
+          this.currentValue = null;
+        }
         break;
       default:
         this.currentValue = target.value;

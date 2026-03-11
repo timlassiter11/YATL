@@ -85,7 +85,9 @@ export default css`
 
   [part='header']:not(.has-header),
   [part='footer']:not(.has-footer) {
-    display: none;
+    padding: 0;
+    margin: 0;
+    border: none;
   }
 
   .divider {

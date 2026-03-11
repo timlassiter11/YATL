@@ -96,6 +96,8 @@ export interface BaseColumnOptions<T> {
   filter?: ColumnFilterCallback;
 }
 
+export type ColumnDataType = 'text' | 'number' | 'date' | 'boolean';
+
 /**
  * Column options for the table.
  */
@@ -120,6 +122,11 @@ export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
    * Wheter the column's cells can be edited or not.
    */
   editable?: boolean;
+
+  /**
+   *
+   */
+  dataType?: ColumnDataType;
 
   /**
    * A function to format the value for display.

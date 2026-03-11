@@ -1,4 +1,5 @@
 import type {
+  ColumnDataType,
   ColumnOptions,
   ColumnState,
   DisplayColumnOptions,
@@ -941,24 +942,24 @@ export class YatlTable<
     `;
   }
 
-  protected renderCellInput(value: unknown) {
-    const inputType = this.getInputTypeFromValue(value);
+  protected renderCellInput(value: unknown, type?: ColumnDataType) {
+    type ??= this.getInputTypeFromValue(value);
     let cellContents: unknown;
-    if (inputType === 'date') {
+    if (type === 'date') {
       cellContents = html`
         <input
           part="input"
           class="input"
-          type=${inputType}
+          type=${type}
           .valueAsDate=${live(value as Date)}
         />
       `;
-    } else if (inputType === 'checkbox') {
+    } else if (type === 'boolean') {
       cellContents = html`
         <input
           part="input"
           class="input"
-          type=${inputType}
+          type="checkbox"
           .checked=${live(value as boolean)}
         />
       `;
@@ -967,7 +968,7 @@ export class YatlTable<
         <input
           part="input"
           class="input"
-          type=${inputType}
+          type=${type}
           .value=${live(value as string)}
         />
       `;
@@ -1017,7 +1018,7 @@ export class YatlTable<
       this.editingState.id === rowId &&
       this.editingState.field === field
     ) {
-      return this.renderCellInput(value);
+      return this.renderCellInput(value, column.dataType);
     }
 
     if (typeof column.valueFormatter === 'function') {
@@ -1341,15 +1342,13 @@ export class YatlTable<
     return widths;
   }
 
-  private getInputTypeFromValue(
-    value: unknown,
-  ): 'text' | 'number' | 'date' | 'checkbox' {
+  private getInputTypeFromValue(value: unknown): ColumnDataType {
     const valueType = typeof value;
     if (valueType === 'bigint' || valueType === 'number') {
       return 'number';
     }
     if (valueType === 'boolean') {
-      return 'checkbox';
+      return 'boolean';
     }
     if (value instanceof Date) {
       return 'date';
@@ -1367,6 +1366,9 @@ export class YatlTable<
       value = this.cellInput.valueAsDate;
     } else if (this.cellInput.type === 'number') {
       value = this.cellInput.valueAsNumber;
+      if (isNaN(value as number)) {
+        value = null;
+      }
     } else if (this.cellInput.type === 'checkbox') {
       value = this.cellInput.checked;
     } else {

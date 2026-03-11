@@ -152,7 +152,11 @@ export abstract class YatlFormControl<
   protected override willUpdate(
     changedProperties: PropertyValues<YatlFormControl<TData, TInput>>,
   ): void {
-    if (!this.hasUserInteracted && changedProperties.has('defaultValue')) {
+    if (
+      changedProperties.has('defaultValue') &&
+      !changedProperties.has('value') &&
+      !this.hasUserInteracted
+    ) {
       this.value = this.defaultValue;
       this.setFormValue(this.formValue);
     }

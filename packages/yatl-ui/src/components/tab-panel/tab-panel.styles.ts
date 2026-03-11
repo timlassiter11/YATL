@@ -14,5 +14,6 @@ export default css`
   [part='base'] {
     display: block;
     padding: var(--padding);
+    box-sizing: border-box;
   }
 `;

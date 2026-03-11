@@ -1,5 +1,4 @@
 import type {
-  ColumnDataType,
   ColumnOptions,
   ColumnState,
   DisplayColumnOptions,
@@ -47,7 +46,6 @@ import {
   YatlTableController,
 } from '../table-controller/table-controller';
 import styles from './table.styles';
-import { live } from 'lit/directives/live.js';
 
 // #region --- Constants ---
 
@@ -83,8 +81,8 @@ export class YatlTable<
   private tableElement!: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
-  @query('.input')
-  private cellInput?: HTMLInputElement;
+  @query('.cell.is-editing > *')
+  private editor?: HTMLElement;
 
   private get virtualizerRef() {
     if (this.virtualizer) {
@@ -942,40 +940,6 @@ export class YatlTable<
     `;
   }
 
-  protected renderCellInput(value: unknown, type?: ColumnDataType) {
-    type ??= this.getInputTypeFromValue(value);
-    let cellContents: unknown;
-    if (type === 'date') {
-      cellContents = html`
-        <input
-          part="input"
-          class="input"
-          type=${type}
-          .valueAsDate=${live(value as Date)}
-        />
-      `;
-    } else if (type === 'boolean') {
-      cellContents = html`
-        <input
-          part="input"
-          class="input"
-          type="checkbox"
-          .checked=${live(value as boolean)}
-        />
-      `;
-    } else {
-      cellContents = html`
-        <input
-          part="input"
-          class="input"
-          type=${type}
-          .value=${live(value as string)}
-        />
-      `;
-    }
-    return this.renderCellWrapper(cellContents);
-  }
-
   protected renderCellContents(
     value: unknown,
     column: DisplayColumnOptions<T>,
@@ -1014,11 +978,21 @@ export class YatlTable<
     const rowId = this.controller.getRowId(row);
     const field = column.field;
     if (
+      column.editor &&
       this.editingState &&
       this.editingState.id === rowId &&
       this.editingState.field === field
     ) {
-      return this.renderCellInput(value, column.dataType);
+      return this.renderCellWrapper(html`
+        <div
+          role="cell"
+          part="cell body-cell cell-${column.field}"
+          class=${classMap({ ...classes, 'is-editing': true })}
+          data-field=${column.field}
+        >
+          ${column.editor.render(value, row)}
+        </div>
+      `);
     }
 
     if (typeof column.valueFormatter === 'function') {
@@ -1246,12 +1220,14 @@ export class YatlTable<
     window.addEventListener('mouseup', this.handleResizeMouseUp);
   }
 
-  protected override updated(changedProperties: PropertyValues) {
+  public override updated(changedProperties: PropertyValues) {
     super.updated(changedProperties);
-    if (this.cellInput) {
+    if (this.editor && document.activeElement !== this.editor) {
       setTimeout(() => {
-        this.cellInput?.focus();
-        this.cellInput?.select();
+        this.editor?.focus();
+        if (this.editor instanceof HTMLInputElement) {
+          this.editor.select();
+        }
       });
     }
   }
@@ -1342,7 +1318,9 @@ export class YatlTable<
     return widths;
   }
 
-  private getInputTypeFromValue(value: unknown): ColumnDataType {
+  private getInputTypeFromValue(
+    value: unknown,
+  ): 'text' | 'number' | 'date' | 'boolean' {
     const valueType = typeof value;
     if (valueType === 'bigint' || valueType === 'number') {
       return 'number';
@@ -1356,37 +1334,33 @@ export class YatlTable<
     return 'text';
   }
 
-  private saveEdits() {
-    if (!this.editingState || !this.cellInput) {
+  private async saveEdits() {
+    if (!this.editingState) {
+      return;
+    }
+
+    const { id: rowId, field, originalValue } = this.editingState;
+    const column = this.getDisplayColumn(field);
+    const row = this.getRow(rowId);
+    if (!column?.editor || !row) {
       return;
     }
 
     let value;
-    if (this.cellInput.type === 'date') {
-      value = this.cellInput.valueAsDate;
-    } else if (this.cellInput.type === 'number') {
-      value = this.cellInput.valueAsNumber;
-      if (isNaN(value as number)) {
-        value = null;
-      }
-    } else if (this.cellInput.type === 'checkbox') {
-      value = this.cellInput.checked;
+    const result = column.editor.save(originalValue, field, row);
+    if (result instanceof Promise) {
+      value = await result;
     } else {
-      value = this.cellInput.value;
+      value = result;
     }
 
-    const { id: rowId, field, originalValue } = this.editingState;
-
-    if (value === originalValue) {
-      return;
+    if (value !== undefined) {
+      setNestedValue(row, field, value);
+      this.dispatchEvent(
+        new YatlCellEditEvent(row, rowId, field, originalValue, value),
+      );
+      this.controller.requestUpdate('data');
     }
-
-    const row = this.getRow(rowId)!;
-    setNestedValue(row, field, value);
-    this.dispatchEvent(
-      new YatlCellEditEvent(row, rowId, field, originalValue, value),
-    );
-    this.controller.requestUpdate('data');
   }
 
   // #endregion
@@ -1441,7 +1415,7 @@ export class YatlTable<
 
   private handleCellDoubleClick(row: T, field: NestedKeyOf<T>) {
     const column = this.getDisplayColumn(field);
-    if (!column || !column.editable) {
+    if (!column || !column.editor) {
       return;
     }
 
@@ -1472,19 +1446,39 @@ export class YatlTable<
       for (const col of this.displayColumns) {
         if (!foundColumn && col.field === this.editingState.field) {
           foundColumn = true;
-        } else if (foundColumn && col.editable) {
+        } else if (foundColumn && col.editor) {
           return this.handleCellDoubleClick(row, col.field);
         }
       }
 
-      const rowIndex = this.controller.getRowIndex(row) + 1;
-      const nextRow = this.data[rowIndex];
+      // We can't tab through rows if there are none
+      if (this.filteredData.length === 0) {
+        return;
+      }
+
+      let rowIndex = this.filteredData.indexOf(row);
+      // This should never happen but lets just be safe.
+      if (rowIndex < 0) {
+        return;
+      }
+
+      rowIndex++;
+      if (rowIndex >= this.filteredData.length) {
+        rowIndex = 0;
+      }
+      const nextRow = this.filteredData[rowIndex];
       this.handleCellDoubleClick(nextRow, this.editingState.field);
+      event.preventDefault();
     }
   }
 
   private handleMouseDown(event: Event) {
-    if (!this.cellInput || !event.composedPath().includes(this.cellInput)) {
+    const containsEditing = event
+      .composedPath()
+      .filter(e => e instanceof HTMLElement)
+      .some(e => e.classList.contains('is-editing'));
+
+    if (this.editingState && !containsEditing) {
       this.saveEdits();
       this.editingState = null;
     }

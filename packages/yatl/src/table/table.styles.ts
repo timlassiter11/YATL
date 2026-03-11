@@ -131,7 +131,11 @@ export default css`
       justify-content: flex-end;
     }
 
-    .input {
+    .cell.is-editing {
+      padding: 0;
+    }
+
+    .cell.is-editing > * {
       width: 100%;
       height: 100%;
       box-sizing: border-box;

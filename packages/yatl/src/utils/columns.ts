@@ -4,6 +4,7 @@ import {
   DisplayColumnOptions,
   InternalColumnOptions,
   NestedKeyOf,
+  UnspecifiedRecord,
 } from '../types';
 
 export function findColumn<
@@ -13,19 +14,19 @@ export function findColumn<
   return columns.find(c => c.field === field);
 }
 
-export function isInternalColumn<T>(
+export function isInternalColumn<T extends object = UnspecifiedRecord>(
   col: ColumnOptions<T> | undefined | null,
 ): col is InternalColumnOptions<T> {
   return col?.role === 'internal';
 }
 
-export function isDisplayColumn<T>(
+export function isDisplayColumn<T extends object = UnspecifiedRecord>(
   col: ColumnOptions<T> | undefined | null,
 ): col is DisplayColumnOptions<T> {
   return col?.role !== 'internal';
 }
 
-export function createState<T>(
+export function createState<T extends object = UnspecifiedRecord>(
   field: NestedKeyOf<T>,
   defaults?: Partial<ColumnState<T>>,
 ): ColumnState<T> {
@@ -37,7 +38,7 @@ export function createState<T>(
   };
 }
 
-export function getColumnStateChanges<T>(
+export function getColumnStateChanges<T extends object = UnspecifiedRecord>(
   oldState: ColumnState<T> | undefined,
   newState: ColumnState<T>,
 ): (keyof ColumnState<T>)[] {

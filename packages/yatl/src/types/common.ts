@@ -42,3 +42,5 @@ export type Renderable =
   | undefined
   | TemplateResult
   | DirectiveResult;
+
+export type MaybePromise<T> = Promise<T> | T;

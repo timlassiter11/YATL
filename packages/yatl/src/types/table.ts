@@ -1,8 +1,11 @@
 import { ColumnOptions, ColumnState, RestorableColumnState } from './columns';
-import { RowId } from './common';
+import { RowId, UnspecifiedRecord } from './common';
 import { TokenizerCallback } from './filters';
 
-export type RowIdCallback<T> = (row: T, index: number) => RowId;
+export type RowIdCallback<T extends object = UnspecifiedRecord> = (
+  row: T,
+  index: number,
+) => RowId;
 
 /**
  * The method used for selecting rows.
@@ -17,7 +20,9 @@ export type RowSelectionMethod = 'single' | 'multi';
  * @param row - The row data.
  * @returns the part string or list of part strings that should be added to this row.
  */
-export type RowPartsCallback<T> = (row: T) => string | string[] | undefined;
+export type RowPartsCallback<T extends object = UnspecifiedRecord> = (
+  row: T,
+) => string | string[] | undefined;
 
 export interface StorageInterface {
   getItem: (key: string) => string | null;
@@ -60,7 +65,7 @@ export interface StorageOptions {
 /**
  * Represents the current state of the table
  */
-export interface TableState<T> {
+export interface TableState<T extends object = UnspecifiedRecord> {
   /**
    * A list of {@link ColumnState}s representing all of the columns in the table.
    */
@@ -77,9 +82,10 @@ export interface TableState<T> {
   selectedRows: RowId[];
 }
 
-export type RestorableTableState<T> = Partial<
-  Omit<TableState<T>, 'columns'>
-> & { columns?: RestorableColumnState<T>[] };
+export type RestorableTableState<T extends object = UnspecifiedRecord> =
+  Partial<Omit<TableState<T>, 'columns'>> & {
+    columns?: RestorableColumnState<T>[];
+  };
 
 /**
  * Options for configuring what date should be exported.
@@ -96,7 +102,7 @@ export interface ExportOptions {
 /**
  * Options for configuring a table controller
  */
-export interface TableControllerOptions<T extends object> {
+export interface TableControllerOptions<T extends object = UnspecifiedRecord> {
   enableSearchTokenization?: boolean;
   enableSearchScoring?: boolean;
   searchTokenizer?: TokenizerCallback;

@@ -1,4 +1,10 @@
-import { Compareable, NestedKeyOf, Renderable } from './common';
+import {
+  Compareable,
+  MaybePromise,
+  NestedKeyOf,
+  Renderable,
+  UnspecifiedRecord,
+} from './common';
 import { ColumnFilterCallback, TokenizerCallback } from './filters';
 
 export type ColumnRole = 'display' | 'internal';
@@ -9,7 +15,7 @@ export type ColumnRole = 'display' | 'internal';
  * @param field - The field of the column.
  * @param row - The row data.
  */
-export type CellPartsCallback<T> = (
+export type CellPartsCallback<T extends object = UnspecifiedRecord> = (
   value: unknown,
   field: NestedKeyOf<T>,
   row: T,
@@ -22,7 +28,7 @@ export type CellPartsCallback<T> = (
  * @param row - The row data.
  * @returns - Should return an HTMLElement or anything Lit can render
  */
-export type CellRenderCallback<T> = (
+export type CellRenderCallback<T extends object = UnspecifiedRecord> = (
   value: unknown,
   field: NestedKeyOf<T>,
   row: T,
@@ -34,7 +40,7 @@ export type CellRenderCallback<T> = (
  * @param value - The value of the cell.
  * @param row - The row data.
  */
-export type ValueFormatterCallback<T> = (
+export type ValueFormatterCallback<T extends object = UnspecifiedRecord> = (
   value: unknown,
   row: T,
 ) => string | null;
@@ -48,9 +54,21 @@ export type ValueFormatterCallback<T> = (
 export type SortValueCallback = (value: unknown) => Compareable;
 
 /**
+ *
+ */
+export interface ColumnEditor<T extends object = UnspecifiedRecord> {
+  render: (value: unknown, row: T) => unknown;
+  save: (
+    originalValue: unknown,
+    field: NestedKeyOf<T>,
+    row: T,
+  ) => MaybePromise<unknown | undefined>;
+}
+
+/**
  * Shared options between both internal and displayed columns.
  */
-export interface BaseColumnOptions<T> {
+export interface BaseColumnOptions<T extends object = UnspecifiedRecord> {
   /**
    * The field name in the data object.
    */
@@ -96,12 +114,11 @@ export interface BaseColumnOptions<T> {
   filter?: ColumnFilterCallback;
 }
 
-export type ColumnDataType = 'text' | 'number' | 'date' | 'boolean';
-
 /**
  * Column options for the table.
  */
-export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
+export interface DisplayColumnOptions<T extends object = UnspecifiedRecord>
+  extends BaseColumnOptions<T> {
   /**
    * Determines if a column is intended to be displayed,
    * or just for searching and filtering.
@@ -121,12 +138,7 @@ export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
   /**
    * Wheter the column's cells can be edited or not.
    */
-  editable?: boolean;
-
-  /**
-   *
-   */
-  dataType?: ColumnDataType;
+  editor?: ColumnEditor;
 
   /**
    * A function to format the value for display.
@@ -148,7 +160,8 @@ export interface DisplayColumnOptions<T> extends BaseColumnOptions<T> {
 /**
  * Internal column definition used for searching and filtering
  */
-export interface InternalColumnOptions<T> extends BaseColumnOptions<T> {
+export interface InternalColumnOptions<T extends object = UnspecifiedRecord>
+  extends BaseColumnOptions<T> {
   /**
    * Marks this column as internal-only.
    * It will be indexed for search and filtering, but strictly excluded from the UI.
@@ -156,7 +169,7 @@ export interface InternalColumnOptions<T> extends BaseColumnOptions<T> {
   role: 'internal';
 }
 
-export type ColumnOptions<T> =
+export type ColumnOptions<T extends object = UnspecifiedRecord> =
   | DisplayColumnOptions<T>
   | InternalColumnOptions<T>;
 
@@ -182,7 +195,7 @@ export type SortState = {
 /**
  * Represents the current state of a column.
  */
-export interface ColumnState<T> {
+export interface ColumnState<T extends object = UnspecifiedRecord> {
   /**
    * The unique field name of the column.
    */
@@ -207,5 +220,5 @@ export interface ColumnState<T> {
 /**
  * {@link ColumnState} with all properties optional except {@link ColumnState.field}
  */
-export type RestorableColumnState<T> = Partial<Omit<ColumnState<T>, 'field'>> &
-  Pick<ColumnState<T>, 'field'>;
+export type RestorableColumnState<T extends object = UnspecifiedRecord> =
+  Partial<Omit<ColumnState<T>, 'field'>> & Pick<ColumnState<T>, 'field'>;

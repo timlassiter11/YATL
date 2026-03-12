@@ -193,13 +193,19 @@ export class YatlTableView<
 
     try {
       const data = await fetchTask;
-      if (data) {
-        this.controller.data = data;
+      if (data === undefined) {
+        // Trigger error state if fetch task returns undefined
+        throw new Error();
       }
-    } finally {
-      this.loading = false;
+      this.controller.data = data;
       this.buttonState = 'success';
       setTimeout(() => (this.buttonState = 'idle'), 3000);
+      return;
+    } catch {
+      this.buttonState = 'error';
+      setTimeout(() => (this.buttonState = 'idle'), 3000);
+    } finally {
+      this.loading = false;
     }
   }
 }

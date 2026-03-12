@@ -86,7 +86,7 @@ export default css`
   }
 
   [part='close'] {
-    flex: 0 0 0%;
+    flex-shrink: 0;
   }
 
   [part='message'] {

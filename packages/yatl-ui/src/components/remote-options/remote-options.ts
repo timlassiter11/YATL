@@ -10,6 +10,9 @@ export interface YatlOptionData {
 
 export type FetchApi = (input: string) => Promise<Response | unknown>;
 
+const promiseCache = new Map<string, Promise<unknown>>();
+const refCount = new Map<string, number>();
+
 @customElement('yatl-remote-options')
 export class YatlRemoteOptions extends YatlBase {
   @state() private isLoading = false;
@@ -33,16 +36,48 @@ export class YatlRemoteOptions extends YatlBase {
   @property({ attribute: false })
   public fetchClient: FetchApi = uri => window.fetch(uri);
 
+  /**
+   * If set to false, fresh data will always be loaded instead of using the cache.
+   */
+  @property({ type: Boolean, attribute: 'no-cache' })
+  public noCache = false;
+
   // We don't want this to be shadow DOM
   // so the selects can find the options.
   protected override createRenderRoot() {
     return this;
   }
 
+  public override connectedCallback() {
+    super.connectedCallback();
+    if (this.uri) {
+      updateRefCount(this.uri, 1);
+    }
+  }
+
+  public override disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.uri) {
+      updateRefCount(this.uri, -1);
+    }
+  }
+
   protected override willUpdate(
     changedProperties: PropertyValues<YatlRemoteOptions>,
   ): void {
     super.willUpdate(changedProperties);
+
+    if (changedProperties.has('uri')) {
+      const oldUri = changedProperties.get('uri');
+      // If oldUri exists, this is a dynamic property change, not the initial mount.
+      // We must decrement the old and increment the new.
+      if (oldUri !== undefined) {
+        updateRefCount(oldUri, -1);
+        if (this.uri) {
+          updateRefCount(this.uri, 1);
+        }
+      }
+    }
 
     if (changedProperties.has('uri') || changedProperties.has('parser')) {
       this.fetchOptions();
@@ -73,52 +108,77 @@ export class YatlRemoteOptions extends YatlBase {
       return;
     }
 
-    this.isLoading = true;
+    if (!this.noCache && promiseCache.has(this.uri)) {
+      this._data = await promiseCache.get(this.uri)!;
+    } else {
+      this.isLoading = true;
+      try {
+        const promise = this.promiseToJson();
+        if (!this.noCache) {
+          promiseCache.set(this.uri, promise);
+        }
+        this._data = await promise;
+      } finally {
+        this.isLoading = false;
+      }
+    }
+
+    if (this.parser) {
+      this.options = [...this.parser(this.data)];
+    } else if (Array.isArray(this.data)) {
+      this.options = this.data.map(v => {
+        if (isOptionData(v)) {
+          return {
+            value: String(v.value),
+            label: String(v.label),
+          };
+        }
+        return {
+          value: String(v),
+          label: String(v),
+        };
+      });
+    } else {
+      // This shouldn't happen but if we only get one value back
+      // we will just treat it as a single option. Maybe warn user?
+      this.options = [{ value: String(this.data), label: String(this.data) }];
+    }
+
+    await this.updateComplete;
+    // We know the select looks for a slot change to update it's options.
+    // Just hook into that to let it know new options are available.
+    this.dispatchEvent(
+      new Event('slotchange', {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private async promiseToJson() {
     try {
       const response = await this.fetchClient(this.uri);
-
       if (response instanceof Response) {
-        this._data = await response.json();
+        return await response.json();
       } else {
-        this._data = response;
+        return response;
       }
-
-      if (this.parser) {
-        this.options = [...this.parser(this.data)];
-      } else if (Array.isArray(this.data)) {
-        this.options = this.data.map(v => {
-          if (isOptionData(v)) {
-            return {
-              value: String(v.value),
-              label: String(v.label),
-            };
-          }
-          return {
-            value: String(v),
-            label: String(v),
-          };
-        });
-      } else {
-        // This shouldn't happen but if we only get one value back
-        // we will just treat it as a single option. Maybe warn user?
-        this.options = [{ value: String(this.data), label: String(this.data) }];
-      }
-
-      // We have to set this before we await the update
-      // since it prevents the children from being rendered.
-      this.isLoading = false;
-      await this.updateComplete;
-      // We know the select looks for a slot change to update it's options.
-      // Just hook into that to let it know new options are available.
-      this.dispatchEvent(
-        new Event('slotchange', {
-          bubbles: true,
-          composed: true,
-        }),
-      );
-    } finally {
-      this.isLoading = false;
+    } catch (error) {
+      promiseCache.delete(this.uri);
+      throw error;
     }
+  }
+}
+
+function updateRefCount(key: string, delta = 1) {
+  const count = (refCount.get(key) ?? 0) + delta;
+  if (!refCount.has(key) && count > 0) {
+    refCount.set(key, delta);
+  } else if (count > 0) {
+    refCount.set(key, count);
+  } else {
+    refCount.delete(key);
+    promiseCache.delete(key);
   }
 }
 

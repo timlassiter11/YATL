@@ -146,16 +146,13 @@ export class YatlDropdown extends YatlBase {
 
   private handleKeydown = (event: KeyboardEvent) => {
     if (this.open) {
-      if (event.key === 'Escape' || event.key === 'Tab') {
+      if (event.key === 'Escape') {
         this.open = false;
-
-        if (event.key === 'Escape') {
-          // If we are in a dialog and press escape to close
-          // the dropdown we don't want it to close the dialog too.
-          event.stopPropagation();
-          event.preventDefault();
-          this.referenceElement?.focus();
-        }
+        // If we are in a dialog and press escape to close
+        // the dropdown we don't want it to close the dialog too.
+        event.stopPropagation();
+        event.preventDefault();
+        this.referenceElement?.focus();
       } else if (
         ['ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(event.key)
       ) {

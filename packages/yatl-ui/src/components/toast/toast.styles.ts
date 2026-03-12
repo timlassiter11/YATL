@@ -69,6 +69,17 @@ export default css`
     padding: var(--toast-padding);
   }
 
+  [part='base']:not(.has-label) {
+    /* We put the message in the label-row when there is no label */
+    [part='message'] {
+      display: none;
+    }
+
+    [part='label-row'] {
+      border-bottom: none;
+    }
+  }
+
   [part='label'] {
     flex-grow: 1;
   }

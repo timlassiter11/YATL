@@ -72,7 +72,7 @@ export class YatlToast extends YatlBase {
 
   protected override render() {
     const hasMessage = this.slotController.test(null) || !!this.message;
-    const hasLabel = !!this.label;
+    const hasLabel = this.slotController.test('label') || !!this.label;
     const classes = { 'has-label': hasLabel, 'has-message': hasMessage };
     let icon = '';
     if (this.variant === 'danger') {

@@ -1,14 +1,14 @@
 import { YatlEvent } from '@timlassiter11/yatl';
 
-export class YatlDetailsOpenEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-details-open';
-  constructor() {
-    super(YatlDetailsOpenEvent.EVENT_NAME);
+export class YatlDetailsToggleEvent extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-details-toggle';
+  constructor(public readonly open: boolean) {
+    super(YatlDetailsToggleEvent.EVENT_NAME);
   }
 }
 
 declare global {
   interface HTMLElementEventMap {
-    [YatlDetailsOpenEvent.EVENT_NAME]: YatlDetailsOpenEvent;
+    [YatlDetailsToggleEvent.EVENT_NAME]: YatlDetailsToggleEvent;
   }
 }

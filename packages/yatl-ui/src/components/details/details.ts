@@ -2,8 +2,11 @@ import { html, PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './details.styles';
-import { YatlDetailsOpenEvent } from '../../events/details';
+import { YatlDetailsToggleEvent } from '../../events/details';
 
+/**
+ * @fires yatl-details-toggle - When the details opens or closes
+ */
 @customElement('yatl-details')
 export class YatlDetails extends YatlBase {
   public static override styles = [...super.styles, styles];
@@ -56,7 +59,7 @@ export class YatlDetails extends YatlBase {
     const details = event.target as HTMLDetailsElement;
     this.open = details.open;
 
-    this.dispatchEvent(new YatlDetailsOpenEvent());
+    this.dispatchEvent(new YatlDetailsToggleEvent(this.open));
   }
 }
 

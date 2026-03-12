@@ -18,11 +18,14 @@ export class YatlToastManager extends YatlBase {
   public override connectedCallback() {
     super.connectedCallback();
     window.addEventListener('yatl-toast-request', this.handleToastRequest);
+    document.addEventListener('yatl-dialog-show', this.updatePopoverIndex);
+    this.popover = 'manual';
   }
 
   public override disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('yatl-toast-request', this.handleToastRequest);
+    document.removeEventListener('yatl-dialog-show', this.updatePopoverIndex);
   }
 
   protected override render() {
@@ -48,6 +51,7 @@ export class YatlToastManager extends YatlBase {
 
   private handleToastRequest = (event: YatlToastRequest) => {
     this.toasts = [{ id: crypto.randomUUID(), ...event.data }, ...this.toasts];
+    this.updatePopoverIndex();
   };
 
   private handleToastHide(event: Event) {
@@ -59,6 +63,15 @@ export class YatlToastManager extends YatlBase {
       this.toasts = toasts;
     }
   }
+
+  private updatePopoverIndex = () => {
+    if (this.toasts.length) {
+      this.hidePopover();
+      this.showPopover();
+    } else {
+      this.hidePopover();
+    }
+  };
 }
 
 declare global {

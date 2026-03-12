@@ -75,6 +75,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
         max=${ifDefined(this.max)}
         step=${ifDefined(this.step)}
         .value=${live(value)}
+        autocomplete="off"
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}

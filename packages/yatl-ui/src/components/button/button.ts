@@ -92,11 +92,13 @@ export class YatlButton extends YatlFormControl {
           <slot></slot>
           <slot name="end"></slot>
         </div>
-        <yatl-spinner
-          state=${this.state}
-          class="state-icon"
-          part="spinner"
-        ></yatl-spinner>
+        <div class="state-layer">
+          <yatl-spinner
+            state=${this.state}
+            class="state-icon"
+            part="spinner"
+          ></yatl-spinner>
+        </div>
       </button>
     `;
   }
@@ -132,9 +134,9 @@ export class YatlButton extends YatlFormControl {
       return;
     }
 
-    // No form so just let it propagate.
     const form = this.internals.form;
     if (!form) {
+      // No form so just let it propagate.
       return;
     }
 

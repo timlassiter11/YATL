@@ -21,7 +21,7 @@ export default css`
     );
     --toast-hide-animation-duration: var(
       --yatl-toast-hide-animation-duration,
-      0.5s
+      0.3s
     );
 
     position: relative;
@@ -32,6 +32,7 @@ export default css`
     max-width: var(--toast-max-width);
     max-height: 100vh;
     background-color: var(--toast-bg);
+    overflow: hidden;
     border-radius: var(--toast-radius);
     border-width: var(--toast-border-width);
     border-style: var(--toast-border-style);
@@ -101,7 +102,6 @@ export default css`
     width: 0;
     height: 100%;
     background-color: var(--yatl-color-brand);
-    border-radius: var(--toast-radius);
   }
 
   [part='timer']:not(.running) {
@@ -153,10 +153,6 @@ export default css`
   @keyframes fade-and-collapse {
     0% {
       opacity: 1;
-      max-height: 200px;
-    }
-    50% {
-      opacity: 0.5;
       max-height: 200px;
     }
     100% {

@@ -1,5 +1,5 @@
 import { html } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlToastRequest } from '../../events/toast';
@@ -8,12 +8,22 @@ import { YatlBase } from '../base/base';
 import styles from './toast-manager.styles';
 
 type ToastData = YatlToastData & { id: string };
+type ToastPosition =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
 
 @customElement('yatl-toast-manager')
 export class YatlToastManager extends YatlBase {
   public static override styles = [...super.styles, styles];
 
   @state() private toasts: ToastData[] = [];
+
+  @property({ type: String, reflect: true })
+  public position: ToastPosition = 'bottom-right';
 
   public override connectedCallback() {
     super.connectedCallback();

@@ -79,9 +79,9 @@ export default css`
 
   :host([fullscreen]) dialog {
     width: 100vw !important;
-    max-width: 100vw;
+    max-width: 100vw !important;
     height: 100vh !important;
-    max-height: 100vh;
+    max-height: 100vh !important;
     padding: 0;
     margin: 0;
   }

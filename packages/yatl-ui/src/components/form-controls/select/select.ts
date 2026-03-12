@@ -130,6 +130,7 @@ export class YatlSelect extends YatlFormControl<
     const displayValue = selectedOption?.label;
     return html`
       <input
+        tabindex="-1"
         part="input"
         id=${this.inputId}
         type="text"

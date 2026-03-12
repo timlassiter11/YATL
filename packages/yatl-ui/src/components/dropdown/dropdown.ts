@@ -7,7 +7,12 @@ import {
   size,
 } from '@floating-ui/dom';
 import { html, PropertyValues } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
+import {
+  customElement,
+  property,
+  query,
+  queryAssignedElements,
+} from 'lit/decorators.js';
 
 import {
   YatlDropdownCloseEvent,
@@ -36,14 +41,24 @@ export class YatlDropdown extends YatlBase {
   private menuElement!: HTMLElement;
   @query('slot[name="trigger"]')
   private triggerSlot?: HTMLSlotElement;
-  @query('slot:not([name])')
-  private defaultSlot?: HTMLSlotElement;
+  @queryAssignedElements({ flatten: true })
+  private assignedElements!: Array<HTMLElement>;
 
   @property({ type: Boolean, reflect: true })
   public open = false;
 
   @property({ type: Boolean, attribute: 'match-width' })
   public matchWidth = false;
+
+  public getAllOptions(includeDisabled = true): YatlOption[] {
+    return this.assignedElements
+      .flatMap(e => {
+        return e instanceof YatlOption
+          ? [e]
+          : [...e.querySelectorAll('yatl-option')];
+      })
+      .filter(o => includeDisabled || !o.disabled);
+  }
 
   // #region Render
 
@@ -131,14 +146,21 @@ export class YatlDropdown extends YatlBase {
 
   private handleKeydown = (event: KeyboardEvent) => {
     if (this.open) {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' || event.key === 'Tab') {
         this.open = false;
-        this.referenceElement?.focus();
+
+        if (event.key === 'Escape') {
+          // If we are in a dialog and press escape to close
+          // the dropdown we don't want it to close the dialog too.
+          event.stopPropagation();
+          event.preventDefault();
+          this.referenceElement?.focus();
+        }
       } else if (
         ['ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(event.key)
       ) {
         // Handle keyboard navigation logic
-        const items = this.getItems();
+        const items = this.getAllOptions();
         const activeItem = this.getActiveItem(items);
         if (activeItem) {
           activeItem.tabIndex = -1;
@@ -206,15 +228,6 @@ export class YatlDropdown extends YatlBase {
     document.removeEventListener('pointerdown', this.handleDocumentFocusin);
     document.removeEventListener('focusin', this.handleDocumentFocusin);
     document.removeEventListener('keydown', this.handleKeydown);
-  }
-
-  private getItems(includeDisabled = false) {
-    const items =
-      this.defaultSlot
-        ?.assignedElements({ flatten: true })
-        .filter(i => i instanceof YatlOption) ?? [];
-
-    return includeDisabled ? items : items.filter(i => !i.disabled);
   }
 
   private getActiveItem(items: YatlOption[]) {

@@ -47,6 +47,9 @@ export class YatlButton extends YatlFormControl {
   @property({ type: Number, attribute: 'success-duration' })
   public successDuration = 2000;
 
+  @property({ type: Number, attribute: 'error-duration' })
+  public errorDuration = 2000;
+
   @property({ attribute: false })
   public action?: () => MaybePromise<unknown>;
 
@@ -128,6 +131,9 @@ export class YatlButton extends YatlFormControl {
           }
         } catch (e) {
           this.state = 'error';
+          if (this.errorDuration) {
+            setTimeout(() => (this.state = 'idle'), this.errorDuration);
+          }
           throw e;
         }
       }

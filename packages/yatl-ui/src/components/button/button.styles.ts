@@ -75,6 +75,7 @@ export default css`
   :host([state='error']) {
     [part='contents'] {
       opacity: 0;
+      transition-delay: 0s;
     }
   }
 

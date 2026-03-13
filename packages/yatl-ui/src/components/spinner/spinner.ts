@@ -35,6 +35,9 @@ export class YatlSpinner extends YatlBase {
   @property({ type: Number, attribute: 'overlay-duration' })
   public overlayDuration = 3000;
 
+  @property({ type: Boolean, attribute: 'no-overlay' })
+  public noOverlay = false;
+
   protected override willUpdate(
     changedProperties: PropertyValues<YatlSpinner>,
   ) {
@@ -52,11 +55,13 @@ export class YatlSpinner extends YatlBase {
         // Store the current state internally so when the state changes
         // back to idle, we keep our colors for the animation.
         this.internalState = this.state;
-        this.showOverlay = true;
-        if (this.overlayDuration) {
-          setTimeout(() => (this.showOverlay = false), this.overlayDuration);
+        if (!this.noOverlay) {
+          this.showOverlay = true;
+          if (this.overlayDuration) {
+            setTimeout(() => (this.showOverlay = false), this.overlayDuration);
+          }
+          this.updateAnimationOrigin();
         }
-        this.updateAnimationOrigin();
       }
 
       this.dispatchEvent(new YatlSpinnerStateChangeEvent(this.state));

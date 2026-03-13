@@ -7,6 +7,7 @@ import { MaybePromise, YatlSize } from '../../types';
 
 import styles from './button.styles';
 import sizeStyles from '../../styles/components/size.styles';
+import { YatlSpinnerStateChangeEvent } from '../../events';
 
 export type YatlButtonVariant = 'neutral' | 'outline' | 'plain';
 export type YatlButtonColor =
@@ -45,10 +46,10 @@ export class YatlButton extends YatlFormControl {
   public state: YatlSpinnerState = 'idle';
 
   @property({ type: Number, attribute: 'success-duration' })
-  public successDuration = 2000;
+  public successDuration = 3000;
 
   @property({ type: Number, attribute: 'error-duration' })
-  public errorDuration = 2000;
+  public errorDuration = 3000;
 
   @property({ attribute: false })
   public action?: () => MaybePromise<unknown>;
@@ -95,11 +96,14 @@ export class YatlButton extends YatlFormControl {
           <slot></slot>
           <slot name="end"></slot>
         </div>
-        <div class="state-layer">
+        <div class="state-wrapper">
           <yatl-spinner
             state=${this.state}
             class="state-icon"
             part="spinner"
+            success-duration=${this.successDuration}
+            error-duration=${this.errorDuration}
+            @yatl-spinner-state-change=${this.handleSpinnerStateChange}
           ></yatl-spinner>
         </div>
       </button>
@@ -108,6 +112,10 @@ export class YatlButton extends YatlFormControl {
 
   // Satisfy the base class
   protected override renderInput() {}
+
+  private handleSpinnerStateChange(event: YatlSpinnerStateChangeEvent) {
+    this.state = event.state;
+  }
 
   private async handleClick(event: MouseEvent) {
     if (this.disabled) {
@@ -126,14 +134,8 @@ export class YatlButton extends YatlFormControl {
           }
 
           this.state = 'success';
-          if (this.successDuration) {
-            setTimeout(() => (this.state = 'idle'), this.successDuration);
-          }
         } catch (e) {
           this.state = 'error';
-          if (this.errorDuration) {
-            setTimeout(() => (this.state = 'idle'), this.errorDuration);
-          }
           throw e;
         }
       }

@@ -61,32 +61,22 @@ export default css`
     justify-content: space-around;
   }
 
-  .state-layer {
+  .state-wrapper {
+    box-sizing: border-box;
     position: absolute;
     inset: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    z-index: 1;
-  }
-
-  .state-layer::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-
-    clip-path: circle(0% at center);
-    transition: clip-path;
-    transition-timing-function: linear;
-    transition-duration: var(--button-state-animation-duration);
+    height: 100%;
+    width: 100%;
+    padding: var(--button-padding);
   }
 
   .state-icon {
-    z-index: 2;
-    --check-color: var(--success-state-color);
-    --error-color: var(--error-state-color);
+    height: 100%;
+    width: 100%;
+    --yatl-spinner-check-color: var(--success-state-color);
+    --yatl-spinner-success-bg: var(--success-state-bg);
+    --yatl-spinner-error-color: var(--error-state-color);
+    --yatl-spinner-error-bg: var(--error-state-bg);
   }
 
   :host([state='loading']),
@@ -101,20 +91,6 @@ export default css`
     pointer-events: none;
     cursor: wait;
     opacity: 0.8;
-  }
-
-  :host([state='success']) {
-    .state-layer::after {
-      background-color: var(--success-state-bg);
-      clip-path: circle(150% at center);
-    }
-  }
-
-  :host([state='error']) {
-    .state-layer::after {
-      background-color: var(--error-state-bg);
-      clip-path: circle(150% at center);
-    }
   }
 
   :host([disabled]) {

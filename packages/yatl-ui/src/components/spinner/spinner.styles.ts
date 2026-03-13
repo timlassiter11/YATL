@@ -20,9 +20,11 @@ export default css`
 
     --check-width: var(--yatl-spinner-check-width, 2px);
     --check-color: var(--yatl-spinner-check-color, var(--yatl-color-success));
+    --success-bg: var(--yatl-spinner-success-bg, var(--yatl-color-success));
 
     --error-width: var(--yatl-spinner-error-width, 2px);
     --error-color: var(--yatl-spinner-error-color, var(--yatl-color-danger));
+    --error-bg: var(--yatl-spinner-error-bg, var(--yatl-color-danger));
 
     width: var(--spinner-size);
     height: var(--spinner-size);
@@ -33,9 +35,23 @@ export default css`
     height: 100%;
   }
 
-  svg {
+  [part='svg'] {
     width: 100%;
     height: 100%;
+    position: relative;
+    z-index: 1;
+  }
+
+  [part='state-overlay'] {
+    position: absolute;
+    inset: 0;
+    /* Fallback to center, overridden by Lit's injected CSS variables */
+    clip-path: circle(0% at var(--origin-x, 50%) var(--origin-y, 50%));
+    transition: clip-path;
+    transition-duration: max(var(--spinner-transition-time), 1ms);
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: auto;
+    pointer-events: none;
   }
 
   .sr-only {
@@ -50,85 +66,121 @@ export default css`
     border-width: 0;
   }
 
+  /* Hide all icons by default. Show based on state. */
   .icon {
     opacity: 0;
     transform-origin: center;
   }
 
+  /* Loading icon */
   .spinner {
     scale: 0;
     transition: opacity var(--spinner-transition-time) linear,
       scale var(--spinner-transition-time) var(--ease-1);
-  }
 
-  .spinner.track {
-    stroke: var(--spinner-track-color);
-    stroke-width: var(--spinner-track-width);
-  }
+    &.track {
+      stroke: var(--spinner-track-color);
+      stroke-width: var(--spinner-track-width);
+    }
 
-  .spinner.indicator {
-    animation: spin 1s linear infinite;
-    stroke: var(--spinner-indicator-color);
-    stroke-width: var(--spinner-indicator-width);
-    stroke-linecap: round;
-    /* 
+    &.indicator {
+      animation: spin 1s linear infinite;
+      stroke: var(--spinner-indicator-color);
+      stroke-width: var(--spinner-indicator-width);
+      stroke-linecap: round;
+      /* 
     * Because pathLength="100" is set on the SVG element, 
     * these numbers act as exact percentages! 
     * 25% colored stroke, 75% empty gap.
     */
-    stroke-dasharray: var(--spinner-indicator-length)
-      calc(100px - var(--spinner-indicator-length));
+      stroke-dasharray: var(--spinner-indicator-length)
+        calc(100px - var(--spinner-indicator-length));
+    }
   }
 
+  /* Success icon */
   .check {
     stroke: var(--check-color);
     stroke-width: var(--check-width);
     stroke-dasharray: 100px;
     stroke-dashoffset: 100px;
-    transition: opacity var(--spinner-transition-time) linear,
-      scale var(--spinner-transition-time) var(--ease-1),
+    transition: stroke var(--spinner-transition-time) linear,
       stroke-dashoffset var(--spinner-transition-time) var(--ease-1);
   }
 
+  /* Error icon */
   .close {
-    scale: 0;
     stroke: var(--error-color);
     stroke-width: var(--error-width);
     stroke-dasharray: 100px;
     stroke-dashoffset: 100px;
-    transition: opacity var(--spinner-transition-time) linear,
-      scale var(--spinner-transition-time) var(--ease-1),
+    transition: stroke var(--spinner-transition-time) linear,
       stroke-dashoffset var(--spinner-transition-time) var(--ease-1);
   }
 
+  /* Loading is based on the actual reflected state */
   :host([state='loading']) {
-    .track {
+    .spinner.track {
       opacity: 0.25;
       scale: 1;
     }
 
-    .indicator {
+    .spinner.indicator {
       opacity: 1;
       scale: 1;
     }
   }
 
-  :host([state='success']) {
+  :host([state='success']) .check {
+    stroke-dashoffset: 0px;
+    transition-delay: var(--spinner-transition-time);
+  }
+
+  :host([state='error']) .close {
+    stroke-dashoffset: 0px;
+    animation: shake-x 0.5s linear;
+    animation-delay: var(--spinner-transition-time);
+  }
+
+  /* Apply clip based on main state, not the internal state. */
+  .show-overlay {
+    .icon {
+      stroke: white;
+    }
+
+    [part='state-overlay'] {
+      clip-path: circle(150% at var(--origin-x, 50%) var(--origin-y, 50%));
+    }
+  }
+
+  /* Don't delay icon animations when closing */
+  :host([state='idle']) {
+    [data-state='success'] .check {
+      transition-delay: 0ms;
+    }
+    [data-state='error'] .close {
+      animation-delay: 0ms;
+    }
+  }
+
+  /* Success and error colors are based on internal state */
+  [data-state='success'] {
     .check {
       opacity: 1;
-      scale: 1;
-      stroke-dashoffset: 0px;
-      transition-delay: var(--spinner-transition-time);
+    }
+
+    [part='state-overlay'] {
+      background-color: var(--success-bg);
     }
   }
 
-  :host([state='error']) {
+  [data-state='error'] {
     .close {
       opacity: 1;
-      scale: 1;
-      stroke-dashoffset: 0px;
-      animation: shake-x 0.5s linear;
-      animation-delay: var(--spinner-transition-time);
+    }
+
+    [part='state-overlay'] {
+      background-color: var(--error-bg);
     }
   }
 

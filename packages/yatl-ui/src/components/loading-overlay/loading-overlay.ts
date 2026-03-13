@@ -3,6 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './loading-overlay.styles';
 import { YatlSpinnerState } from '../spinner/spinner';
+import { YatlSpinnerStateChangeEvent } from '../../events';
 
 @customElement('yatl-loading-overlay')
 export class YatlLoadingOverlay extends YatlBase {
@@ -17,12 +18,20 @@ export class YatlLoadingOverlay extends YatlBase {
   public override render() {
     return html`
       <div part="base">
-        <yatl-spinner part="spinner" state=${this.state}></yatl-spinner>
+        <yatl-spinner
+          part="spinner"
+          state=${this.state}
+          @yatl-spinner-state-change=${this.handleStateChange}
+        ></yatl-spinner>
         <div part="message">
           <slot> </slot>
         </div>
       </div>
     `;
+  }
+
+  private handleStateChange(event: YatlSpinnerStateChangeEvent) {
+    this.state = event.state;
   }
 }
 

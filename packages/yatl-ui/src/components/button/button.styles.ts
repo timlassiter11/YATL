@@ -22,14 +22,6 @@ export default css`
     --button-bg: var(--yatl-button-bg, var(--appearance-color));
     --button-border-width: var(--yatl-button-border-width, 2px);
     --button-border-color: var(--yatl-button-border, transparent);
-    --button-state-animation-duration: var(
-      --yatl-button-state-animation-duration,
-      0.5s
-    );
-    --success-state-color: white;
-    --success-state-bg: var(--yatl-color-success);
-    --error-state-color: white;
-    --error-state-bg: var(--yatl-color-danger);
 
     display: inline-block;
     box-sizing: border-box;
@@ -59,6 +51,9 @@ export default css`
     flex-direction: row;
     align-items: center;
     justify-content: space-around;
+    /** TODO: This needs to match the spinner animation */
+    transition: opacity 0.5s linear;
+    transition-delay: 0.5s;
   }
 
   .state-wrapper {
@@ -73,10 +68,6 @@ export default css`
   .state-icon {
     height: 100%;
     width: 100%;
-    --yatl-spinner-check-color: var(--success-state-color);
-    --yatl-spinner-success-bg: var(--success-state-bg);
-    --yatl-spinner-error-color: var(--error-state-color);
-    --yatl-spinner-error-bg: var(--error-state-bg);
   }
 
   :host([state='loading']),
@@ -105,83 +96,43 @@ export default css`
   :host([color='brand']) {
     --appearance-color: var(--yatl-color-brand);
     --appearance-text: var(--yatl-text-brand);
-
-    --success-state-color: white;
-    --success-state-bg: var(--yatl-color-success);
-    --error-state-color: white;
-    --error-state-bg: var(--yatl-color-danger);
   }
 
   :host([color='danger']) {
     --appearance-color: var(--yatl-color-danger);
     --appearance-text: white;
-
-    --success-state-color: white;
-    --success-state-bg: var(--yatl-color-success);
-    --error-state-color: var(--yatl-color-danger);
-    --error-state-bg: white;
   }
 
   :host([color='warning']) {
     --appearance-color: var(--yatl-color-warning);
     --appearance-text: white;
-
-    --success-state-color: white;
-    --success-state-bg: var(--yatl-color-success);
-    --error-state-color: white;
-    --error-state-bg: var(--yatl-color-danger);
   }
 
   :host([color='success']) {
     --appearance-color: var(--yatl-color-success);
     --appearance-text: white;
-
-    --success-state-color: var(--yatl-color-success);
-    --success-state-bg: white;
-    --error-state-color: white;
-    --error-state-bg: var(--yatl-color-danger);
   }
 
   :host([color='raised']) {
     --appearance-color: var(--yatl-surface-raised-1);
     --appearance-text: var(--yatl-text-1);
-
-    --success-state-color: white;
-    --success-state-bg: var(--yatl-color-success);
-    --error-state-color: white;
-    --error-state-bg: var(--yatl-color-danger);
   }
 
   :host([color='muted']) {
     --appearance-color: var(--yatl-text-3);
     --appearance-text: white;
-
-    --success-state-color: white;
-    --success-state-bg: var(--yatl-color-success);
-    --error-state-color: white;
-    --error-state-bg: var(--yatl-color-danger);
   }
 
   :host([variant='outline']) {
     --button-bg: transparent;
     --button-text: var(--appearance-color);
     --button-border-color: var(--appearance-color);
-
-    --success-state-color: var(--yatl-color-success);
-    --success-state-bg: transparent;
-    --error-state-color: var(--yatl-color-danger);
-    --error-state-bg: transparent;
   }
 
   :host([variant='plain']) {
     --button-text: var(--appearance-color);
     --button-bg: transparent;
     --button-border-width: 0;
-
-    --success-state-color: var(--yatl-color-success);
-    --success-state-bg: transparent;
-    --error-state-color: var(--yatl-color-danger);
-    --error-state-bg: transparent;
   }
 
   /* Neutral color is too dim to be used without BG */

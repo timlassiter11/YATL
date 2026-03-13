@@ -82,6 +82,12 @@ export class YatlButton extends YatlFormControl {
   }
 
   protected override render() {
+    const noOverlay =
+      this.color === 'neutral' ||
+      this.color === 'raised' ||
+      this.variant === 'plain' ||
+      this.variant === 'outline';
+
     return html`
       <button
         part="base"
@@ -101,6 +107,7 @@ export class YatlButton extends YatlFormControl {
             state=${this.state}
             class="state-icon"
             part="spinner"
+            ?no-overlay=${noOverlay}
             success-duration=${this.successDuration}
             error-duration=${this.errorDuration}
             @yatl-spinner-state-change=${this.handleSpinnerStateChange}

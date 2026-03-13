@@ -24,7 +24,7 @@ export default css`
     --button-border-color: var(--yatl-button-border, transparent);
     --button-state-animation-duration: var(
       --yatl-button-state-animation-duration,
-      0.4s
+      0.5s
     );
     --success-state-color: white;
     --success-state-bg: var(--yatl-color-success);
@@ -79,7 +79,7 @@ export default css`
 
     clip-path: circle(0% at center);
     transition: clip-path;
-    transition-timing-function: var(--ease-1);
+    transition-timing-function: linear;
     transition-duration: var(--button-state-animation-duration);
   }
 

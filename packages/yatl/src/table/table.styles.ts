@@ -172,8 +172,17 @@ export default css`
       transition: background-color 0.2s;
     }
 
+    .cell-wrapper:has(.cell-index) {
+      overflow: visible;
+      background-color: var(--table-header-bg);
+      height: calc(100% + var(--table-border-width));
+    }
+
     .row-number-cell {
       background-color: var(--table-header-bg);
+      border-right-width: var(--table-border-width);
+      border-right-color: var(--table-border-color);
+      border-right-style: solid;
     }
 
     .message {

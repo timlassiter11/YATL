@@ -28,7 +28,7 @@ export default css`
     visibility: hidden;
     transition: opacity var(--overlay-fade-duration) ease,
       visibility var(--overlay-fade-duration) ease;
-    pointer-events: none;
+    pointer-events: auto;
   }
 
   :host([show]) {
@@ -51,7 +51,10 @@ export default css`
   }
 
   [part='message'] {
-    font-size: small;
     text-align: center;
+  }
+
+  :host([state='idle']) [part='spinner'] {
+    display: none;
   }
 `;

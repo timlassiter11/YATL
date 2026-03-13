@@ -46,18 +46,12 @@ export default css`
     &.show {
       display: flex;
       animation: show-dialog var(--dialog-show-duration) ease;
-
-      &::backdrop {
-        animation: show-backdrop var(--dialog-show-duration) ease;
-      }
+      animation-fill-mode: both;
     }
 
     &.hide {
       animation: show-dialog var(--dialog-hide-duration) ease reverse;
-
-      &::backdrop {
-        animation: show-backdrop var(--dialog-hide-duration) ease reverse;
-      }
+      animation-fill-mode: both;
     }
 
     &.pulse {
@@ -65,7 +59,11 @@ export default css`
     }
   }
 
-  dialog[open] {
+  dialog::backdrop {
+    display: none !important;
+  }
+
+  dialog[popover]:popover-open {
     display: flex;
   }
 
@@ -73,8 +71,21 @@ export default css`
     outline: none;
   }
 
-  dialog::backdrop {
+  .backdrop {
+    opacity: 0;
+    pointer-events: none;
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
     background-color: color-mix(in oklab, black 60%, transparent);
+  }
+
+  :host([open]) .backdrop {
+    opacity: 1;
+    animation: show-backdrop var(--dialog-show-duration) ease;
+    animation-fill-mode: both;
+    pointer-events: auto;
   }
 
   :host([fullscreen]) dialog {
@@ -98,6 +109,7 @@ export default css`
     --card-header-padding: var(--dialog-header-padding);
 
     flex: 1;
+    z-index: 2;
     overflow: hidden;
     padding: var(--dialog-padding);
   }

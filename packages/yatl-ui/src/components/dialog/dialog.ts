@@ -71,9 +71,9 @@ export class YatlDialog extends YatlBase {
     this._open = value;
 
     if (this.hasUpdated) {
-      if (this.open && !this.dialogElement!.open) {
+      if (this.open) {
         this.show();
-      } else if (!this.open && this.dialogElement!.open) {
+      } else {
         this.hide();
       }
     }
@@ -97,7 +97,7 @@ export class YatlDialog extends YatlBase {
       await this.updateComplete;
     }
 
-    this.dialogElement!.showModal();
+    this.dialogElement!.showPopover();
     this.open = true;
     this.dialogElement!.classList.add('show');
     await this.transitionComplete;
@@ -138,7 +138,7 @@ export class YatlDialog extends YatlBase {
     return html`
       <dialog
         part="dialog"
-        ?popover=${this.open}
+        popover="manual"
         @cancel=${this.handleDialogCancel}
         @pointerdown=${this.handleDialogPointerdown}
       >
@@ -170,6 +170,7 @@ export class YatlDialog extends YatlBase {
           ></slot>
         </yatl-card>
       </dialog>
+      <div class="backdrop" @click=${this.handleBackdropClick}></div>
     `;
   }
 
@@ -193,7 +194,7 @@ export class YatlDialog extends YatlBase {
     this.open = false;
     this.dialogElement!.classList.add('hide');
     await this.transitionComplete;
-    this.dialogElement!.close();
+    this.dialogElement!.hidePopover();
 
     const event = new YatlDialogHideEvent();
     this.dispatchEvent(event);
@@ -202,6 +203,14 @@ export class YatlDialog extends YatlBase {
   private handleCloseClick(event: Event) {
     const target = event.target as HTMLElement;
     this.requestClose(target);
+  }
+
+  private handleBackdropClick(event: Event) {
+    if (this.modal) {
+      animateWithClass(this.dialogElement!, 'pulse');
+    } else {
+      this.handleCloseClick(event);
+    }
   }
 
   private handleDialogPointerdown(event: PointerEvent) {
@@ -222,6 +231,14 @@ export class YatlDialog extends YatlBase {
       this.requestClose(this.dialogElement);
     }
   }
+
+  private handleGlobalEvents = (event: Event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    if (!event.composedPath().includes(this.dialogElement!)) {
+      this.requestClose(this.dialogElement!);
+    }
+  };
 }
 
 declare global {

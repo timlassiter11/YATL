@@ -1404,7 +1404,19 @@ export class YatlTable<
     field: NestedKeyOf<T>,
   ) => {
     // Ignore events if the user is highlighting text
-    if (window.getSelection()?.toString()) return;
+    if (window.getSelection()?.toString()) {
+      return;
+    }
+
+    // Ignore links and buttons
+    const target = event.target as HTMLElement;
+    if (
+      target.tagName === 'A' ||
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'YATL-BUTTON'
+    ) {
+      return;
+    }
 
     const rowId = this.controller.getRowId(row);
     const rowIndex = this.controller.getRowIndex(row);

@@ -2,6 +2,7 @@ import { html } from 'lit';
 import { ColumnEditor, NestedKeyOf, UnspecifiedRecord } from '../types';
 import { live } from 'lit/directives/live.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
+import { YatlTableController } from '../table-controller/table-controller';
 
 export class InputEditor<T extends object = UnspecifiedRecord>
   implements ColumnEditor<T>
@@ -10,7 +11,12 @@ export class InputEditor<T extends object = UnspecifiedRecord>
 
   constructor(private readonly options?: InputEditorOptions) {}
 
-  public render(value: unknown, _row: T) {
+  public render(
+    value: unknown,
+    _field: NestedKeyOf<T>,
+    _row: T,
+    _controller: YatlTableController<T>,
+  ) {
     return html`
       <input
         .value=${live(String(value))}
@@ -28,7 +34,12 @@ export class InputEditor<T extends object = UnspecifiedRecord>
     `;
   }
 
-  public save(originalValue: unknown, _field: NestedKeyOf<T>, _row: T) {
+  public save(
+    originalValue: unknown,
+    _field: NestedKeyOf<T>,
+    _row: T,
+    _controller: YatlTableController<T>,
+  ) {
     if (
       this.currentValue === undefined ||
       this.currentValue === originalValue

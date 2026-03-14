@@ -990,7 +990,7 @@ export class YatlTable<
           class=${classMap({ ...classes, 'is-editing': true })}
           data-field=${column.field}
         >
-          ${column.editor.render(value, row)}
+          ${column.editor.render(value, field, row, this.controller)}
         </div>
       `);
     }
@@ -1347,7 +1347,13 @@ export class YatlTable<
     }
 
     let value;
-    const result = column.editor.save(originalValue, field, row);
+    const result = column.editor.save(
+      originalValue,
+      field,
+      row,
+      this.controller,
+    );
+
     if (result instanceof Promise) {
       value = await result;
     } else {

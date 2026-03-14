@@ -1,3 +1,4 @@
+import { YatlTableController } from '../table-controller/table-controller';
 import {
   Compareable,
   MaybePromise,
@@ -57,11 +58,36 @@ export type SortValueCallback = (value: unknown) => Compareable;
  *
  */
 export interface ColumnEditor<T extends object = UnspecifiedRecord> {
-  render: (value: unknown, row: T) => unknown;
+  /**
+   * A method for rendering the input element used for editing the cell
+   * @param value - The current value
+   * @param field - The field that is being edited
+   * @param row  - The row
+   * @param controller - This table's controller
+   * @returns Should return a renderable object like TemplateResult
+   */
+  render: (
+    value: unknown,
+    field: NestedKeyOf<T>,
+    row: T,
+    controller: YatlTableController<T>,
+  ) => unknown;
+
+  /**
+   * A method for saving the data. If it's async,
+   * the promise will be awaited before closing the edit.
+   * @param originalValue - The value before editing
+   * @param field The field that is being edited
+   * @param row The row that is being edited
+   * @param controller The table's controller
+   * @returns The new value or a promise to the new value.
+   * If undefined is returned, the edit is cancelled
+   */
   save: (
     originalValue: unknown,
     field: NestedKeyOf<T>,
     row: T,
+    controller: YatlTableController<T>,
   ) => MaybePromise<unknown | undefined>;
 }
 
@@ -138,7 +164,7 @@ export interface DisplayColumnOptions<T extends object = UnspecifiedRecord>
   /**
    * Wheter the column's cells can be edited or not.
    */
-  editor?: ColumnEditor;
+  editor?: ColumnEditor<T>;
 
   /**
    * A function to format the value for display.

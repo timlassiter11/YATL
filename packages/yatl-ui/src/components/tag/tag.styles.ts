@@ -27,6 +27,7 @@ export default css`
     padding: 0;
     flex-shrink: 0;
     margin-left: var(--yatl-spacing-xs);
+    height: 100%;
   }
 
   yatl-button {
@@ -41,5 +42,10 @@ export default css`
   yatl-button[part='dismiss-button']::part(base):hover {
     color: var(--yatl-text-1);
     background: none;
+  }
+
+  yatl-icon {
+    width: 0.85em;
+    height: 0.85em;
   }
 `;

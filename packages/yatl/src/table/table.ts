@@ -1216,8 +1216,8 @@ export class YatlTable<
     this.removeEventListener('keydown', this.handleCellInputKeypress);
 
     // Clean up just in case
-    window.addEventListener('mousemove', this.handleResizeMouseMove);
-    window.addEventListener('mouseup', this.handleResizeMouseUp);
+    window.removeEventListener('mousemove', this.handleResizeMouseMove);
+    window.removeEventListener('mouseup', this.handleResizeMouseUp);
   }
 
   public override updated(changedProperties: PropertyValues) {
@@ -1410,7 +1410,7 @@ export class YatlTable<
     field: NestedKeyOf<T>,
   ) => {
     // Ignore events if the user is highlighting text
-    if (window.getSelection()?.toString()) {
+    if (this.editingState || window.getSelection()?.toString()) {
       return;
     }
 
@@ -1497,6 +1497,7 @@ export class YatlTable<
       .some(e => e.classList.contains('is-editing'));
 
     if (this.editingState && !containsEditing) {
+      console.log('saving');
       this.saveEdits();
       this.editingState = null;
     }

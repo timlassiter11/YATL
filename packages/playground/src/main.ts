@@ -10,6 +10,7 @@ import {
   YatlSwitch,
   YatlTableView,
 } from '@timlassiter11/yatl-ui';
+import { SelectEditor } from '@timlassiter11/yatl';
 
 // Used for generating data and for filters
 const statuses = [
@@ -20,6 +21,7 @@ const statuses = [
   'On Hold',
   'Needs Review',
 ];
+
 const possibleTags = [
   'urgent',
   'bugfix',
@@ -153,6 +155,7 @@ function initTable() {
       field: 'status',
       title: 'Status',
       searchable: false,
+      editor: new SelectEditor(),
     },
     {
       field: 'lastModified',

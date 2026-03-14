@@ -1,5 +1,20 @@
 # @timlassiter11/yatl
 
+## 1.2.6
+
+### Patch Changes
+
+- 295518a: Fixed bug causing table row click events to fire when a link or button in a cell was clicked
+- f32af15: Added ability to edit cells within table
+- 56df7fd: Show column title on header hover
+- 0aa669c: Allow users to provide storage interface
+- ceae989: Fixed columns missing from storage data not displaying
+- 89263d8: Properly handle array values when creating column options
+- cbef96d: Moved from editable flag to editor interface to allow for custom cell editors
+- ea20d98: Only dispatch cell change events when data actually changed
+- 2a27505: Fixed table displaying NaN when editing a number cell with an empty value
+- 25eaabb: Added ability to set column data type
+
 ## 1.2.5
 
 ### Patch Changes

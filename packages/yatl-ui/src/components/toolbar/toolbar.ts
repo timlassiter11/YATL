@@ -164,6 +164,8 @@ export class YatlToolbar<
 
   private onSearchChange = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
+    clearTimeout(this.searchDebounceTimer);
+    this.controller?.search(input.value);
     this.dispatchEvent(new YatlToolbarSearchChange(input.value));
   };
 

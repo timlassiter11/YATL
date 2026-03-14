@@ -955,6 +955,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       );
     }
 
+    if (props.includes('data')) {
+      this.filterDirty = true;
+    }
+
     for (const host of this.hosts) {
       host.requestUpdate();
     }

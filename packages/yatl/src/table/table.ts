@@ -1334,6 +1334,24 @@ export class YatlTable<
     return 'text';
   }
 
+  private getNextEditableField(currentField?: NestedKeyOf<T>) {
+    let index = 0;
+    if (currentField) {
+      index = this.displayColumns.findIndex(c => c.field === currentField);
+      if (index < 0) {
+        index = 0;
+      } else {
+        index++;
+      }
+    }
+
+    for (const col of this.displayColumns.slice(index)) {
+      if (col.editor) {
+        return col.field;
+      }
+    }
+  }
+
   private async saveEdits() {
     if (!this.editingState) {
       return;
@@ -1437,6 +1455,7 @@ export class YatlTable<
       return;
     }
 
+    column.editor.reset();
     const value = getNestedValue(row, field);
     this.editingState = {
       id: this.controller.getRowId(row),
@@ -1457,20 +1476,19 @@ export class YatlTable<
       this.editingState = null;
     } else if (event.key === 'Tab') {
       this.saveEdits();
+
       const { id: rowId } = this.editingState;
       const row = this.getRow(rowId)!;
 
-      let foundColumn = false;
-      for (const col of this.displayColumns) {
-        if (!foundColumn && col.field === this.editingState.field) {
-          foundColumn = true;
-        } else if (foundColumn && col.editor) {
-          return this.handleCellDoubleClick(row, col.field);
-        }
+      // Try to find the next editable field in this row.
+      let nextColumn = this.getNextEditableField(this.editingState.field);
+      if (nextColumn) {
+        return this.handleCellDoubleClick(row, nextColumn);
       }
 
-      // We can't tab through rows if there are none
-      if (this.filteredData.length === 0) {
+      // Get first editable column
+      nextColumn = this.getNextEditableField();
+      if (!nextColumn) {
         return;
       }
 
@@ -1485,7 +1503,7 @@ export class YatlTable<
         rowIndex = 0;
       }
       const nextRow = this.filteredData[rowIndex];
-      this.handleCellDoubleClick(nextRow, this.editingState.field);
+      this.handleCellDoubleClick(nextRow, nextColumn);
       event.preventDefault();
     }
   }

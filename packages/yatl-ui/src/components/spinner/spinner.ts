@@ -45,10 +45,10 @@ export class YatlSpinner extends YatlBase {
 
     if (changedProperties.has('state')) {
       if (this.state === 'success' && this.successDuration) {
-        setTimeout(() => (this.state = 'idle'), this.successDuration);
+        setTimeout(() => this.updateSpinnerState('idle'), this.successDuration);
       }
       if (this.state === 'error' && this.errorDuration) {
-        setTimeout(() => (this.state = 'idle'), this.errorDuration);
+        setTimeout(() => this.updateSpinnerState('idle'), this.errorDuration);
       }
 
       if (this.state === 'success' || this.state === 'error') {
@@ -63,8 +63,6 @@ export class YatlSpinner extends YatlBase {
           this.updateAnimationOrigin();
         }
       }
-
-      this.dispatchEvent(new YatlSpinnerStateChangeEvent(this.state));
     }
   }
 
@@ -94,6 +92,11 @@ export class YatlSpinner extends YatlBase {
         ></div>
       </div>
     `;
+  }
+
+  private updateSpinnerState(state: YatlSpinnerState) {
+    this.state = state;
+    this.dispatchEvent(new YatlSpinnerStateChangeEvent(this.state));
   }
 
   private updateAnimationOrigin() {

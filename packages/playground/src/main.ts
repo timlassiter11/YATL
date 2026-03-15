@@ -10,7 +10,7 @@ import {
   YatlSwitch,
   YatlTableView,
 } from '@timlassiter11/yatl-ui';
-import { SelectEditor } from '@timlassiter11/yatl';
+import { NumberEditor, SelectEditor, TextEditor } from '@timlassiter11/yatl';
 
 // Used for generating data and for filters
 const statuses = [
@@ -150,12 +150,18 @@ function initTable() {
       title: 'Item Name',
       searchable: true,
       tokenize: true,
+      editor: new TextEditor(),
     },
     {
       field: 'status',
       title: 'Status',
       searchable: false,
-      editor: new SelectEditor(),
+      editor: new SelectEditor<TableData>({
+        onSave: (oldValue, newValue, field, row) => {
+          row.lastModified = new Date();
+          return newValue;
+        },
+      }),
     },
     {
       field: 'lastModified',
@@ -190,6 +196,7 @@ function initTable() {
     {
       field: 'issueCount',
       title: 'Issues',
+      editor: new NumberEditor(),
     },
     {
       field: 'tags',
@@ -300,12 +307,11 @@ function generateMockData(count: number) {
     arr[Math.floor(Math.random() * arr.length)];
 
   for (let i = 1; i <= count; i++) {
-    // Generate a random date (+- 1 year from now)
+    // Generate a random date within the last year
     const today = new Date();
     const oneYearInMillis = 365 * 24 * 60 * 60 * 1000;
-    const randomTimeOffset =
-      Math.random() * 2 * oneYearInMillis - oneYearInMillis;
-    const randomDate = new Date(today.getTime() + randomTimeOffset);
+    const randomTimeOffset = Math.random() * oneYearInMillis;
+    const randomDate = new Date(today.getTime() - randomTimeOffset);
 
     // Generate a tokenizable string of tags
     // Shuffle tags and pick a random number of them (2 to 5)

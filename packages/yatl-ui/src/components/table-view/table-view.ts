@@ -172,6 +172,7 @@ export class YatlTableView<
 
   private handleClearFiltersClick() {
     this.filters = null;
+    this.searchQuery = '';
     this.dispatchEvent(new YatlTableViewFiltersClearEvent());
   }
 

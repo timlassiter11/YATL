@@ -1,15 +1,16 @@
 import { html } from 'lit';
-import { ColumnEditor, NestedKeyOf, UnspecifiedRecord } from '../types';
 import { live } from 'lit/directives/live.js';
-import { YatlTableController } from '../table-controller/table-controller';
 import { repeat } from 'lit/directives/repeat.js';
+import { YatlTableController } from '../table-controller/table-controller';
+import { NestedKeyOf, UnspecifiedRecord } from '../types';
+import { BaseEditor, BaseEditorOptions } from './base';
 
-export class SelectEditor<T extends object = UnspecifiedRecord>
-  implements ColumnEditor<T>
-{
-  private currentValue?: unknown;
-
-  constructor(private readonly options?: SelectEditorOptions) {}
+export class SelectEditor<
+  T extends object = UnspecifiedRecord,
+> extends BaseEditor<T> {
+  constructor(protected override readonly options?: SelectEditorOptions<T>) {
+    super(options);
+  }
 
   public render(
     value: unknown,
@@ -39,30 +40,13 @@ export class SelectEditor<T extends object = UnspecifiedRecord>
     `;
   }
 
-  public save(
-    originalValue: unknown,
-    _field: NestedKeyOf<T>,
-    _row: T,
-    _controller: YatlTableController<T>,
-  ) {
-    if (
-      this.currentValue === undefined ||
-      this.currentValue === originalValue
-    ) {
-      return;
-    }
-
-    const newValue = this.currentValue;
-    this.currentValue = undefined;
-    return newValue;
-  }
-
   private handleChange = (event: Event) => {
     const target = event.target as HTMLSelectElement;
     this.currentValue = target.value;
   };
 }
 
-export interface SelectEditorOptions {
+export interface SelectEditorOptions<T extends object = UnspecifiedRecord>
+  extends BaseEditorOptions<T> {
   labelRenderer?: (value: unknown) => [string, string];
 }

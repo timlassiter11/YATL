@@ -59,6 +59,12 @@ export type SortValueCallback = (value: unknown) => Compareable;
  */
 export interface ColumnEditor<T extends object = UnspecifiedRecord> {
   /**
+   * Reset the state of the editor before a new cell uses it
+   * @returns
+   */
+  reset: () => void;
+
+  /**
    * A method for rendering the input element used for editing the cell
    * @param value - The current value
    * @param field - The field that is being edited

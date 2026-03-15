@@ -1,15 +1,16 @@
 import { html } from 'lit';
-import { ColumnEditor, NestedKeyOf, UnspecifiedRecord } from '../types';
-import { live } from 'lit/directives/live.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
+import { live } from 'lit/directives/live.js';
 import { YatlTableController } from '../table-controller/table-controller';
+import { NestedKeyOf, UnspecifiedRecord } from '../types';
+import { BaseEditor, BaseEditorOptions } from './base';
 
-export class InputEditor<T extends object = UnspecifiedRecord>
-  implements ColumnEditor<T>
-{
-  private currentValue?: unknown;
-
-  constructor(private readonly options?: InputEditorOptions) {}
+export class InputEditor<
+  T extends object = UnspecifiedRecord,
+> extends BaseEditor<T> {
+  constructor(public override readonly options?: InputEditorOptions<T>) {
+    super(options);
+  }
 
   public render(
     value: unknown,
@@ -32,21 +33,6 @@ export class InputEditor<T extends object = UnspecifiedRecord>
         @input=${this.handleChange}
       />
     `;
-  }
-
-  public save(
-    originalValue: unknown,
-    _field: NestedKeyOf<T>,
-    _row: T,
-    _controller: YatlTableController<T>,
-  ) {
-    if (
-      this.currentValue === undefined ||
-      this.currentValue === originalValue
-    ) {
-      return;
-    }
-    return this.currentValue;
   }
 
   private handleChange = (event: Event) => {
@@ -87,7 +73,8 @@ export type InputType =
   | 'url'
   | 'week';
 
-export interface InputEditorOptions {
+export interface InputEditorOptions<T extends object = UnspecifiedRecord>
+  extends BaseEditorOptions<T> {
   type?: InputType;
   minlength?: number;
   maxlength?: number;

@@ -37,22 +37,28 @@ export class InputEditor<
 
   private handleChange = (event: Event) => {
     const target = event.target as HTMLInputElement;
-    switch (this.options?.type) {
-      case 'checkbox':
-        this.currentValue = target.checked;
-        break;
-      case 'date':
-      case 'datetime-local':
-        this.currentValue = target.valueAsDate;
-        break;
-      case 'number':
-        this.currentValue = target.valueAsNumber;
-        if (isNaN(this.currentValue as number)) {
-          this.currentValue = null;
+    const { type, max, min } = this.options ?? {};
+
+    if (type === 'checkbox') {
+      this.currentValue = target.checked;
+    } else if (type === 'date' || type === 'datetime-local') {
+      this.currentValue = target.valueAsDate;
+    } else if (type === 'number') {
+      let value: number | null = target.valueAsNumber;
+      if (isNaN(value)) {
+        value = null;
+      } else {
+        if (typeof max === 'number' && value > max) {
+          target.valueAsNumber = max;
+          value = max;
+        } else if (typeof min === 'number' && value < min) {
+          target.valueAsNumber = min;
+          value = min;
         }
-        break;
-      default:
-        this.currentValue = target.value;
+        this.currentValue = value;
+      }
+    } else {
+      this.currentValue = target.value;
     }
   };
 }

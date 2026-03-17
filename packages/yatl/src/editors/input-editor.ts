@@ -20,7 +20,7 @@ export class InputEditor<
   ) {
     return html`
       <input
-        .value=${live(String(value))}
+        .value=${live(String(value ?? ''))}
         type=${ifDefined(this.options?.type)}
         minlength=${ifDefined(this.options?.minlength)}
         maxlength=${ifDefined(this.options?.maxlength)}

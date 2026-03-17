@@ -1,5 +1,29 @@
 # @timlassiter11/yatl
 
+## 1.3.0
+
+### Minor Changes
+
+- aebeaae: Improved property names, defaults, and docstrings for table and table controller
+
+### Patch Changes
+
+- 295518a: Fixed bug causing table row click events to fire when a link or button in a cell was clicked
+- f32af15: Added ability to edit cells within table
+- 56df7fd: Show column title on header hover
+- 0aa669c: Allow users to provide storage interface
+- 5b489cd: Added print method to table component
+- ceae989: Fixed columns missing from storage data not displaying
+- 89263d8: Properly handle array values when creating column options
+- e1310a0: Added select editor
+- 269725b: Added save callback to all cell editors
+- 329b84b: Added ability to conditionally disable editing of a single cell in an editable column
+- cbef96d: Moved from editable flag to editor interface to allow for custom cell editors
+- ea20d98: Only dispatch cell change events when data actually changed
+- 2a27505: Fixed table displaying NaN when editing a number cell with an empty value
+- 72fa32a: Limit input to range in options when editing a cell with the number editor
+- 25eaabb: Added ability to set column data type
+
 ## 1.2.5
 
 ### Patch Changes

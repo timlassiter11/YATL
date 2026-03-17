@@ -1,12 +1,13 @@
 import { YatlTableController } from '../table-controller/table-controller';
 import {
-  ColumnEditor,
+  CellEditor,
   MaybePromise,
   NestedKeyOf,
   UnspecifiedRecord,
 } from '../types';
 
 export interface BaseEditorOptions<T extends object = UnspecifiedRecord> {
+  canEdit?: (field: NestedKeyOf<T>, row: T) => boolean;
   onSave?: (
     oldValue: unknown,
     newValue: unknown,
@@ -16,7 +17,7 @@ export interface BaseEditorOptions<T extends object = UnspecifiedRecord> {
 }
 
 export abstract class BaseEditor<T extends object = UnspecifiedRecord>
-  implements ColumnEditor<T>
+  implements CellEditor<T>
 {
   protected currentValue: unknown;
 
@@ -24,6 +25,10 @@ export abstract class BaseEditor<T extends object = UnspecifiedRecord>
 
   public reset() {
     this.currentValue = undefined;
+  }
+
+  public canEdit(field: NestedKeyOf<T>, row: T) {
+    return this.options?.canEdit?.(field, row) ?? true;
   }
 
   public abstract render(

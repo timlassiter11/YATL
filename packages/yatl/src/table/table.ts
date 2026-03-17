@@ -1334,7 +1334,7 @@ export class YatlTable<
     return 'text';
   }
 
-  private getNextEditableField(currentField?: NestedKeyOf<T>) {
+  private getNextEditableField(row: T, currentField?: NestedKeyOf<T>) {
     let index = 0;
     if (currentField) {
       index = this.displayColumns.findIndex(c => c.field === currentField);
@@ -1346,7 +1346,7 @@ export class YatlTable<
     }
 
     for (const col of this.displayColumns.slice(index)) {
-      if (col.editor) {
+      if (col.editor && col.editor.canEdit(col.field, row)) {
         return col.field;
       }
     }
@@ -1451,7 +1451,7 @@ export class YatlTable<
 
   private handleCellDoubleClick(row: T, field: NestedKeyOf<T>) {
     const column = this.getDisplayColumn(field);
-    if (!column || !column.editor) {
+    if (!column || !column.editor || !column.editor.canEdit(field, row)) {
       return;
     }
 
@@ -1481,15 +1481,9 @@ export class YatlTable<
       const row = this.getRow(rowId)!;
 
       // Try to find the next editable field in this row.
-      let nextColumn = this.getNextEditableField(this.editingState.field);
+      let nextColumn = this.getNextEditableField(row, this.editingState.field);
       if (nextColumn) {
         return this.handleCellDoubleClick(row, nextColumn);
-      }
-
-      // Get first editable column
-      nextColumn = this.getNextEditableField();
-      if (!nextColumn) {
-        return;
       }
 
       let rowIndex = this.filteredData.indexOf(row);
@@ -1503,6 +1497,12 @@ export class YatlTable<
         rowIndex = 0;
       }
       const nextRow = this.filteredData[rowIndex];
+
+      // Get first editable column
+      nextColumn = this.getNextEditableField(nextRow);
+      if (!nextColumn) {
+        return;
+      }
       this.handleCellDoubleClick(nextRow, nextColumn);
       event.preventDefault();
     }

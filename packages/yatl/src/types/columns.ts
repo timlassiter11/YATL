@@ -57,12 +57,17 @@ export type SortValueCallback = (value: unknown) => Compareable;
 /**
  *
  */
-export interface ColumnEditor<T extends object = UnspecifiedRecord> {
+export interface CellEditor<T extends object = UnspecifiedRecord> {
   /**
    * Reset the state of the editor before a new cell uses it
    * @returns
    */
   reset: () => void;
+
+  /**
+   * A function to determine if editing should be allowed for the given row.
+   */
+  canEdit: (field: NestedKeyOf<T>, row: T) => boolean;
 
   /**
    * A method for rendering the input element used for editing the cell
@@ -170,7 +175,7 @@ export interface DisplayColumnOptions<T extends object = UnspecifiedRecord>
   /**
    * Wheter the column's cells can be edited or not.
    */
-  editor?: ColumnEditor<T>;
+  editor?: CellEditor<T>;
 
   /**
    * A function to format the value for display.

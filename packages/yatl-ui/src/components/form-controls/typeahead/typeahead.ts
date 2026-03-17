@@ -48,6 +48,12 @@ export class YatlTypeahead extends YatlFormControl {
     this.requestUpdate('uri', oldValue);
   }
 
+  /**
+   * Max number of options to display in the dropdown.
+   */
+  @property({ type: Number, attribute: 'max-options' })
+  public maxOptions = 20;
+
   @property({ type: Number, attribute: 'min-query-length' })
   public get minQueryLength() {
     return this._minQueryLength;
@@ -113,6 +119,7 @@ export class YatlTypeahead extends YatlFormControl {
             id=${this.inputId}
             name=${this.name}
             type="text"
+            autocomplete="off"
             .value=${live(this.value)}
             value=${this.defaultValue}
             placeholder=${this.placeholder}
@@ -149,7 +156,9 @@ export class YatlTypeahead extends YatlFormControl {
     }
 
     if (this.hasOptions) {
-      return repeat(this.options, option => this.renderOption(option));
+      const max = Math.min(this.maxOptions, this.options.size);
+      const options = [...this.options].slice(0, max);
+      return repeat(options, option => this.renderOption(option));
     }
 
     return nothing;

@@ -536,6 +536,41 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     a.remove();
   }
 
+  public async print(title?: string) {
+    if (title) {
+      document.title = title;
+    }
+
+    const printSheet = new CSSStyleSheet();
+    printSheet.replaceSync(`
+      @media print {
+        body > *:not(.yatl-printable) { 
+          display: none !important; 
+        }
+        
+        body { 
+          height: auto !important; 
+          overflow: visible !important; 
+          background: white !important;
+        }
+      }
+    `);
+    const documentStyleSheets = document.adoptedStyleSheets;
+    document.adoptedStyleSheets = [...documentStyleSheets, printSheet];
+
+    const printTable = document.createElement('yatl-table') as YatlTable<T>;
+    printTable.classList.add('yatl-printable');
+    printTable.controller = this.controller;
+    printTable.virtualScroll = false;
+    document.body.append(printTable);
+    await printTable.updateComplete;
+    requestAnimationFrame(() => {
+      window.print();
+      printTable.remove();
+      document.adoptedStyleSheets = documentStyleSheets;
+    });
+  }
+
   public scrollToRow(row: T) {
     const index = this.data.findIndex(v => v === row);
     if (typeof index === 'number') {

@@ -413,4 +413,19 @@ export default css`
     white-space: nowrap;
     overflow: hidden;
   }
+
+  @media print {
+    .table {
+      color: black;
+      width: 100%;
+    }
+
+    .row {
+      break-inside: avoid;
+    }
+
+    .cell {
+      border: 1px solid black;
+    }
+  }
 `;

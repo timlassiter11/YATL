@@ -11,6 +11,7 @@ import type {
   SortOrder,
   TableState,
   UnspecifiedRecord,
+  YatlTableApi,
 } from '../types';
 
 import {
@@ -72,9 +73,10 @@ import styles from './table.styles';
  * @fires yatl-table-state-change - Fired when any persistable state (width, order, sort, query) changes. Used for syncing with local storage.
  */
 @customElement('yatl-table')
-export class YatlTable<
-  T extends object = UnspecifiedRecord,
-> extends LitElement {
+export class YatlTable<T extends object = UnspecifiedRecord>
+  extends LitElement
+  implements YatlTableApi<T>
+{
   public static override styles = [styles];
 
   @query('.table')
@@ -92,8 +94,6 @@ export class YatlTable<
   }
 
   // #region --- State Data ---
-
-  // Property data
 
   private resizeState: {
     active: boolean;
@@ -117,16 +117,17 @@ export class YatlTable<
     originalValue: unknown;
   } | null = null;
 
+  private _controller = new YatlTableController<T>(this);
+
   // #endregion
 
   // #region --- Properties ---
 
-  private _controller = new YatlTableController<T>(this);
-  @property({ attribute: false })
   public get controller() {
     return this._controller;
   }
 
+  @property({ attribute: false })
   public set controller(controller) {
     if (this._controller === controller) {
       return;
@@ -142,146 +143,15 @@ export class YatlTable<
     controller.attach(this);
 
     this._controller = controller;
-    this.requestUpdate('controller', oldController);
   }
 
-  @property({ type: Boolean, reflect: true })
-  public striped = false;
-
-  /**
-   * Default sortability for all columns.
-   * Can be overridden by setting `sortable` on the specific column definition.
-   * * **NOTE:** Changing this will not clear sorted column states.
-   * @default false
-   */
-  @property({ type: Boolean, attribute: 'sortable' })
-  public sortable = true;
-
-  /**
-   * Default resizability for all columns.
-   * Can be overridden by setting `resizable` on the specific column definition.
-   * *  **NOTE:** Changing this will not clear current column widths.
-   * @default false
-   */
-  @property({ type: Boolean, attribute: 'resizable' })
-  public resizable = true;
-
-  /**
-   * Enables virtual scrolling for the table.
-   * When enabled, only the visible rows are rendered to the DOM, significantly improving
-   * performance for large datasets (1000+ rows).
-   * @default false
-   */
-  @property({ type: Boolean, attribute: 'enable-virtual-scroll' })
-  public enableVirtualScroll = false;
-
-  /**
-   * When enabled, text matching the current search query will be wrapped in `<mark>` tags.
-   * This applies to all visible cells that contain the search term.
-   * This does NOT apply to content rendered by the user such as the ColumnOptions.render callback.
-   * @default true
-   */
-  @property({ type: Boolean, attribute: 'enable-search-highlight' })
-  public enableSearchHighlight = true;
-
-  /**
-   * Enables tokenized search behavior.
-   * When enabled, the search query is split into individual tokens using the
-   * `searchTokenizer` function (defaults to splitting on whitespace).
-   * A row is considered a match if **ANY** of the tokens appear in the searchable fields.
-   * @default false
-   */
-  @property({ type: Boolean, attribute: 'enable-search-tokenization' })
-  public get enableSearchTokenization() {
-    return this.controller.enableSearchTokenization;
-  }
-
-  public set enableSearchTokenization(enable) {
-    const oldValue = this.enableSearchTokenization;
-    if (oldValue === enable) {
-      return;
-    }
-
-    this.controller.enableSearchTokenization = enable;
-    this.requestUpdate('enableSearchTokenization', oldValue);
-  }
-
-  /**
-   * Enables weighted relevance scoring for search results.
-   * When enabled, exact matches and prefix matches are ranked higher than substring matches.
-   * Rows are sorted by their relevance score descending.
-   * @default false
-   */
-  @property({ type: Boolean, attribute: 'enable-search-scoring' })
-  public get enableSearchScoring() {
-    return this.controller.enableSearchScoring;
-  }
-
-  public set enableSearchScoring(enable) {
-    const oldValue = this.enableSearchScoring;
-    if (oldValue === enable) {
-      return;
-    }
-
-    this.controller.enableSearchScoring = enable;
-    this.requestUpdate('enableSearchScoring', oldValue);
-  }
-
-  /**
-   * Allows users to reorder columns by dragging and dropping headers.
-   * @default true
-   */
-  @property({ type: Boolean, attribute: 'enable-column-reorder' })
-  public enableColumnReorder = true;
-
-  /**
-   * Shows a column to the left of each row with its row number.
-   */
-  @property({ type: Boolean, attribute: 'enable-row-number-column' })
-  public enableRowNumberColumn = true;
-
-  /**
-   * Shows the built-in footer row which displays the current record count.
-   * The footer content can be customized using the `slot="footer"` element.
-   * @default false
-   */
-  @property({ type: Boolean, attribute: 'enable-footer' })
-  public enableFooter = true;
-
-  /**
-   * The string to display in a cell when the data value is `null` or `undefined`.
-   * @default "-"
-   */
-  @property({ type: String, attribute: 'null-value-placeholder' })
-  public nullValuePlaceholder = '-';
-
-  /**
-   * The message displayed when the `data` array is empty.
-   * @default "No records to display"
-   */
-  @property({ type: String, attribute: 'empty-message' })
-  public emptyMessage = 'No records to display';
-
-  /**
-   * The message displayed when `data` exists but the current search/filter
-   * results in zero visible rows.
-   * @default "No matching records found"
-   */
-  @property({ type: String, attribute: 'no-results-message' })
-  public noResultsMessage = 'No matching records found';
-
-  /**
-   * The definitions for the columns to be rendered.
-   * This defines the field mapping, titles, sortability, and other static options.
-   */
-  @property({ attribute: false })
   public get columns() {
     return this.controller.columns;
   }
 
+  @property({ attribute: false })
   public set columns(columns) {
-    const oldValue = this.columns;
-    if (oldValue === columns) {
+    if (this.columns === columns) {
       return;
     }
 
@@ -292,7 +162,6 @@ export class YatlTable<
     }
 
     this.controller.columns = columns;
-    this.requestUpdate('columns', oldValue);
   }
 
   /**
@@ -303,14 +172,12 @@ export class YatlTable<
     return this.controller.displayColumns;
   }
 
-  @property({ attribute: false })
   public get columnStates() {
     return this.controller.columnStates;
   }
 
+  @property({ attribute: false })
   public set columnStates(states) {
-    const oldValue = this.columnStates;
-
     let changed = false;
     for (const state of states) {
       const oldState = this.getColumnState(state.field);
@@ -326,169 +193,15 @@ export class YatlTable<
     }
 
     this.controller.columnStates = states;
-    this.requestUpdate('columnStates', oldValue);
   }
 
-  /**
-   * The current text string used to filter the table data.
-   * Setting this property triggers a new search and render cycle.
-   */
-  @property({ type: String, attribute: 'search-query' })
-  public get searchQuery() {
-    return this.controller.searchQuery;
-  }
-
-  public set searchQuery(query) {
-    const oldValue = this.searchQuery;
-    if (oldValue === query) {
-      return;
-    }
-
-    this.controller.searchQuery = query;
-    this.requestUpdate('searchQuery', oldValue);
-  }
-
-  /**
-   * A function that splits the search query into tokens.
-   * Only used if `enableSearchTokenization` is true.
-   * @default whitespaceTokenizer
-   */
-  @property({ attribute: false })
-  public get searchTokenizer() {
-    return this.controller.searchTokenizer;
-  }
-
-  public set searchTokenizer(tokenizer) {
-    const oldValue = this.searchTokenizer;
-    if (oldValue === tokenizer) {
-      return;
-    }
-
-    this.controller.searchTokenizer = tokenizer;
-    this.requestUpdate('searchTokenizer', oldValue);
-  }
-
-  /**
-   * An optional set of criteria to filter the visible rows.
-   * This runs **before** the global search query is applied.
-   * * You can provide:
-   * 1. A **Partial Object**: matches rows where specific keys equal specific values (AND logic).
-   * 2. A **Callback Function**: returns `true` to keep the row, `false` to hide it.
-   * * @example
-   * // 1. Object Syntax (Simple Exact Match)
-   * // Shows rows where status is 'active' AND role is 'admin'
-   * table.filters = { status: 'active', role: 'admin' };
-   * * @example
-   * // 2. Callback Syntax (Complex Logic)
-   * // Shows rows where age is over 21 OR they are a VIP
-   * table.filters = (row) => row.age > 21 || row.isVip;
-   */
-  @property({ attribute: false })
-  public get filters() {
-    return this.controller.filters;
-  }
-
-  public set filters(filters) {
-    const oldValue = this.filters;
-    if (oldValue === filters) {
-      return;
-    }
-
-    this.controller.filters = filters;
-    this.requestUpdate('filters', oldValue);
-  }
-
-  /**
-   * A callback function to conditionally apply CSS parts to table rows.
-   */
-  @property({ attribute: false })
-  public rowParts: RowPartsCallback<T> | null = null;
-
-  /**
-   * The row selection method to use.
-   * * single - Only a single row can be selected at a time
-   * * multi - Multiple rows can be selected at a time
-   * * null - Disable row selection
-   */
-  @property({ type: String })
-  public get rowSelectionMethod() {
-    return this.controller.rowSelectionMethod;
-  }
-
-  public set rowSelectionMethod(selection) {
-    const oldValue = this.rowSelectionMethod;
-    if (oldValue === selection) {
-      return;
-    }
-
-    this.controller.rowSelectionMethod = selection;
-    this.requestUpdate('rowSelectionMethod', oldValue);
-  }
-
-  /**
-   * List of currently selected row indexes.
-   * * **NOTE**: These indexes are based off the of
-   * the original data array index, *not* the filtered data.
-   */
-  @property({ attribute: false })
-  public get selectedRowIds() {
-    return this.controller.selectedRowIds;
-  }
-
-  public set selectedRowIds(rows) {
-    const oldValue = new Set(this.selectedRowIds);
-    if (oldValue.size === rows.length && rows.every(r => oldValue.has(r))) {
-      return;
-    }
-
-    this.controller.selectedRowIds = rows;
-    this.requestUpdate('selectedRows', [...oldValue]);
-  }
-
-  /**
-   * Configuration options for automatically saving and restoring table state
-   * (column width, order, visibility, etc.) to browser storage.
-   */
-  @property({ type: Object, attribute: 'storage-options' })
-  public get storageOptions() {
-    return this.controller.storageOptions;
-  }
-
-  public set storageOptions(options) {
-    const oldValue = this.storageOptions;
-    // TODO: Check if anything changed
-    this.controller.storageOptions = options;
-    this.requestUpdate('storageOptions', oldValue);
-  }
-
-  @property({ attribute: false })
-  public get rowIdCallback() {
-    return this.controller.rowIdCallback;
-  }
-
-  public set rowIdCallback(callback) {
-    const oldValue = this.rowIdCallback;
-    if (oldValue === callback) {
-      return;
-    }
-
-    this.controller.rowIdCallback = callback;
-    this.requestUpdate('rowIdCallback', oldValue);
-  }
-
-  /**
-   * The array of data objects to be displayed.
-   * Objects must satisfy the `WeakKey` constraint (objects only, no primitives).
-   */
-  @property({ attribute: false })
   public get data() {
     return this.controller.data;
   }
 
+  @property({ attribute: false })
   public set data(value: T[]) {
-    const oldValue = this.data;
     this.controller.data = value;
-    this.requestUpdate('data', oldValue);
   }
 
   public get filteredData() {
@@ -498,6 +211,170 @@ export class YatlTable<
   public get dataUpdateTimestamp() {
     return this.controller.dataUpdateTimestamp;
   }
+
+  public get filters() {
+    return this.controller.filters;
+  }
+
+  @property({ attribute: false })
+  public set filters(filters) {
+    if (this.filters === filters) {
+      return;
+    }
+    this.controller.filters = filters;
+  }
+
+  /** @attr search-query */
+  public get searchQuery() {
+    return this.controller.searchQuery;
+  }
+
+  @property({ type: String, attribute: 'search-query' })
+  public set searchQuery(query) {
+    if (this.searchQuery === query) {
+      return;
+    }
+    this.controller.searchQuery = query;
+  }
+
+  /** @attr tokenized-search */
+  public get tokenizedSearch() {
+    return this.controller.tokenizedSearch;
+  }
+
+  @property({ type: Boolean, attribute: 'tokenized-search' })
+  public set tokenizedSearch(enable) {
+    if (this.tokenizedSearch === enable) {
+      return;
+    }
+    this.controller.tokenizedSearch = enable;
+  }
+
+  /** @attr scored-search */
+  public get scoredSearch() {
+    return this.controller.scoredSearch;
+  }
+
+  @property({ type: Boolean, attribute: 'scored-search' })
+  public set scoredSearch(enable) {
+    if (this.scoredSearch === enable) {
+      return;
+    }
+    this.controller.scoredSearch = enable;
+  }
+
+  public get searchTokenizer() {
+    return this.controller.searchTokenizer;
+  }
+
+  @property({ attribute: false })
+  public set searchTokenizer(tokenizer) {
+    if (this.searchTokenizer === tokenizer) {
+      return;
+    }
+    this.controller.searchTokenizer = tokenizer;
+  }
+
+  /** @attr row-selection-method */
+  public get rowSelectionMethod() {
+    return this.controller.rowSelectionMethod;
+  }
+
+  @property({ type: String, attribute: 'row-selection-method' })
+  public set rowSelectionMethod(selection) {
+    if (this.rowSelectionMethod === selection) {
+      return;
+    }
+    this.controller.rowSelectionMethod = selection;
+  }
+
+  public get selectedRowIds() {
+    return this.controller.selectedRowIds;
+  }
+
+  @property({ attribute: false })
+  public set selectedRowIds(rows) {
+    const oldValue = new Set(this.selectedRowIds);
+    if (oldValue.size === rows.length && rows.every(r => oldValue.has(r))) {
+      return;
+    }
+
+    this.controller.selectedRowIds = rows;
+  }
+
+  public get storageOptions() {
+    return this.controller.storageOptions;
+  }
+
+  @property({ attribute: false })
+  public set storageOptions(options) {
+    // TODO: Check if anything changed
+    this.controller.storageOptions = options;
+  }
+
+  public get rowIdCallback() {
+    return this.controller.rowIdCallback;
+  }
+
+  @property({ attribute: false })
+  public set rowIdCallback(callback) {
+    if (this.rowIdCallback === callback) {
+      return;
+    }
+    this.controller.rowIdCallback = callback;
+  }
+
+  @property({ type: Boolean, reflect: true })
+  public striped = false;
+
+  @property({ type: Boolean })
+  public sortable = false;
+
+  @property({ type: Boolean })
+  public resizable = false;
+
+  @property({ type: Boolean })
+  public reorderable = false;
+
+  /** @attr row-numbers */
+  @property({ type: Boolean, attribute: 'row-numbers' })
+  public rowNumbers = false;
+
+  /** @attr virtual-scroll */
+  @property({ type: Boolean, attribute: 'virtual-scroll' })
+  public virtualScroll = false;
+
+  /** @attr hide-footer */
+  @property({ type: Boolean, attribute: 'hide-footer' })
+  public hideFooter = false;
+
+  /** @attr disable-editing */
+  @property({ type: Boolean, attribute: 'disable-editing' })
+  public disableEditing = false;
+
+  /**
+   * @default "-"
+   * @attr null-value-placeholder
+   */
+  @property({ type: String, attribute: 'null-value-placeholder' })
+  public nullValuePlaceholder = '-';
+
+  /**
+   * @default "No records to display"
+   * @attr emptry-message
+   */
+  @property({ type: String, attribute: 'empty-message' })
+  public emptyMessage = 'No records to display';
+
+  /**
+   * @default "No matching records found"
+   * @attr no-results-message
+   */
+  @property({ type: String, attribute: 'no-results-message' })
+  public noResultsMessage = 'No matching records found';
+
+  @property({ attribute: false })
+  public rowParts: RowPartsCallback<T> | null = null;
 
   // #endregion
 
@@ -889,7 +766,7 @@ export class YatlTable<
         part="cell header-cell"
         class=${classMap(classes)}
         title=${title}
-        draggable=${ifDefined(this.enableColumnReorder ? true : undefined)}
+        draggable=${ifDefined(this.reorderable ? true : undefined)}
         data-field=${column.field}
         @dragstart=${(event: DragEvent) =>
           this.handleDragColumnStart(event, column.field)}
@@ -928,7 +805,7 @@ export class YatlTable<
   protected renderHeader() {
     const classes = {
       header: true,
-      reorderable: this.enableColumnReorder,
+      reorderable: this.reorderable,
     };
     return html`
       <div role="rowgroup" part="header" class=${classMap(classes)}>
@@ -955,7 +832,7 @@ export class YatlTable<
 
     const indices = this.controller.getRowHighlightIndicies(row);
 
-    return this.enableSearchHighlight && indices
+    return indices
       ? highlightText(String(value), indices[column.field])
       : value;
   }
@@ -979,6 +856,7 @@ export class YatlTable<
     const field = column.field;
     if (
       column.editor &&
+      !this.disableEditing &&
       this.editingState &&
       this.editingState.id === rowId &&
       this.editingState.field === field
@@ -1101,7 +979,7 @@ export class YatlTable<
       `;
     }
 
-    if (this.enableVirtualScroll) {
+    if (this.virtualScroll) {
       return html`
         <lit-virtualizer
           .items=${this.filteredData}
@@ -1122,7 +1000,7 @@ export class YatlTable<
   }
 
   protected renderFooter() {
-    if (!this.enableFooter) {
+    if (this.hideFooter) {
       return nothing;
     }
 
@@ -1279,7 +1157,7 @@ export class YatlTable<
   private getGridWidths() {
     const widths: string[] = [];
 
-    if (this.enableRowNumberColumn) {
+    if (this.rowNumbers) {
       widths.push('var(--yatl-row-number-column-width, 48px)');
     } else {
       widths.push('0');
@@ -1379,11 +1257,12 @@ export class YatlTable<
     }
 
     if (value !== undefined) {
-      setNestedValue(row, field, value);
+      const updateData = {};
+      setNestedValue(updateData, field, value);
+      this.updateRow(rowId, updateData as Partial<T>);
       this.dispatchEvent(
         new YatlCellEditEvent(row, rowId, field, originalValue, value),
       );
-      this.controller.requestUpdate('data');
     }
   }
 

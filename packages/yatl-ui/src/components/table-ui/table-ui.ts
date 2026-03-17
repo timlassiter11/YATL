@@ -18,6 +18,7 @@ import styles from './table-ui.styles';
  * @slot toolbar-button-group - Adds content into the toolbar button group.
  * @slot footer - Inherited from `yatl-table`. Content to display in the table footer area.
  * @slot body - Inherited from `yatl-table`. Custom rendering for the table body.
+ * @inheritdoc
  */
 @customElement('yatl-table-ui')
 export class YatlTableUi<

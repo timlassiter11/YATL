@@ -105,12 +105,6 @@ window.addEventListener('load', () => {
 function initTable() {
   // Used for formatting our last modified data
   const dateFormatter = new Intl.DateTimeFormat(undefined);
-
-  table.enableSearchHighlight = true;
-  table.enableSearchScoring = true;
-  table.enableSearchTokenization = true;
-  table.enableFooter = true;
-
   table.data = generateMockData(rowCountInput.value!);
 
   // Add a fake task for fetching data

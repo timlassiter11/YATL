@@ -18,6 +18,7 @@ import type {
   TableState,
   TokenizerCallback,
   UnspecifiedRecord,
+  YatlTableControllerApi,
 } from '../types';
 
 import {
@@ -70,14 +71,14 @@ const MATCH_WEIGHTS = {
 
 export class YatlTableController<T extends object = UnspecifiedRecord>
   extends TypedEventTarget<ControllerEventMap>
-  implements ReactiveController
+  implements ReactiveController, YatlTableControllerApi<T>
 {
   // #region State Data
 
   // Property data
   private hosts = new Set<ReactiveControllerHost>();
-  private _enableSearchTokenization = false;
-  private _enableSearchScoring = false;
+  private _tokenizedSearch = false;
+  private _scoredSearch = false;
   // Original options passed by the user
   private _columns: ColumnOptions<T>[] = [];
   // Options mapped by field for faster lookup
@@ -127,52 +128,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Properties
 
-  /**
-   * Enables tokenized search behavior.
-   * When enabled, the search query is split into individual tokens using the
-   * `searchTokenizer` function (defaults to splitting on whitespace).
-   * A row is considered a match if **ANY** of the tokens appear in the searchable fields.
-   * @default false
-   */
-  public get enableSearchTokenization() {
-    return this._enableSearchTokenization;
-  }
-
-  public set enableSearchTokenization(enable) {
-    if (this._enableSearchTokenization === enable) {
-      return;
-    }
-
-    this._enableSearchTokenization = enable;
-    this.updateInternalQuery();
-    this.filterDirty = true;
-    this.requestUpdate('enableSearchTokenization');
-  }
-
-  /**
-   * Enables weighted relevance scoring for search results.
-   * When enabled, exact matches and prefix matches are ranked higher than substring matches.
-   * Rows are sorted by their relevance score descending.
-   * @default false
-   */
-  public get enableSearchScoring() {
-    return this._enableSearchScoring;
-  }
-
-  public set enableSearchScoring(enable) {
-    if (this._enableSearchScoring === enable) {
-      return;
-    }
-
-    this._enableSearchScoring = enable;
-    this.filterDirty = true;
-    this.requestUpdate('enableSearchScoring');
-  }
-
-  /**
-   * The definitions for the columns to be rendered.
-   * This defines the field mapping, titles, sortability, and other static options.
-   */
   public get columns() {
     return [...this._columns];
   }
@@ -224,170 +179,15 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.requestUpdate('columnStates');
   }
 
-  /**
-   * The current text string used to filter the table data.
-   * Setting this property triggers a new search and render cycle.
-   */
-  public get searchQuery() {
-    return this._searchQuery;
-  }
-
-  public set searchQuery(query) {
-    if (this._searchQuery === query) {
-      return;
-    }
-
-    this._searchQuery = query;
-    this.updateInternalQuery();
-    this.filterDirty = true;
-    this.requestUpdate('searchQuery');
-  }
-
-  /**
-   * A function that splits the search query into tokens.
-   * Only used if `enableSearchTokenization` is true.
-   * @default whitespaceTokenizer
-   */
-  public get searchTokenizer() {
-    return this._searchTokenizer;
-  }
-
-  public set searchTokenizer(tokenizer) {
-    if (this._searchTokenizer === tokenizer) {
-      return;
-    }
-
-    this._searchTokenizer = tokenizer;
-    this.filterDirty = true;
-    this.requestUpdate('searchTokenizer');
-  }
-
-  /**
-   * An optional set of criteria to filter the visible rows.
-   * This runs **before** the global search query is applied.
-   * * You can provide:
-   * 1. A **Partial Object**: matches rows where specific keys equal specific values (AND logic).
-   * 2. A **Callback Function**: returns `true` to keep the row, `false` to hide it.
-   * * @example
-   * // 1. Object Syntax (Simple Exact Match)
-   * // Shows rows where status is 'active' AND role is 'admin'
-   * table.filters = { status: 'active', role: 'admin' };
-   * * @example
-   * // 2. Callback Syntax (Complex Logic)
-   * // Shows rows where age is over 21 OR they are a VIP
-   * table.filters = (row) => row.age > 21 || row.isVip;
-   */
-  public get filters() {
-    return this._filters;
-  }
-
-  public set filters(filters) {
-    if (this._filters === filters) {
-      return;
-    }
-
-    this._filters = filters;
-    this.filterDirty = true;
-    this.requestUpdate('filters');
-  }
-
-  /**
-   * The row selection method to use.
-   * * single - Only a single row can be selected at a time
-   * * multi - Multiple rows can be selected at a time
-   * * null - Disable row selection
-   */
-  public get rowSelectionMethod() {
-    return this._rowSelectionMethod;
-  }
-
-  public set rowSelectionMethod(selection) {
-    if (
-      this._rowSelectionMethod === selection ||
-      !isRowSelectionMethod(selection)
-    ) {
-      return;
-    }
-
-    this._rowSelectionMethod = selection;
-    this.requestUpdate('rowSelectionMethod');
-  }
-
-  /**
-   * List of currently selected row indexes.
-   * * **NOTE**: These indexes are based off the of
-   * the original data array index, *not* the filtered data.
-   */
-  public get selectedRowIds() {
-    let selectedRows = [...this._selectedRowIds];
-
-    if (this.rowSelectionMethod === 'single') {
-      selectedRows = selectedRows.slice(0, 1);
-    } else if (!this.rowSelectionMethod) {
-      selectedRows = [];
-    }
-    return selectedRows;
-  }
-
-  public set selectedRowIds(rows) {
-    if (
-      rows.length === this._selectedRowIds.size &&
-      rows.every(a => this._selectedRowIds.has(a))
-    ) {
-      return;
-    }
-
-    this._selectedRowIds = new Set(rows);
-    this.requestUpdate('selectedRowIds');
-  }
-
-  /**
-   * Configuration options for automatically saving and restoring table state
-   * (column width, order, visibility, etc.) to browser storage.
-   */
-  public get storageOptions() {
-    return this._storageOptions ? { ...this._storageOptions } : null;
-  }
-
-  public set storageOptions(options) {
-    if (this._storageOptions === options) {
-      return;
-    }
-
-    this._storageOptions = options ? { ...options } : null;
-    if (!this.hasRestoredState) {
-      this.loadStateFromStorage();
-      this.requestUpdate('storageOptions');
-    }
-  }
-
-  public get rowIdCallback() {
-    return this._rowIdCallback;
-  }
-
-  public set rowIdCallback(callback) {
-    if (this._rowIdCallback === callback) {
-      return;
-    }
-
-    this._rowIdCallback = callback;
-    // Update IDs in metadata for existing data.
-    for (let i = 0; i < this.data.length; ++i) {
-      const row = this.data[i];
-      this.rowMetadata.get(row)!.id = this._rowIdCallback(row, i);
-    }
-    this.requestUpdate('rowIdCallback');
-  }
-
-  /**
-   * The array of data objects to be displayed.
-   * Objects must satisfy the `WeakKey` constraint (objects only, no primitives).
-   */
   public get data() {
     return [...this._data];
   }
 
   public set data(data: T[]) {
+    if (this._data === data) {
+      return;
+    }
+
     this._data = [...data];
     this.createMetadata();
     this._dataUpdateTimestamp = new Date();
@@ -412,6 +212,151 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     return this._dataUpdateTimestamp;
   }
 
+  public get filters() {
+    return this._filters;
+  }
+
+  public set filters(filters) {
+    if (this._filters === filters) {
+      return;
+    }
+
+    this._filters = filters;
+    this.filterDirty = true;
+    this.requestUpdate('filters');
+  }
+
+  public get searchQuery() {
+    return this._searchQuery;
+  }
+
+  public set searchQuery(query) {
+    if (this._searchQuery === query) {
+      return;
+    }
+
+    this._searchQuery = query;
+    this.updateInternalQuery();
+    this.filterDirty = true;
+    this.requestUpdate('searchQuery');
+  }
+
+  public get tokenizedSearch() {
+    return this._tokenizedSearch;
+  }
+
+  public set tokenizedSearch(enable) {
+    if (this._tokenizedSearch === enable) {
+      return;
+    }
+
+    this._tokenizedSearch = enable;
+    this.updateInternalQuery();
+    this.filterDirty = true;
+    this.requestUpdate('tokenizedSearch');
+  }
+
+  public get scoredSearch() {
+    return this._scoredSearch;
+  }
+
+  public set scoredSearch(enable) {
+    if (this._scoredSearch === enable) {
+      return;
+    }
+
+    this._scoredSearch = enable;
+    this.filterDirty = true;
+    this.requestUpdate('scoredSearch');
+  }
+
+  public get searchTokenizer() {
+    return this._searchTokenizer;
+  }
+
+  public set searchTokenizer(tokenizer) {
+    if (this._searchTokenizer === tokenizer) {
+      return;
+    }
+
+    this._searchTokenizer = tokenizer;
+    this.filterDirty = true;
+    this.requestUpdate('searchTokenizer');
+  }
+
+  public get rowSelectionMethod() {
+    return this._rowSelectionMethod;
+  }
+
+  public set rowSelectionMethod(selection) {
+    if (
+      this._rowSelectionMethod === selection ||
+      !isRowSelectionMethod(selection)
+    ) {
+      return;
+    }
+
+    this._rowSelectionMethod = selection;
+    this.requestUpdate('rowSelectionMethod');
+  }
+
+  public get selectedRowIds() {
+    let selectedRows = [...this._selectedRowIds];
+
+    if (this.rowSelectionMethod === 'single') {
+      selectedRows = selectedRows.slice(0, 1);
+    } else if (!this.rowSelectionMethod) {
+      selectedRows = [];
+    }
+    return selectedRows;
+  }
+
+  public set selectedRowIds(rows) {
+    if (
+      rows.length === this._selectedRowIds.size &&
+      rows.every(a => this._selectedRowIds.has(a))
+    ) {
+      return;
+    }
+
+    this._selectedRowIds = new Set(rows);
+    this.requestUpdate('selectedRowIds');
+  }
+
+  public get rowIdCallback() {
+    return this._rowIdCallback;
+  }
+
+  public set rowIdCallback(callback) {
+    if (this._rowIdCallback === callback) {
+      return;
+    }
+
+    this._rowIdCallback = callback;
+    // Update IDs in metadata for existing data.
+    for (let i = 0; i < this.data.length; ++i) {
+      const row = this.data[i];
+      this.rowMetadata.get(row)!.id = this._rowIdCallback(row, i);
+    }
+    this.requestUpdate('rowIdCallback');
+  }
+
+  public get storageOptions() {
+    return this._storageOptions ? { ...this._storageOptions } : null;
+  }
+
+  public set storageOptions(options) {
+    if (this._storageOptions === options) {
+      return;
+    }
+
+    this._storageOptions = options ? { ...options } : null;
+    if (!this.hasRestoredState) {
+      this.loadStateFromStorage();
+      this.requestUpdate('storageOptions');
+    }
+  }
+
   // #endregion
 
   // #region Public Methods
@@ -427,10 +372,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     if (options) {
-      if (options.enableSearchScoring !== undefined)
-        this.enableSearchScoring = options.enableSearchScoring;
-      if (options.enableSearchTokenization !== undefined)
-        this.enableSearchTokenization = options.enableSearchTokenization;
+      if (options.scoredSearch !== undefined)
+        this.scoredSearch = options.scoredSearch;
+      if (options.tokenizedSearch !== undefined)
+        this.tokenizedSearch = options.tokenizedSearch;
       if (options.searchTokenizer !== undefined)
         this.searchTokenizer = options.searchTokenizer;
       if (options.rowIdCallback !== undefined)
@@ -846,8 +791,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public updateRow(rowId: RowId, data: Partial<T>) {
     const row = this.idToRowMap.get(rowId);
     if (row) {
-      Object.assign(row, data);
-      this.requestUpdate('data');
+      this.updateRowData(row, data);
     }
   }
 
@@ -867,8 +811,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public updateRowAtIndex(index: number, data: Partial<T>) {
     const row = this.data[index];
     if (row) {
-      Object.assign(row, data);
-      this.requestUpdate('data');
+      this.updateRowData(row, data);
     }
   }
 
@@ -1044,7 +987,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
     // Handle Quoted/Untokenized (Direct Search)
     if (query.quoted || !tokens) {
-      if (!this.enableSearchScoring) {
+      if (!this.scoredSearch) {
         // Simple boolean match
         if (value.includes(query.value)) {
           result.score = 1;
@@ -1062,7 +1005,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     // Handle Tokenized Search
     // We search the tokens to check for validity/scoring,
     // but we map back to the 'value' for highlighting.
-    if (!this.enableSearchScoring) {
+    if (!this.scoredSearch) {
       const isMatch = tokens.some(token => token.includes(query.value));
       if (isMatch) {
         result.score = 1;
@@ -1250,7 +1193,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       const bMetadata = this.rowMetadata.get(b)!;
 
       // Try to sort by search score if we're using scoring and there is a query.
-      if (this.enableSearchScoring && this.queryTokens) {
+      if (this.scoredSearch && this.queryTokens) {
         const aValue = aMetadata.searchScore || 0;
         const bValue = bMetadata.searchScore || 0;
         if (aValue > bValue) return -1;
@@ -1334,6 +1277,13 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
   }
 
+  private updateRowData(row: T, data: object) {
+    Object.assign(row, data);
+    // TODO: Make this more efficient.
+    this.createMetadata();
+    this.requestUpdate('data');
+  }
+
   private updateInternalQuery() {
     if (this.searchQuery.length === 0) {
       this.queryTokens = null;
@@ -1344,7 +1294,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       { value: this.searchQuery.toLocaleLowerCase(), quoted: true },
     ];
 
-    if (this.enableSearchTokenization) {
+    if (this.tokenizedSearch) {
       this.queryTokens.push(...this.searchTokenizer(this.searchQuery));
     }
   }

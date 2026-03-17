@@ -115,7 +115,7 @@ export class YatlDialog extends YatlBase {
     // We just wait until the animation is done and force a reflow.
     for (const child of getEffectiveChildren(this.defaultSlot)) {
       for (const element of child.querySelectorAll('*')) {
-        if (element instanceof YatlTable && element.enableVirtualScroll) {
+        if (element instanceof YatlTable && element.virtualScroll) {
           if (element.data.length > 0) {
             element.reflowVirtualizer();
           }

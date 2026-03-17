@@ -9,6 +9,7 @@ import { YatlTableFetchContext, YatlTableFetchTask } from '../../types';
 import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
 import { YatlSpinnerState } from '../spinner/spinner';
 
+/** @inheritdoc */
 @customElement('yatl-table-view')
 export class YatlTableView<
   T extends object = UnspecifiedRecord,

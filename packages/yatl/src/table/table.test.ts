@@ -291,7 +291,7 @@ describe('YatlTable Component', () => {
     });
 
     test('respects prevented reorder request', async () => {
-      const table = await renderTable({ enableColumnReorder: true });
+      const table = await renderTable({ reorderable: true });
       const tableLocator = page.elementLocator(table);
       const dragHeader = tableLocator.getByRole('columnheader', {
         name: 'Age',

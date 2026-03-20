@@ -21,6 +21,8 @@ export * from './tag/tag';
 export * from './toast/toast';
 export * from './toast-manager/toast-manager';
 export * from './toolbar/toolbar';
+export * from './tree/tree';
+export * from './tree-item/tree-item';
 
 export * from './filter-components/base-filter/base-filter';
 export * from './filter-components/date-filter/date-filter';

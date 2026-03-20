@@ -28,6 +28,8 @@ export type YatlSize = 'small' | 'medium' | 'large';
 
 export type YatlToastVariant = 'neutral' | 'success' | 'warning' | 'danger';
 
+export type YatlSelectionMethod = 'single' | 'multi' | 'leaf';
+
 export interface YatlToastData {
   label?: string;
   message: string | TemplateResult;

@@ -9,3 +9,5 @@ export * from './table-toolbar';
 export * from './table-view';
 export * from './tag';
 export * from './toast';
+export * from './tree-item';
+export * from './tree';

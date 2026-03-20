@@ -59,12 +59,6 @@ export type SortValueCallback = (value: unknown) => Compareable;
  */
 export interface CellEditor<T extends object = UnspecifiedRecord> {
   /**
-   * Reset the state of the editor before a new cell uses it
-   * @returns
-   */
-  reset: () => void;
-
-  /**
    * A function to determine if editing should be allowed for the given row.
    */
   canEdit: (field: NestedKeyOf<T>, row: T) => boolean;
@@ -83,23 +77,6 @@ export interface CellEditor<T extends object = UnspecifiedRecord> {
     row: T,
     controller: YatlTableController<T>,
   ) => unknown;
-
-  /**
-   * A method for saving the data. If it's async,
-   * the promise will be awaited before closing the edit.
-   * @param originalValue - The value before editing
-   * @param field The field that is being edited
-   * @param row The row that is being edited
-   * @param controller The table's controller
-   * @returns The new value or a promise to the new value.
-   * If undefined is returned, the edit is cancelled
-   */
-  save: (
-    originalValue: unknown,
-    field: NestedKeyOf<T>,
-    row: T,
-    controller: YatlTableController<T>,
-  ) => MaybePromise<unknown | undefined>;
 }
 
 /**

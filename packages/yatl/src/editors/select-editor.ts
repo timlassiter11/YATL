@@ -1,9 +1,9 @@
-import { html } from 'lit';
-import { live } from 'lit/directives/live.js';
+import { html, TemplateResult } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlTableController } from '../table-controller/table-controller';
 import { NestedKeyOf, UnspecifiedRecord } from '../types';
 import { BaseEditor, BaseEditorOptions } from './base';
+import { isTemplateResult } from 'lit/directive-helpers.js';
 
 export class SelectEditor<
   T extends object = UnspecifiedRecord,
@@ -18,19 +18,36 @@ export class SelectEditor<
     row: T,
     controller: YatlTableController<T>,
   ) {
-    const values = controller.getColumnFilterValues(field, false);
+    const save = (event: Event) => {
+      const target = event.target as HTMLSelectElement;
+      controller.setPendingValue(row, field, target.value);
+    };
+
     return html`
-      <select .value=${live(String(value))} @change=${this.handleChange}>
-        ${repeat(
-          values.keys(),
-          option => option,
-          option => this.renderOption(option, option === value),
-        )}
+      <select value=${String(value)} @change=${save}>
+        ${this.renderOptions(value, field, controller)}
       </select>
     `;
   }
 
-  public renderOption(option: unknown, select: boolean) {
+  protected renderOptions(
+    value: unknown,
+    field: NestedKeyOf<T>,
+    controller: YatlTableController<T>,
+  ) {
+    if (isTemplateResult(this.options?.options)) {
+      return this.options?.options;
+    }
+
+    const values = controller.getColumnFilterValues(field, false);
+    return repeat(
+      values.keys(),
+      option => option,
+      option => this.renderOption(option, option === value),
+    );
+  }
+
+  protected renderOption(option: unknown, select: boolean) {
     const [value, display] = this.options?.labelRenderer?.(option) ?? [
       String(option),
       String(option),
@@ -39,14 +56,10 @@ export class SelectEditor<
       <option value=${value} ?selected=${select}>${display}</option>
     `;
   }
-
-  private handleChange = (event: Event) => {
-    const target = event.target as HTMLSelectElement;
-    this.currentValue = target.value;
-  };
 }
 
 export interface SelectEditorOptions<T extends object = UnspecifiedRecord>
   extends BaseEditorOptions<T> {
+  options?: [string, string][] | TemplateResult;
   labelRenderer?: (value: unknown) => [string, string];
 }

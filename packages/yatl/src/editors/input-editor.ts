@@ -1,6 +1,5 @@
 import { html } from 'lit';
 import { ifDefined } from 'lit/directives/if-defined.js';
-import { live } from 'lit/directives/live.js';
 import { YatlTableController } from '../table-controller/table-controller';
 import { NestedKeyOf, UnspecifiedRecord } from '../types';
 import { BaseEditor, BaseEditorOptions } from './base';
@@ -14,13 +13,44 @@ export class InputEditor<
 
   public render(
     value: unknown,
-    _field: NestedKeyOf<T>,
-    _row: T,
-    _controller: YatlTableController<T>,
+    field: NestedKeyOf<T>,
+    row: T,
+    controller: YatlTableController<T>,
   ) {
+    const save = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      const { type, max, min } = this.options ?? {};
+
+      let newValue;
+      if (type === 'checkbox') {
+        newValue = target.checked;
+      } else if (type === 'date' || type === 'datetime-local') {
+        newValue = target.valueAsDate;
+      } else if (type === 'number') {
+        newValue = target.valueAsNumber;
+        if (isNaN(newValue)) {
+          newValue = null;
+        } else {
+          if (typeof max === 'number' && newValue > max) {
+            target.valueAsNumber = max;
+            newValue = max;
+          } else if (typeof min === 'number' && newValue < min) {
+            target.valueAsNumber = min;
+            newValue = min;
+          }
+        }
+      } else {
+        newValue = target.value;
+      }
+
+      if (newValue !== undefined) {
+        controller.setPendingValue(row, field, newValue);
+      }
+    };
+
     return html`
       <input
-        .value=${live(String(value ?? ''))}
+        value=${String(value ?? '')}
         type=${ifDefined(this.options?.type)}
         minlength=${ifDefined(this.options?.minlength)}
         maxlength=${ifDefined(this.options?.maxlength)}
@@ -30,37 +60,10 @@ export class InputEditor<
         pattern=${ifDefined(this.options?.pattern)}
         placeholder=${ifDefined(this.options?.placeholder)}
         autofocus
-        @input=${this.handleChange}
+        @input=${save}
       />
     `;
   }
-
-  private handleChange = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    const { type, max, min } = this.options ?? {};
-
-    if (type === 'checkbox') {
-      this.currentValue = target.checked;
-    } else if (type === 'date' || type === 'datetime-local') {
-      this.currentValue = target.valueAsDate;
-    } else if (type === 'number') {
-      let value: number | null = target.valueAsNumber;
-      if (isNaN(value)) {
-        value = null;
-      } else {
-        if (typeof max === 'number' && value > max) {
-          target.valueAsNumber = max;
-          value = max;
-        } else if (typeof min === 'number' && value < min) {
-          target.valueAsNumber = min;
-          value = min;
-        }
-        this.currentValue = value;
-      }
-    } else {
-      this.currentValue = target.value;
-    }
-  };
 }
 
 export type InputType =

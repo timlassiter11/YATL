@@ -1,9 +1,11 @@
 import {
+  MaybePromise,
   NestedKeyOf,
   RowId,
   SortOrder,
   TableState,
   UnspecifiedRecord,
+  YatlCommitTransaction,
 } from './types';
 
 /**
@@ -164,19 +166,16 @@ export class YatlColumnReorderEvent<
   }
 }
 
-export class YatlCellEditEvent<
+export class YatlTableCommitRequest<
   T extends object = UnspecifiedRecord,
 > extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-cell-edit';
+  public static readonly EVENT_NAME = 'yatl-table-commit-request';
 
   constructor(
-    public readonly row: T,
-    public readonly rowId: RowId,
-    public readonly field: NestedKeyOf<T>,
-    public readonly originalValue: unknown,
-    public readonly currentValue: unknown,
+    public readonly transaction: YatlCommitTransaction<T>,
+    public readonly respondWith: (promise: MaybePromise<boolean>) => void,
   ) {
-    super(YatlCellEditEvent.EVENT_NAME);
+    super(YatlTableCommitRequest.EVENT_NAME);
   }
 }
 

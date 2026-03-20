@@ -123,6 +123,7 @@ export default css`
     }
 
     .cell {
+      position: relative;
       align-items: center;
       padding: var(--table-cell-padding);
     }
@@ -131,18 +132,53 @@ export default css`
       justify-content: flex-end;
     }
 
-    .cell.is-editing {
-      padding: 0;
+    [part='status-indicator'] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-top: 8px solid transparent;
+      border-right: 8px solid transparent;
+      pointer-events: none;
     }
 
-    .cell.is-editing > * {
-      width: 100%;
-      height: 100%;
+    .cell.is-dirty [part='status-indicator'] {
+      border-top-color: var(--yatl-color-brand);
+      border-right-color: transparent;
+    }
+
+    .cell.is-saving {
+      opacity: 0.6;
+    }
+
+    .cell.is-saving [part='status-indicator'] {
+      border-top-color: var(--yatl-color-);
+      animation: pulse 1.5s infinite alternate ease-in-out;
+    }
+
+    .cell.is-editing {
+      padding: 0;
       box-sizing: border-box;
-      outline: none;
-      padding: var(--yatl-spacing-m);
+      --yatl-input-border-width: 0px;
+      --yatl-input-outline-width: 0px;
       border: 1px solid var(--yatl-color-brand);
       border-radius: var(--yatl-radius-xs);
+
+      & > * {
+        width: 100%;
+        height: 100%;
+      }
+
+      input,
+      select {
+        outline: none;
+        padding: var(--yatl-spacing-m);
+      }
+    }
+
+    :host([edit-mode='bulk']) .cell.is-editing {
+      border: none;
     }
 
     .table.resizing * {
@@ -426,6 +462,15 @@ export default css`
 
     .cell {
       border: 1px solid black;
+    }
+  }
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.4;
+    }
+    100% {
+      opacity: 1;
     }
   }
 `;

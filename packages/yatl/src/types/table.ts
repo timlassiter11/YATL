@@ -1,6 +1,6 @@
 import { YatlTableController } from '../table-controller/table-controller';
 import { ColumnOptions, ColumnState, RestorableColumnState } from './columns';
-import { RowId, UnspecifiedRecord } from './common';
+import { NestedKeyOf, RowId, UnspecifiedRecord } from './common';
 import { FilterCallback, Filters, TokenizerCallback } from './filters';
 
 export type RowIdCallback<T extends object = UnspecifiedRecord> = (
@@ -9,12 +9,61 @@ export type RowIdCallback<T extends object = UnspecifiedRecord> = (
 ) => RowId;
 
 /**
+ * The current editing mode of the table
+ * * immediate - Data is commited to the table as soon as cell editing ends
+ * * row - Data is commited to the table when editing leaves the current row
+ * * batch - Data is not automatically commited. User must manually commit changes
+ */
+export type YatlTableCommitStrategy = 'immediate' | 'row' | 'batch';
+
+/**
+ * The method used to start cell editing
+ * * click - A single click on an editable cell shows the editor
+ * * dblclick - Double clicking on an editable cell shows the editor
+ * * none - In-cell editing is completely disabled
+ */
+export type YatlTableEditTrigger = 'click' | 'dblclick' | 'none';
+
+/**
  * The method used for selecting rows.
  * * single - Only a single row can be selected at a time
  * * multi - Multiple rows can be selected at a time
  * * null - Disable row selection
  */
 export type RowSelectionMethod = 'single' | 'multi';
+
+/**
+ * A commit record describing the changes to a single row.
+ */
+export interface YatlCommitRecord<T extends object = UnspecifiedRecord> {
+  /** The unique identifier for the row */
+  rowId: RowId;
+
+  /**
+   * List of fields that changed during this transactions
+   */
+  changedFields: NestedKeyOf<T>[];
+
+  /**
+   * A read-only reference to the original, unedited row data.
+   */
+  originalRow: T;
+
+  /**
+   * A partial object of only the fields that changed and their new, parsed values.
+   */
+  changes: Partial<T>;
+
+  /**
+   * A new row object containing the originalRow with the 'changes' deeply applied.
+   */
+  mergedRow: T;
+}
+
+export interface YatlCommitTransaction<T extends object = UnspecifiedRecord> {
+  id: string;
+  records: YatlCommitRecord<T>[];
+}
 
 /**
  * Callback for conditionally adding classes to a row
@@ -240,6 +289,11 @@ export interface YatlTableApi<T extends object = UnspecifiedRecord>
   controller: YatlTableController<T>;
 
   /**
+   * When set, editing is completely disabled.
+   */
+  readonly: boolean;
+
+  /**
    * Enables visual row striping
    */
   striped: boolean;
@@ -283,11 +337,6 @@ export interface YatlTableApi<T extends object = UnspecifiedRecord>
   hideFooter: boolean;
 
   /**
-   * When set, completely disables editing for all columns.
-   */
-  disableEditing: boolean;
-
-  /**
    * The string to display in a cell when the data value is `null` or `undefined`.
    */
   nullValuePlaceholder: string;
@@ -301,6 +350,11 @@ export interface YatlTableApi<T extends object = UnspecifiedRecord>
    * The message displayed when `data` exists but the current search/filter results in zero visible rows.
    */
   noResultsMessage: string;
+
+  /**
+   *
+   */
+  editTrigger: YatlTableEditTrigger;
 
   /**
    * A callback function to conditionally apply CSS parts to table rows.

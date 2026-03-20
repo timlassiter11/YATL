@@ -9,20 +9,28 @@ export type RowIdCallback<T extends object = UnspecifiedRecord> = (
 ) => RowId;
 
 /**
- * The method used for selecting rows.
- * * single - Only a single row can be selected at a time
- * * multi - Multiple rows can be selected at a time
- * * null - Disable row selection
- */
-export type RowSelectionMethod = 'single' | 'multi';
-
-/**
  * The current editing mode of the table
  * * immediate - Data is commited to the table as soon as cell editing ends
  * * row - Data is commited to the table when editing leaves the current row
  * * batch - Data is not automatically commited. User must manually commit changes
  */
 export type YatlTableCommitStrategy = 'immediate' | 'row' | 'batch';
+
+/**
+ * The method used to start cell editing
+ * * click - A single click on an editable cell shows the editor
+ * * dblclick - Double clicking on an editable cell shows the editor
+ * * none - In-cell editing is completely disabled
+ */
+export type YatlTableEditTrigger = 'click' | 'dblclick' | 'none';
+
+/**
+ * The method used for selecting rows.
+ * * single - Only a single row can be selected at a time
+ * * multi - Multiple rows can be selected at a time
+ * * null - Disable row selection
+ */
+export type RowSelectionMethod = 'single' | 'multi';
 
 /**
  * A commit record describing the changes to a single row.
@@ -342,6 +350,11 @@ export interface YatlTableApi<T extends object = UnspecifiedRecord>
    * The message displayed when `data` exists but the current search/filter results in zero visible rows.
    */
   noResultsMessage: string;
+
+  /**
+   *
+   */
+  editTrigger: YatlTableEditTrigger;
 
   /**
    * A callback function to conditionally apply CSS parts to table rows.

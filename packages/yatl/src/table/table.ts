@@ -13,6 +13,7 @@ import type {
   UnspecifiedRecord,
   YatlTableApi,
   YatlTableCommitStrategy,
+  YatlTableEditTrigger,
 } from '../types';
 
 import {
@@ -275,8 +276,17 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   /** @attr commit-strategy */
-  @property({ type: String, attribute: 'commit-strategy', reflect: true })
+  @property({ type: String, attribute: 'commit-strategy' })
   public commitStrategy: YatlTableCommitStrategy = 'immediate';
+
+  /**
+   * Controls how a user initiates cell editing within the table.
+   * @default 'dblclick'
+   * @see {@link YatlTableEditTrigger} for available options.
+   * @attr edit-trigger
+   */
+  @property({ type: String, attribute: 'edit-trigger' })
+  public editTrigger: YatlTableEditTrigger = 'dblclick';
 
   /** @attr row-selection-method */
   public get rowSelectionMethod() {
@@ -1265,6 +1275,19 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     return 'text';
   }
 
+  private beginCellEdit(row: T, field: NestedKeyOf<T>) {
+    if (
+      this.readonly ||
+      this.editTrigger === 'none' ||
+      !this.controller.isCellEditable(row, field)
+    ) {
+      return;
+    }
+
+    const rowId = this.controller.getRowId(row);
+    this.currentEditCell = { rowId, field };
+  }
+
   private getNextEditableField(row: T, currentField?: NestedKeyOf<T>) {
     let index = 0;
     if (currentField) {
@@ -1360,18 +1383,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return;
     }
 
-    const col = this.getDisplayColumn(field);
-    const rowId = this.controller.getRowId(row);
-    if (
-      this.commitStrategy !== 'immediate' &&
-      rowId === this.currentEditCell?.rowId &&
-      field !== this.currentEditCell.field &&
-      col?.editor
-    ) {
-      // We are currently editing this row and we are bulk editing
-      // so just start editing the new cell they clicked.
-      this.currentEditCell = { rowId, field };
-      return;
+    if (this.editTrigger === 'click') {
+      this.beginCellEdit(row, field);
     }
 
     // Ignore links and buttons
@@ -1384,6 +1397,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return;
     }
 
+    const rowId = this.controller.getRowId(row);
     const rowIndex = this.controller.getRowIndex(row);
     this.dispatchEvent(
       new YatlRowClickEvent(row, rowId, rowIndex, field, event),
@@ -1391,12 +1405,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   };
 
   private handleCellDoubleClick(row: T, field: NestedKeyOf<T>) {
-    if (this.readonly) {
+    if (this.editTrigger !== 'dblclick') {
       return;
     }
-
-    const rowId = this.controller.getRowId(row);
-    this.currentEditCell = { rowId, field };
+    this.beginCellEdit(row, field);
   }
 
   private handleCellInputKeypress(event: KeyboardEvent) {
@@ -1422,7 +1434,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       // Try to find the next editable field in this row.
       let nextColumn = this.getNextEditableField(row, field);
       if (nextColumn) {
-        this.handleCellDoubleClick(row, nextColumn);
+        this.beginCellEdit(row, nextColumn);
         return;
       }
 
@@ -1448,7 +1460,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         this.dispatchTransaction();
       }
 
-      this.handleCellDoubleClick(nextRow, nextColumn);
+      this.beginCellEdit(nextRow, nextColumn);
       event.preventDefault();
     }
   }

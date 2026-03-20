@@ -33,7 +33,12 @@ export class YatlTabGroup extends YatlBase {
 
   public override connectedCallback() {
     super.connectedCallback();
-    this.addEventListener('click', event => this.handleClick(event));
+    this.addEventListener('click', this.handleClick);
+  }
+
+  public override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener('click', this.handleClick);
   }
 
   protected override willUpdate(
@@ -69,7 +74,7 @@ export class YatlTabGroup extends YatlBase {
     }
   }
 
-  private handleClick(event: Event) {
+  private handleClick = (event: Event) => {
     const target = event.target as HTMLElement;
     const tab = target.closest('yatl-tab');
     if (!tab) {
@@ -77,7 +82,7 @@ export class YatlTabGroup extends YatlBase {
     }
 
     this.setActiveTab(tab.panel);
-  }
+  };
 
   private getAllTabs() {
     return [...this.querySelectorAll('yatl-tab')];

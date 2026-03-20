@@ -1,31 +1,52 @@
-import { html, nothing } from 'lit';
+import { html, PropertyValueMap } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../../events';
 import { YatlFormControl } from '../form-control/form-control';
 import styles from './typeahead.styles';
+import { YatlSearchEngine } from '@timlassiter11/yatl';
+import { YatlOptionData } from '../../../types';
 
+/**
+ * A hybrid typeahead component that searches local data instantly
+ * and falls back to a remote endpoint for asynchronous data fetching.
+ * @element yatl-typeahead
+ * @fires change - Fired when the selected value changes.
+ */
 @customElement('yatl-typeahead')
 export class YatlTypeahead extends YatlFormControl {
   public static override styles = [...super.styles, styles];
 
-  private _uri = '';
-  private _minQueryLength = 3;
-  private _searchParam = 'search';
-  private _debounceTimer = 0;
+  private searchDebounceTimer = 0;
 
-  @state() private loading = false;
-  @state() private error = false;
-  @state() private options = new Set<string>();
+  private cacheDirty = false;
+  private cachedOptions = new Map<string, YatlOptionData>();
+  private searchEngine = new YatlSearchEngine<YatlOptionData>({
+    fields: [{ field: 'label' }],
+    tokenizedSearch: true,
+    scoredSearch: true,
+  });
+
   @state() private open = false;
+  @state() private state: 'idle' | 'searching' | 'error' = 'idle';
+  @state() private matchedOptions: YatlOptionData[] = [];
 
+  /**
+   * Placeholder text shown when the input is empty.
+   */
   @property({ type: String })
   public placeholder = '';
 
+  /**
+   * The initial, uncontrolled value of the typeahead.
+   */
   @property({ type: String, attribute: 'value' })
   public override defaultValue = '';
 
+  /**
+   * The current, controlled value of the typeahead input.
+   */
   @property({ attribute: false })
   public override value: string = '';
 
@@ -33,72 +54,114 @@ export class YatlTypeahead extends YatlFormControl {
     return this.value;
   }
 
+  /**
+   * The remote endpoint URL to fetch search results from.
+   * If left blank, the component will only search local data.
+   */
   @property({ type: String })
-  public get uri() {
-    return this._uri;
-  }
-  public set uri(uri) {
-    if (this._uri === uri) {
-      return;
-    }
-
-    const oldValue = this._uri;
-    this._uri = uri;
-    this.scheduleUpdate();
-    this.requestUpdate('uri', oldValue);
-  }
+  public uri = '';
 
   /**
-   * Max number of options to display in the dropdown.
+   * The property key within the data objects to use as the underlying value.
+   * @attr value-field
+   */
+  @property({ type: String, attribute: 'value-field' })
+  public valueField = '';
+
+  /**
+   * The property key within the data objects to display visually in the dropdown.
+   * @attr label-field
+   */
+  @property({ type: String, attribute: 'label-field' })
+  public labelField = '';
+
+  /**
+   * Maximum number of options to display in the dropdown at one time.
+   * @attr max-options
+   * @default 20
    */
   @property({ type: Number, attribute: 'max-options' })
   public maxOptions = 20;
 
+  /**
+   * Minimum number of characters required before firing a remote network request.
+   * Note: Local searches trigger instantly regardless of this value.
+   * @attr min-query-length
+   * @default 3
+   */
   @property({ type: Number, attribute: 'min-query-length' })
-  public get minQueryLength() {
-    return this._minQueryLength;
-  }
-  public set minQueryLength(value) {
-    if (this._minQueryLength === value) {
-      return;
-    }
+  public minQueryLength = 3;
 
-    const oldValue = this._minQueryLength;
-    const wasSearching = this.canSearch;
-    this._minQueryLength = value;
-    if (!wasSearching && this.canSearch) {
-      this.scheduleUpdate();
-    }
-    this.requestUpdate('minQueryLength', oldValue);
-  }
-
+  /**
+   * The URL query parameter key used to pass the search string to the endpoint.
+   * @attr search-param
+   * @default "search"
+   */
   @property({ type: String, attribute: 'search-param' })
-  public get searchParam() {
-    return this._searchParam;
-  }
-  public set searchParam(value) {
-    if (this._searchParam === value) {
-      return;
-    }
+  public searchParam = 'search';
 
-    const oldValue = this._searchParam;
-    this._searchParam = value;
-    this.scheduleUpdate();
-    this.requestUpdate('searchParam', oldValue);
-  }
-
+  /**
+   * Time in milliseconds to wait after the last keystroke before fetching remote data.
+   * @attr search-debounce
+   * @default 200
+   */
   @property({ type: Number, attribute: 'search-debounce' })
   public searchDebounce = 200;
 
+  /**
+   * Optional adapter function to intercept and normalize the raw API response
+   * before it is processed by the search engine.
+   */
   @property({ attribute: false })
-  public parser?: (value: unknown) => string[];
+  public transformResponse?: (value: unknown) => unknown[];
+
+  /**
+   * An array of pre-loaded objects to search through locally.
+   */
+  @property({ attribute: false })
+  public localData?: unknown[];
 
   protected get hasOptions() {
-    return this.options.size > 0;
+    return this.matchedOptions.length > 0;
   }
 
-  protected get canSearch() {
+  protected get canSearchRemote() {
     return !!this.uri && this.value.length >= this.minQueryLength;
+  }
+
+  protected override willUpdate(
+    changedProperties: PropertyValueMap<YatlTypeahead>,
+  ) {
+    super.willUpdate(changedProperties);
+
+    let cacheCleared = false;
+    if (
+      changedProperties.has('labelField') ||
+      changedProperties.has('valueField') ||
+      changedProperties.has('transformResponse')
+    ) {
+      // Clear cache if the mapping rules or transformers change
+      this.cachedOptions.clear();
+      cacheCleared = true;
+    }
+
+    if (changedProperties.has('localData') || cacheCleared) {
+      // Load local data into the search engine cache if its new or was cleared
+      if (this.localData) {
+        this.addDataToCache(this.localData);
+      }
+    }
+
+    if (
+      changedProperties.has('uri') ||
+      changedProperties.has('searchParam') ||
+      changedProperties.has('minQueryLength')
+    ) {
+      // If any of the remote configuration properties changed schedule a fetch request
+      if (this.canSearchRemote) {
+        this.scheduleFetch();
+      }
+    }
   }
 
   protected override render() {
@@ -139,46 +202,41 @@ export class YatlTypeahead extends YatlFormControl {
   protected override renderInput() {}
 
   protected renderDropdownContent() {
-    if (this.error) {
+    if (this.state === 'error') {
       return html`<span class="message" part="error"
         >Failed to get results</span
       >`;
     }
 
-    if (this.loading) {
+    if (this.state === 'searching') {
       return html`<span class="message" part="loading">Loading...</span>`;
     }
 
-    if (this.canSearch && !this.hasOptions) {
+    if (!this.hasOptions) {
       return html`<span class="message" part="empty-options"
         >No results found...</span
       >`;
     }
 
-    if (this.hasOptions) {
-      const max = Math.min(this.maxOptions, this.options.size);
-      const options = [...this.options].slice(0, max);
-      return repeat(options, option => this.renderOption(option));
-    }
-
-    return nothing;
+    const max = Math.min(this.maxOptions, this.matchedOptions.length);
+    const options = this.matchedOptions.slice(0, max);
+    return repeat(options, option => this.renderOption(option));
   }
 
-  protected renderOption(option: string) {
-    return html`<yatl-option value=${option} label=${option}></yatl-option>`;
+  protected renderOption(option: YatlOptionData) {
+    return html`<yatl-option
+      value=${option.value}
+      label=${option.label}
+    ></yatl-option>`;
   }
 
   protected override isValidChangeEvent(event: Event): boolean | void {
-    // Ignore change events that fire on focus loss
-    if (event.type === 'change') {
-      return false;
-    }
-
     const target = event.target as HTMLInputElement;
     if (this.value !== target.value) {
       this.value = target.value;
+      this.updateMatchedOptions();
       this.scheduleFetch();
-      this.open = this.canSearch;
+      this.open = this.hasOptions || this.state === 'searching';
     }
   }
 
@@ -186,7 +244,7 @@ export class YatlTypeahead extends YatlFormControl {
     if (this.formControl) {
       this.formControl.value = event.item.value;
       this.formControl.dispatchEvent(
-        new Event('input', { composed: true, bubbles: true }),
+        new Event('change', { composed: true, bubbles: true }),
       );
     }
 
@@ -204,22 +262,22 @@ export class YatlTypeahead extends YatlFormControl {
   }
 
   private scheduleFetch() {
-    if (!this.canSearch) {
+    if (!this.canSearchRemote) {
       return;
     }
 
     // Give the user some indication that we are working
     // even if we are just waiting for them to stop typing
-    this.loading = true;
-    clearTimeout(this._debounceTimer);
-    this._debounceTimer = window.setTimeout(
-      () => this.updateOptions(),
+    this.state = 'searching';
+    clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = window.setTimeout(
+      () => this.fetchOptions(),
       this.searchDebounce,
     );
   }
 
-  private async updateOptions() {
-    if (!this.canSearch) {
+  private async fetchOptions() {
+    if (!this.canSearchRemote) {
       return;
     }
 
@@ -237,28 +295,75 @@ export class YatlTypeahead extends YatlFormControl {
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        this.error = true;
+        this.state = 'error';
         return;
       }
 
       json = await response.json();
     } catch {
-      this.error = true;
+      this.state = 'error';
       return;
-    } finally {
-      this.loading = false;
     }
 
-    let options: string[];
-    if (this.parser) {
-      options = this.parser(json);
+    let normalizedData;
+    if (this.transformResponse) {
+      normalizedData = this.transformResponse(json);
     } else if (Array.isArray(json)) {
-      options = json.map(o => String(o));
+      normalizedData = json;
     } else {
-      options = [String(json)];
+      // TODO: Handle error.
     }
 
-    this.options = new Set(options);
+    if (normalizedData) {
+      this.addDataToCache(normalizedData);
+    }
+    this.state = 'idle';
+  }
+
+  private addDataToCache(data: unknown[]) {
+    this.cacheDirty = true;
+    const options = this.getOptionsFromData(data);
+
+    for (const option of options) {
+      this.cachedOptions.set(option.value, option);
+    }
+    this.updateMatchedOptions();
+  }
+
+  private updateMatchedOptions() {
+    if (this.cacheDirty) {
+      this.searchEngine.data = [...this.cachedOptions.values()];
+      this.cacheDirty = false;
+    }
+
+    if (this.value) {
+      const results = this.searchEngine.search(this.value);
+      this.matchedOptions = results.map(r => r.item);
+    } else {
+      this.matchedOptions = [];
+    }
+  }
+
+  private getOptionsFromData(data: unknown[]) {
+    const options: YatlOptionData[] = [];
+    const labelField = this.labelField || this.valueField;
+    const valueField = this.valueField || this.labelField;
+    if (!labelField && !valueField) {
+      return options;
+    }
+
+    for (const item of data as Record<string, unknown>[]) {
+      if (!(labelField in item) || !(valueField in item)) {
+        continue;
+      }
+
+      const label = item[labelField];
+      const value = item[valueField];
+
+      options.push({ label: String(label), value: String(value) });
+    }
+
+    return options;
   }
 }
 

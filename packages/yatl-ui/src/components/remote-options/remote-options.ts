@@ -2,11 +2,7 @@ import { html, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import { repeat } from 'lit/directives/repeat.js';
-
-export interface YatlOptionData {
-  value: string;
-  label: string;
-}
+import { YatlOptionData } from '../../types';
 
 export type FetchApi = (input: string) => Promise<Response | unknown>;
 

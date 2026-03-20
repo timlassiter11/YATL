@@ -30,6 +30,11 @@ export type YatlToastVariant = 'neutral' | 'success' | 'warning' | 'danger';
 
 export type YatlSelectionMethod = 'single' | 'multi' | 'leaf';
 
+export interface YatlOptionData {
+  value: string;
+  label: string;
+}
+
 export interface YatlToastData {
   label?: string;
   message: string | TemplateResult;

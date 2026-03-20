@@ -14,7 +14,7 @@ import { animateWithClass, HasSlotController } from '../../utils';
 export class YatlToast extends YatlBase {
   public static override styles = [...super.styles, styles];
 
-  private slotController = new HasSlotController(this, '[default]');
+  private slotController = new HasSlotController(this, '[default]', 'label');
 
   @state() private running = false;
 

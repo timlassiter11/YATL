@@ -1,4 +1,5 @@
 import {
+  MaybePromise,
   NestedKeyOf,
   RowId,
   SortOrder,
@@ -170,7 +171,10 @@ export class YatlTableCommitRequest<
 > extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-table-commit-request';
 
-  constructor(public readonly transaction: YatlCommitTransaction<T>) {
+  constructor(
+    public readonly transaction: YatlCommitTransaction<T>,
+    public readonly respondWith: (promise: MaybePromise<boolean>) => void,
+  ) {
     super(YatlTableCommitRequest.EVENT_NAME);
   }
 }

@@ -1284,8 +1284,33 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
   private dispatchTransaction() {
     const transaction = this.controller.createCommitTransaction();
-    if (transaction) {
-      this.dispatchEvent(new YatlTableCommitRequest(transaction));
+    if (!transaction) {
+      return;
+    }
+
+    let isHandled = false;
+    const event = new YatlTableCommitRequest(transaction, async promise => {
+      isHandled = true;
+
+      if (promise instanceof Promise) {
+        try {
+          promise = await promise;
+        } catch {
+          promise = false;
+        }
+      }
+
+      if (promise) {
+        this.controller.resolveTransaction(transaction.id);
+      } else {
+        this.controller.rejectTransaction(transaction.id);
+      }
+    });
+    this.dispatchEvent(event);
+
+    if (!isHandled) {
+      // User didn't respond to the event so just reject the edits.
+      this.controller.rejectTransaction(transaction.id);
     }
   }
 

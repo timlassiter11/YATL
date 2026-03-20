@@ -12,23 +12,23 @@ import type {
   TableState,
   UnspecifiedRecord,
   YatlTableApi,
+  YatlTableCommitStrategy,
 } from '../types';
 
 import {
   getColumnStateChanges,
   getNestedValue,
   isDisplayColumn,
-  setNestedValue,
 } from '../utils';
 
 import { highlightText, toHumanReadable } from './utils';
 
 import {
-  YatlCellEditEvent,
   YatlColumnReorderRequest,
   YatlColumnSortRequest,
   YatlRowClickEvent,
   YatlRowSelectRequest,
+  YatlTableCommitRequest,
   YatlTableControllerEvent,
 } from '../events';
 
@@ -58,7 +58,6 @@ import styles from './table.styles';
  * @element yatl-table
  * @summary A high-performance grid engine for rugged environments.
  *
- * @fires yatl-cell-edit - Fired after a cell value has been edited.
  * @fires yatl-row-click - Fired when a user clicks a row.
  * @fires yatl-row-select-request - Fired before the row selection changes. Cancellable
  * @fires yatl-row-select - Fired when the row selection changes.
@@ -68,6 +67,7 @@ import styles from './table.styles';
  * @fires yatl-column-resize - Fired after a column has been resized by the user.
  * @fires yatl-column-reorder-request - Fired when the user drops a column into a new position. Cancellable.
  * @fires yatl-column-reorder - Fired after the column order changes.
+ * @fires yatl-table-commit-request -
  * @fires yatl-table-search - Fired when the search query is updated.
  * @fires yatl-table-view-change - Fired when the visible slice of data changes due to sorting, filtering, or data updates. Payload contains the processed rows.
  * @fires yatl-table-state-change - Fired when any persistable state (width, order, sort, query) changes. Used for syncing with local storage.
@@ -111,10 +111,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   private useYatlUi = false;
 
   @state()
-  private editingState: {
-    id: RowId;
+  private currentEditCell: {
+    rowId: RowId;
     field: NestedKeyOf<T>;
-    originalValue: unknown;
   } | null = null;
 
   private _controller = new YatlTableController<T>(this);
@@ -275,6 +274,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     this.controller.searchTokenizer = tokenizer;
   }
 
+  /** @attr commit-strategy */
+  @property({ type: String, attribute: 'commit-strategy', reflect: true })
+  public commitStrategy: YatlTableCommitStrategy = 'immediate';
+
   /** @attr row-selection-method */
   public get rowSelectionMethod() {
     return this.controller.rowSelectionMethod;
@@ -325,6 +328,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   @property({ type: Boolean, reflect: true })
+  public readonly = false;
+
+  @property({ type: Boolean, reflect: true })
   public striped = false;
 
   @property({ type: Boolean })
@@ -347,10 +353,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   /** @attr hide-footer */
   @property({ type: Boolean, attribute: 'hide-footer' })
   public hideFooter = false;
-
-  /** @attr disable-editing */
-  @property({ type: Boolean, attribute: 'disable-editing' })
-  public disableEditing = false;
 
   /**
    * @default "-"
@@ -873,7 +875,14 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   protected renderCell(column: DisplayColumnOptions<T>, row: T) {
-    let value = getNestedValue(row, column.field);
+    const status = this.controller.getCellStatus(row, column.field);
+    // Try to use the value from any pending edits if they exist.
+    let value = this.controller.getLatestValue(row, column.field);
+    if (value === undefined) {
+      // If not, fallback to the actual value.
+      value = getNestedValue(row, column.field);
+    }
+
     // Get the user parts from the raw value
     // before we call the value formatter.
     let userParts = column.cellParts?.call(this, value, column.field, row);
@@ -885,16 +894,18 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     const classes = {
       cell: true,
       'is-number': inputType === 'number',
+      'is-dirty': status === 'dirty',
+      'is-saving': status === 'saving',
     };
 
-    const rowId = this.controller.getRowId(row);
     const field = column.field;
+    const rowId = this.controller.getRowId(row);
+
     if (
-      column.editor &&
-      !this.disableEditing &&
-      this.editingState &&
-      this.editingState.id === rowId &&
-      this.editingState.field === field
+      !this.readonly &&
+      this.currentEditCell &&
+      rowId === this.currentEditCell.rowId &&
+      field === this.currentEditCell.field
     ) {
       return this.renderCellWrapper(html`
         <div
@@ -903,7 +914,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
           class=${classMap({ ...classes, 'is-editing': true })}
           data-field=${column.field}
         >
-          ${column.editor.render(value, field, row, this.controller)}
+          ${column.editor!.render(value, field, row, this.controller)}
         </div>
       `);
     }
@@ -925,6 +936,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         <span class="truncate">
           ${this.renderCellContents(value, column, row)}
         </span>
+
+        ${status !== 'clean'
+          ? html`<div part="status-indicator"></div>`
+          : nothing}
       </div>
     `);
   }
@@ -980,6 +995,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       'row-odd': renderIndex % 2 !== 0,
     };
     const rowIndex = renderIndex + 1;
+    const rowId = this.controller.getRowId(row);
 
     return html`
       <div
@@ -988,6 +1004,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         aria-selected=${selected ? 'true' : 'false'}
         part=${'row ' + userParts}
         class=${classMap(classes)}
+        data-row-id=${rowId}
       >
         ${this.renderRowNumberCell(rowIndex)}
         ${this.renderRowSelectorCell(row, selected)}
@@ -1265,39 +1282,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     }
   }
 
-  private async saveEdits() {
-    if (!this.editingState) {
-      return;
-    }
-
-    const { id: rowId, field, originalValue } = this.editingState;
-    const column = this.getDisplayColumn(field);
-    const row = this.getRow(rowId);
-    if (!column?.editor || !row) {
-      return;
-    }
-
-    let value;
-    const result = column.editor.save(
-      originalValue,
-      field,
-      row,
-      this.controller,
-    );
-
-    if (result instanceof Promise) {
-      value = await result;
-    } else {
-      value = result;
-    }
-
-    if (value !== undefined) {
-      const updateData = {};
-      setNestedValue(updateData, field, value);
-      this.updateRow(rowId, updateData as Partial<T>);
-      this.dispatchEvent(
-        new YatlCellEditEvent(row, rowId, field, originalValue, value),
-      );
+  private dispatchTransaction() {
+    const transaction = this.controller.createCommitTransaction();
+    if (transaction) {
+      this.dispatchEvent(new YatlTableCommitRequest(transaction));
     }
   }
 
@@ -1342,7 +1330,21 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     field: NestedKeyOf<T>,
   ) => {
     // Ignore events if the user is highlighting text
-    if (this.editingState || window.getSelection()?.toString()) {
+    if (window.getSelection()?.toString()) {
+      return;
+    }
+
+    const col = this.getDisplayColumn(field);
+    const rowId = this.controller.getRowId(row);
+    if (
+      this.commitStrategy !== 'immediate' &&
+      rowId === this.currentEditCell?.rowId &&
+      field !== this.currentEditCell.field &&
+      col?.editor
+    ) {
+      // We are currently editing this row and we are bulk editing
+      // so just start editing the new cell they clicked.
+      this.currentEditCell = { rowId, field };
       return;
     }
 
@@ -1356,7 +1358,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return;
     }
 
-    const rowId = this.controller.getRowId(row);
     const rowIndex = this.controller.getRowIndex(row);
     this.dispatchEvent(
       new YatlRowClickEvent(row, rowId, rowIndex, field, event),
@@ -1364,40 +1365,39 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   };
 
   private handleCellDoubleClick(row: T, field: NestedKeyOf<T>) {
-    const column = this.getDisplayColumn(field);
-    if (!column || !column.editor || !column.editor.canEdit(field, row)) {
+    if (this.readonly) {
       return;
     }
 
-    column.editor.reset();
-    const value = getNestedValue(row, field);
-    this.editingState = {
-      id: this.controller.getRowId(row),
-      field: field,
-      originalValue: value,
-    };
+    const rowId = this.controller.getRowId(row);
+    this.currentEditCell = { rowId, field };
   }
 
   private handleCellInputKeypress(event: KeyboardEvent) {
-    if (!this.editingState) {
+    if (!this.currentEditCell) {
       return;
     }
 
-    if (event.key === 'Escape') {
-      this.editingState = null;
-    } else if (event.key === 'Enter') {
-      this.saveEdits();
-      this.editingState = null;
-    } else if (event.key === 'Tab') {
-      this.saveEdits();
+    const { rowId, field } = this.currentEditCell;
+    const row = this.getRow(rowId)!;
 
-      const { id: rowId } = this.editingState;
-      const row = this.getRow(rowId)!;
+    if (event.key === 'Escape') {
+      this.currentEditCell = null;
+      this.controller.revertPendingChanges();
+    } else if (event.key === 'Enter') {
+      this.dispatchTransaction();
+      this.currentEditCell = null;
+    } else if (event.key === 'Tab') {
+      this.currentEditCell = null;
+      if (this.commitStrategy === 'immediate') {
+        this.dispatchTransaction();
+      }
 
       // Try to find the next editable field in this row.
-      let nextColumn = this.getNextEditableField(row, this.editingState.field);
+      let nextColumn = this.getNextEditableField(row, field);
       if (nextColumn) {
-        return this.handleCellDoubleClick(row, nextColumn);
+        this.handleCellDoubleClick(row, nextColumn);
+        return;
       }
 
       let rowIndex = this.filteredData.indexOf(row);
@@ -1417,21 +1417,41 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       if (!nextColumn) {
         return;
       }
+
+      if (this.commitStrategy === 'row') {
+        this.dispatchTransaction();
+      }
+
       this.handleCellDoubleClick(nextRow, nextColumn);
       event.preventDefault();
     }
   }
 
   private handleMouseDown(event: Event) {
-    const containsEditing = event
+    if (!this.currentEditCell) {
+      return;
+    }
+
+    const isWithinEdit = event
       .composedPath()
       .filter(e => e instanceof HTMLElement)
-      .some(e => e.classList.contains('is-editing'));
+      .some(e => {
+        if (this.commitStrategy === 'immediate') {
+          // Commit and end edit when clicking out of the cell
+          return e.classList.contains('is-editing');
+        } else {
+          // Commit and end edit when clicking out of the row
+          // This is intentionally a loose equality check.
+          return e.dataset.rowId == this.currentEditCell?.rowId;
+        }
+      });
 
-    if (this.editingState && !containsEditing) {
-      console.log('saving');
-      this.saveEdits();
-      this.editingState = null;
+    if (!isWithinEdit) {
+      if (this.commitStrategy !== 'batch') {
+        // Never commit with batch editing. Thats the user's job.
+        this.dispatchTransaction();
+      }
+      this.currentEditCell = null;
     }
   }
 

@@ -18,17 +18,20 @@ import type {
   TableState,
   TokenizerCallback,
   UnspecifiedRecord,
+  YatlCommitRecord,
+  YatlCommitTransaction,
   YatlTableControllerApi,
 } from '../types';
 
 import {
   createState,
+  getColumnStateChanges,
   getNestedValue,
   isDisplayColumn,
   isRowIdType,
   isRowSelectionMethod,
+  setNestedValue,
   whitespaceTokenizer,
-  getColumnStateChanges,
 } from '../utils';
 
 import { createRankMap } from './utils';
@@ -45,6 +48,7 @@ import {
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
 } from '../events';
+import { throwRowNotFound, YatlError } from '../utils/errors';
 import { TypedEventTarget } from '../utils/typed-event-target';
 
 // #region Constants
@@ -123,6 +127,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private idToRowMap = new Map<RowId, T>();
   // List of tokens created from the current query
   private queryTokens: QueryToken[] | null = null;
+  // List of rows with pending edits. Just for quick lookup
+  private editedRows = new Set<RowId>();
+  // Transactions that have been started but not finished
+  private pendingTransactions = new Map<string, YatlCommitRecord<T>[]>();
 
   // #endregion
 
@@ -744,6 +752,124 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     return new Blob([csvContent], { type: 'text/csv;charset=utf-8,' });
   }
 
+  public setPendingValue(
+    row: T | RowId,
+    field: NestedKeyOf<T>,
+    value: unknown,
+  ) {
+    row = this.getRowOrThrow(row);
+    const currentValue = getNestedValue(row, field);
+    const metadata = this.getRowMetadata(row);
+    if (value === currentValue) {
+      metadata.pendingEdits.delete(field);
+      if (metadata.pendingEdits.size === 0) {
+        this.editedRows.delete(metadata.id);
+      }
+    } else {
+      metadata.pendingEdits.set(field, value);
+      this.editedRows.add(metadata.id);
+    }
+  }
+
+  /**
+   * Gets the latest value for the cell at the given row and field.
+   * This will prioritize live edits first, pending commit transactions second
+   * and finally the actual value in the row data.
+   * @param row
+   * @param field
+   * @returns
+   */
+  public getLatestValue(row: T | RowId, field: NestedKeyOf<T>) {
+    row = this.getRowOrThrow(row);
+    const metadata = this.getRowMetadata(row);
+
+    let value = metadata.pendingEdits.get(field);
+    if (value !== undefined) {
+      return value;
+    }
+
+    value = metadata.pendingTransactions.get(field)?.value;
+    if (value !== undefined) {
+      return value;
+    }
+
+    return getNestedValue(row, field);
+  }
+
+  public getCellStatus(row: T | RowId, field: NestedKeyOf<T>) {
+    const metadata = this.rowMetadata.get(this.getRowOrThrow(row));
+    if (!metadata) return 'clean';
+
+    if (metadata.pendingTransactions.has(field as string)) {
+      return 'saving';
+    }
+
+    if (metadata.pendingEdits.has(field as string)) {
+      return 'dirty';
+    }
+
+    return 'clean';
+  }
+
+  public getPendingChanges() {
+    return this.getTransactionRecords();
+  }
+
+  public createCommitTransaction(): YatlCommitTransaction | null {
+    const transactionId = crypto.randomUUID();
+    const records = this.getTransactionRecords(transactionId);
+    if (records.length === 0) return null;
+
+    this.pendingTransactions.set(transactionId, records);
+    // Need to tell the table to update the status
+    this.requestUpdate();
+    return { id: transactionId, records };
+  }
+
+  public resolveTransaction(id: string) {
+    this.closeTransaction(id, 'resolve');
+  }
+
+  public rejectTransaction(id: string) {
+    this.closeTransaction(id, 'reject');
+  }
+
+  public discardTransaction(id: string) {
+    this.closeTransaction(id, 'discard');
+  }
+
+  public commitChanges(row: T | RowId, field: NestedKeyOf<T>, update = true) {
+    row = this.getRowOrThrow(row);
+    const metadata = this.getRowMetadata(row);
+    const currentValue = metadata.pendingEdits.get(field);
+    if (currentValue !== undefined) {
+      setNestedValue(row, field, currentValue);
+      this.editedRows.delete(metadata.id);
+      if (update) {
+        this.requestUpdate('data');
+      }
+    }
+  }
+
+  public async commitAllChanges() {
+    for (const rowId of this.editedRows) {
+      const metadata = this.getRowMetadata(rowId);
+      for (const field of metadata.pendingEdits.keys()) {
+        this.commitChanges(rowId, field as NestedKeyOf<T>, false);
+      }
+    }
+    this.requestUpdate('data');
+  }
+
+  public async revertPendingChanges() {
+    for (const rowId of this.editedRows) {
+      const row = this.getRow(rowId)!;
+      const metadata = this.getRowMetadata(row);
+      metadata.pendingEdits.clear();
+    }
+    this.requestUpdate();
+  }
+
   /**
    * Gets the row associated with the provided ID.
    * @param id - The ID of the row to get
@@ -1219,8 +1345,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   private createMetadata() {
     this.idToRowMap = new Map();
-    this.rowMetadata = new WeakMap();
-
     const rankMaps = new Map<string, Map<unknown, number>>();
     // TODO: We only need rank maps for sortable columns
     // but the user could enable sorting later. It's easiest
@@ -1235,8 +1359,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       rankMaps.set(column.field, createRankMap(rawValues));
     }
 
-    let index = 0;
-    for (const row of this.data) {
+    for (let index = 0; index < this.data.length; ++index) {
+      const row = this.data[index];
       let rowId = this._rowIdCallback(row, index);
       // If the user screws
       if (rowId == null || this.idToRowMap.has(rowId)) {
@@ -1244,16 +1368,20 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         rowId = `__yatl_fallback_id_${index}`;
       }
 
+      const metadata =
+        this.rowMetadata.get(row) ??
+        ({
+          id: rowId,
+          index: index,
+          searchTokens: {},
+          searchValues: {},
+          sortValues: {},
+          selected: false,
+          pendingEdits: new Map(),
+          pendingTransactions: new Map(),
+        } as RowMetadata);
+
       this.idToRowMap.set(rowId, row);
-      // Add the index
-      const metadata: RowMetadata = {
-        id: rowId,
-        index: index++,
-        searchTokens: {},
-        searchValues: {},
-        sortValues: {},
-        selected: false,
-      };
       this.rowMetadata.set(row, metadata);
 
       for (const column of this.columns) {
@@ -1305,6 +1433,103 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.saveTimer = window.setTimeout(() => {
       this.saveStateToStorage();
     }, STATE_SAVE_DEBOUNCE);
+  }
+
+  private getRowOrThrow(row: T | RowId) {
+    if (isRowIdType(row)) {
+      row = this.getRow(row)!;
+      if (!row) {
+        throwRowNotFound(row);
+      }
+      return row;
+    }
+    return row;
+  }
+
+  private getRowMetadata(row: T | RowId) {
+    row = this.getRowOrThrow(row);
+    const metadata = this.rowMetadata.get(row);
+    if (!metadata) {
+      throw new YatlError(
+        'The provided row object does not exist in the current dataset',
+      );
+    }
+    return metadata;
+  }
+
+  /**
+   * Gets the list of transaction records from the current edits.
+   * @param transactionId If provied, moves the values from pending edits to pending transactions
+   * @returns
+   */
+  private getTransactionRecords(transactionId?: string) {
+    const records: YatlCommitRecord<T>[] = [];
+    for (const rowId of this.editedRows) {
+      const row = this.getRow(rowId)!;
+      const metadata = this.getRowMetadata(row);
+      const edits = metadata.pendingEdits;
+      if (edits.size === 0) {
+        continue;
+      }
+
+      const changes: Partial<T> = {};
+      const changedFields = [];
+      const mergedRow = structuredClone(row);
+      for (const [field, value] of edits.entries()) {
+        changedFields.push(field as NestedKeyOf<T>);
+        setNestedValue(changes, field, value);
+        setNestedValue(mergedRow, field, value);
+      }
+
+      records.push({
+        rowId: rowId,
+        changedFields: changedFields,
+        originalRow: row,
+        changes: changes,
+        mergedRow: mergedRow,
+      });
+
+      if (transactionId) {
+        for (const [key, value] of edits.entries()) {
+          metadata.pendingTransactions.set(key, { id: transactionId, value });
+        }
+        edits.clear();
+      }
+    }
+    return records;
+  }
+
+  private closeTransaction(
+    id: string,
+    action: 'resolve' | 'reject' | 'discard',
+  ) {
+    const records = this.pendingTransactions.get(id);
+    if (!records) {
+      throw new YatlError(
+        `Attempting to commit non-existent transaction ${id}`,
+      );
+    }
+
+    for (const record of records) {
+      const metadata = this.getRowMetadata(record.rowId);
+      for (const field of record.changedFields) {
+        const pendingData = metadata.pendingTransactions.get(field);
+        if (pendingData?.id === id) {
+          // If the data in pending transactions is still for this transactions
+          if (action === 'reject' && !metadata.pendingEdits.has(field)) {
+            // If the user is rejecting the transaction we want to keep the data
+            metadata.pendingEdits.set(field, pendingData.value);
+            this.editedRows.add(record.rowId);
+          }
+          metadata.pendingTransactions.delete(field);
+        }
+      }
+      if (action === 'resolve') {
+        this.updateRow(record.rowId, record.changes);
+      }
+    }
+    this.pendingTransactions.delete(id);
+    this.requestUpdate();
   }
 
   // #endregion
@@ -1439,6 +1664,8 @@ interface RowMetadata {
   sortValues: Record<string, number | null>;
   highlightIndices?: Record<string, [number, number][]>;
   selected: boolean;
+  pendingEdits: Map<string, unknown>;
+  pendingTransactions: Map<string, { id: string; value: unknown }>;
 }
 
 interface SearchResult {

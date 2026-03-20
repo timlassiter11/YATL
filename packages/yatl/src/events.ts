@@ -4,6 +4,7 @@ import {
   SortOrder,
   TableState,
   UnspecifiedRecord,
+  YatlCommitTransaction,
 } from './types';
 
 /**
@@ -164,19 +165,13 @@ export class YatlColumnReorderEvent<
   }
 }
 
-export class YatlCellEditEvent<
+export class YatlTableCommitRequest<
   T extends object = UnspecifiedRecord,
 > extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-cell-edit';
+  public static readonly EVENT_NAME = 'yatl-table-commit-request';
 
-  constructor(
-    public readonly row: T,
-    public readonly rowId: RowId,
-    public readonly field: NestedKeyOf<T>,
-    public readonly originalValue: unknown,
-    public readonly currentValue: unknown,
-  ) {
-    super(YatlCellEditEvent.EVENT_NAME);
+  constructor(public readonly transaction: YatlCommitTransaction<T>) {
+    super(YatlTableCommitRequest.EVENT_NAME);
   }
 }
 

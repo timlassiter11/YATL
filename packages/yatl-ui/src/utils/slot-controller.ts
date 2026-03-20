@@ -4,18 +4,20 @@ import { getEffectiveChildren } from './common';
 type SlotName = '[default]' | (string & {});
 
 /** A reactive controller that determines when slots exist. */
-export class HasSlotController implements ReactiveController {
-  private slotNames: SlotName[] = [];
+export class HasSlotController<T extends string = string>
+  implements ReactiveController
+{
+  private slotNames: (T | SlotName)[] = [];
 
   constructor(
     private readonly host: ReactiveControllerHost & Element,
-    ...slotNames: SlotName[]
+    ...slotNames: (T | SlotName)[]
   ) {
     host.addController(this);
     this.slotNames = slotNames;
   }
 
-  private hasSlot(name: SlotName | null): boolean {
+  private hasSlot(name: T | null): boolean {
     const slotContents = name
       ? this.host.querySelector(`:scope > [slot="${name}"]`)
       : this.host.querySelector(`:scope > :not([slot])`);
@@ -27,7 +29,7 @@ export class HasSlotController implements ReactiveController {
     return getEffectiveChildren(slotContents).length > 0;
   }
 
-  public test(slotName: SlotName | null) {
+  public test(slotName: T | null) {
     return this.hasSlot(slotName);
   }
 

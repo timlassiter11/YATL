@@ -1,5 +1,59 @@
 # @timlassiter11/yatl-ui
 
+## 2.0.0
+
+### Patch Changes
+
+- f32af15: Added ability to edit cells within table
+- 9d18096: Fixed card layout incorrect when header or footer are empty
+- 6dd3d58: Switched dialog from native modal to popover to fix toast issues
+- 796c56d: Show error state in reload button when table view fetch task returns undefined
+- c567e6d: Added caching to remote options
+- c03734a: Fixed toasts showing behind open dialogs
+- 3c1683f: Fixed detail body not scrolling
+- d16ba0e: Fixed components not honoring hidden attribute
+- d0aaa1f: Added new icons for lists and nodes
+- d4dfd4d: Fixed table-view loading overlay still allowing scrolling
+- 2e51698: Fixed missing form data for inputs initialized with a value and never changed
+- 3549add: Fixed details layout issue when stacked in a flex container
+- f7ca428: Fixed dropzones not always working in Chrome
+- d83f27e: Added error state timeout property to button
+- 97f91ac: Fixed toast showing label and message when only message set
+- 06856f6: Hide confirmation dialog buttons when text is empty
+- cae648f: Added position property to toast manager
+- db39faf: Added better success and error animations to the button
+- 3b82458: Fixed number inputs masked characters not matching length of display value
+- f716e88: Fixed dropdown keyboard navigation ignoring nested options
+- 9590c25: Added new property to table view for hiding the clear filters button
+- 0e3f3fe: Added new toast components
+- f083a6a: Added new pencil and save icons
+- f202b12: Fixed crash in remote options when using default fetch client
+- 8dd62b6: Fixed close button missing on toast
+- 56e642a: Added properties to the spinner to automatically transition between states.
+- 729ef64: Added property to spinner to disable success / error overlay animation
+- 15e88dd: Disable the spinner overlay animation on some button variants
+- 0de3776: Fixed number inputs showing autocomplete suggestions
+- 2e94b9e: Added property to typeahead to limit total number of options displayed
+- 3462cbe: Fixed tab panel clipping
+- 689fd08: Fixed form controls not honoring initial value
+- Updated dependencies [295518a]
+- Updated dependencies [f32af15]
+- Updated dependencies [aebeaae]
+- Updated dependencies [56df7fd]
+- Updated dependencies [0aa669c]
+- Updated dependencies [5b489cd]
+- Updated dependencies [ceae989]
+- Updated dependencies [89263d8]
+- Updated dependencies [e1310a0]
+- Updated dependencies [269725b]
+- Updated dependencies [329b84b]
+- Updated dependencies [cbef96d]
+- Updated dependencies [ea20d98]
+- Updated dependencies [2a27505]
+- Updated dependencies [72fa32a]
+- Updated dependencies [25eaabb]
+  - @timlassiter11/yatl@1.3.0
+
 ## 1.0.7
 
 ### Patch Changes

@@ -1,7 +1,8 @@
 import { YatlTableController } from '../table-controller/table-controller';
 import { ColumnOptions, ColumnState, RestorableColumnState } from './columns';
 import { NestedKeyOf, RowId, UnspecifiedRecord } from './common';
-import { FilterCallback, Filters, TokenizerCallback } from './filters';
+import { FilterCallback, Filters } from './filters';
+import { TokenizerCallback } from './search';
 
 export type RowIdCallback<T extends object = UnspecifiedRecord> = (
   row: T,

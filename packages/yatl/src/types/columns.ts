@@ -1,12 +1,12 @@
 import { YatlTableController } from '../table-controller/table-controller';
 import {
   Compareable,
-  MaybePromise,
   NestedKeyOf,
   Renderable,
   UnspecifiedRecord,
 } from './common';
-import { ColumnFilterCallback, TokenizerCallback } from './filters';
+import { ColumnFilterCallback } from './filters';
+import { TokenizerCallback } from './search';
 
 export type ColumnRole = 'display' | 'internal';
 

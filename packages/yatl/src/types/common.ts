@@ -22,6 +22,14 @@ export type NestedKeyOf<ObjectType> = ObjectType extends object
 export type UnspecifiedRecord = Record<string, any>;
 
 /**
+ * A partial table record
+ */
+export type PartialRecord<
+  T extends object = UnspecifiedRecord,
+  D = unknown,
+> = Partial<Record<NestedKeyOf<T>, D>>;
+
+/**
  * Valid types for Row IDs
  */
 export type RowId = string | number;

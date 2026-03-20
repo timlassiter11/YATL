@@ -1,4 +1,5 @@
 import { html, TemplateResult } from 'lit';
+import { MatchIndex } from '../types';
 
 /**
  * Highlights sections of a string based on index ranges.
@@ -8,26 +9,26 @@ import { html, TemplateResult } from 'lit';
  */
 export function highlightText(
   text: string,
-  ranges: [number, number][],
+  ranges: MatchIndex[],
 ): TemplateResult | string {
   if (!text || !ranges || ranges.length === 0) {
     return text;
   }
 
   // 1. Sort ranges by start position to process linearly
-  const sortedRanges = [...ranges].sort((a, b) => a[0] - b[0]);
+  const sortedRanges = [...ranges].sort((a, b) => a.start - b.start);
 
   // 2. Merge overlapping ranges
   // Example: [[0, 5], [2, 6]] becomes [[0, 6]]
-  const mergedRanges: [number, number][] = [];
+  const mergedRanges: MatchIndex[] = [];
   let currentRange = sortedRanges[0];
 
   for (let i = 1; i < sortedRanges.length; i++) {
     const nextRange = sortedRanges[i];
 
-    if (nextRange[0] < currentRange[1]) {
+    if (nextRange.start < currentRange.end) {
       // Overlap detected: Extend the current end if needed
-      currentRange[1] = Math.max(currentRange[1], nextRange[1]);
+      currentRange.end = Math.max(currentRange.end, nextRange.end);
     } else {
       // No overlap: Push current and start a new one
       mergedRanges.push(currentRange);
@@ -40,7 +41,7 @@ export function highlightText(
   const result: (string | TemplateResult)[] = [];
   let lastIndex = 0;
 
-  for (const [start, end] of mergedRanges) {
+  for (const { start, end } of mergedRanges) {
     // Clamp values to prevent out-of-bounds errors
     const safeStart = Math.max(0, Math.min(start, text.length));
     const safeEnd = Math.max(0, Math.min(end, text.length));

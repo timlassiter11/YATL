@@ -11,12 +11,12 @@ import type {
   RestorableTableState,
   RowId,
   RowIdCallback,
+  RowMatchIndices,
   RowSelectionMethod,
   SortOrder,
   StorageOptions,
   TableControllerOptions,
   TableState,
-  TokenizerCallback,
   UnspecifiedRecord,
   YatlCommitRecord,
   YatlCommitTransaction,
@@ -31,7 +31,6 @@ import {
   isRowIdType,
   isRowSelectionMethod,
   setNestedValue,
-  whitespaceTokenizer,
 } from '../utils';
 
 import { createRankMap } from './utils';
@@ -48,6 +47,7 @@ import {
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
 } from '../events';
+import { YatlSearchEngine } from '../search/search';
 import { throwRowNotFound, YatlError } from '../utils/errors';
 import { TypedEventTarget } from '../utils/typed-event-target';
 
@@ -65,12 +65,6 @@ const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
   saveSelectedRows: true,
 };
 
-const MATCH_WEIGHTS = {
-  EXACT: 100,
-  PREFIX: 50,
-  SUBSTRING: 10,
-};
-
 // #endregion
 
 export class YatlTableController<T extends object = UnspecifiedRecord>
@@ -81,8 +75,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // Property data
   private hosts = new Set<ReactiveControllerHost>();
-  private _tokenizedSearch = false;
-  private _scoredSearch = false;
+
   // Original options passed by the user
   private _columns: ColumnOptions<T>[] = [];
   // Options mapped by field for faster lookup
@@ -107,7 +100,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private _dataUpdateTimestamp: Date | null = null;
 
   private _searchQuery = '';
-  private _searchTokenizer: TokenizerCallback = whitespaceTokenizer;
   private _filters: Filters<T> | FilterCallback<T> | null = null;
 
   // Flag if we have already restored the state or not.
@@ -120,6 +112,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   // requires the filter or sort logic to re-run.
   private filterDirty = false;
   private sortDirty = false;
+
+  private searchEngine = new YatlSearchEngine<T>();
 
   // Maps rows ids to their metadata
   private rowMetadata = new Map<RowId, RowMetadata>();
@@ -145,11 +139,17 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public set columns(columns) {
     this._columns = [...columns];
     this.filterDirty = true;
+
     // Cache these in a map for faster lookups
     this._columnDefinitionMap = new Map();
+    const searchFields = [];
     for (const column of columns) {
       this._columnDefinitionMap.set(column.field, column);
+      if (column.searchable) {
+        searchFields.push(column);
+      }
     }
+    this.searchEngine.searchFields = searchFields;
     this.rebuildMetadata();
     this.requestUpdate('columns');
   }
@@ -202,6 +202,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.rebuildMetadata();
     this._dataUpdateTimestamp = new Date();
     this.filterDirty = true;
+    this.searchEngine.data = data;
     this.requestUpdate('data');
   }
 
@@ -246,50 +247,48 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     this._searchQuery = query;
-    this.updateInternalQuery();
     this.filterDirty = true;
     this.requestUpdate('searchQuery');
   }
 
   public get tokenizedSearch() {
-    return this._tokenizedSearch;
+    return this.searchEngine.tokenizedSearch;
   }
 
   public set tokenizedSearch(enable) {
-    if (this._tokenizedSearch === enable) {
+    if (this.tokenizedSearch === enable) {
       return;
     }
 
-    this._tokenizedSearch = enable;
-    this.updateInternalQuery();
+    this.searchEngine.tokenizedSearch = enable;
     this.filterDirty = true;
     this.requestUpdate('tokenizedSearch');
   }
 
   public get scoredSearch() {
-    return this._scoredSearch;
+    return this.searchEngine.scoredSearch;
   }
 
   public set scoredSearch(enable) {
-    if (this._scoredSearch === enable) {
+    if (this.scoredSearch === enable) {
       return;
     }
 
-    this._scoredSearch = enable;
+    this.searchEngine.scoredSearch = enable;
     this.filterDirty = true;
     this.requestUpdate('scoredSearch');
   }
 
   public get searchTokenizer() {
-    return this._searchTokenizer;
+    return this.searchEngine.tokenizer;
   }
 
   public set searchTokenizer(tokenizer) {
-    if (this._searchTokenizer === tokenizer) {
+    if (this.searchTokenizer === tokenizer) {
       return;
     }
 
-    this._searchTokenizer = tokenizer;
+    this.searchEngine.tokenizer = tokenizer;
     this.filterDirty = true;
     this.requestUpdate('searchTokenizer');
   }
@@ -1054,123 +1053,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Filter Methods
 
-  /**
-   * Calculates a relevance score for a given query against a target string.
-   *
-   * This function implements a tiered matching strategy:
-   * 1.  **Exact Match**: The query exactly matches the target. This yields the highest score.
-   * 2.  **Prefix Match**: The target starts with the query. This is the next most relevant.
-   * 3.  **Substring Match**: The target contains the query somewhere. This is the least relevant.
-   *
-   * The final score is weighted and adjusted by the length difference between the query and the target
-   * to ensure that more specific matches (e.g., "apple" vs "application" for the query "apple") rank higher.
-   *
-   * @param query The search term (e.g., "app").
-   * @param target The string to be searched (e.g., "Apple" or "Application").
-   * @returns A numerical score representing the relevance of the match. Higher is better. Returns 0 if no match is found.
-   */
-  private calculateSearchScore(query: string, target: string): SearchResult {
-    const results: SearchResult = { score: 0, ranges: [] };
-
-    if (!query || !target) {
-      return results;
-    }
-
-    let baseScore = 0;
-    let matchTypeWeight = 0;
-
-    if (target === query) {
-      matchTypeWeight = MATCH_WEIGHTS.EXACT;
-      baseScore = query.length;
-      results.ranges.push([0, target.length]);
-    } else if (target.startsWith(query)) {
-      matchTypeWeight = MATCH_WEIGHTS.PREFIX;
-      baseScore = query.length;
-      results.ranges.push([0, query.length]);
-    } else {
-      const index = target.indexOf(query);
-      if (index !== -1) {
-        matchTypeWeight = MATCH_WEIGHTS.SUBSTRING;
-        baseScore = query.length;
-
-        let cursor = index;
-        while (cursor !== -1) {
-          results.ranges.push([cursor, cursor + query.length]);
-          cursor = target.indexOf(query, cursor + 1);
-        }
-      } else {
-        return results;
-      }
-    }
-
-    // Reward matches where the query length is close to the target length.
-    const lengthDifference = target.length - query.length;
-    const specificityBonus = 1 / (1 + lengthDifference);
-
-    // The final score is a combination of the match type's importance,
-    // the base score from the query length, and the specificity bonus.
-    results.score = baseScore * matchTypeWeight * specificityBonus;
-    return results;
-  }
-
-  private searchField(
-    query: QueryToken,
-    value: string,
-    tokens?: string[],
-  ): SearchResult {
-    const result: SearchResult = { score: 0, ranges: [] };
-
-    const addRangesFromValue = (searchTerm: string) => {
-      let idx = value.indexOf(searchTerm);
-      while (idx !== -1) {
-        result.ranges.push([idx, idx + searchTerm.length]);
-        idx = value.indexOf(searchTerm, idx + 1);
-      }
-    };
-
-    // Handle Quoted/Untokenized (Direct Search)
-    if (query.quoted || !tokens) {
-      if (!this.scoredSearch) {
-        // Simple boolean match
-        if (value.includes(query.value)) {
-          result.score = 1;
-          addRangesFromValue(query.value);
-        }
-      } else {
-        // Scored match
-        const calculation = this.calculateSearchScore(query.value, value);
-        result.score = calculation.score;
-        result.ranges = calculation.ranges;
-      }
-      return result;
-    }
-
-    // Handle Tokenized Search
-    // We search the tokens to check for validity/scoring,
-    // but we map back to the 'value' for highlighting.
-    if (!this.scoredSearch) {
-      const isMatch = tokens.some(token => token.includes(query.value));
-      if (isMatch) {
-        result.score = 1;
-        addRangesFromValue(query.value);
-      }
-      return result;
-    }
-
-    // Complex Scored Token Search
-    // We sum the scores of all matching tokens
-    for (const token of tokens) {
-      const calculation = this.calculateSearchScore(query.value, token);
-      if (calculation.score > 0) {
-        result.score += calculation.score;
-        // If a token matched, find that query in the main string
-        addRangesFromValue(query.value);
-      }
-    }
-
-    return result;
-  }
-
   private filterField(
     value: unknown,
     filter: unknown,
@@ -1235,51 +1117,24 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   private filterRows() {
-    const columnData = [...this.columns];
-    const fields = columnData
-      .filter(column => column.searchable)
-      .map(column => column.field);
+    const baseData = this._data.filter((row, i) => this.filterRow(row, i));
+    if (this.searchQuery && this.searchEngine) {
+      // The engine returns SearchResult objects, so we map them back
+      const searchResults = this.searchEngine.search(
+        this.searchQuery,
+        baseData,
+      );
 
-    this._filteredData = this.data.filter((row, index) => {
-      const metadata = this.getRowMetadata(row);
-      metadata.searchScore = 0;
-      metadata.highlightIndices = {};
-      // Filter takes precedence over search.
-      if (!this.filterRow(row, index)) {
-        return false;
-      }
-
-      if (!this.queryTokens) {
-        return true;
-      }
-
-      for (const field of fields) {
-        const originalValue = getNestedValue(row, field);
-        const compareValue = metadata.searchValues[field];
-        const columnTokens = metadata.searchTokens[field];
-
-        if (
-          typeof originalValue !== 'string' ||
-          typeof compareValue !== 'string'
-        ) {
-          continue;
-        }
-
-        const fieldResults: SearchResult = { score: 0, ranges: [] };
-        for (const token of this.queryTokens) {
-          const results = this.searchField(token, compareValue, columnTokens);
-          fieldResults.score += results.score;
-          fieldResults.ranges.push(...results.ranges);
-        }
-
-        if (fieldResults.score > 0) {
-          metadata.searchScore += fieldResults.score;
-          metadata.highlightIndices[field] = fieldResults.ranges;
-        }
-      }
-
-      return metadata.searchScore > 0;
-    });
+      // We update our metadata map with the new highlight indices and scores!
+      this._filteredData = searchResults.map(res => {
+        const meta = this.getRowMetadata(res.item);
+        meta.searchScore = res.score;
+        meta.highlightIndices = res.matches;
+        return res.item;
+      });
+    } else {
+      this._filteredData = baseData;
+    }
 
     this.filterDirty = false;
 
@@ -1336,7 +1191,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       const bMetadata = this.getRowMetadata(b);
 
       // Try to sort by search score if we're using scoring and there is a query.
-      if (this.scoredSearch && this.queryTokens) {
+      if (this.scoredSearch && this.searchQuery) {
         const aValue = aMetadata.searchScore || 0;
         const bValue = bMetadata.searchScore || 0;
         if (aValue > bValue) return -1;
@@ -1406,19 +1261,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         const value = getNestedValue(row, column.field);
         const rankMap = rankMaps.get(column.field)!;
         metadata.sortValues[column.field] = rankMap.get(value) ?? null;
-
-        // Cache precomputed lower-case values for search
-        if (typeof value === 'string') {
-          metadata.searchValues[column.field] = value.toLocaleLowerCase();
-        }
-
-        // Tokenize any searchable columns
-        if (column.searchable && column.tokenize && value) {
-          const tokenizer = column.searchTokenizer ?? this.searchTokenizer;
-          metadata.searchTokens[column.field] = tokenizer(String(value)).map(
-            token => token.value,
-          );
-        }
       }
     });
   }
@@ -1428,21 +1270,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     // TODO: Make this more efficient.
     this.rebuildMetadata();
     this.requestUpdate('data');
-  }
-
-  private updateInternalQuery() {
-    if (this.searchQuery.length === 0) {
-      this.queryTokens = null;
-      return;
-    }
-
-    this.queryTokens = [
-      { value: this.searchQuery.toLocaleLowerCase(), quoted: true },
-    ];
-
-    if (this.tokenizedSearch) {
-      this.queryTokens.push(...this.searchTokenizer(this.searchQuery));
-    }
   }
 
   private scheduleSave() {
@@ -1675,21 +1502,12 @@ interface RowMetadata {
   id: RowId;
   index: number;
   searchScore?: number;
-  /** Precomputed search tokens */
-  searchTokens: Record<string, string[]>;
-  /** Precomputed search values */
-  searchValues: Record<string, string>;
   /** Precomputed sort values */
   sortValues: Record<string, number | null>;
-  highlightIndices?: Record<string, [number, number][]>;
+  highlightIndices?: RowMatchIndices;
   selected: boolean;
   pendingEdits: Map<string, unknown>;
   pendingTransactions: Map<string, { id: string; value: unknown }>;
-}
-
-interface SearchResult {
-  score: number;
-  ranges: [number, number][]; // Array of [start, end] tuples
 }
 
 let _hasWarnedMissingId = false;

@@ -877,11 +877,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return this.nullValuePlaceholder;
     }
 
-    const indices = this.controller.getRowHighlightIndicies(row);
+    const rowIndicies = this.controller.getRowHighlightIndicies(row);
+    const matchIndicies = rowIndicies ? rowIndicies[column.field] : undefined;
 
-    return indices
-      ? highlightText(String(value), indices[column.field])
-      : value;
+    return matchIndicies ? highlightText(String(value), matchIndicies) : value;
   }
 
   protected renderCell(column: DisplayColumnOptions<T>, row: T) {
@@ -1422,18 +1421,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     if (event.key === 'Escape') {
       this.currentEditCell = null;
       this.controller.revertPendingChanges();
-      event.stopPropagation();
-      event.preventDefault();
-      return;
-    }
-
-    if (event.key !== 'Enter' && event.key !== 'Tab') {
-      return;
-    }
-
-    this.editor?.blur();
-
-    if (event.key === 'Enter') {
+    } else if (event.key === 'Enter') {
       this.dispatchTransaction();
       this.currentEditCell = null;
     } else if (event.key === 'Tab') {

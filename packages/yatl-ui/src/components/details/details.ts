@@ -56,9 +56,9 @@ export class YatlDetails extends YatlBase {
   }
 
   private handleDetailsToggle(event: Event) {
+    event.stopPropagation();
     const details = event.target as HTMLDetailsElement;
     this.open = details.open;
-
     this.dispatchEvent(new YatlDetailsToggleEvent(this.open));
   }
 }

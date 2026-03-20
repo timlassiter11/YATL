@@ -121,8 +121,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private filterDirty = false;
   private sortDirty = false;
 
-  // Maps rows to their metadata
-  private rowMetadata = new WeakMap<T, RowMetadata>();
+  // Maps rows ids to their metadata
+  private rowMetadata = new Map<RowId, RowMetadata>();
+  // Maps row objects to their generated IDs
+  private rowToIdMap = new WeakMap<T, RowId>();
   // Map row ids to their rows for faster lookup
   private idToRowMap = new Map<RowId, T>();
   // List of tokens created from the current query
@@ -148,7 +150,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     for (const column of columns) {
       this._columnDefinitionMap.set(column.field, column);
     }
-    this.createMetadata();
+    this.rebuildMetadata();
     this.requestUpdate('columns');
   }
 
@@ -197,7 +199,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     this._data = [...data];
-    this.createMetadata();
+    this.rebuildMetadata();
     this._dataUpdateTimestamp = new Date();
     this.filterDirty = true;
     this.requestUpdate('data');
@@ -340,12 +342,19 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return;
     }
 
-    this._rowIdCallback = callback;
     // Update IDs in metadata for existing data.
     for (let i = 0; i < this.data.length; ++i) {
       const row = this.data[i];
-      this.rowMetadata.get(row)!.id = this._rowIdCallback(row, i);
+      const oldId = this._rowIdCallback(row, i);
+      const newId = callback(row, i);
+
+      const metadata = this.rowMetadata.get(oldId);
+      this.rowMetadata.delete(oldId);
+      if (metadata) {
+        this.rowMetadata.set(newId, metadata);
+      }
     }
+    this._rowIdCallback = callback;
     this.requestUpdate('rowIdCallback');
   }
 
@@ -797,7 +806,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   public getCellStatus(row: T | RowId, field: NestedKeyOf<T>) {
-    const metadata = this.rowMetadata.get(this.getRowOrThrow(row));
+    const metadata = this.getRowMetadata(row);
     if (!metadata) return 'clean';
 
     if (metadata.pendingTransactions.has(field as string)) {
@@ -920,7 +929,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public findRowIndex(field: NestedKeyOf<T>, value: unknown) {
     const row = this.findRow(field, value);
     if (row) {
-      return this.rowMetadata.get(row)!.index;
+      return this.getRowMetadata(row).index;
     }
     return -1;
   }
@@ -958,10 +967,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    */
   public deleteRow(...rowIds: RowId[]) {
     for (const rowId of rowIds) {
-      const row = this.idToRowMap.get(rowId);
-      if (row) {
-        const metadata = this.rowMetadata.get(row)!;
+      try {
+        const metadata = this.getRowMetadata(rowId);
         this.deleteRowAtIndex(metadata.index);
+      } catch {
+        // We don't care if they try to delete a row that doesn't actually exist.
       }
     }
   }
@@ -975,9 +985,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     for (const index of indexes) {
       const row = this.data[index];
       if (row) {
-        const metadata = this.rowMetadata.get(row)!;
+        const metadata = this.getRowMetadata(row);
         this.idToRowMap.delete(metadata.id);
-        this.rowMetadata.delete(row);
+        this.rowMetadata.delete(metadata.id);
+        this.editedRows.delete(metadata.id);
         newSelectedRows.delete(metadata.id);
         this.data = this.data.toSpliced(index, 1);
       }
@@ -986,27 +997,22 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   public getRowId(row: T) {
-    const metadata = this.rowMetadata.get(row);
-    if (!metadata) {
-      throw new Error('The provided row does not exist in the current dataset');
+    const id = this.rowToIdMap.get(row);
+    if (id === undefined) {
+      throw new YatlError(
+        'The provided row object does not exist in the current dataset.',
+        'Ensure you are passing a reference from the active data array.',
+      );
     }
-    return metadata.id;
+    return id;
   }
 
   public getRowIndex(row: T) {
-    const metadata = this.rowMetadata.get(row);
-    if (!metadata) {
-      throw new Error('The provided row does not exist in the current dataset');
-    }
-    return metadata.index;
+    return this.getRowMetadata(row).index;
   }
 
   public getRowHighlightIndicies(row: T) {
-    const metadata = this.rowMetadata.get(row);
-    if (!metadata) {
-      throw new Error('The provided row does not exist in the current dataset');
-    }
-    return metadata.highlightIndices;
+    return this.getRowMetadata(row).highlightIndices;
   }
 
   // #endregion
@@ -1235,7 +1241,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       .map(column => column.field);
 
     this._filteredData = this.data.filter((row, index) => {
-      const metadata = this.rowMetadata.get(row)!;
+      const metadata = this.getRowMetadata(row);
       metadata.searchScore = 0;
       metadata.highlightIndices = {};
       // Filter takes precedence over search.
@@ -1293,8 +1299,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return 0;
     }
 
-    const aMetadata = this.rowMetadata.get(a)!;
-    const bMetadata = this.rowMetadata.get(b)!;
+    const aMetadata = this.getRowMetadata(a);
+    const bMetadata = this.getRowMetadata(b);
 
     if (state.sort?.order === 'asc') {
       aValue = aMetadata.sortValues[field];
@@ -1326,8 +1332,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       .sort((a, b) => b.sort!.priority - a.sort!.priority);
 
     this._filteredData = this._filteredData.toSorted((a, b) => {
-      const aMetadata = this.rowMetadata.get(a)!;
-      const bMetadata = this.rowMetadata.get(b)!;
+      const aMetadata = this.getRowMetadata(a);
+      const bMetadata = this.getRowMetadata(b);
 
       // Try to sort by search score if we're using scoring and there is a query.
       if (this.scoredSearch && this.queryTokens) {
@@ -1354,12 +1360,12 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Utilities
 
-  private createMetadata() {
+  private rebuildMetadata() {
     this.idToRowMap = new Map();
     const rankMaps = new Map<string, Map<unknown, number>>();
     // TODO: We only need rank maps for sortable columns
     // but the user could enable sorting later. It's easiest
-    // to just compute them all know regardless.
+    // to just compute them all now regardless.
     for (const column of this.columns) {
       // Collect all raw values for this column
       const rawValues = this.data.map(row => {
@@ -1370,17 +1376,15 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       rankMaps.set(column.field, createRankMap(rawValues));
     }
 
-    for (let index = 0; index < this.data.length; ++index) {
-      const row = this.data[index];
+    this._data.forEach((row, index) => {
       let rowId = this._rowIdCallback(row, index);
-      // If the user screws
       if (rowId == null || this.idToRowMap.has(rowId)) {
         warnInvalidIdFunction(index, rowId, row);
         rowId = `__yatl_fallback_id_${index}`;
       }
 
       const metadata =
-        this.rowMetadata.get(row) ??
+        this.rowMetadata.get(rowId) ??
         ({
           id: rowId,
           index: index,
@@ -1392,8 +1396,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
           pendingTransactions: new Map(),
         } as RowMetadata);
 
+      this.rowToIdMap.set(row, rowId);
       this.idToRowMap.set(rowId, row);
-      this.rowMetadata.set(row, metadata);
+      this.rowMetadata.set(rowId, metadata);
+
+      metadata.index = index;
 
       for (const column of this.columns) {
         const value = getNestedValue(row, column.field);
@@ -1413,13 +1420,13 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
           );
         }
       }
-    }
+    });
   }
 
   private updateRowData(row: T, data: object) {
     Object.assign(row, data);
     // TODO: Make this more efficient.
-    this.createMetadata();
+    this.rebuildMetadata();
     this.requestUpdate('data');
   }
 
@@ -1458,8 +1465,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   private getRowMetadata(row: T | RowId) {
-    row = this.getRowOrThrow(row);
-    const metadata = this.rowMetadata.get(row);
+    const id = isRowIdType(row) ? row : this.getRowId(row);
+    const metadata = this.rowMetadata.get(id);
     if (!metadata) {
       throw new YatlError(
         'The provided row object does not exist in the current dataset',
@@ -1476,12 +1483,13 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private getTransactionRecords(transactionId?: string) {
     const records: YatlCommitRecord<T>[] = [];
     for (const rowId of this.editedRows) {
-      const row = this.getRow(rowId)!;
-      const metadata = this.getRowMetadata(row);
-      const edits = metadata.pendingEdits;
-      if (edits.size === 0) {
+      const row = this.getRow(rowId);
+      const metadata = this.rowMetadata.get(rowId);
+      if (!row || !metadata || metadata.pendingEdits.size === 0) {
         continue;
       }
+
+      const edits = metadata.pendingEdits;
 
       const changes: Partial<T> = {};
       const changedFields = [];

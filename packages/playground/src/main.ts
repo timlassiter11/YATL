@@ -150,12 +150,7 @@ function initTable() {
       field: 'status',
       title: 'Status',
       searchable: false,
-      editor: new SelectEditor<TableData>({
-        onSave: (oldValue, newValue, field, row) => {
-          row.lastModified = new Date();
-          return newValue;
-        },
-      }),
+      editor: new SelectEditor<TableData>(),
     },
     {
       field: 'lastModified',

@@ -811,6 +811,17 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     return 'clean';
   }
 
+  public isCellEditable(row: T | RowId, field: NestedKeyOf<T>) {
+    row = this.getRowOrThrow(row);
+    const col = this.getDisplayColumn(field);
+    if (!col || !col.editor || !col.editor.canEdit(field, row)) {
+      return false;
+    }
+
+    const metadata = this.getRowMetadata(row);
+    return !metadata.pendingTransactions.has(field);
+  }
+
   public getPendingChanges() {
     return this.getTransactionRecords();
   }

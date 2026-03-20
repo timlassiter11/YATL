@@ -905,7 +905,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       !this.readonly &&
       this.currentEditCell &&
       rowId === this.currentEditCell.rowId &&
-      field === this.currentEditCell.field
+      field === this.currentEditCell.field &&
+      this.controller.isCellEditable(row, field)
     ) {
       return this.renderCellWrapper(html`
         <div

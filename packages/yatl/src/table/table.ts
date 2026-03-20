@@ -1422,7 +1422,18 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     if (event.key === 'Escape') {
       this.currentEditCell = null;
       this.controller.revertPendingChanges();
-    } else if (event.key === 'Enter') {
+      event.stopPropagation();
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key !== 'Enter' && event.key !== 'Tab') {
+      return;
+    }
+
+    this.editor?.blur();
+
+    if (event.key === 'Enter') {
       this.dispatchTransaction();
       this.currentEditCell = null;
     } else if (event.key === 'Tab') {

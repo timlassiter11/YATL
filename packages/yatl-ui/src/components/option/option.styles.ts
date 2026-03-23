@@ -22,6 +22,10 @@ export default css`
       var(--yatl-text-3)
     );
 
+    --option-mark-color: var(--yatl-option-mark-color, var(--yatl-text-1));
+    --option-mark-bg: var(--yatl-option-mark-bg, var(--yatl-color-brand));
+    --option-mark-font-weight: var(--yatl-option-mark-font-weight, normal);
+
     border-radius: var(--option-radius);
   }
 
@@ -61,6 +65,12 @@ export default css`
     line-height: normal;
     overflow-x: hidden;
     text-overflow: ellipsis;
+  }
+
+  [part='mark'] {
+    color: var(--option-mark-color);
+    background-color: var(--option-mark-bg);
+    font-weight: var(--option-mark-font-weight);
   }
 
   [part='start'],

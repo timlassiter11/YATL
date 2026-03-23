@@ -6,7 +6,6 @@ import type {
   FilterCallback,
   Filters,
   NestedKeyOf,
-  QueryToken,
   RestorableColumnState,
   RestorableTableState,
   RowId,
@@ -121,8 +120,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private rowToIdMap = new WeakMap<T, RowId>();
   // Map row ids to their rows for faster lookup
   private idToRowMap = new Map<RowId, T>();
-  // List of tokens created from the current query
-  private queryTokens: QueryToken[] | null = null;
   // List of rows with pending edits. Just for quick lookup
   private editedRows = new Set<RowId>();
   // Transactions that have been started but not finished
@@ -1011,6 +1008,9 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   public getRowHighlightIndicies(row: T) {
+    if (!this.searchQuery) {
+      return;
+    }
     return this.getRowMetadata(row).highlightIndices;
   }
 
@@ -1119,13 +1119,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private filterRows() {
     const baseData = this._data.filter((row, i) => this.filterRow(row, i));
     if (this.searchQuery && this.searchEngine) {
-      // The engine returns SearchResult objects, so we map them back
       const searchResults = this.searchEngine.search(
         this.searchQuery,
         baseData,
       );
 
-      // We update our metadata map with the new highlight indices and scores!
       this._filteredData = searchResults.map(res => {
         const meta = this.getRowMetadata(res.item);
         meta.searchScore = res.score;
@@ -1269,6 +1267,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     Object.assign(row, data);
     // TODO: Make this more efficient.
     this.rebuildMetadata();
+    this.searchEngine.updateCache(row);
     this.requestUpdate('data');
   }
 

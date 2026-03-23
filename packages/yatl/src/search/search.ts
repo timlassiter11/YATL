@@ -107,6 +107,13 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
     return [...this._fields.keys()];
   }
 
+  public updateCache(...items: T[]) {
+    for (const item of items) {
+      this.cache.delete(item);
+      this.getOrCreateCacheEntry(item);
+    }
+  }
+
   public search(query: string, subset?: T[]): YatlSearchResult<T>[] {
     const data = subset ?? this.data;
     if (query.length === 0) {
@@ -157,6 +164,11 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
         results.push(searchResult);
       }
     }
+
+    if (this.scoredSearch) {
+      results.sort((a, b) => b.score - a.score);
+    }
+
     return results;
   }
 
@@ -268,13 +280,18 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
 
     // Complex Scored Token Search
     // We sum the scores of all matching tokens
+    let hasMatch = false;
     for (const token of tokens) {
       const calculation = this.calculateSearchScore(query.value, token);
       if (calculation.score > 0) {
+        hasMatch = true;
         result.score += calculation.score;
-        // If a token matched, find that query in the main string
-        addRangesFromValue(query.value);
       }
+    }
+
+    if (hasMatch) {
+      // If a token matched, find that query in the main string
+      addRangesFromValue(query.value);
     }
 
     return result;

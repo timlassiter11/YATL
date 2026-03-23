@@ -123,6 +123,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
           id=${this.inputId}
           type="search"
           placeholder=${this.placeholder}
+          autocomplete="off"
           @input=${this.handleInput}
         />
         ${this.renderContents()}

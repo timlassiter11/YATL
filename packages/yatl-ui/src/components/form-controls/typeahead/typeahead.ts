@@ -5,7 +5,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../../events';
 import { YatlFormControl } from '../form-control/form-control';
 import styles from './typeahead.styles';
-import { YatlSearchEngine } from '@timlassiter11/yatl';
+import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
 import { YatlOptionData } from '../../../types';
 
 /**
@@ -18,6 +18,7 @@ import { YatlOptionData } from '../../../types';
 export class YatlTypeahead extends YatlFormControl {
   public static override styles = [...super.styles, styles];
 
+  private hasWarnedMissingFields = false;
   private searchDebounceTimer = 0;
 
   private cacheDirty = false;
@@ -30,7 +31,7 @@ export class YatlTypeahead extends YatlFormControl {
 
   @state() private open = false;
   @state() private state: 'idle' | 'searching' | 'error' = 'idle';
-  @state() private matchedOptions: YatlOptionData[] = [];
+  @state() private searchResults: YatlSearchResult<YatlOptionData>[] = [];
 
   /**
    * Placeholder text shown when the input is empty.
@@ -122,7 +123,7 @@ export class YatlTypeahead extends YatlFormControl {
   public localData?: unknown[];
 
   protected get hasOptions() {
-    return this.matchedOptions.length > 0;
+    return this.searchResults.length > 0;
   }
 
   protected get canSearchRemote() {
@@ -218,15 +219,20 @@ export class YatlTypeahead extends YatlFormControl {
       >`;
     }
 
-    const max = Math.min(this.maxOptions, this.matchedOptions.length);
-    const options = this.matchedOptions.slice(0, max);
-    return repeat(options, option => this.renderOption(option));
+    const max = Math.min(this.maxOptions, this.searchResults.length);
+    const results = this.searchResults.slice(0, max);
+    return repeat(
+      results,
+      result => result.item,
+      result => this.renderOption(result),
+    );
   }
 
-  protected renderOption(option: YatlOptionData) {
+  protected renderOption(result: YatlSearchResult<YatlOptionData>) {
     return html`<yatl-option
-      value=${option.value}
-      label=${option.label}
+      value=${result.item.value}
+      label=${result.item.label}
+      .highlightIndices=${result.matches['label']}
     ></yatl-option>`;
   }
 
@@ -337,10 +343,9 @@ export class YatlTypeahead extends YatlFormControl {
     }
 
     if (this.value) {
-      const results = this.searchEngine.search(this.value);
-      this.matchedOptions = results.map(r => r.item);
+      this.searchResults = this.searchEngine.search(this.value);
     } else {
-      this.matchedOptions = [];
+      this.searchResults = [];
     }
   }
 
@@ -348,24 +353,40 @@ export class YatlTypeahead extends YatlFormControl {
     const options: YatlOptionData[] = [];
     const labelField = this.labelField || this.valueField;
     const valueField = this.valueField || this.labelField;
-    if (!labelField && !valueField) {
-      return options;
-    }
-
     for (const item of data as Record<string, unknown>[]) {
-      if (!(labelField in item) || !(valueField in item)) {
-        continue;
+      if (typeof item === 'string') {
+        options.push({ label: item, value: item });
+      } else if (labelField in item && valueField in item) {
+        const label = item[labelField];
+        const value = item[valueField];
+
+        options.push({ label: String(label), value: String(value) });
+      } else {
+        this.warnMissingFields();
+        // Abort and return empty options since we can't trust the data.
+        return [];
       }
-
-      const label = item[labelField];
-      const value = item[valueField];
-
-      options.push({ label: String(label), value: String(value) });
     }
 
     return options;
   }
+
+  private warnMissingFields() {
+    if (!this.hasWarnedMissingFields) {
+      this.hasWarnedMissingFields = true;
+      console.warn(warnMissingFieldsMessage, this);
+    }
+  }
 }
+
+const warnMissingFieldsMessage = `
+[yatl-typeahead] Cannot parse remote data.
+The endpoint returned complex objects, but no 'label-field' or 'value-field' was provided.
+
+To fix this, either:
+1. Add mapping attributes (label-field / value-field).
+2. Use 'transformResponse' to convert the payload into a flat array of strings.
+`;
 
 declare global {
   interface HTMLElementTagNameMap {

@@ -239,6 +239,7 @@ declare global {
     [YatlColumnReorderRequest.EVENT_NAME]: YatlColumnReorderRequest;
     [YatlColumnReorderEvent.EVENT_NAME]: YatlColumnReorderEvent;
 
+    [YatlTableCommitRequest.EVENT_NAME]: YatlTableCommitRequest;
     [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
     [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;

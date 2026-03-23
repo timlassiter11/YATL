@@ -10,7 +10,12 @@ import {
   YatlSwitch,
   YatlTableView,
 } from '@timlassiter11/yatl-ui';
-import { NumberEditor, SelectEditor, TextEditor } from '@timlassiter11/yatl';
+import {
+  NumberEditor,
+  SelectEditor,
+  TextEditor,
+  YatlCommitTransaction,
+} from '@timlassiter11/yatl';
 
 // Used for generating data and for filters
 const statuses = [
@@ -123,6 +128,18 @@ function initTable() {
     }
     return [];
   };
+
+  table.addEventListener('yatl-table-commit-request', event => {
+    const transaction = event.transaction as YatlCommitTransaction<TableData>;
+    const save = async () => {
+      await sleep(1000);
+      for (const record of transaction.records) {
+        record.originalRow.lastModified = new Date();
+      }
+      return true;
+    };
+    event.respondWith(save());
+  });
 
   table.storageOptions = {
     key: 'advanced-example-v1',

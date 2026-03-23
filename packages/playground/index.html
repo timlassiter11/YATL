@@ -129,6 +129,28 @@
               <yatl-radio label="None" value="null"></yatl-radio>
             </yatl-radio-group>
             <div class="option-group">
+              <yatl-radio-group name="editTrigger">
+                <h4 slot="label">Edit Trigger</h4>
+                <yatl-radio label="None" value="none"></yatl-radio>
+                <yatl-radio label="Click" value="click"></yatl-radio>
+                <yatl-radio
+                  label="Double Click"
+                  value="dblclick"
+                  checked
+                ></yatl-radio>
+              </yatl-radio-group>
+              <yatl-radio-group name="commitStrategy">
+                <h4 slot="label">Commit Strategy</h4>
+                <yatl-radio
+                  label="Immediate"
+                  value="immediate"
+                  checked
+                ></yatl-radio>
+                <yatl-radio label="Row" value="row"></yatl-radio>
+                <yatl-radio label="Batch" value="batch"></yatl-radio>
+              </yatl-radio-group>
+            </div>
+            <div class="option-group">
               <h4>Misc</h4>
               <yatl-switch
                 name="tokenizedSearch"

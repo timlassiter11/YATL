@@ -216,6 +216,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
       options.forEach(o => {
         o.hidden = false;
         o.highlightIndices = undefined;
+        o.style.order = '';
       });
       return;
     }
@@ -232,6 +233,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
       const result = resultsMap.get(option.value);
       option.hidden = result === undefined;
       option.highlightIndices = result?.matches['label'];
+      option.style.order = String(result?.rank ?? '');
     }
   }
 

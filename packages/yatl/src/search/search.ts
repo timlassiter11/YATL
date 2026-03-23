@@ -117,7 +117,12 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
   public search(query: string, subset?: T[]): YatlSearchResult<T>[] {
     const data = subset ?? this.data;
     if (query.length === 0) {
-      return data.map(item => ({ item, score: 0, matches: {} }));
+      return data.map((item, index) => ({
+        item,
+        score: 0,
+        rank: index,
+        matches: {},
+      }));
     }
 
     const queryTokens = [{ value: query.toLocaleLowerCase(), quoted: true }];
@@ -131,6 +136,7 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
       const searchResult: YatlSearchResult<T> = {
         item: item,
         score: 0,
+        rank: 0,
         matches: {},
       };
       const cacheEntry = this.getOrCreateCacheEntry(item);
@@ -168,6 +174,8 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
     if (this.scoredSearch) {
       results.sort((a, b) => b.score - a.score);
     }
+
+    results.forEach((r, i) => (r.rank = i));
 
     return results;
   }

@@ -37,6 +37,7 @@ export type RowMatchIndices<T extends object = UnspecifiedRecord> =
 export interface YatlSearchResult<T extends object = UnspecifiedRecord> {
   item: T;
   score: number;
+  rank: number;
   matches: RowMatchIndices<T>;
 }
 

@@ -5,6 +5,8 @@ import { YatlOption } from '../../option/option';
 import { YatlFormControl } from '../form-control/form-control';
 import { YatlInput } from '../input/input';
 import styles from './search-select.styles';
+import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
+import { YatlOptionData } from '../../../types';
 
 @customElement('yatl-search-select')
 export class YatlSearchSelect extends YatlFormControl<string[]> {
@@ -16,6 +18,15 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     // it sends focus to the input and shows all the options.
     delegatesFocus: false,
   };
+
+  private optionObserver = new MutationObserver(() => this.handleMutation());
+
+  private query = '';
+  private searchEngine = new YatlSearchEngine<YatlOptionData>({
+    fields: [{ field: 'label' }],
+    tokenizedSearch: true,
+    scoredSearch: true,
+  });
 
   @state() private noMatch = false;
   @state() private hasFocus = false;
@@ -36,16 +47,15 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   public defaultValue = [];
 
   private _value: string[] = [];
-  @property({ attribute: false })
   public get value() {
     return [...this._value];
   }
+
+  @property({ attribute: false })
   public set value(value) {
-    const oldValue = this._value;
     this._value = [...value];
     this.setFormValue(this.formValue);
     this.updateSelectedOptions();
-    this.requestUpdate('value', oldValue);
   }
 
   public get formValue() {
@@ -68,11 +78,18 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   public override connectedCallback() {
     super.connectedCallback();
     document.addEventListener('pointerdown', this.handleFocus);
+    this.optionObserver.observe(this, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['label', 'value'],
+    });
   }
 
   public override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('pointerdown', this.handleFocus);
+    this.optionObserver.disconnect();
   }
 
   public toggleOption(value: string, state?: boolean) {
@@ -115,10 +132,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   protected renderContents() {
     if ((this.hasFocus || !this.hasSelection) && !this.noMatch) {
-      return html`<slot
-        part="options"
-        @slotchange=${this.handleSlotChange}
-      ></slot>`;
+      return html`<slot part="options"></slot>`;
     } else if (this.noMatch) {
       return html`<span part="empty-options">${this.noResultsText}</span>`;
     }
@@ -175,12 +189,9 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   private handleInput(event: Event) {
     event.stopPropagation();
-    const query = (event.target as YatlInput).value.toLocaleLowerCase();
-    this.updateVisibleOptions(query);
-  }
-
-  private handleSlotChange() {
-    this.updateSelectedOptions();
+    const target = event.target as YatlInput;
+    this.query = target.value.toLocaleLowerCase();
+    this.updateVisibleOptions();
   }
 
   private handleSelectedOptionClick(event: Event) {
@@ -191,31 +202,46 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     this.dispatchChange();
   }
 
-  private updateVisibleOptions(query: string) {
-    // If we don't have a query we automatically have a match
-    let noMatch = query ? true : false;
-    for (const option of this.getAllOptions()) {
-      if (!query) {
-        option.hidden = false;
-        continue;
-      }
+  private handleMutation() {
+    this.updateSelectedOptions();
+    this.updateVisibleOptions();
+  }
 
-      const text = option.label.toLocaleLowerCase();
-      const match = text?.includes(query) ?? false;
-      option.hidden = !match;
-      if (match) {
-        noMatch = false;
-      }
+  private updateVisibleOptions() {
+    const options = this.getAllOptions();
+
+    // No query, everything is visible
+    if (!this.query) {
+      this.noMatch = false;
+      options.forEach(o => {
+        o.hidden = false;
+        o.highlightIndices = undefined;
+      });
+      return;
     }
 
-    this.noMatch = noMatch;
+    const results = this.searchEngine.search(this.query);
+    this.noMatch = results.length === 0;
+
+    const resultsMap = new Map<string, YatlSearchResult<YatlOptionData>>();
+    for (const result of results) {
+      resultsMap.set(result.item.value, result);
+    }
+
+    for (const option of options) {
+      const result = resultsMap.get(option.value);
+      option.hidden = result === undefined;
+    }
   }
 
   private updateSelectedOptions() {
+    const optionData: YatlOptionData[] = [];
     for (const option of this.getAllOptions()) {
+      optionData.push({ label: option.label, value: option.value });
       option.checkable = true;
       option.checked = this.value.includes(option.value);
     }
+    this.searchEngine.data = optionData;
   }
 
   private getSelectedOptions() {

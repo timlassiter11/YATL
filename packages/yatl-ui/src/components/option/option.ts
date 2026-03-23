@@ -3,6 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './option.styles';
 import { YatlOptionToggleRequest } from '../../events/option';
+import { highlightText, MatchIndex } from '@timlassiter11/yatl';
 
 @customElement('yatl-option')
 export class YatlOption extends YatlBase {
@@ -23,6 +24,9 @@ export class YatlOption extends YatlBase {
   @property({ type: String, reflect: true })
   public label = '';
 
+  @property({ attribute: false })
+  public highlightIndices?: MatchIndex[];
+
   protected override render() {
     return html`
       <span part="base">
@@ -35,7 +39,12 @@ export class YatlOption extends YatlBase {
   }
 
   protected renderLabel() {
-    return html`<span part="label">${this.label}</span>`;
+    if (!this.highlightIndices || this.highlightIndices.length === 0) {
+      return html`<span part="label">${this.label}</span>`;
+    }
+    return html`<span part="label"
+      >${highlightText(this.label, this.highlightIndices)}</span
+    >`;
   }
 
   protected renderCheck() {

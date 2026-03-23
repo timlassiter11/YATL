@@ -22,7 +22,7 @@ import {
   isDisplayColumn,
 } from '../utils';
 
-import { highlightText, toHumanReadable } from './utils';
+import { highlightText, toHumanReadable } from '../utils';
 
 import {
   YatlColumnReorderRequest,

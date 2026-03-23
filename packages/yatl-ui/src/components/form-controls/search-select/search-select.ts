@@ -231,6 +231,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     for (const option of options) {
       const result = resultsMap.get(option.value);
       option.hidden = result === undefined;
+      option.highlightIndices = result?.matches['label'];
     }
   }
 

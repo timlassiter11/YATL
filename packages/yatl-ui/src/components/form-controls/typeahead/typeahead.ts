@@ -30,8 +30,8 @@ export class YatlTypeahead extends YatlFormControl {
     scoredSearch: true,
   });
 
-  @state() private open = false;
-  @state() private state: 'idle' | 'searching' | 'error' = 'idle';
+  @state() private userHasSelected = false;
+  @state() private state: 'idle' | 'loading' | 'error' = 'idle';
   @state() private searchResults: YatlSearchResult<YatlOptionData>[] = [];
 
   /**
@@ -131,12 +131,23 @@ export class YatlTypeahead extends YatlFormControl {
   @property({ attribute: false })
   public localData?: unknown[];
 
+  protected get open() {
+    return this.canSearch && !this.userHasSelected;
+  }
+
   protected get hasOptions() {
     return this.searchResults.length > 0;
   }
 
+  public get canSearch() {
+    return (
+      this.value.length >= this.minQueryLength &&
+      this.searchEngine.data.length > 0
+    );
+  }
+
   protected get canSearchRemote() {
-    return !!this.uri && this.value.length >= this.minQueryLength;
+    return !!this.uri && this.canSearch;
   }
 
   protected override willUpdate(
@@ -159,6 +170,7 @@ export class YatlTypeahead extends YatlFormControl {
       // Load local data into the search engine cache if its new or was cleared
       if (this.localData) {
         this.addDataToCache(this.localData);
+        this.updateMatchedOptions();
       }
     }
 
@@ -182,7 +194,6 @@ export class YatlTypeahead extends YatlFormControl {
         @yatl-dropdown-select=${this.handleDropdownSelect}
         @yatl-dropdown-open-request=${this.handleDropdownRequest}
         @yatl-dropdown-close-request=${this.handleDropdownRequest}
-        @yatl-dropdown-close=${this.handleDropdownClose}
       >
         <div slot="trigger" part="base" class="text-input">
           <slot part="start" name="start"></slot>
@@ -220,11 +231,13 @@ export class YatlTypeahead extends YatlFormControl {
       >`;
     }
 
-    if (this.state === 'searching') {
+    if (this.state === 'loading') {
       return html`<span class="message" part="loading">Loading...</span>`;
     }
 
-    if (!this.hasOptions) {
+    if (!this.hasOptions && this.canSearch && this.value) {
+      // Only show the no results message if they actually
+      // searched and have options to search through.
       return html`<span class="message" part="empty-options"
         >No results found...</span
       >`;
@@ -250,10 +263,10 @@ export class YatlTypeahead extends YatlFormControl {
   protected override isValidChangeEvent(event: Event): boolean | void {
     const target = event.target as HTMLInputElement;
     if (this.value !== target.value) {
+      this.userHasSelected = false;
       this.value = target.value;
       this.updateMatchedOptions();
       this.scheduleFetch();
-      this.open = this.hasOptions || this.state === 'searching';
     }
   }
 
@@ -265,17 +278,12 @@ export class YatlTypeahead extends YatlFormControl {
       );
     }
 
-    this.open = false;
+    this.userHasSelected = true;
   }
 
   private handleDropdownRequest(event: Event) {
     // We want full control on the open state of the dropdown.
     event.preventDefault();
-  }
-
-  private handleDropdownClose() {
-    // Even though we prevent close requests, we still need to stay in sync
-    this.open = false;
   }
 
   private scheduleFetch() {
@@ -285,7 +293,7 @@ export class YatlTypeahead extends YatlFormControl {
 
     // Give the user some indication that we are working
     // even if we are just waiting for them to stop typing
-    this.state = 'searching';
+    this.state = 'loading';
     clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = window.setTimeout(
       () => this.fetchOptions(),
@@ -342,7 +350,10 @@ export class YatlTypeahead extends YatlFormControl {
     const options = this.getOptionsFromData(data);
 
     for (const option of options) {
-      this.cachedOptions.set(option.value, option);
+      if (option.value) {
+        // Don't add null, undefined, or empty values
+        this.cachedOptions.set(option.value, option);
+      }
     }
     this.updateMatchedOptions();
   }
@@ -353,7 +364,7 @@ export class YatlTypeahead extends YatlFormControl {
       this.cacheDirty = false;
     }
 
-    if (this.value) {
+    if (this.canSearch) {
       this.searchResults = this.searchEngine.search(this.value);
     } else {
       this.searchResults = [];
@@ -368,10 +379,10 @@ export class YatlTypeahead extends YatlFormControl {
       if (typeof item === 'string') {
         options.push({ label: item, value: item });
       } else if (labelField in item && valueField in item) {
-        const label = item[labelField];
-        const value = item[valueField];
+        const label = String(item[labelField] ?? '');
+        const value = String(item[valueField] ?? '');
 
-        options.push({ label: String(label), value: String(value) });
+        options.push({ label: label, value: value });
       } else {
         this.warnMissingFields();
         // Abort and return empty options since we can't trust the data.

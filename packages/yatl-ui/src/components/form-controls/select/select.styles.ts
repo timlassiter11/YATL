@@ -19,7 +19,7 @@ export default css`
     flex-direction: column;
     align-items: flex-start;
     position: relative;
-    padding: 5px var(--input-padding);
+    padding: 2px var(--input-padding);
   }
 
   [part='input'] {

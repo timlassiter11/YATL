@@ -7,6 +7,7 @@ import { YatlFormControl } from '../form-control/form-control';
 import styles from './typeahead.styles';
 import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
 import { YatlOptionData } from '../../../types';
+import { ifDefined } from 'lit/directives/if-defined.js';
 
 /**
  * A hybrid typeahead component that searches local data instantly
@@ -54,6 +55,14 @@ export class YatlTypeahead extends YatlFormControl {
   public override get formValue() {
     return this.value;
   }
+
+  /** The minimum length of input that will be considered valid. */
+  @property({ type: Number })
+  public minlength?: number;
+
+  /** The maximum length of input that will be considered valid. */
+  @property({ type: Number })
+  public maxlength?: number;
 
   /**
    * The remote endpoint URL to fetch search results from.
@@ -187,6 +196,8 @@ export class YatlTypeahead extends YatlFormControl {
             .value=${live(this.value)}
             value=${this.defaultValue}
             placeholder=${this.placeholder}
+            minlength=${ifDefined(this.minlength)}
+            maxlength=${ifDefined(this.maxlength)}
             ?readonly=${this.readonly}
             ?disabled=${this.disabled}
             ?required=${this.required}

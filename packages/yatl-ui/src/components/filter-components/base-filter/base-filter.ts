@@ -12,10 +12,10 @@ import {
 import { YatlBase } from '../../base/base';
 
 export class YatlBaseFilter<
-  T,
+  TValue,
   TData extends object = UnspecifiedRecord,
 > extends YatlBase {
-  private _filterOptions?: Map<T, number>;
+  private _filterOptions?: Map<TValue, number>;
 
   private _controller?: YatlTableController<TData>;
 
@@ -42,7 +42,7 @@ export class YatlBaseFilter<
   }
 
   // TODO: Use actual filter value as single source of truth?
-  private _value?: T;
+  private _value?: TValue;
   @property({ attribute: false })
   public get value() {
     return this._value;
@@ -91,7 +91,7 @@ export class YatlBaseFilter<
   protected get options() {
     // No controller, just return an empty map.
     if (!this.controller) {
-      return new Map<T, number>();
+      return new Map<TValue, number>();
     }
 
     // If we don't have a value, we want to keep updating
@@ -100,7 +100,7 @@ export class YatlBaseFilter<
     if (!this.value || !this._filterOptions) {
       const options = this.controller.getColumnFilterValues(
         this.field as NestedKeyOf<TData>,
-      ) as Map<T, number>;
+      ) as Map<TValue, number>;
 
       // Sort options. This keeps them consistent when sorting
       // changes and makes it easier for the user to find things.

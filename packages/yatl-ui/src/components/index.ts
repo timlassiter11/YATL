@@ -26,6 +26,7 @@ export * from './tree-item/tree-item';
 
 export * from './filter-components/base-filter/base-filter';
 export * from './filter-components/date-filter/date-filter';
+export * from './filter-components/date-range-filter/date-range-filter';
 export * from './filter-components/group-filter/group-filter';
 export * from './filter-components/search-filter/search-filter';
 export * from './filter-components/select-filter/select-filter';

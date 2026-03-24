@@ -44,8 +44,20 @@ export const close = svg`
   />
 `;
 
-export const chevron = svg`
+export const chevronUp = svg`
+  <path class="icon chevron-up" d="M18 15l-6-6-6 6"/>
+`;
+
+export const chevronDown = svg`
   <path class="icon chevron-down" d="M6 9l6 6 6-6" />
+`;
+
+export const chevronLeft = svg`
+  <path class="icon chevron-left" d="M15 18l-6-6 6-6"/>
+`;
+
+export const chevronRight = svg`
+  <path class="icon chevron-right" d="M9 18l6-6-6-6"/>
 `;
 
 export const check = svg`
@@ -211,7 +223,10 @@ export const icons: Record<string, TemplateResult<2>> = {
   'sun-moon': sumMoon,
   trash: trash,
   close: close,
-  'chevron-down': chevron,
+  'chevron-up': chevronUp,
+  'chevron-down': chevronDown,
+  'chevron-left': chevronLeft,
+  'chevron-right': chevronRight,
   check: check,
   columns: columns,
   download: download,

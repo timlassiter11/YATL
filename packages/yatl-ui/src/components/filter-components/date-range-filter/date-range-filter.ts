@@ -317,7 +317,10 @@ export class YatlDateRangeFilter extends YatlBaseFilter<FilterFunction> {
   private updateValue() {
     this.correctRanges();
     const filterFunction = (value: Date) => {
-      const lastModified = value as Date;
+      if (!value) {
+        return false;
+      }
+
       const startDate = this.startDate;
       let endDate = this.endDate;
       // endDate should be inclusive.
@@ -329,13 +332,13 @@ export class YatlDateRangeFilter extends YatlBaseFilter<FilterFunction> {
 
       if (startDate instanceof Date && endDate instanceof Date) {
         return (
-          startDate.getTime() <= lastModified.getTime() &&
-          endDate.getTime() > lastModified.getTime()
+          startDate.getTime() <= value.getTime() &&
+          endDate.getTime() > value.getTime()
         );
       } else if (startDate instanceof Date) {
-        return startDate.getTime() <= lastModified.getTime();
+        return startDate.getTime() <= value.getTime();
       } else if (endDate) {
-        return endDate.getTime() >= lastModified.getTime();
+        return endDate.getTime() >= value.getTime();
       }
       return true;
     };

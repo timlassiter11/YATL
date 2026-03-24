@@ -315,6 +315,12 @@ export class YatlDateRangeFilter extends YatlBaseFilter<FilterFunction> {
   }
 
   private updateValue() {
+    if (!this.startDate && !this.endDate) {
+      // Clear the function if we have no range.
+      this.value = undefined;
+      return;
+    }
+
     this.correctRanges();
     const filterFunction = (value: Date) => {
       if (!value) {

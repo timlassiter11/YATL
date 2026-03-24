@@ -57,16 +57,8 @@
               multi
               clearable
             ></yatl-select-filter>
-
-            <h3>Date Modified</h3>
-            <yatl-date-filter
-              label="From"
-              field="lastModified.startDate"
-            ></yatl-date-filter>
-            <yatl-date-filter
-              label="To"
-              field="lastModified.endDate"
-            ></yatl-date-filter>
+            <yatl-date-range-filter label="Date Modified" field="lastModified">
+            </yatl-date-range-filter>
           </div>
         </yatl-card>
         <yatl-card slot="sidebar-end">

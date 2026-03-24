@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, PropertyValueMap } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { YatlCheckbox } from '../checkbox/checkbox';
 import { YatlFormControl } from '../form-control/form-control';
@@ -26,25 +26,22 @@ export class YatlRadioGroup extends YatlFormControl<string> {
     return this.value;
   }
 
-  public override connectedCallback(): void {
-    super.connectedCallback();
-
-    // Children wont have been upgraded yet so
-    // just use the attributes, not the props.
-    if (!this.value) {
-      // If the user didnt provide a default value
-      // look for the first one that is checked and use that.
+  protected override willUpdate(
+    changedProperties: PropertyValueMap<YatlRadioGroup>,
+  ) {
+    super.willUpdate(changedProperties);
+    if (!this.hasUpdated) {
       const children = this.getAllChildren();
-      let defaultChild = children.find(c => c.hasAttribute('checked'));
-
-      // None checked and field is required, use first option.
-      if (!defaultChild && this.required) {
-        defaultChild = children.at(0);
-      }
-
-      const defaultValue = defaultChild?.getAttribute('value');
-      if (defaultValue) {
-        this.setAttribute('value', defaultValue);
+      if (!this.value) {
+        // If the user didnt provide a default value
+        // look for the first one that is checked and use that.
+        // Children wont have been upgraded yet so
+        // just use the attributes, not the props.
+        const defaultChild = children.find(c => c.hasAttribute('checked'));
+        const defaultValue = defaultChild?.getAttribute('value');
+        if (defaultValue != null) {
+          this.value = defaultValue;
+        }
       }
 
       for (const child of children) {

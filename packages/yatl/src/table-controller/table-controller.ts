@@ -1086,6 +1086,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return filter.test(String(value));
     }
 
+    if (filter instanceof Date && value instanceof Date) {
+      return filter.getTime() === value.getTime();
+    }
+
     return filter === value;
   }
 

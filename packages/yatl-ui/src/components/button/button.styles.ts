@@ -15,7 +15,7 @@ export default css`
     );
 
     /* The color prop sets these and the variant prop decides how to use it */
-    --appearance-text: var(--yatl-text-1);
+    --appearance-text: currentColor;
     --appearance-color: var(--yatl-color-neutral);
 
     --button-text: var(--yatl-button-text, var(--appearance-text));
@@ -23,6 +23,8 @@ export default css`
     --button-border-width: var(--yatl-button-border-width, 2px);
     --button-border-color: var(--yatl-button-border, transparent);
 
+    color: var(--yatl-text-1);
+    font-weight: 500;
     display: inline-block;
     box-sizing: border-box;
     overflow: hidden;
@@ -38,7 +40,7 @@ export default css`
     padding: var(--button-padding);
     color: var(--button-text);
     font-size: var(--button-font-size);
-    font-weight: 500;
+    font-weight: inherit;
     background-color: var(--button-bg);
     border: var(--button-border-width) solid var(--button-border-color);
   }
@@ -133,11 +135,10 @@ export default css`
   :host([variant='plain']) {
     --button-text: var(--appearance-color);
     --button-bg: transparent;
-    --button-border-width: 0;
   }
 
   /* Neutral color is too dim to be used without BG */
   :host([variant='plain'][color='neutral']) {
-    --appearance-color: var(--yatl-text-2);
+    --appearance-color: currentColor;
   }
 `;

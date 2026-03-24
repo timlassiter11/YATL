@@ -60,6 +60,7 @@ export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
         name=${this.field}
         label=${this.label}
         ?disabled=${this.disabled}
+        ?checked=${this._checked}
         .checked=${this.checked}
         @change=${this.handleChange}
       ></yatl-switch>

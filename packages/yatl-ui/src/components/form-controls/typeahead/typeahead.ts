@@ -132,7 +132,9 @@ export class YatlTypeahead extends YatlFormControl {
   public localData?: unknown[];
 
   protected get open() {
-    return this.canSearch && !this.userHasSelected;
+    return (
+      (this.canSearchCache || this.canSearchRemote) && !this.userHasSelected
+    );
   }
 
   protected get hasOptions() {
@@ -140,10 +142,11 @@ export class YatlTypeahead extends YatlFormControl {
   }
 
   public get canSearch() {
-    return (
-      this.value.length >= this.minQueryLength &&
-      this.searchEngine.data.length > 0
-    );
+    return this.value.length >= this.minQueryLength;
+  }
+
+  protected get canSearchCache() {
+    return this.searchEngine.data.length > 0 && this.canSearch;
   }
 
   protected get canSearchRemote() {
@@ -235,7 +238,7 @@ export class YatlTypeahead extends YatlFormControl {
       return html`<span class="message" part="loading">Loading...</span>`;
     }
 
-    if (!this.hasOptions && this.canSearch && this.value) {
+    if (!this.hasOptions && this.canSearchCache && this.value) {
       // Only show the no results message if they actually
       // searched and have options to search through.
       return html`<span class="message" part="empty-options"
@@ -364,7 +367,7 @@ export class YatlTypeahead extends YatlFormControl {
       this.cacheDirty = false;
     }
 
-    if (this.canSearch) {
+    if (this.canSearchCache) {
       this.searchResults = this.searchEngine.search(this.value);
     } else {
       this.searchResults = [];

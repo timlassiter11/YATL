@@ -48,20 +48,51 @@ export class YatlDateGrid extends YatlBase {
   @property({ converter: dateConverter })
   public max?: Date;
 
+  private get minTime() {
+    return this.min ? getDateOnly(this.min).getTime() : undefined;
+  }
+
+  private get maxTime() {
+    return this.max ? getDateOnly(this.max).getTime() : undefined;
+  }
+
+  private get minMonthTime() {
+    return this.min ? getFirstDayOfMonth(this.min).getTime() : undefined;
+  }
+
+  private get maxMonthTime() {
+    return this.max ? getFirstDayOfMonth(this.max).getTime() : undefined;
+  }
+
   protected override render() {
-    const start = getFirstDayOfWeek(getFirstDayOfMonth(this.currentMonth));
+    const normalizedRanges: YatlDateGridRange[] = this.ranges.map(range => ({
+      start: range.start ? getDateOnly(range.start) : undefined,
+      end: range.end ? getDateOnly(range.end) : undefined,
+      color: range.color,
+    }));
+
+    const currentMonthTime = this.currentMonth.getTime();
+    const currentMonthText = monthYearFormatter.format(this.currentMonth);
+    const minMonthTime = this.minMonthTime;
+    const maxMonthTime = this.maxMonthTime;
+
+    const disablePrev = !!minMonthTime && currentMonthTime <= minMonthTime;
+    const disableNext = !!maxMonthTime && currentMonthTime >= maxMonthTime;
+
+    const start = getFirstDayOfWeek(this.currentMonth);
     // Always render 6 weeks. This covers all months and prevents the size from shifting.
     const weeks = Array.from({ length: 6 }, (v, i) =>
       addDaysToDate(start, 7 * i),
     );
     const headers = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-    const currentMonthText = monthYearFormatter.format(this.currentMonth);
+
     return html`
       <div part="base" class="calendar">
         <div class="calendar-header">
           <yatl-button
             variant="plain"
             title="Previous month"
+            ?disabled=${disablePrev}
             @click=${this.handlePreviousClick}
             ><yatl-icon name="chevron-left"></yatl-icon
           ></yatl-button>
@@ -71,21 +102,22 @@ export class YatlDateGrid extends YatlBase {
           <yatl-button
             variant="plain"
             title="Next month"
+            ?disabled=${disableNext}
             @click=${this.handleNextClick}
             ><yatl-icon name="chevron-right"></yatl-icon
           ></yatl-button>
         </div>
         <div class="calendar-grid" role="grid" aria-label="Calendar">
           ${this.renderRow(headers.map(h => this.renderWeekHeader(h)))}
-          ${weeks.map(week => this.renderWeek(week))}
+          ${weeks.map(week => this.renderWeek(week, normalizedRanges))}
         </div>
       </div>
     `;
   }
 
-  private renderWeek(date: Date) {
+  private renderWeek(date: Date, ranges: YatlDateGridRange[]) {
     const days = getDaysOfWeek(date);
-    return this.renderRow(days.map(day => this.renderDay(day)));
+    return this.renderRow(days.map(day => this.renderDay(day, ranges)));
   }
 
   private renderWeekHeader(day: string) {
@@ -96,14 +128,16 @@ export class YatlDateGrid extends YatlBase {
     `;
   }
 
-  private renderDay(date: Date) {
+  private renderDay(date: Date, ranges: YatlDateGridRange[]) {
     const today = getDateOnly(new Date());
     const currentTime = date.getTime();
+    const minTime = this.minTime;
+    const maxTime = this.maxTime;
 
     let isStart = false,
       isEnd = false,
       isInRange = false;
-    for (const range of this.ranges) {
+    for (const range of ranges) {
       if (currentTime === range.start?.getTime()) {
         isStart = true;
       }
@@ -117,6 +151,15 @@ export class YatlDateGrid extends YatlBase {
 
     const isToday = currentTime === today.getTime();
     const isThisMonth = date.getMonth() === this.currentMonth.getMonth();
+
+    let isDisabled = false;
+    if (minTime && currentTime < minTime) {
+      isDisabled = true;
+    }
+
+    if (maxTime && currentTime > maxTime) {
+      isDisabled = true;
+    }
 
     const classes = {
       'day-button': true,
@@ -132,6 +175,7 @@ export class YatlDateGrid extends YatlBase {
         variant="plain"
         size="small"
         class=${classMap(classes)}
+        ?disabled=${isDisabled}
         @click=${() => this.handleDayClicked(date)}
         >${date.getDate()}</yatl-button
       >
@@ -171,10 +215,7 @@ export class YatlDateGrid extends YatlBase {
     if (newStartMonth.getTime() > this.currentMonth.getTime()) {
       // User selected a date that is in the next month/year.
       // Lets move there to make it easier on them.
-      const newMonth = new Date(this.currentMonth);
-      newMonth.setMonth(date.getMonth());
-      newMonth.setFullYear(date.getFullYear());
-      this.currentMonth = getFirstDayOfMonth(newMonth);
+      this.currentMonth = getFirstDayOfMonth(newStartMonth);
     }
     this.dispatchEvent(new YatlDateSelected(date));
   }

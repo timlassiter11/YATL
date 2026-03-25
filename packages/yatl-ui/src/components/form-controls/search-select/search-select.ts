@@ -7,6 +7,7 @@ import { YatlInput } from '../input/input';
 import styles from './search-select.styles';
 import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
 import { YatlOptionData } from '../../../types';
+import { classMap } from 'lit/directives/class-map.js';
 
 @customElement('yatl-search-select')
 export class YatlSearchSelect extends YatlFormControl<string[]> {
@@ -28,6 +29,8 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     scoredSearch: true,
   });
 
+  // Don't make this a state to improve performance
+  @state() private hasQuery = false;
   @state() private noMatch = false;
   @state() private hasFocus = false;
 
@@ -133,7 +136,8 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   protected renderContents() {
     if ((this.hasFocus || !this.hasSelection) && !this.noMatch) {
-      return html`<slot part="options"></slot>`;
+      const classes = { 'has-query': this.hasQuery };
+      return html`<slot part="options" class=${classMap(classes)}></slot>`;
     } else if (this.noMatch) {
       return html`<span part="empty-options">${this.noResultsText}</span>`;
     }
@@ -192,6 +196,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     event.stopPropagation();
     const target = event.target as YatlInput;
     this.query = target.value.toLocaleLowerCase();
+    this.hasQuery = !!this.query;
     this.updateVisibleOptions();
   }
 

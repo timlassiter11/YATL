@@ -76,10 +76,14 @@ export default css`
     flex-shrink: 0;
     height: var(--option-height);
     --yatl-option-radius: 0px;
-    --yatl-option-color: var(--yatl-text-2);
     --yatl-option-mark-color: var(--yatl-text-1);
     --yatl-option-mark-bg: transparent;
     --yatl-option-mark-font-weight: 700;
+  }
+
+  .has-query yatl-option,
+  .has-query::slotted(yatl-option) {
+    --yatl-option-color: var(--yatl-text-2);
   }
 
   yatl-option::part(check) {

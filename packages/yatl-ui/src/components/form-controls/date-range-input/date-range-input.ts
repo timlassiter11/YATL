@@ -6,13 +6,32 @@ import { YatlDateRangePicker } from '../../date-range-picker/date-range-picker';
 import { YatlDropdown } from '../../dropdown/dropdown';
 import { YatlFormControl } from '../form-control/form-control';
 import styles from './date-range-input.styles';
-
-const dayFormatter = Intl.DateTimeFormat(undefined, { dateStyle: 'short' });
+import { classMap } from 'lit/directives/class-map.js';
 
 export interface YatlDateRange {
   start?: Date;
   end?: Date;
 }
+
+export type DateRangeFormatter = (range: YatlDateRange) => string | undefined;
+
+const dayFormatter = Intl.DateTimeFormat(undefined, {
+  month: '2-digit',
+  day: '2-digit',
+  year: 'numeric',
+});
+
+const defaultFormatter: DateRangeFormatter = range => {
+  if (range.start && !range.end) {
+    return `${dayFormatter.format(range.start)} ->`;
+  } else if (range.end && !range.start) {
+    return `-> ${dayFormatter.format(range.start)}`;
+  } else if (range.start && range.end) {
+    return `${dayFormatter.format(range.start)} - ${dayFormatter.format(
+      range.end,
+    )}`;
+  }
+};
 
 @customElement('yatl-date-range-input')
 export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
@@ -24,20 +43,37 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   @state() private open = false;
 
   @property({ type: String })
-  public placeholder = '';
+  public placeholder = 'Pick a range';
+
+  @property({ attribute: false })
+  public formatter: DateRangeFormatter = defaultFormatter;
 
   @property({ type: Number })
   public size?: number;
 
-  @property({ converter: dateConverter, reflect: true })
+  /**
+   * The minimum allowable date value
+   */
+  @property({ converter: dateConverter })
   public min?: Date;
 
-  @property({ converter: dateConverter, reflect: true })
+  /**
+   * The maximum allowable date value
+   */
+  @property({ converter: dateConverter })
   public max?: Date;
 
+  /**
+   * The current start date for the range
+   * @attr start-date
+   */
   @property({ converter: dateConverter, attribute: 'start-date' })
   public startDate?: Date;
 
+  /**
+   * The current end date for the range
+   * @attr end-date
+   */
   @property({ converter: dateConverter, attribute: 'end-date' })
   public endDate?: Date;
 
@@ -47,33 +83,73 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     end: dateConverter.fromAttribute(this.getAttribute('end-date') ?? ''),
   };
 
-  public get value(): YatlDateRange {
-    return { start: this.startDate, end: this.endDate };
+  public get value(): YatlDateRange | undefined {
+    if (this.startDate || this.endDate) {
+      return { start: this.startDate, end: this.endDate };
+    }
   }
 
   @property({ attribute: false })
   public set value(value) {
+    if (!value) {
+      this.startDate = undefined;
+      this.endDate = undefined;
+      return;
+    }
+
     const { start, end } = value;
     this.startDate = start;
     this.endDate = end;
   }
 
   public get formValue() {
-    // TODO: Set form data
+    if (!this.name || !this.value) {
+      return null;
+    }
+
     const data = new FormData();
+    if (this.startDate) {
+      const startValue = dateConverter.toAttribute(this.startDate);
+      if (startValue) {
+        data.append(`${this.name}_start`, startValue);
+      }
+    }
+
+    if (this.endDate) {
+      const endValue = dateConverter.toAttribute(this.endDate);
+      if (endValue) {
+        data.append(`${this.name}_end`, endValue);
+      }
+    }
     return data;
   }
 
-  protected override render() {
+  protected override renderInput() {
+    const valueClasses = {
+      value: true,
+      'has-placeholder': !this.value,
+    };
+
+    const valueText = this.value
+      ? this.formatter(this.value)
+      : this.placeholder;
+
     return html`
       <yatl-dropdown
         .open=${live(this.open)}
         @yatl-dropdown-open=${this.handleDropdownToggle}
         @yatl-dropdown-close=${this.handleDropdownToggle}
       >
-        ${this.renderInput()}
+        <button slot="trigger">
+          <div class="row">
+            <span class=${classMap(valueClasses)}> ${valueText} </span>
+            <yatl-icon name="calendar"></yatl-icon>
+          </div>
+        </button>
         <div class="column">
           <yatl-date-range-picker
+            .min=${this.min}
+            .max=${this.max}
             .startDate=${this.startDateDraft}
             .endDate=${this.endDateDraft}
             @change=${this.handleDatePickerChange}
@@ -111,29 +187,12 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     `;
   }
 
-  protected override renderInput() {
-    const startText = this.startDate
-      ? dayFormatter.format(this.startDate)
-      : 'From';
-    const endText = this.endDate ? dayFormatter.format(this.endDate) : 'To';
-    return html`
-      <yatl-input
-        part="input"
-        slot="trigger"
-        label=${this.label}
-        value="-"
-        readonly
-      >
-        <span slot="start">${startText}</span>
-        <span slot="end">${endText}</span>
-      </yatl-input>
-    `;
-  }
-
   private handleClearClick() {
-    this.formResetCallback();
+    this.value = this.defaultValue;
+    this.startDateDraft = undefined;
+    this.endDateDraft = undefined;
     this.open = false;
-    this.dispatchEvent(new Event('change'));
+    this.emitInteraction('change');
   }
 
   private handleCancelClick() {
@@ -144,7 +203,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     this.startDate = this.startDateDraft;
     this.endDate = this.endDateDraft;
     this.open = false;
-    this.dispatchEvent(new Event('change'));
+    this.emitInteraction('change');
   }
 
   private handleDatePickerChange(event: Event) {
@@ -163,6 +222,57 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
         ? getDateOnly(this.startDate)
         : undefined;
       this.endDateDraft = this.endDate ? getDateOnly(this.endDate) : undefined;
+    }
+  }
+
+  protected override updateValidity() {
+    super.updateValidity();
+
+    // If the base class already flagged an error, stop here.
+    if (!this.validity.valid) {
+      return;
+    }
+
+    const startTime = this.startDate
+      ? getDateOnly(this.startDate).getTime()
+      : -Infinity;
+
+    const endTime = this.endDate
+      ? getDateOnly(this.endDate).getTime()
+      : Infinity;
+
+    if (this.min) {
+      const minTime = getDateOnly(this.min).getTime();
+      if (startTime < minTime || endTime < minTime) {
+        this.setValidity(
+          { rangeUnderflow: true },
+          `Date must be on or after ${dayFormatter.format(this.min)}.`,
+        );
+        return;
+      }
+    }
+
+    if (this.max) {
+      const maxTime = getDateOnly(this.max).getTime();
+      if (startTime > maxTime || endTime > maxTime) {
+        this.setValidity(
+          { rangeOverflow: true },
+          `Date must be on or before ${dayFormatter.format(this.max)}.`,
+        );
+        return;
+      }
+    }
+
+    if (
+      this.startDate &&
+      this.endDate &&
+      this.startDate.getTime() > this.endDate.getTime()
+    ) {
+      this.setValidity(
+        { badInput: true },
+        'Start date cannot be after the end date.',
+      );
+      return;
     }
   }
 

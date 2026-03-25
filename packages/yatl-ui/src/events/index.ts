@@ -1,4 +1,5 @@
 export * from './confirmation-dialog';
+export * from './date-grid';
 export * from './details';
 export * from './dialog';
 export * from './dropdown';

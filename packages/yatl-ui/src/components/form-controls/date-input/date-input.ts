@@ -1,18 +1,28 @@
 import { html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { YatlFormControl } from '../form-control/form-control';
-import { ifDefined } from 'lit/directives/if-defined.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
-import { dateConverter } from '../../../utils';
+import { dateConverter, getDateOnly } from '../../../utils';
+import { YatlFormControl } from '../form-control/form-control';
 
+import { YatlDatePicker } from '../../date-picker/date-picker';
+import { YatlDropdown } from '../../dropdown/dropdown';
 import styles from './date-input.styles';
+import { classMap } from 'lit/directives/class-map.js';
+
+const dayFormatter = Intl.DateTimeFormat(undefined, {
+  month: '2-digit',
+  day: '2-digit',
+  year: 'numeric',
+});
 
 @customElement('yatl-date-input')
 export class YatlDateInput extends YatlFormControl<Date> {
   public static override styles = [...super.styles, styles];
 
+  @state() private open = false;
+
   @property({ type: String })
-  public placeholder = '';
+  public placeholder = 'Pick a date';
 
   @property({ type: Number })
   public size?: number;
@@ -50,31 +60,97 @@ export class YatlDateInput extends YatlFormControl<Date> {
   }
 
   protected override renderInput() {
-    // Unfortunately we have to calculate the attributes for each render
-    // because they aren't reflected back during the render cycle.
-    const min = dateConverter.toAttribute(this.min) ?? undefined;
-    const max = dateConverter.toAttribute(this.max) ?? undefined;
+    const valueClasses = {
+      'has-placeholder': this.value === undefined,
+    };
+    const valueText = this.value
+      ? dayFormatter.format(this.value)
+      : this.placeholder;
     return html`
-      <input
-        part="input"
-        id=${this.inputId}
-        name=${this.name}
-        type="date"
-        size=${ifDefined(this.size)}
-        min=${ifDefined(min)}
-        max=${ifDefined(max)}
-        placeholder=${this.placeholder}
-        .value=${live(this.formValue ?? '')}
-        ?readonly=${this.readonly}
-        ?disabled=${this.disabled}
-        ?required=${this.required}
-      />
+      <yatl-dropdown
+        .open=${live(this.open)}
+        @yatl-dropdown-open=${this.handleDropdownToggle}
+        @yatl-dropdown-close=${this.handleDropdownToggle}
+      >
+        <button slot="trigger">
+          <div class="row">
+            <div class=${classMap(valueClasses)}>${valueText}</div>
+            <yatl-icon name="calendar"></yatl-icon>
+          </div>
+        </button>
+        <div class="column">
+          <yatl-date-picker
+            .min=${this.min}
+            .max=${this.max}
+            .date=${this.value}
+            @change=${this.handleChange}
+          ></yatl-date-picker>
+          <div class="footer">
+            <yatl-button
+              variant="plain"
+              color="danger"
+              size="small"
+              title="Clear date"
+              @click=${this.handleClearClick}
+              >Clear</yatl-button
+            >
+          </div>
+        </div>
+      </yatl-dropdown>
     `;
   }
 
-  protected override isValidChangeEvent(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.value = dateConverter.fromAttribute(input.value);
+  private handleChange(event: Event) {
+    const target = event.target as YatlDatePicker;
+    this.value = target.date;
+    this.open = false;
+    this.emitInteraction('change');
+  }
+
+  private handleClearClick() {
+    this.value = this.defaultValue;
+    this.open = false;
+    this.emitInteraction('change');
+  }
+
+  private handleDropdownToggle(event: Event) {
+    const target = event.target as YatlDropdown;
+    this.open = target.open;
+  }
+
+  protected override updateValidity() {
+    super.updateValidity();
+
+    // If the base class already flagged an error, stop here.
+    if (!this.validity.valid) {
+      return;
+    }
+
+    const valueTime = this.value
+      ? getDateOnly(this.value).getTime()
+      : -Infinity;
+
+    if (this.min) {
+      const minTime = getDateOnly(this.min).getTime();
+      if (valueTime < minTime) {
+        this.setValidity(
+          { rangeUnderflow: true },
+          `Date must be on or after ${dayFormatter.format(this.min)}.`,
+        );
+        return;
+      }
+    }
+
+    if (this.max) {
+      const maxTime = getDateOnly(this.max).getTime();
+      if (valueTime > maxTime) {
+        this.setValidity(
+          { rangeOverflow: true },
+          `Date must be on or before ${dayFormatter.format(this.max)}.`,
+        );
+        return;
+      }
+    }
   }
 }
 

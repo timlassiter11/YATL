@@ -78,14 +78,13 @@ export class YatlDateInput extends YatlFormControl<Date> {
             <yatl-icon name="calendar"></yatl-icon>
           </div>
         </button>
-        <div class="column">
-          <yatl-date-picker
-            .min=${this.min}
-            .max=${this.max}
-            .date=${this.value}
-            @change=${this.handleChange}
-          ></yatl-date-picker>
-          <div class="footer">
+        <yatl-date-picker
+          .min=${this.min}
+          .max=${this.max}
+          .date=${this.value}
+          @change=${this.handleChange}
+        >
+          <div slot="footer" class="footer">
             <yatl-button
               variant="plain"
               color="danger"
@@ -95,7 +94,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
               >Clear</yatl-button
             >
           </div>
-        </div>
+        </yatl-date-picker>
       </yatl-dropdown>
     `;
   }

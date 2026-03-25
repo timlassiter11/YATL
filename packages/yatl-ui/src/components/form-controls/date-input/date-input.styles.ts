@@ -32,12 +32,6 @@ export default css`
     justify-content: space-between;
   }
 
-  .column {
-    display: flex;
-    flex-direction: column;
-    gap: var(--yatl-spacing-xs);
-  }
-
   .footer {
     display: flex;
     flex-direction: row;

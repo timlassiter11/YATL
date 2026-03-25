@@ -87,19 +87,24 @@ export class YatlDateGrid extends YatlBase {
     const headers = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
     return html`
-      <div part="base" class="calendar">
-        <div class="calendar-header">
+      <div part="base" class="base">
+        <div part="navigation" class="navigation">
           <yatl-button
+            part="navigation-button previous-button"
             variant="plain"
             title="Previous month"
             ?disabled=${disablePrev}
             @click=${this.handlePreviousClick}
             ><yatl-icon name="chevron-left"></yatl-icon
           ></yatl-button>
-          <yatl-button variant="plain" @click=${this.handleMonthClick}
+          <yatl-button
+            part="navigation-button month-button"
+            variant="plain"
+            @click=${this.handleMonthClick}
             >${currentMonthText}</yatl-button
           >
           <yatl-button
+            part="navigation-button next-button"
             variant="plain"
             title="Next month"
             ?disabled=${disableNext}
@@ -107,10 +112,12 @@ export class YatlDateGrid extends YatlBase {
             ><yatl-icon name="chevron-right"></yatl-icon
           ></yatl-button>
         </div>
-        <div class="calendar-grid" role="grid" aria-label="Calendar">
+        <slot name="toolbar"></slot>
+        <div part="calendar" class="calendar" role="grid" aria-label="Calendar">
           ${this.renderRow(headers.map(h => this.renderWeekHeader(h)))}
           ${weeks.map(week => this.renderWeek(week, normalizedRanges))}
         </div>
+        <slot name="footer"></slot>
       </div>
     `;
   }
@@ -122,7 +129,7 @@ export class YatlDateGrid extends YatlBase {
 
   private renderWeekHeader(day: string) {
     return html`
-      <div role="columnheader" aria-label=${day} class="header-cell">
+      <div part="weekday" class="weekday" role="columnheader" aria-label=${day}>
         ${day}
       </div>
     `;
@@ -170,28 +177,23 @@ export class YatlDateGrid extends YatlBase {
       'is-outside-month': !isThisMonth,
     };
 
-    return this.renderCell(html`
-      <yatl-button
-        variant="plain"
-        size="small"
-        class=${classMap(classes)}
-        ?disabled=${isDisabled}
-        @click=${() => this.handleDayClicked(date)}
-        >${date.getDate()}</yatl-button
-      >
-    `);
+    return html`
+      <div part="day-cell" class="day-cell" role="gridcell">
+        <yatl-button
+          variant="plain"
+          size="small"
+          part="day-button"
+          class=${classMap(classes)}
+          ?disabled=${isDisabled}
+          @click=${() => this.handleDayClicked(date)}
+          >${date.getDate()}</yatl-button
+        >
+      </div>
+    `;
   }
 
   private renderRow(contents: unknown) {
-    return html`
-      <div part="week" class="grid-row" role="row">${contents}</div>
-    `;
-  }
-
-  private renderCell(contents: unknown) {
-    return html`
-      <div part="day" class="grid-cell" role="gridcell">${contents}</div>
-    `;
+    return html` <div part="week" class="week" role="row">${contents}</div> `;
   }
 
   private handlePreviousClick() {

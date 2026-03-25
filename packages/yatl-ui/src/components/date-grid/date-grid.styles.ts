@@ -9,13 +9,13 @@ export default css`
     color: var(--yatl-text-1);
   }
 
-  .calendar {
+  .base {
     display: flex;
     flex-direction: column;
     gap: var(--yatl-spacing-xs);
   }
 
-  .calendar-header {
+  .navigation {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -23,25 +23,16 @@ export default css`
     gap: var(--yatl-spacing-xs);
   }
 
-  .calendar-footer {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-evenly;
-    gap: var(--yatl-spacing-xs);
-    padding-top: var(--yatl-spacing-m);
-  }
-
-  .calendar-grid {
+  .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
   }
 
-  .grid-row {
+  .week {
     display: contents;
   }
 
-  .header-cell {
+  .weekday {
     display: flex;
     align-items: center;
     justify-content: center;

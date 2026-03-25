@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
-import { dateConverter, getDateOnly } from '../../../utils';
+import { dateConverter, datesEqual, getDateOnly } from '../../../utils';
 import { YatlDateRangePicker } from '../../date-range-picker/date-range-picker';
 import { YatlDropdown } from '../../dropdown/dropdown';
 import { YatlFormControl } from '../form-control/form-control';
@@ -21,12 +21,18 @@ const dayFormatter = Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 });
 
+const mediumFormatter = Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+});
+
 const defaultFormatter: DateRangeFormatter = range => {
   if (range.start && !range.end) {
-    return `${dayFormatter.format(range.start)} ->`;
+    return `After ${mediumFormatter.format(range.start)}`;
   } else if (range.end && !range.start) {
-    return `-> ${dayFormatter.format(range.start)}`;
-  } else if (range.start && range.end) {
+    return `Before ${mediumFormatter.format(range.end)}`;
+  } else if (datesEqual(range.start, range.end)) {
+    return mediumFormatter.format(range.start);
+  } else {
     return `${dayFormatter.format(range.start)} - ${dayFormatter.format(
       range.end,
     )}`;
@@ -134,6 +140,8 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
       ? this.formatter(this.value)
       : this.placeholder;
 
+    const hasNoSelection = !this.startDateDraft && !this.endDateDraft;
+
     return html`
       <yatl-dropdown
         .open=${live(this.open)}
@@ -146,15 +154,13 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
             <yatl-icon name="calendar"></yatl-icon>
           </div>
         </button>
-        <div class="column">
-          <yatl-date-range-picker
-            .min=${this.min}
-            .max=${this.max}
-            .startDate=${this.startDateDraft}
-            .endDate=${this.endDateDraft}
-            @change=${this.handleDatePickerChange}
-          ></yatl-date-range-picker>
-          <div class="footer">
+        <yatl-date-range-picker
+          .min=${this.min}
+          .max=${this.max}
+          .startDate=${this.startDateDraft}
+          .endDate=${this.endDateDraft}
+          @change=${this.handleDatePickerChange}
+          ><div class="footer" slot="footer">
             <yatl-button
               variant="plain"
               color="danger"
@@ -177,12 +183,12 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
               color="brand"
               size="small"
               title="Apply"
-              ?disabled=${!this.startDateDraft}
+              ?disabled=${hasNoSelection}
               @click=${this.handleApplyClick}
               >Apply</yatl-button
             >
           </div>
-        </div>
+        </yatl-date-range-picker>
       </yatl-dropdown>
     `;
   }

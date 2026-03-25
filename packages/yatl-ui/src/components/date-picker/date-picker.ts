@@ -37,7 +37,10 @@ export class YatlDatePicker extends YatlBase {
         .max=${this.max}
         .ranges=${ranges}
         @yatl-date-selected=${this.handleDateSelected}
-      ></yatl-date-grid>
+      >
+        <slot name="toolbar" slot="toolbar"></slot>
+        <slot name="footer" slot="footer"></slot>
+      </yatl-date-grid>
     `;
   }
 

@@ -102,3 +102,9 @@ export function isInDateRange(
 
   return startTime < dateTime && endTime > dateTime;
 }
+
+export function datesEqual(a: Date | undefined, b: Date | undefined) {
+  const aTime = a ? getDateOnly(a).getTime() : Infinity;
+  const bTime = b ? getDateOnly(b).getTime() : Infinity;
+  return aTime === bTime;
+}

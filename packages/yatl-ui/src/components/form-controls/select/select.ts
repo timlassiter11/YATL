@@ -12,10 +12,7 @@ import { YatlOption } from '../../option/option';
 import styles from './select.styles';
 
 @customElement('yatl-select')
-export class YatlSelect extends YatlFormControl<
-  string | string[],
-  YatlFormControl
-> {
+export class YatlSelect extends YatlFormControl<string | string[]> {
   public static override styles = [...super.styles, styles];
 
   @queryAssignedElements({ flatten: true })

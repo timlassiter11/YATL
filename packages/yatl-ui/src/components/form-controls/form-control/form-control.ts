@@ -22,10 +22,7 @@ export type FormControl =
  * @slot start - Content to place at the start of the input block (e.g., icons).
  * @slot end - Content to place at the end of the input block.
  */
-export abstract class YatlFormControl<
-    TData = string,
-    TInput extends FormControl = HTMLInputElement,
-  >
+export abstract class YatlFormControl<TData = string>
   extends YatlBase
   implements ElementInternals
 {
@@ -35,6 +32,12 @@ export abstract class YatlFormControl<
     delegatesFocus: true,
   };
   public static override styles = [...super.styles, sizeStyles, styles];
+
+  /** Used to associate the label with the control element */
+  public readonly inputId = 'input';
+
+  // Flag indicating if the user has made any changes
+  private hasUserInteracted = false;
 
   private slotController = new HasSlotController(
     this,
@@ -47,20 +50,12 @@ export abstract class YatlFormControl<
   @state() private currentValidationText = '';
   protected readonly internals: ElementInternals;
 
-  /** Indicates if the user made any changes */
-  protected hasUserInteracted = false;
-
-  /** Used to associate the label with the control element */
-  public readonly inputId = 'input';
-
   /**
    * A reference to the internal native form control.
    * Subclasses should ensure they either use an input
    * element, or override this with their own query.
    */
-  @query('input') protected formControl?: TInput;
-
-  @query('slot[name="label"]') protected labelSlot?: HTMLSlotElement;
+  @query('input') protected formControl?: HTMLElement;
 
   /** The name of the form control, submitted as a pair with the control's value. */
   @property({ type: String, reflect: true })
@@ -78,11 +73,15 @@ export abstract class YatlFormControl<
    * Custom error message to display when the control is invalid.
    * Setting this explicitly overrides native validation messages
    * and marks the input as invalid for form submission.
+   * @attr error-text
    */
   @property({ type: String, attribute: 'error-text' })
   public errorText = '';
 
-  /** The default message displayed when the `required` constraint is violated. */
+  /**
+   * The default message displayed when the `required` constraint is violated.
+   * @attr required-text
+   */
   @property({ type: String, attribute: 'required-text' })
   public requiredText = 'This field is required';
 
@@ -311,7 +310,7 @@ export abstract class YatlFormControl<
       this.setValidity({ customError: true }, this.errorText);
     } else if (this.required && !this.value) {
       this.setValidity({ valueMissing: true }, this.requiredText);
-    } else if (this.formControl && !this.formControl.checkValidity()) {
+    } else if (isValidationElement(this.formControl)) {
       // Sync the custom control's validity with the native input's validity
       this.setValidity(
         this.formControl.validity,
@@ -345,4 +344,23 @@ export abstract class YatlFormControl<
       this.form?.requestSubmit();
     }
   };
+}
+
+interface ValidationElement {
+  checkValidity: () => boolean;
+  validity: ValidityState;
+  validationMessage: string;
+}
+
+function isValidationElement(
+  element: object | undefined,
+): element is ValidationElement {
+  return (
+    element != null &&
+    'checkValidity' in element &&
+    typeof element.checkValidity === 'function' &&
+    'validationMessage' in element &&
+    typeof element.validationMessage === 'string' &&
+    'validity' in element
+  );
 }

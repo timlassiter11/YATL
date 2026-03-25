@@ -79,6 +79,8 @@ export class YatlInput extends YatlFormControl<string> {
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}
+        @input=${this.handleChange}
+        @change=${this.handleChange}
       />
       ${this.renderPasswordToggle()}
     `;
@@ -122,8 +124,11 @@ export class YatlInput extends YatlFormControl<string> {
     `;
   }
 
-  protected override isValidChangeEvent(event: Event) {
-    this.value = (event.target as HTMLInputElement).value;
+  private handleChange(event: Event) {
+    event.stopPropagation();
+    const target = event.target as HTMLInputElement;
+    this.value = target.value;
+    this.emitInteraction(event.type as 'change' | 'input');
   }
 
   private handlePasswordToggleClick() {

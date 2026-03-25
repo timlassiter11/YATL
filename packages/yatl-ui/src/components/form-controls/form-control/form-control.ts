@@ -5,6 +5,7 @@ import { classMap } from 'lit/directives/class-map.js';
 import { YatlBase } from '../../base/base';
 import styles from './form-control.styles';
 import sizeStyles from '../../../styles/components/size.styles';
+import { YatlEvent } from '@timlassiter11/yatl';
 
 export type FormControl =
   | HTMLInputElement
@@ -107,12 +108,6 @@ export abstract class YatlFormControl<
   public abstract defaultValue?: TData;
   /** The vlue to be stored in the form data */
   public abstract formValue: string | File | FormData | null;
-  /**
-   * Override to handle change and input events.
-   * Return false to ignore the provided event.
-   * Return true or nothing (void) to process them as changes.
-   */
-  protected isValidChangeEvent(_event: Event): boolean | void {}
 
   /** Indicates if the user has provided a label via the property or slot*/
   protected get hasLabel() {
@@ -143,55 +138,42 @@ export abstract class YatlFormControl<
 
   protected override createRenderRoot() {
     const root = super.createRenderRoot();
-    root.addEventListener('input', this.handleInputChange);
-    root.addEventListener('change', this.handleInputChange);
     root.addEventListener('keydown', this.handleKeyDown as EventListener);
     return root;
   }
 
-  protected override willUpdate(
-    changedProperties: PropertyValues<YatlFormControl<TData, TInput>>,
-  ): void {
+  protected override willUpdate(changedProps: PropertyValues<YatlFormControl>) {
     if (
-      changedProperties.has('defaultValue') &&
-      !changedProperties.has('value') &&
+      changedProps.has('defaultValue') &&
+      !changedProps.has('value') &&
       !this.hasUserInteracted
     ) {
       this.value = this.defaultValue;
       this.setFormValue(this.formValue);
     }
 
-    if (changedProperties.has('required')) {
-      // Keep the underlying form control in sync before we update validity.
-      // Our validity relies on the form control so if it is out of sync we get a false positive
-      if (this.formControl && this.formControl.required !== this.required) {
-        this.formControl.required = this.required;
-      }
-      this.updateValidity();
-    }
-
-    if (changedProperties.has('requiredText')) {
-      this.updateValidity();
-    }
-
     // Update form data when disabled or readonly state changes.
-    if (
-      changedProperties.has('disabled') ||
-      changedProperties.has('readonly')
-    ) {
+    if (changedProps.has('disabled') || changedProps.has('readonly')) {
       this.setFormValue(this.formValue);
       this.toggleState('disabled', this.disabled);
       this.toggleState('readonly', this.readonly);
     }
   }
 
-  protected override updated(
-    changedProperties: PropertyValues<YatlFormControl>,
-  ): void {
+  protected override updated(changedProps: PropertyValues<YatlFormControl>) {
     // Update the form value of the actual update so the underlying
     // form control gets updated and we can use its validity.
-    if (changedProperties.has('value')) {
+    if (changedProps.has('value')) {
       this.setFormValue(this.formValue);
+    }
+
+    if (
+      changedProps.has('value') ||
+      changedProps.has('requiredText') ||
+      changedProps.has('errorText') ||
+      changedProps.has('required')
+    ) {
+      this.updateValidity();
     }
   }
 
@@ -300,6 +282,7 @@ export abstract class YatlFormControl<
     this.updateValidity();
     return this.internals.checkValidity();
   }
+
   public reportValidity() {
     const valid = this.checkValidity();
     if (!valid) {
@@ -322,7 +305,7 @@ export abstract class YatlFormControl<
     this.value = this.defaultValue;
   }
 
-  private updateValidity() {
+  protected updateValidity() {
     if (this.errorText) {
       // If the user set an error, that will always take precedence.
       this.setValidity({ customError: true }, this.errorText);
@@ -348,18 +331,14 @@ export abstract class YatlFormControl<
     }
   }
 
-  private handleInputChange = (event: Event) => {
-    if (this.isValidChangeEvent?.(event) === false) {
-      return;
+  protected emitInteraction(type: 'change' | 'input', newValue?: TData) {
+    if (newValue !== undefined) {
+      this.value = newValue;
     }
 
-    event.stopPropagation();
     this.hasUserInteracted = true;
-    this.setFormValue(this.formValue);
-    this.dispatchEvent(
-      new Event(event.type, { bubbles: true, composed: true }),
-    );
-  };
+    this.dispatchEvent(new YatlEvent(type));
+  }
 
   private handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' && event.target === this.formControl) {

@@ -54,7 +54,7 @@ export class YatlRadioGroup extends YatlFormControl<string> {
   protected override render() {
     return html`
       ${this.renderLabel()}
-      <div part="base">${this.renderInput()}</div>
+      <div part="base" @change=${this.handleChange}>${this.renderInput()}</div>
       ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
@@ -66,10 +66,10 @@ export class YatlRadioGroup extends YatlFormControl<string> {
     ></slot> `;
   }
 
-  protected override isValidChangeEvent(event: Event) {
+  private handleChange(event: Event) {
     event.stopPropagation();
     if (event.type !== 'change') {
-      return false;
+      return;
     }
 
     const target = event.target as SupportedChildren;
@@ -80,6 +80,7 @@ export class YatlRadioGroup extends YatlFormControl<string> {
       this.value = target.value;
     }
     this.syncChildStates();
+    this.emitInteraction('change');
   }
 
   private syncChildStates() {

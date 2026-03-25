@@ -179,7 +179,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
       event.preventDefault();
       event.stopPropagation();
       this.toggleOption(event.target.value, event.target.checked);
-      this.dispatchChange();
+      this.emitInteraction('change');
     }
   };
 
@@ -205,7 +205,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     const target = event.currentTarget as YatlOption;
     this.toggleOption(target.value, false);
     target.remove();
-    this.dispatchChange();
+    this.emitInteraction('change');
   }
 
   private handleMutation() {
@@ -263,10 +263,6 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   private getAllOptions(includeDisabled = false) {
     const options = [...this.querySelectorAll<YatlOption>(':not([slot])')];
     return includeDisabled ? options : options.filter(o => !o.disabled);
-  }
-
-  private dispatchChange() {
-    this.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
   }
 }
 

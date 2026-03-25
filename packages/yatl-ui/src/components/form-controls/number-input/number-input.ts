@@ -79,6 +79,8 @@ export class YatlNumberInput extends YatlFormControl<number> {
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}
+        @input=${this.handleChange}
+        @change=${this.handleChange}
       />
       ${this.renderVisibilityToggle()}
     `;
@@ -101,9 +103,11 @@ export class YatlNumberInput extends YatlFormControl<number> {
     `;
   }
 
-  protected override isValidChangeEvent(event: Event) {
+  private handleChange(event: Event) {
+    event.stopPropagation();
     const input = event.target as HTMLInputElement;
-    this.value = Number(input.value);
+    this.value = input.valueAsNumber;
+    this.emitInteraction(event.type as 'change' | 'input');
   }
 
   private handleVisibilityToggleClick() {

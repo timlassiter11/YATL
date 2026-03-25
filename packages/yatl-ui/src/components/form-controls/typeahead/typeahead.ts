@@ -189,9 +189,8 @@ export class YatlTypeahead extends YatlFormControl {
     }
   }
 
-  protected override render() {
+  protected override renderInput() {
     return html`
-      ${this.renderLabel()}
       <yatl-dropdown
         .open=${live(this.open)}
         @yatl-dropdown-select=${this.handleDropdownSelect}
@@ -215,17 +214,15 @@ export class YatlTypeahead extends YatlFormControl {
             ?readonly=${this.readonly}
             ?disabled=${this.disabled}
             ?required=${this.required}
+            @input=${this.handleChange}
+            @change=${this.handleChange}
           />
           <slot part="end" name="end"></slot>
         </div>
         ${this.renderDropdownContent()}
       </yatl-dropdown>
-      ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
-
-  // Satisfy base class
-  protected override renderInput() {}
 
   protected renderDropdownContent() {
     if (this.state === 'error') {
@@ -263,7 +260,8 @@ export class YatlTypeahead extends YatlFormControl {
     ></yatl-option>`;
   }
 
-  protected override isValidChangeEvent(event: Event): boolean | void {
+  private handleChange(event: Event) {
+    event.stopPropagation();
     const target = event.target as HTMLInputElement;
     if (this.value !== target.value) {
       this.userHasSelected = false;
@@ -274,14 +272,10 @@ export class YatlTypeahead extends YatlFormControl {
   }
 
   private handleDropdownSelect(event: YatlDropdownSelectEvent) {
-    if (this.formControl) {
-      this.formControl.value = event.item.value;
-      this.formControl.dispatchEvent(
-        new Event('change', { composed: true, bubbles: true }),
-      );
-    }
-
+    event.stopPropagation();
+    this.value = event.item.value;
     this.userHasSelected = true;
+    this.emitInteraction('change');
   }
 
   private handleDropdownRequest(event: Event) {

@@ -55,12 +55,16 @@ export class YatlTextArea extends YatlFormControl {
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}
+        @input=${this.handleChange}
+        @change=${this.handleChange}
       ></textarea>
     `;
   }
 
-  protected override isValidChangeEvent(event: Event): boolean | void {
+  private handleChange(event: Event) {
+    event.stopPropagation();
     this.value = (event.target as HTMLTextAreaElement).value;
+    this.emitInteraction(event.type as 'change' | 'input');
   }
 }
 

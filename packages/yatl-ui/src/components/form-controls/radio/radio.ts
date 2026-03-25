@@ -1,5 +1,5 @@
 import { html } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { YatlFormControl } from '../form-control/form-control';
 import styles from './radio.styles';
@@ -8,69 +8,46 @@ import styles from './radio.styles';
 export class YatlRadio extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
 
+  // This control needs to be inline
+  public override inline = true;
+
   private _value = this.getAttribute('value') ?? 'on';
-  private _uncheckedValue?: string;
+  private _checked = this.hasAttribute('checked');
 
   /**
-   * The value to store in the form data if the checkbox is checked
+   * The value to store in the form data when the radio is selected.
    */
-  @property({ type: String, reflect: true })
   public get value() {
     return this._value;
   }
 
+  @property({ type: String, reflect: true })
   public set value(value) {
-    if (this._value === value) {
-      return;
-    }
-    const oldValue = this._value;
     this._value = value;
     this.updateFormValue();
-    this.requestUpdate('value', oldValue);
   }
 
   public override get defaultValue() {
     return this.value;
   }
 
-  @property({ type: String, attribute: 'unchecked-value' })
-  public get uncheckedValue() {
-    return this._uncheckedValue;
+  public get checked() {
+    return this._checked;
   }
 
-  public set uncheckedValue(value) {
-    const oldValue = this.uncheckedValue;
-    this._uncheckedValue = value;
+  @property({ type: Boolean, attribute: false })
+  public set checked(value) {
+    this._checked = Boolean(value);
+    this.toggleState('checked', value);
     this.updateFormValue();
-    this.requestUpdate('uncheckedValue', oldValue);
   }
 
   @property({ type: Boolean, attribute: 'checked' })
   public defaultChecked = this.hasAttribute('checked');
 
-  @property({ type: Boolean, attribute: 'always-include' })
-  public alwaysInclude = false;
-
-  public override inline = true;
-
-  @state()
-  private _checked = this.hasAttribute('checked');
-
-  public get checked() {
-    return this._checked;
-  }
-
-  public set checked(value) {
-    this._checked = value;
-    this.toggleState('checked', value);
-    this.updateFormValue();
-  }
-
   public get formValue() {
     if (this._checked) {
       return this.value || 'on';
-    } else if (this.alwaysInclude) {
-      return this.uncheckedValue ?? 'off';
     }
     return null;
   }
@@ -81,12 +58,13 @@ export class YatlRadio extends YatlFormControl<string> {
 
   constructor() {
     super();
-    this.addEventListener('click', (event: Event) => this.handleClick(event));
+    // Set our initial checked state
+    this.toggleState('checked', this.defaultChecked);
+    this.addEventListener('click', this.handleClick);
   }
 
   public override connectedCallback() {
     super.connectedCallback();
-    this.checked = this.defaultChecked;
     this.updateFormValue();
   }
 
@@ -109,6 +87,7 @@ export class YatlRadio extends YatlFormControl<string> {
         ?readonly=${this.readonly}
         ?disabled=${this.disabled}
         ?required=${this.required}
+        @change=${this.handleChange}
       />
       <svg viewBox="0 0 16 16" part="radio">
         <circle cx="8" cy="8" r="8" />
@@ -120,8 +99,10 @@ export class YatlRadio extends YatlFormControl<string> {
     this.setFormValue(this.formValue);
   }
 
-  protected override isValidChangeEvent(event: Event) {
+  private handleChange(event: Event) {
+    event.stopPropagation();
     this.checked = (event.target as HTMLInputElement).checked;
+    this.emitInteraction('change');
   }
 
   private handleClick = (event: Event) => {

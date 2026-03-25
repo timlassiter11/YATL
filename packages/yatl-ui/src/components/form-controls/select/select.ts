@@ -208,19 +208,18 @@ export class YatlSelect extends YatlFormControl<
   private handleTagDissmiss(option: YatlOption, event: Event) {
     (event.target as HTMLElement).remove();
     this.toggleOption(option.value, false);
-    this.dispatchChange();
+    this.emitInteraction('change');
   }
 
   private handleSlotChange() {
     this.updateSelectedOptions();
-    this.dispatchChange();
     this.requestUpdate();
   }
 
   private handleClearButtonClick(event: Event) {
     event.stopPropagation();
     this.value = [];
-    this.dispatchChange();
+    this.emitInteraction('change');
   }
 
   private handleDropdownToggle(event: Event) {
@@ -254,7 +253,7 @@ export class YatlSelect extends YatlFormControl<
     }
 
     this.toggleOption(item.value, item.checked);
-    this.dispatchChange();
+    this.emitInteraction('change');
   }
 
   private updateSelectedOptions() {
@@ -277,10 +276,6 @@ export class YatlSelect extends YatlFormControl<
         ? [e]
         : [...e.querySelectorAll('yatl-option')];
     });
-  }
-
-  private dispatchChange() {
-    this.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
   }
 }
 

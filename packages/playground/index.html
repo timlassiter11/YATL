@@ -113,14 +113,12 @@
                 always-include
                 checked
               ></yatl-switch>
-            </div>
-            <yatl-radio-group class="option-group" name="rowSelectionMethod">
-              <h4 slot="label">Row Selection Method</h4>
-              <yatl-radio label="Multi" value="multi" checked></yatl-radio>
-              <yatl-radio label="Single" value="single"></yatl-radio>
-              <yatl-radio label="None" value="null"></yatl-radio>
-            </yatl-radio-group>
-            <div class="option-group">
+              <yatl-radio-group name="rowSelectionMethod">
+                <h4 slot="label">Row Selection Method</h4>
+                <yatl-radio label="Multi" value="multi" checked></yatl-radio>
+                <yatl-radio label="Single" value="single"></yatl-radio>
+                <yatl-radio label="None" value="null"></yatl-radio>
+              </yatl-radio-group>
               <yatl-radio-group name="editTrigger">
                 <h4 slot="label">Edit Trigger</h4>
                 <yatl-radio label="None" value="none"></yatl-radio>

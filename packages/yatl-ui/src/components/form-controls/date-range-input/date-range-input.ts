@@ -137,7 +137,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     };
 
     const valueText = this.value
-      ? this.formatter(this.value)
+      ? this.formatter(this.value)!
       : this.placeholder;
 
     const hasNoSelection = !this.startDateDraft && !this.endDateDraft;
@@ -150,7 +150,9 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
       >
         <button slot="trigger">
           <div class="row">
-            <span class=${classMap(valueClasses)}> ${valueText} </span>
+            <span class=${classMap(valueClasses)} title=${valueText}>
+              ${valueText}
+            </span>
             <yatl-icon name="calendar"></yatl-icon>
           </div>
         </button>

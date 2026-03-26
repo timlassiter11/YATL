@@ -44,6 +44,11 @@ export default css`
     margin-right: auto;
   }
 
+  .value {
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
   .has-placeholder {
     color: var(--yatl-text-2);
   }

@@ -84,6 +84,12 @@ export default css`
     translate: calc((var(--width) - var(--height)) / 2);
   }
 
+  :host([disabled]) {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
   [part~='label'] {
     display: inline-block;
     line-height: var(--height);

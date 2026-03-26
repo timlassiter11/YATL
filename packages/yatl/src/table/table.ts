@@ -224,6 +224,18 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     this.controller.filters = filters;
   }
 
+  public get filterStrategy() {
+    return this.controller.filterStrategy;
+  }
+
+  @property({ attribute: false })
+  public set filterStrategy(value) {
+    if (this.filterStrategy === value) {
+      return;
+    }
+    this.controller.filterStrategy = value;
+  }
+
   /** @attr search-query */
   public get searchQuery() {
     return this.controller.searchQuery;

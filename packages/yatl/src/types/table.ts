@@ -189,19 +189,41 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
   /**
    * An optional set of criteria to filter the visible rows.
    * This runs **before** the global search query is applied.
-   * * You can provide:
-   * 1. A **Partial Object**: matches rows where specific keys equal specific values (AND logic).
-   * 2. A **Callback Function**: returns `true` to keep the row, `false` to hide it.
    * * @example
-   * // 1. Object Syntax (Simple Exact Match)
    * // Shows rows where status is 'active' AND role is 'admin'
    * table.filters = { status: 'active', role: 'admin' };
-   * * @example
-   * // 2. Callback Syntax (Complex Logic)
-   * // Shows rows where age is over 21 OR they are a VIP
-   * table.filters = (row) => row.age > 21 || row.isVip;
    */
-  filters: Filters<T> | FilterCallback<T> | null;
+  filters: Filters<T> | null;
+
+  /**
+   * An optional custom filter function.
+   * Provide this function to bypass the default filter logic.
+   * @param row - The current data record being evaluated.
+   * @param index - The original index of the row in the unfiltered dataset.
+   * @param filters - The current active filter state (the `filters` object).
+   * @returns `true` to keep the row in the `filteredData` results, `false` to exclude it.
+   * @example
+   * ```ts
+   * controller.filterStrategy = (row, filters) => {
+   * // Example: Custom global search across multiple columns
+   * if (filters.globalSearch) {
+   *  const term = filters.globalSearch.toLowerCase();
+   *  if (
+   *      !row.firstName.toLowerCase().includes(term) &&
+   *      !row.lastName.toLowerCase().includes(term)
+   *  ) {
+   *      return false;
+   *    }
+   *  }
+   *  // Example: Strict mathematical matching
+   *  if (filters.minAge && row.age < filters.minAge) {
+   *    return false;
+   *  }
+   *  return true;
+   * };
+   * ```
+   */
+  filterStrategy: FilterCallback<T> | null;
 
   /**
    * The current text string used to filter the table data.

@@ -19,15 +19,15 @@ export class YatlBaseFilter<
 
   private _controller?: YatlTableController<TData>;
 
+  public get controller() {
+    return this._controller;
+  }
+
   @consume({
     context: getTableContext<TData>(),
     subscribe: true,
   })
   @property({ attribute: false })
-  public get controller() {
-    return this._controller;
-  }
-
   public set controller(controller) {
     const oldValue = this._controller;
     if (oldValue === controller) {
@@ -38,15 +38,14 @@ export class YatlBaseFilter<
     controller?.attach(this);
     this._controller = controller;
     this.updateFilters();
-    this.requestUpdate('controller', oldValue);
   }
 
   // TODO: Use actual filter value as single source of truth?
   private _value?: TValue;
-  @property({ attribute: false })
   public get value() {
     return this._value;
   }
+  @property({ attribute: false })
   public set value(value) {
     const oldValue = this._value;
     if (oldValue === value) {
@@ -55,7 +54,6 @@ export class YatlBaseFilter<
 
     this._value = value;
     this.updateFilters();
-    this.requestUpdate('value', oldValue);
   }
 
   @property({ type: String })
@@ -68,20 +66,14 @@ export class YatlBaseFilter<
   public disabled = false;
 
   protected get filters() {
-    // Don't mess with filters if user sets a custom function
-    if (!this.controller || typeof this.controller.filters === 'function') {
+    if (!this.controller) {
       return undefined;
     }
     return { ...this.controller.filters };
   }
 
   protected set filters(filters) {
-    // Don't mess with filters if user sets a custom function
-    if (
-      filters === undefined ||
-      !this.controller ||
-      typeof this.controller.filters === 'function'
-    ) {
+    if (filters === undefined || !this.controller) {
       return;
     }
 

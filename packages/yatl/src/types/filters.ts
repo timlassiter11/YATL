@@ -17,6 +17,7 @@ export type Filters<T extends object = UnspecifiedRecord> = Partial<{
 export type FilterCallback<T extends object = UnspecifiedRecord> = (
   row: T,
   index: number,
+  filters: Filters<T>,
 ) => boolean;
 
 /**

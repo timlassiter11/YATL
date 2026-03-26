@@ -99,7 +99,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private _dataUpdateTimestamp: Date | null = null;
 
   private _searchQuery = '';
-  private _filters: Filters<T> | FilterCallback<T> | null = null;
+  private _filters: Filters<T> | null = null;
+  private _filterStrategy: FilterCallback<T> | null = null;
 
   // Flag if we have already restored the state or not.
   private hasRestoredState = false;
@@ -230,6 +231,19 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     this._filters = filters;
+    this.filterDirty = true;
+    this.requestUpdate('filters');
+  }
+
+  public get filterStrategy() {
+    return this._filterStrategy;
+  }
+
+  public set filterStrategy(value) {
+    if (this._filterStrategy === value) {
+      return;
+    }
+    this._filterStrategy = value;
     this.filterDirty = true;
     this.requestUpdate('filters');
   }
@@ -1098,8 +1112,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return true;
     }
 
-    if (typeof this.filters === 'function') {
-      return this.filters(row, index);
+    if (this.filterStrategy) {
+      return this.filterStrategy(row, index, this.filters);
     }
 
     for (const field in this.filters) {

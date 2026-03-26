@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { YatlFormControl } from '../form-control/form-control';
@@ -58,14 +58,18 @@ export class YatlRadio extends YatlFormControl<string> {
 
   constructor() {
     super();
-    // Set our initial checked state
-    this.toggleState('checked', this.defaultChecked);
     this.addEventListener('click', this.handleClick);
   }
 
   public override connectedCallback() {
     super.connectedCallback();
     this.updateFormValue();
+  }
+
+  protected override firstUpdated(changedProps: PropertyValues<YatlRadio>) {
+    super.firstUpdated(changedProps);
+    this._checked = this.defaultChecked;
+    this.toggleState('checked', this._checked);
   }
 
   protected override render() {
@@ -106,6 +110,7 @@ export class YatlRadio extends YatlFormControl<string> {
   }
 
   private handleClick = (event: Event) => {
+    // Handle clicks on ourselves unless it came from inside our input element.
     const path = event.composedPath();
     if (!this.formControl || path.includes(this.formControl)) {
       return;

@@ -197,28 +197,24 @@ export class YatlTypeahead extends YatlFormControl {
         @yatl-dropdown-open-request=${this.handleDropdownRequest}
         @yatl-dropdown-close-request=${this.handleDropdownRequest}
       >
-        <div slot="trigger" part="base" class="text-input">
-          <slot part="start" name="start"></slot>
-          <input
-            slot="trigger"
-            part="input"
-            id=${this.inputId}
-            name=${this.name}
-            type="text"
-            autocomplete="off"
-            .value=${live(this.value)}
-            value=${this.defaultValue}
-            placeholder=${this.placeholder}
-            minlength=${ifDefined(this.minlength)}
-            maxlength=${ifDefined(this.maxlength)}
-            ?readonly=${this.readonly}
-            ?disabled=${this.disabled}
-            ?required=${this.required}
-            @input=${this.handleChange}
-            @change=${this.handleChange}
-          />
-          <slot part="end" name="end"></slot>
-        </div>
+        <input
+          slot="trigger"
+          part="input"
+          id=${this.inputId}
+          name=${this.name}
+          type="text"
+          autocomplete="off"
+          .value=${live(this.value)}
+          value=${this.defaultValue}
+          placeholder=${this.placeholder}
+          minlength=${ifDefined(this.minlength)}
+          maxlength=${ifDefined(this.maxlength)}
+          ?readonly=${this.readonly}
+          ?disabled=${this.disabled}
+          ?required=${this.required}
+          @input=${this.handleChange}
+          @change=${this.handleChange}
+        />
         ${this.renderDropdownContent()}
       </yatl-dropdown>
     `;

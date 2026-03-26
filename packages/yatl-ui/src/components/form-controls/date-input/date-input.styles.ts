@@ -48,4 +48,15 @@ export default css`
   .has-placeholder {
     color: var(--yatl-text-2);
   }
+
+  :host(:state(readonly)) {
+    .text-input {
+      opacity: 1;
+    }
+
+    button {
+      opacity: 0.8;
+      pointer-events: none;
+    }
+  }
 `;

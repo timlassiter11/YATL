@@ -19,7 +19,7 @@ export default css`
     flex-direction: column;
     align-items: flex-start;
     position: relative;
-    padding: 2px var(--input-padding);
+    padding: 0;
   }
 
   [part='input'] {
@@ -40,9 +40,8 @@ export default css`
     flex-direction: row;
     gap: var(--yatl-spacing-xs);
     flex-wrap: wrap;
-    margin-left: calc(var(--yatl-spacing-s) * -1);
     flex-grow: 1;
-    padding: var(--yatl-spacing-xs) 0;
+    padding: 2px;
   }
 
   :host(:not([multi])) [part='tags'] {

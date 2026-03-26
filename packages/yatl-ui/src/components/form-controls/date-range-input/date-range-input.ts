@@ -196,7 +196,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   }
 
   private handleClearClick() {
-    this.value = this.defaultValue;
+    this.value = undefined;
     this.startDateDraft = undefined;
     this.endDateDraft = undefined;
     this.open = false;

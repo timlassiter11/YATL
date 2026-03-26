@@ -107,7 +107,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
   }
 
   private handleClearClick() {
-    this.value = this.defaultValue;
+    this.value = undefined;
     this.open = false;
     this.emitInteraction('change');
   }

@@ -57,9 +57,13 @@ export default css`
       color-mix(in srbg, var(--yatl-color-mix) 3%, var(--table-bg))
         var(--table-header-bg)
     );
+    --table-accent-color: var(
+      --yatl-table-accent-color,
+      var(--yatl-color-brand)
+    );
     --table-row-selected-bg: var(
       --yatl-table-row-selected-bg,
-      color-mix(in srgb, var(--yatl-color-brand) 20%, transparent)
+      color-mix(in srgb, var(--table-accent-color) 20%, transparent)
     );
     --table-footer-text: var(--yatl-table-footer-text, var(--yatl-text-3));
     --table-selector-color: var(
@@ -80,6 +84,12 @@ export default css`
       100ms
     );
 
+    --checkbox-width: var(--yatl-table-row-selector-width, 1.5em);
+    --checkbox-height: var(--yatl-table-row-selector-height, 1.5em);
+    --checkbox-accent: var(
+      --yatl-table-row-selector-accent,
+      var(--table-accent-color)
+    );
     /* Resize grab handle width */
     --resizer-width: var(--yatl-table-column-resizer-width, 10px);
 
@@ -219,6 +229,46 @@ export default css`
       border-right-width: var(--table-border-width);
       border-right-color: var(--table-border-color);
       border-right-style: solid;
+    }
+
+    .row-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      margin: 0;
+
+      width: var(--checkbox-width);
+      height: var(--checkbox-height);
+
+      border: 1px solid var(--table-border-color);
+      border-radius: 4px;
+      background-color: var(--yatl-surface-lowered);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.1s ease-in-out;
+    }
+
+    .row-checkbox:checked {
+      background-color: var(--checkbox-accent);
+      border-color: var(--checkbox-accent);
+    }
+
+    .row-checkbox::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 45%;
+      width: 25%;
+      height: 55%;
+
+      border: solid white;
+      border-width: 0 2px 2px 0;
+
+      transform: translate(-50%, -50%) rotate(45deg) scale(0);
+      transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .row-checkbox:checked::after {
+      transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
 
     .message {

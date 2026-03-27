@@ -48,6 +48,7 @@ import {
   YatlTableController,
 } from '../table-controller/table-controller';
 import styles from './table.styles';
+import { live } from 'lit/directives/live.js';
 
 // #region --- Constants ---
 
@@ -107,9 +108,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
   // Column drag & drop state
   private dragColumn: NestedKeyOf<T> | null = null;
-
-  @state()
-  private useYatlUi = false;
 
   @state()
   private currentEditCell: {
@@ -967,22 +965,13 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   protected renderCheckbox(row: T, selected: boolean) {
-    return this.useYatlUi
-      ? html`<yatl-checkbox
-          part="row-checkbox"
-          class="row-checkbox"
-          .checked=${selected}
-          @change=${(event: Event) =>
-            this.handleRowSelectionClicked(event, row)}
-        ></yatl-checkbox>`
-      : html`<input
-          part="row-checkbox"
-          class="row-checkbox"
-          type="checkbox"
-          .checked=${selected}
-          @change=${(event: Event) =>
-            this.handleRowSelectionClicked(event, row)}
-        />`;
+    return html`<input
+      part="row-checkbox"
+      class="row-checkbox"
+      type="checkbox"
+      .checked=${live(selected)}
+      @change=${(event: Event) => this.handleRowSelectionClicked(event, row)}
+    />`;
   }
 
   protected renderRowSelectorCell(row: T, selected: boolean) {
@@ -1057,6 +1046,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return html`
         <lit-virtualizer
           .items=${this.filteredData}
+          .keyFunction=${(item: T) => this.controller.getRowId(item)}
           .renderItem=${(item: T, index: number) =>
             this.renderRow(item, index) as TemplateResult}
         >
@@ -1151,14 +1141,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     this.addControllerListeners(this.controller);
     this.addEventListener('mousedown', this.handleMouseDown);
     this.addEventListener('keydown', this.handleCellInputKeypress);
-
-    // We want to use the checkbox from yatl-ui if it is available.
-    // If it gets defined, rerender with it.
-    if (!this.useYatlUi) {
-      customElements.whenDefined('yatl-checkbox').then(() => {
-        this.useYatlUi = true;
-      });
-    }
   }
 
   public override disconnectedCallback(): void {

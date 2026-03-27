@@ -185,7 +185,8 @@ export class YatlDropdown extends YatlBase {
           }
           itemToFocus =
             event.key === 'Home' ? items[0] : items[items.length - 1];
-        } else if (event.key === ' ') {
+        } else if (event.key === ' ' && activeItemIndex != -1) {
+          // We only want to absorb the space key if we have the active item!
           event.preventDefault();
           event.stopPropagation();
           activeItem?.click();

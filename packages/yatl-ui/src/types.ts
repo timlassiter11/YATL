@@ -3,7 +3,7 @@ import { TemplateResult } from 'lit';
 export type MaybePromise<T> = Promise<T> | T;
 
 /** The reason for a table data fetch task to be called */
-export type YatlTableFetchReason = 'init' | 'reload';
+export type YatlTableFetchReason = 'init' | 'reload' | (string & {});
 
 /** Options for a fetch task */
 export interface YatlFetchOptions {

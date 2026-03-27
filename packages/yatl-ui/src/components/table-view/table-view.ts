@@ -5,7 +5,11 @@ import { ContextProvider } from '@lit/context';
 import { getTableContext } from '../../context';
 import styles from './table-view.styles';
 import { UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
-import { YatlTableFetchContext, YatlTableFetchTask } from '../../types';
+import {
+  YatlTableFetchContext,
+  YatlTableFetchReason,
+  YatlTableFetchTask,
+} from '../../types';
 import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
 import { YatlSpinnerState } from '../spinner/spinner';
 
@@ -82,11 +86,15 @@ export class YatlTableView<
 
   /**
    * Reloads the table data by calling the provided fetch task.
+   * @param reason - The reason for the reload. Used as context for the fetch task.
    * @param silent - If true, the loading overlay is not shown and instead the reload button shows a spinner.
    * @returns A promise that resolves when the data is finished being fetched and loaded into the table.
    */
-  public async reloadData(silent = false) {
-    return this.requestReload({ reason: 'reload', options: { silent } });
+  public async reloadData(
+    reason: YatlTableFetchReason = 'reload',
+    silent = false,
+  ) {
+    return this.requestReload({ reason, options: { silent } });
   }
 
   protected override willUpdate(
@@ -154,7 +162,7 @@ export class YatlTableView<
         title="Reload data"
         ?disabled=${this.loading}
         state=${this.buttonState}
-        @click=${() => this.reloadData(true)}
+        @click=${() => this.reloadData('reload', true)}
       >
         <yatl-icon name="reload"></yatl-icon>
       </yatl-button>

@@ -1,6 +1,11 @@
 import { css } from 'lit';
 
 export default css`
+  yatl-dropdown {
+    width: 100%;
+    height: 100%;
+  }
+
   yatl-option::part(label) {
     color: var(--yatl-text-2);
   }

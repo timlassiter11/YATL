@@ -3,9 +3,9 @@ import { property, query, state } from 'lit/decorators.js';
 import { HasSlotController } from '../../../utils/slot-controller';
 import { classMap } from 'lit/directives/class-map.js';
 import { YatlBase } from '../../base/base';
-import styles from './form-control.styles';
-import sizeStyles from '../../../styles/components/size.styles';
 import { YatlEvent } from '@timlassiter11/yatl';
+
+import styles from './form-control.styles';
 
 export type FormControl =
   | HTMLInputElement
@@ -31,7 +31,7 @@ export abstract class YatlFormControl<TData = string>
     ...LitElement.shadowRootOptions,
     delegatesFocus: true,
   };
-  public static override styles = [...super.styles, sizeStyles, styles];
+  public static override styles = [...super.styles, styles];
 
   /** Used to associate the label with the control element */
   public readonly inputId = 'input';

@@ -9,10 +9,7 @@ export default css`
       var(--yatl-border-color)
     );
     --input-radius: var(--yatl-input-radius, var(--yatl-radius-m));
-    --input-padding: var(
-      --yatl-input-padding,
-      var(--yatl-size-padding, var(--yatl-spacing-m))
-    );
+    --input-padding: var(--yatl-input-padding, var(--yatl-spacing-s));
     --input-font-size: var(
       --yatl-input-font-size,
       var(--yatl-size-font-size),
@@ -21,13 +18,7 @@ export default css`
     --input-bg: var(--yatl-input-bg, var(--yatl-surface-lowered));
     --input-text: var(--yatl-input-text, var(--yatl-text-1));
     --input-line-height: var(--yatl-input-line-height, 1.2);
-    --input-min-height: var(
-      --yatl-input-min-height,
-      round(
-        calc(2 * var(--input-padding) + 1em * var(--input-line-height)),
-        1px
-      )
-    );
+    --input-height: var(--yatl-input-height, 42px);
     --input-outline-color: var(
       --yatl-input-outline-color,
       var(--yatl-color-brand)
@@ -77,8 +68,7 @@ export default css`
     font-size: large;
     padding: var(--input-padding);
     width: 100%;
-    height: 100%;
-    min-height: var(--input-min-height);
+    height: var(--input-height);
     justify-content: center;
     align-items: center;
   }

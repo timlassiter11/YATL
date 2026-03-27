@@ -106,7 +106,11 @@ export class YatlNumberInput extends YatlFormControl<number> {
   private handleChange(event: Event) {
     event.stopPropagation();
     const input = event.target as HTMLInputElement;
-    this.value = input.valueAsNumber;
+    if (input.value) {
+      this.value = input.valueAsNumber;
+    } else {
+      this.value = undefined;
+    }
     this.emitInteraction(event.type as 'change' | 'input');
   }
 

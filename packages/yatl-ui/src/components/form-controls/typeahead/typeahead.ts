@@ -19,8 +19,10 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 export class YatlTypeahead extends YatlFormControl {
   public static override styles = [...super.styles, styles];
 
+  private hasWarnedMissingUri = false;
   private hasWarnedMissingFields = false;
   private searchDebounceTimer = 0;
+  private abortController: AbortController | null = null;
 
   private cacheDirty = false;
   private cachedOptions = new Map<string, YatlOptionData>();
@@ -198,8 +200,7 @@ export class YatlTypeahead extends YatlFormControl {
       <yatl-dropdown
         .open=${live(this.open)}
         @yatl-dropdown-select=${this.handleDropdownSelect}
-        @yatl-dropdown-open-request=${this.handleDropdownRequest}
-        @yatl-dropdown-close-request=${this.handleDropdownRequest}
+        @yatl-dropdown-toggle-request=${this.handleDropdownRequest}
       >
         <input
           slot="trigger"
@@ -231,11 +232,11 @@ export class YatlTypeahead extends YatlFormControl {
       >`;
     }
 
-    if (this.state === 'loading') {
+    if (this.state === 'loading' && !this.hasOptions) {
       return html`<span class="message" part="loading">Loading...</span>`;
     }
 
-    if (!this.hasOptions && this.canSearchCache && this.value) {
+    if (!this.hasOptions && this.value) {
       // Only show the no results message if they actually
       // searched and have options to search through.
       return html`<span class="message" part="empty-options"
@@ -269,13 +270,17 @@ export class YatlTypeahead extends YatlFormControl {
       this.updateMatchedOptions();
       this.scheduleFetch();
     }
+    this.emitInteraction(event.type as 'change' | 'input');
   }
 
   private handleDropdownSelect(event: YatlDropdownSelectEvent) {
     event.stopPropagation();
-    this.value = event.item.value;
+
     this.userHasSelected = true;
-    this.emitInteraction('change');
+    if (this.value !== event.item.value) {
+      this.value = event.item.value;
+      this.emitInteraction('change');
+    }
   }
 
   private handleDropdownRequest(event: Event) {
@@ -303,6 +308,13 @@ export class YatlTypeahead extends YatlFormControl {
       return;
     }
 
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+
+    const abortController = new AbortController();
+    this.abortController = abortController;
+
     let url: URL;
     try {
       // If they provided a full URL this will work.
@@ -315,16 +327,25 @@ export class YatlTypeahead extends YatlFormControl {
     let json: unknown;
     url.searchParams.set(this.searchParam, this.value);
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: abortController.signal,
+      });
+
       if (!response.ok) {
         this.state = 'error';
         return;
       }
 
       json = await response.json();
-    } catch {
-      this.state = 'error';
+    } catch (error) {
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        this.state = 'error';
+      }
       return;
+    } finally {
+      if (this.abortController === abortController) {
+        this.abortController = null;
+      }
     }
 
     let normalizedData;

@@ -50,10 +50,6 @@ export default css`
     --yatl-button-bg: var(--dropdown-menu-open-bg);
   }
 
-  [part='trigger'] {
-    display: contents;
-  }
-
   :host([open]) [part='menu'] {
     display: flex;
   }

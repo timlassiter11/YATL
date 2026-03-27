@@ -65,13 +65,11 @@ export class YatlDropdown extends YatlBase {
   protected override render() {
     return html`
       <div part="base">
-        <div part="trigger">
-          <slot
-            name="trigger"
-            @click=${this.handleTriggerClick}
-            @keydown=${this.handleTriggerKeydown}
-          ></slot>
-        </div>
+        <slot
+          name="trigger"
+          @click=${this.handleTriggerClick}
+          @keydown=${this.handleTriggerKeydown}
+        ></slot>
         <div part="menu" @click=${this.handleItemClick}>
           <slot></slot>
         </div>

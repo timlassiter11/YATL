@@ -9,19 +9,39 @@ export default css`
     --checkbox-size: var(--yatl-checkbox-size, 1.25rem);
     --checkbox-bg: var(--yatl-checkbox-bg, var(--yatl-surface-1));
     --checkbox-border: var(--yatl-checkbox-border, var(--yatl-border-color));
-
-    display: inline-flex;
-    align-items: center;
-    vertical-align: middle;
   }
 
+  /* 
+   * Only apply layout changes when inline 
+   * Match normal inputs when the user opts out of inline 
+   */
   :host([inline]) {
     /* 
      * remove the default gap to prevent 
      * click deadzone between control and label.
      */
     gap: 0;
+    display: flex;
+    flex-direction: row-reverse;
     align-items: center;
+    justify-content: start;
+
+    .label {
+      display: inline-flex;
+      vertical-align: baseline;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      padding-left: var(--yatl-spacing-m);
+      line-height: 1;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .input:focus-visible {
+      outline: 2px solid var(--checkbox-accent-color);
+      outline-offset: 2px;
+    }
   }
 
   .base {
@@ -71,27 +91,5 @@ export default css`
 
   .input:checked::after {
     transform: translate(-50%, -50%) rotate(45deg) scale(1);
-  }
-
-  label {
-    display: inline-flex;
-  }
-
-  .label {
-    position: relative;
-    display: inline-block;
-    vertical-align: baseline;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-    padding-left: var(--yatl-spacing-m);
-    line-height: 1;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-
-  .input:focus-visible {
-    outline: 2px solid var(--checkbox-accent-color);
-    outline-offset: 2px;
   }
 `;

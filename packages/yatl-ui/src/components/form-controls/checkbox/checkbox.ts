@@ -98,8 +98,9 @@ export class YatlCheckbox extends YatlFormControl<string> {
 
   protected override render() {
     return html`
+      ${this.renderLabel()}
       <div part="base" class="base">${this.renderInput()}</div>
-      ${this.renderLabel()} ${this.renderHint()} ${this.renderErrorText()}
+      ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
 

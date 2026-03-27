@@ -29,44 +29,46 @@ export default css`
     );
   }
 
-  [part='options'] {
+  .column {
     display: flex;
     flex-direction: column;
-    gap: var(--options-gap);
-    overflow-y: auto;
-    flex-grow: 1;
   }
 
   .text-input {
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+  }
+
+  .options {
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    height: calc(
-      var(--option-height) * var(--size, 4) + var(--input-padding-top) +
-        var(--input-padding-bottom)
-    );
-    overflow: auto;
     justify-content: flex-start;
+    gap: var(--options-gap);
+    overflow-y: auto;
+    flex-grow: 1;
+    width: 100%;
+    height: calc(var(--option-height) * var(--size, 4));
     padding: 0;
+    border-width: var(--input-border-width);
+    border-style: var(--input-border-style);
+    border-color: var(--input-border-color);
+    border-radius: var(--input-radius);
+    border-top-width: 0px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+    color: var(--input-text);
+    background-color: var(--input-bg);
+    line-height: var(--input-line-height);
+    font-size: large;
   }
 
-  /* Need the specificity to override form control styles */
-  .text-input > input[part='search'] {
-    flex: 0 0 fit-content;
-    padding-left: var(--input-padding-left);
-    padding-right: var(--input-padding-right);
-    padding-top: var(--input-padding-top);
-    padding-bottom: var(--input-padding-bottom);
-    border-bottom-width: var(--input-separator-width);
-    border-bottom-style: solid;
-    border-bottom-color: var(--input-separator-color);
-  }
-
-  [part='selected-trash-icon'] {
+  .trash-icon {
     opacity: 0;
     transition: opacity 0.1s ease;
   }
 
-  [part='empty-options'] {
+  .message {
     padding: var(--yatl-spacing-m);
   }
 
@@ -81,8 +83,8 @@ export default css`
     --yatl-option-mark-font-weight: 700;
   }
 
-  .has-query yatl-option,
-  .has-query::slotted(yatl-option) {
+  .has-query ::slotted(yatl-option) {
+    /* Dim text when searching so marks standout. */
     --yatl-option-color: var(--yatl-text-2);
   }
 

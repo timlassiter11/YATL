@@ -1,13 +1,14 @@
+import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
 import { html, LitElement } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { YatlOptionData } from '../../../types';
 import { YatlOption } from '../../option/option';
 import { YatlFormControl } from '../form-control/form-control';
 import { YatlInput } from '../input/input';
 import styles from './search-select.styles';
-import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
-import { YatlOptionData } from '../../../types';
-import { classMap } from 'lit/directives/class-map.js';
+import { live } from 'lit/directives/live.js';
 
 @customElement('yatl-search-select')
 export class YatlSearchSelect extends YatlFormControl<string[]> {
@@ -22,7 +23,6 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   private optionObserver = new MutationObserver(() => this.handleMutation());
 
-  private query = '';
   private searchEngine = new YatlSearchEngine<YatlOptionData>({
     fields: [{ field: 'label' }],
     tokenizedSearch: true,
@@ -30,6 +30,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   });
 
   // Don't make this a state to improve performance
+  private query = '';
   @state() private hasQuery = false;
   @state() private noMatch = false;
   @state() private hasFocus = false;
@@ -113,33 +114,45 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   protected override render() {
     return html`
       ${this.renderLabel()}
-      <div part="base">${this.renderInput()}</div>
+      <div part="base" class="base">${this.renderInput()}</div>
       ${this.renderHint()}${this.renderErrorText()}
     `;
   }
 
   protected renderInput() {
+    const classes = { options: true, 'has-query': this.hasQuery };
     return html`
-      <div class="text-input" style=${`--size: ${this.size + 1}`}>
-        <input
-          part="search"
-          id=${this.inputId}
-          type="search"
-          placeholder=${this.placeholder}
-          autocomplete="off"
-          @input=${this.handleInput}
-        />
-        ${this.renderContents()}
+      <div class="column">
+        <div class="text-input">
+          <input
+            part="input"
+            class="input"
+            id=${this.inputId}
+            type="search"
+            placeholder=${this.placeholder}
+            autocomplete="off"
+            .value=${live(this.query)}
+            @input=${this.handleInput}
+          />
+        </div>
+        <div
+          part="options"
+          class=${classMap(classes)}
+          style=${`--size: ${this.size}`}
+        >
+          ${this.renderContents()}
+        </div>
       </div>
     `;
   }
 
   protected renderContents() {
     if ((this.hasFocus || !this.hasSelection) && !this.noMatch) {
-      const classes = { 'has-query': this.hasQuery };
-      return html`<slot part="options" class=${classMap(classes)}></slot>`;
+      return html`<slot></slot>`;
     } else if (this.noMatch) {
-      return html`<span part="empty-options">${this.noResultsText}</span>`;
+      return html`<span part="empty-options" class="message"
+        >${this.noResultsText}</span
+      >`;
     }
 
     return this.renderSelectedOptions();
@@ -166,6 +179,7 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
       >
         <yatl-icon
           part="selected-trash-icon"
+          class="trash-icon"
           slot="end"
           name="trash"
         ></yatl-icon>
@@ -187,6 +201,9 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     const path = event.composedPath();
     if (!path.includes(this)) {
       this.hasFocus = false;
+      this.hasQuery = false;
+      this.query = '';
+      this.updateVisibleOptions();
     } else if (this.formControl && path.includes(this.formControl)) {
       this.hasFocus = true;
     }

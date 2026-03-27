@@ -90,4 +90,11 @@ export default css`
     background-color: var(--switch-bg);
     translate: calc((var(--width) - var(--height)) / 2);
   }
+
+  :host(:not([readonly])) {
+    .input,
+    .label {
+      cursor: pointer;
+    }
+  }
 `;

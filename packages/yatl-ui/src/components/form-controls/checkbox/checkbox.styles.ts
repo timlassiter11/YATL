@@ -31,7 +31,6 @@ export default css`
       vertical-align: baseline;
       color: inherit;
       font: inherit;
-      cursor: pointer;
       padding-left: var(--yatl-spacing-m);
       line-height: 1;
       user-select: none;
@@ -64,7 +63,6 @@ export default css`
     border: 1px solid var(--checkbox-border);
     border-radius: 4px;
     background-color: var(--checkbox-bg);
-    cursor: pointer;
     position: relative;
     transition: all 0.1s ease-in-out;
   }
@@ -91,5 +89,12 @@ export default css`
 
   .input:checked::after {
     transform: translate(-50%, -50%) rotate(45deg) scale(1);
+  }
+
+  :host(:not([readonly])) {
+    .input,
+    .label {
+      cursor: pointer;
+    }
   }
 `;

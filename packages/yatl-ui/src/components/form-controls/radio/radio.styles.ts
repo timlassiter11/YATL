@@ -97,4 +97,11 @@ export default css`
     outline: var(--radio-focus-color);
     outline-offset: 3px;
   }
+
+  :host(:not([readonly])) {
+    .input,
+    .label {
+      cursor: pointer;
+    }
+  }
 `;

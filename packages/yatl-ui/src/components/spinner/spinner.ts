@@ -17,6 +17,9 @@ export type YatlSpinnerState = 'idle' | 'loading' | 'success' | 'error';
 export class YatlSpinner extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  private stateTimer = 0;
+  private overlayTimer = 0;
+
   // Decouple internal state from external so we can animate smoothly
   @state() private internalState?: 'success' | 'error';
   @state() private showOverlay = false;
@@ -44,11 +47,18 @@ export class YatlSpinner extends YatlBase {
     super.willUpdate(changedProperties);
 
     if (changedProperties.has('state')) {
+      clearTimeout(this.stateTimer);
       if (this.state === 'success' && this.successDuration) {
-        setTimeout(() => this.updateSpinnerState('idle'), this.successDuration);
+        this.stateTimer = window.setTimeout(
+          () => this.updateSpinnerState('idle'),
+          this.successDuration,
+        );
       }
       if (this.state === 'error' && this.errorDuration) {
-        setTimeout(() => this.updateSpinnerState('idle'), this.errorDuration);
+        this.stateTimer = window.setTimeout(
+          () => this.updateSpinnerState('idle'),
+          this.errorDuration,
+        );
       }
 
       if (this.state === 'success' || this.state === 'error') {
@@ -58,7 +68,11 @@ export class YatlSpinner extends YatlBase {
         if (!this.noOverlay) {
           this.showOverlay = true;
           if (this.overlayDuration) {
-            setTimeout(() => (this.showOverlay = false), this.overlayDuration);
+            clearTimeout(this.overlayTimer);
+            this.overlayTimer = window.setTimeout(
+              () => (this.showOverlay = false),
+              this.overlayDuration,
+            );
           }
           this.updateAnimationOrigin();
         }

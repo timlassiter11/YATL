@@ -187,6 +187,10 @@ export class YatlTypeahead extends YatlFormControl {
         this.scheduleFetch();
       }
     }
+
+    if (!this.uri && !this.localData) {
+      this.warnMissingUri();
+    }
   }
 
   protected override renderInput() {
@@ -386,16 +390,37 @@ export class YatlTypeahead extends YatlFormControl {
     return options;
   }
 
+  private warnMissingUri() {
+    if (!this.hasWarnedMissingUri) {
+      this.hasWarnedMissingUri = true;
+      console.warn(this.warnHeader + warnMissingUriMessage, this);
+    }
+  }
+
   private warnMissingFields() {
     if (!this.hasWarnedMissingFields) {
       this.hasWarnedMissingFields = true;
-      console.warn(warnMissingFieldsMessage, this);
+      console.warn(this.warnHeader + warnMissingFieldsMessage, this);
     }
+  }
+
+  private get warnHeader() {
+    return this.name
+      ? `[yatl-typeahead](name=${this.name}) `
+      : '[yatl-typeahed] ';
   }
 }
 
+const warnMissingUriMessage = `
+No URI or data was provided. Nothing can be searched...
+
+To fix this, either:
+1. Add local data via the localData property.
+2. Set the remote URI via the uri property.
+`;
+
 const warnMissingFieldsMessage = `
-[yatl-typeahead] Cannot parse remote data.
+Cannot parse remote data.
 The endpoint returned complex objects, but no 'label-field' or 'value-field' was provided.
 
 To fix this, either:

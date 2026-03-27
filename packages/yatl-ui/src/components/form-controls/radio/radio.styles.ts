@@ -8,8 +8,6 @@ export default css`
       --yatl-checkbox-accent-color,
       var(--yatl-color-brand)
     );
-    --radio-label-font-weight: var(--yatl-radio-font-weight, 600);
-    --radio-label-font-szie: var(--yatl-radio-font-size, 1rem);
     --radio-size: var(--yatl-radio-size, 1.25rem);
     --radio-scale: var(--yatl-radio-scale, 0.7);
     --radio-border-width: var(--yatl-radio-border-width, 1px);
@@ -20,15 +18,18 @@ export default css`
     );
     --radio-focus-color: var(--yatl-radio-focus-color, var(--yatl-color-brand));
     --radio-transition: var(--yatl-radio-transition, 0.2s ease-in-out);
-
-    display: inline-flex;
-    align-items: center;
-    gap: var(--yatl-spacing-xs);
-    vertical-align: middle;
-    cursor: pointer;
   }
 
-  [part='base'] {
+  :host([inline]) {
+    /* 
+     * remove the default gap to prevent 
+     * click deadzone between control and label.
+     */
+    gap: 0;
+    align-items: center;
+  }
+
+  .base {
     flex: 0 0 auto;
     position: relative;
     display: inline-flex;
@@ -42,61 +43,58 @@ export default css`
     border-radius: 50%;
     background-color: var(--radio-bg);
     color: transparent;
-    transition: background 250ms, border-color 250ms, box-shadow 250ms,
+    transition: background-color 250ms, border-color 250ms, box-shadow 250ms,
       color 250ms;
     transition-timing-function: ease;
-    margin-inline-end: 0.5em;
   }
 
-  [part='input'] {
-    opacity: 0;
-    width: 0;
-    height: 0;
+  .input {
     position: absolute;
+    opacity: 0;
+    padding: 0;
     margin: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
   }
 
-  [part='radio'] {
+  .radio {
     display: flex;
     fill: currentColor;
     width: var(--radio-size);
     height: var(--radio-size);
     scale: var(--radio-scale);
+    pointer-events: none;
+  }
+
+  label {
+    display: inline-flex;
+  }
+
+  .label {
+    position: relative;
+    display: inline-block;
+    vertical-align: baseline;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    padding-left: var(--yatl-spacing-m);
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   :host(:not(:state(checked))) svg circle {
     opacity: 0;
   }
 
-  :host(:state(checked)) [part='base'] {
+  :host(:state(checked)) .base {
     color: var(--radio-accent-color);
     border-color: var(--radio-accent-color);
   }
 
-  :host(:focus-visible) [part='base'] {
+  :host(:focus-visible) .base {
     outline: var(--radio-focus-color);
     outline-offset: 3px;
-  }
-
-  :host(:hover) [part='base'] {
-    border-color: var(--radio-accent-color);
-  }
-
-  :host([disabled]) {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  :host([disabled]) [part='radio'] {
-    pointer-events: none;
-  }
-
-  [part='label'] {
-    font-size: var(--checkbox-label-font-size);
-    font-weight: var(--checkbox-label-font-weight);
-    color: var(--checkbox-label-color);
-    line-height: 1;
-    cursor: pointer;
-    user-select: none;
   }
 `;

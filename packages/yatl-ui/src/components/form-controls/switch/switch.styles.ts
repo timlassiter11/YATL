@@ -12,27 +12,32 @@ export default css`
     --thumb-size: 0.75em;
 
     display: inline-flex;
-    line-height: var(--yatl-switch-line-height, 1);
-    cursor: pointer;
+    align-items: center;
+    vertical-align: middle;
   }
 
-  [part='base'] {
+  :host([inline]) {
+    /* 
+     * remove the default gap to prevent 
+     * click deadzone between control and label.
+     */
+    gap: 0;
+  }
+
+  .base {
     position: relative;
     width: fit-content;
   }
 
-  [part='label'] {
-    position: relative;
-    display: flex;
-    align-items: center;
-    font: inherit;
-    color: var(--switch-color);
-    vertical-align: middle;
+  .input {
+    position: absolute;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
     cursor: pointer;
   }
 
   .switch {
-    flex: 0 0 auto;
     position: relative;
     display: flex;
     align-items: center;
@@ -42,9 +47,11 @@ export default css`
     background-color: var(--switch-bg);
     border: 1px solid var(--switch-border-color);
     border-radius: var(--height);
-    transition-property: translate, background, border-color, box-shadow;
+    transition-property: translate, background-color, border-color, box-shadow;
     transition-duration: 150ms;
     transition-timing-function: ease;
+    /* Let the clicks fall through to the native input */
+    pointer-events: none;
   }
 
   .switch .thumb {
@@ -57,21 +64,21 @@ export default css`
     transition: inherit;
   }
 
-  .input {
-    position: absolute;
-    opacity: 0;
-    padding: 0;
-    margin: 0;
-    pointer-events: none;
+  label {
+    display: inline-flex;
   }
 
-  label:not(.disabled) .input:focus-visible ~ .switch .thumb {
-    outline: var(--wa-focus-ring);
-    outline-offset: var(--wa-focus-ring-offset);
-  }
-
-  :host(:hover) .switch {
-    border-color: var(--switch-accent);
+  .label {
+    position: relative;
+    display: inline-block;
+    vertical-align: baseline;
+    font: inherit;
+    color: var(--switch-color);
+    cursor: pointer;
+    padding-left: var(--yatl-spacing-m);
+    line-height: var(--height);
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   :host(:state(checked)) .switch {
@@ -82,20 +89,5 @@ export default css`
   :host(:state(checked)) .switch .thumb {
     background-color: var(--switch-bg);
     translate: calc((var(--width) - var(--height)) / 2);
-  }
-
-  :host([disabled]) {
-    opacity: 0.6;
-    pointer-events: none;
-    cursor: not-allowed;
-  }
-
-  [part~='label'] {
-    display: inline-block;
-    line-height: var(--height);
-    margin-inline-start: 0.5em;
-    user-select: none;
-    -webkit-user-select: none;
-    vertical-align: baseline;
   }
 `;

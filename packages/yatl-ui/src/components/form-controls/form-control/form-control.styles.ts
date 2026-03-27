@@ -77,8 +77,10 @@ export default css`
     font-size: large;
     padding: var(--input-padding);
     width: 100%;
+    height: 100%;
     min-height: var(--input-min-height);
     justify-content: center;
+    align-items: center;
   }
 
   .text-input:focus,
@@ -89,17 +91,17 @@ export default css`
     outline-offset: calc(var(--input-outline-width) * -1);
   }
 
-  [part='label'] {
+  .label {
     color: var(--input-label-text);
     font-size: var(--input-label-font-size);
     font-weight: var(--input-label-font-weight);
   }
 
-  [part='label']:not(.has-label) {
+  .label:not(.has-label) {
     display: none;
   }
 
-  :host(:not([inline])) [part='label'] {
+  :host(:not([inline])) .label {
     margin-block-end: var(--yatl-spacing-s);
   }
 
@@ -110,17 +112,12 @@ export default css`
      * swallow the event and no drag operations will happen.
      */
     pointer-events: none;
-
-    .text-input {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   :host(:state(readonly)) {
-    .text-input {
-      opacity: 0.8;
-    }
+    opacity: 0.8;
   }
 
   :host(:state(disabled)) .text-input:focus,
@@ -180,8 +177,8 @@ export default css`
     display: none;
   }
 
-  [part='start'],
-  [part='end'] {
+  .input-start,
+  .input-end {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;

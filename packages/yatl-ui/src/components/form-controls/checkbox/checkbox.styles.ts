@@ -6,20 +6,25 @@ export default css`
       --yatl-checkbox-accent-color,
       var(--yatl-color-brand)
     );
-    --checkbox-label-font-weight: var(--yatl-checkbox-font-weight, 600);
-    --checkbox-label-font-szie: var(--yatl-checkbox-font-size, 1rem);
     --checkbox-size: var(--yatl-checkbox-size, 1.25rem);
     --checkbox-bg: var(--yatl-checkbox-bg, var(--yatl-surface-1));
     --checkbox-border: var(--yatl-checkbox-border, var(--yatl-border-color));
 
     display: inline-flex;
     align-items: center;
-    gap: var(--yatl-spacing-xs);
     vertical-align: middle;
-    cursor: pointer;
   }
 
-  [part='base'] {
+  :host([inline]) {
+    /* 
+     * remove the default gap to prevent 
+     * click deadzone between control and label.
+     */
+    gap: 0;
+    align-items: center;
+  }
+
+  .base {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -28,7 +33,7 @@ export default css`
     flex-shrink: 0;
   }
 
-  [part='input'] {
+  .input {
     appearance: none;
     -webkit-appearance: none;
     margin: 0;
@@ -44,12 +49,12 @@ export default css`
     transition: all 0.1s ease-in-out;
   }
 
-  [part='input']:checked {
+  .input:checked {
     background-color: var(--checkbox-accent-color);
     border-color: var(--checkbox-accent-color);
   }
 
-  [part='input']::after {
+  .input::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -64,31 +69,29 @@ export default css`
     transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
-  [part='input']:checked::after {
+  .input:checked::after {
     transform: translate(-50%, -50%) rotate(45deg) scale(1);
   }
 
-  [part='label'] {
-    font-size: var(--checkbox-label-font-size);
-    font-weight: var(--checkbox-label-font-weight);
-    color: var(--checkbox-label-color);
-    line-height: 1.4;
-    cursor: pointer;
-    user-select: none;
+  label {
+    display: inline-flex;
   }
 
-  [part='input']:focus-visible {
+  .label {
+    position: relative;
+    display: inline-block;
+    vertical-align: baseline;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    padding-left: var(--yatl-spacing-m);
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .input:focus-visible {
     outline: 2px solid var(--checkbox-accent-color);
     outline-offset: 2px;
-  }
-
-  :host(:hover) [part='input'] {
-    border-color: var(--checkbox-accent-color);
-  }
-
-  :host([disabled]) {
-    opacity: 0.6;
-    pointer-events: none;
-    cursor: not-allowed;
   }
 `;

@@ -42,6 +42,7 @@ export default css`
     flex-wrap: wrap;
     flex-grow: 1;
     padding: 2px;
+    --yatl-tag-padding: var(--yatl-spacing-xs) var(--yatl-spacing-s);
   }
 
   :host(:not([multi])) [part='tags'] {

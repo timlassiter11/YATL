@@ -85,11 +85,6 @@ export class YatlCheckbox extends YatlFormControl<string> {
     this.checked = this.defaultChecked;
   }
 
-  constructor() {
-    super();
-    this.addEventListener('click', this.handleClick);
-  }
-
   public override connectedCallback() {
     super.connectedCallback();
     this.updateFormValue();
@@ -103,7 +98,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
 
   protected override render() {
     return html`
-      <div part="base">${this.renderInput()}</div>
+      <div part="base" class="base">${this.renderInput()}</div>
       ${this.renderLabel()} ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
@@ -112,6 +107,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
     return html`
       <input
         part="input"
+        class="input"
         id=${this.inputId}
         name=${this.name}
         type="checkbox"
@@ -133,18 +129,6 @@ export class YatlCheckbox extends YatlFormControl<string> {
     this.checked = (event.target as HTMLInputElement).checked;
     this.emitInteraction('change');
   }
-
-  private handleClick = (event: Event) => {
-    // Handle clicks on ourselves unless it came from inside our input element.
-    const path = event.composedPath();
-    if (!this.formControl || path.includes(this.formControl)) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this.formControl.click();
-  };
 }
 
 declare global {

@@ -185,21 +185,20 @@ export abstract class YatlFormControl<TData = string>
 
   protected renderBase(contents: unknown) {
     return html`
-      <div part="base" class="text-input">
-        <slot part="start" name="start"></slot>
+      <div part="base" class="base text-input">
+        <slot part="start" class="input-start" name="start"></slot>
         ${contents}
-        <slot part="end" name="end"></slot>
+        <slot part="end" class="input-end" name="end"></slot>
       </div>
     `;
   }
 
   protected renderLabel(): unknown {
+    const classes = { label: true, 'has-label': this.hasLabel };
     return html`
-      <label for="input">
+      <label for="input" class=${classMap(classes)}>
         <slot name="label">
-          <div part="label" class=${classMap({ 'has-label': this.hasLabel })}>
-            ${this.label}
-          </div>
+          <div part="label">${this.label}</div>
         </slot>
       </label>
     `;

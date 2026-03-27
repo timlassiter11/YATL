@@ -87,12 +87,15 @@ export class YatlInput extends YatlFormControl<string> {
   }
 
   protected override renderLabel() {
+    const classes = {
+      label: true,
+      'label-row': true,
+      'has-label': this.hasLabel,
+    };
     return html`
-      <label for="input" class="label-row">
+      <label for="input" class=${classMap(classes)}>
         <slot name="label">
-          <div part="label" class=${classMap({ 'has-label': this.hasLabel })}>
-            ${this.label}
-          </div>
+          <div part="label">${this.label}</div>
         </slot>
         <span class="label-spacer"></span>
         ${this.showCount ? this.renderCount() : nothing}

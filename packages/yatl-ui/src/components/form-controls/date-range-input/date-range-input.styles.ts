@@ -50,7 +50,7 @@ export default css`
   }
 
   .has-placeholder {
-    color: var(--yatl-text-2);
+    color: var(--input-placeholder-color);
   }
 
   :host(:state(readonly)) {

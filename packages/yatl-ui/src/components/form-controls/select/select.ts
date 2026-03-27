@@ -100,6 +100,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
         .open=${this.open}
         @yatl-dropdown-select=${this.handleDropdownSelect}
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
+        @yatl-dropdown-toggle-request=${this.handleDropdownToggleRequest}
       >
         <div
           class="text-input"
@@ -226,6 +227,13 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
       this.states.delete('open');
     }
     this.open = target.open;
+  }
+
+  private handleDropdownToggleRequest(event: Event) {
+    const target = event.target as YatlDropdown;
+    if (target.open && (this.readonly || this.disabled)) {
+      event.preventDefault();
+    }
   }
 
   private handleDropdownSelect(event: YatlDropdownSelectEvent) {

@@ -1108,12 +1108,13 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   private filterRow(row: T, index: number): boolean {
-    if (!this.filters) {
-      return true;
+    if (this.filterStrategy) {
+      // If there is a custom filter strategy, we run it no matter what
+      return this.filterStrategy(row, index, this.filters ?? {});
     }
 
-    if (this.filterStrategy) {
-      return this.filterStrategy(row, index, this.filters);
+    if (!this.filters) {
+      return true;
     }
 
     for (const field in this.filters) {

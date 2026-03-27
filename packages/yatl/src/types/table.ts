@@ -150,20 +150,6 @@ export interface ExportOptions {
   includeInternalColumns?: boolean;
 }
 
-/**
- * Options for configuring a table controller
- */
-export interface TableControllerOptions<T extends object = UnspecifiedRecord> {
-  tokenizedSearch?: boolean;
-  scoredSearch?: boolean;
-  searchTokenizer?: TokenizerCallback;
-  rowIdCallback?: RowIdCallback<T>;
-  rowSelectionMethod?: RowSelectionMethod | null;
-  storageOptions?: StorageOptions;
-  columns?: ColumnOptions<T>[];
-  data?: T[];
-}
-
 export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
   /**
    * The definitions for the columns to be rendered.
@@ -303,6 +289,12 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
    */
   storageOptions: StorageOptions | null;
 }
+
+/**
+ * Options for configuring a table controller
+ */
+export type TableControllerOptions<T extends object = UnspecifiedRecord> =
+  Partial<YatlTableControllerApi<T>>;
 
 export interface YatlTableApi<T extends object = UnspecifiedRecord>
   extends YatlTableControllerApi<T> {

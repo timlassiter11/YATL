@@ -394,25 +394,17 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   ) {
     super();
 
-    if (host) {
-      this.attach(host);
+    if (options) {
+      const { data, ...other } = options;
+      // Set data after everything else to avoid extra calculations
+      Object.assign(this, other);
+      this.data = data ?? [];
     }
 
-    if (options) {
-      if (options.scoredSearch !== undefined)
-        this.scoredSearch = options.scoredSearch;
-      if (options.tokenizedSearch !== undefined)
-        this.tokenizedSearch = options.tokenizedSearch;
-      if (options.searchTokenizer !== undefined)
-        this.searchTokenizer = options.searchTokenizer;
-      if (options.rowIdCallback !== undefined)
-        this.rowIdCallback = options.rowIdCallback;
-      if (options.rowSelectionMethod !== undefined)
-        this.rowSelectionMethod = options.rowSelectionMethod;
-      if (options.storageOptions !== undefined)
-        this.storageOptions = options.storageOptions;
-      if (options.columns !== undefined) this.columns = options.columns;
-      if (options.data !== undefined) this.data = options.data;
+    // Attach host after options so we
+    // don't spam it with update requests.
+    if (host) {
+      this.attach(host);
     }
   }
 

@@ -83,6 +83,15 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   @property({ converter: dateConverter, attribute: 'end-date' })
   public endDate?: Date;
 
+  /**
+   * A function used to genrate the form value names
+   */
+  @property({ attribute: false })
+  public nameFunction?: (name: string) => {
+    start: string | null;
+    end: string | null;
+  };
+
   @property({ attribute: false })
   public defaultValue: YatlDateRange = {
     start: dateConverter.fromAttribute(this.getAttribute('start-date') ?? ''),
@@ -113,20 +122,20 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
       return null;
     }
 
+    const names = this.nameFunction?.(this.name) ?? generateNames(this.name);
+
     const data = new FormData();
     if (this.startDate) {
       const startValue = dateConverter.toAttribute(this.startDate);
-      if (startValue) {
-        const key = this.name ? `${this.name}_start` : 'start';
-        data.append(key, startValue);
+      if (startValue && names.start) {
+        data.append(names.start, startValue);
       }
     }
 
     if (this.endDate) {
       const endValue = dateConverter.toAttribute(this.endDate);
-      if (endValue) {
-        const key = this.name ? `${this.name}_end` : 'end';
-        data.append(key, endValue);
+      if (endValue && names.end) {
+        data.append(names.end, endValue);
       }
     }
     return data;
@@ -289,6 +298,13 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
       this.value = this.defaultValue;
     }
   }
+}
+
+function generateNames(name: string) {
+  return {
+    start: name ? `${name}_start` : 'start',
+    end: name ? `${name}_end` : 'end',
+  };
 }
 
 declare global {

@@ -156,8 +156,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     return html`
       <yatl-dropdown
         .open=${live(this.open)}
-        @yatl-dropdown-open=${this.handleDropdownToggle}
-        @yatl-dropdown-close=${this.handleDropdownToggle}
+        @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <button class="row" slot="trigger">
           <span class=${classMap(valueClasses)} title=${valueText}>
@@ -217,8 +216,11 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   }
 
   private handleApplyClick() {
-    this.startDate = this.startDateDraft;
-    this.endDate = this.endDateDraft;
+    // Always update the value so it triggers the form save
+    this.value = {
+      start: this.startDateDraft,
+      end: this.endDateDraft,
+    };
     this.open = false;
     this.emitInteraction('change');
   }

@@ -1,31 +1,17 @@
 import { YatlEvent } from '@timlassiter11/yatl';
 import { type YatlOption } from '../components';
 
-export class YatlDropdownOpenRequest extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-open-request';
-  constructor() {
-    super(YatlDropdownOpenRequest.EVENT_NAME, { cancelable: true });
+export class YatlDropdownToggleRequest extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-dropdown-toggle-request';
+  constructor(public readonly open: boolean) {
+    super(YatlDropdownToggleRequest.EVENT_NAME, { cancelable: true });
   }
 }
 
-export class YatlDropdownOpenEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-open';
-  constructor() {
-    super(YatlDropdownOpenEvent.EVENT_NAME);
-  }
-}
-
-export class YatlDropdownCloseRequest extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-close-request';
-  constructor() {
-    super(YatlDropdownCloseRequest.EVENT_NAME, { cancelable: true });
-  }
-}
-
-export class YatlDropdownCloseEvent extends YatlEvent {
-  public static readonly EVENT_NAME = 'yatl-dropdown-close';
-  constructor() {
-    super(YatlDropdownCloseEvent.EVENT_NAME);
+export class YatlDropdownToggleEvent extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-dropdown-toggle';
+  constructor(public readonly open: boolean) {
+    super(YatlDropdownToggleRequest.EVENT_NAME);
   }
 }
 
@@ -38,10 +24,8 @@ export class YatlDropdownSelectEvent extends YatlEvent {
 
 declare global {
   interface HTMLElementEventMap {
-    [YatlDropdownOpenRequest.EVENT_NAME]: YatlDropdownOpenRequest;
-    [YatlDropdownOpenEvent.EVENT_NAME]: YatlDropdownOpenEvent;
-    [YatlDropdownCloseRequest.EVENT_NAME]: YatlDropdownCloseEvent;
-    [YatlDropdownCloseEvent.EVENT_NAME]: YatlDropdownCloseEvent;
+    [YatlDropdownToggleRequest.EVENT_NAME]: YatlDropdownToggleRequest;
+    [YatlDropdownToggleEvent.EVENT_NAME]: YatlDropdownToggleEvent;
     [YatlDropdownSelectEvent.EVENT_NAME]: YatlDropdownSelectEvent;
   }
 }

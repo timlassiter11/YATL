@@ -99,8 +99,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
       <yatl-dropdown
         .open=${this.open}
         @yatl-dropdown-select=${this.handleDropdownSelect}
-        @yatl-dropdown-open=${this.handleDropdownToggle}
-        @yatl-dropdown-close=${this.handleDropdownToggle}
+        @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <div
           class="text-input"

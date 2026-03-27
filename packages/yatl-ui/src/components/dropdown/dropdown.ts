@@ -15,11 +15,9 @@ import {
 } from 'lit/decorators.js';
 
 import {
-  YatlDropdownCloseEvent,
-  YatlDropdownCloseRequest,
-  YatlDropdownSelectEvent as YatlDropdownItemSelectEvent,
-  YatlDropdownOpenEvent,
-  YatlDropdownOpenRequest,
+  YatlDropdownSelectEvent,
+  YatlDropdownToggleEvent,
+  YatlDropdownToggleRequest,
 } from '../../events';
 import { activeElements } from '../../utils';
 import { YatlBase } from '../base/base';
@@ -28,8 +26,8 @@ import styles from './dropdown.styles';
 
 /**
  * @fires yatl-dropdown-select
- * @fires yatl-dropdown-open
- * @fires yatl-dropdown-close
+ * @fires yatl-dropdown-toggle-request
+ * @fires yatl-dropdown-toggle
  */
 @customElement('yatl-dropdown')
 export class YatlDropdown extends YatlBase {
@@ -86,10 +84,8 @@ export class YatlDropdown extends YatlBase {
     if (changedProperties.has('open')) {
       if (this.open) {
         this.addListeners();
-        this.dispatchEvent(new YatlDropdownOpenEvent());
       } else {
         this.removeListeners();
-        this.dispatchEvent(new YatlDropdownCloseEvent());
       }
     }
   }
@@ -109,14 +105,7 @@ export class YatlDropdown extends YatlBase {
       return;
     }
 
-    const requestEvent = this.open
-      ? new YatlDropdownCloseRequest()
-      : new YatlDropdownOpenRequest();
-    if (!this.dispatchEvent(requestEvent)) {
-      return;
-    }
-
-    this.open = !this.open;
+    this.requestState(!this.open);
   }
 
   private handleItemClick(event: Event) {
@@ -126,7 +115,7 @@ export class YatlDropdown extends YatlBase {
       return;
     }
 
-    const selectEvent = new YatlDropdownItemSelectEvent(item);
+    const selectEvent = new YatlDropdownSelectEvent(item);
     this.dispatchEvent(selectEvent);
     if (!selectEvent.defaultPrevented) {
       this.open = false;
@@ -136,9 +125,12 @@ export class YatlDropdown extends YatlBase {
   private handleTriggerKeydown(event: KeyboardEvent) {
     // Open when the user presses the spacebar on the trigger element
     if (!this.open && event.key === ' ') {
-      this.open = true;
-      event.preventDefault();
-      event.stopPropagation();
+      this.requestState(true);
+      if (this.open) {
+        // If our open request was accepted, absorb this event
+        event.preventDefault();
+        event.stopPropagation();
+      }
     }
   }
 
@@ -224,6 +216,21 @@ export class YatlDropdown extends YatlBase {
     document.removeEventListener('pointerdown', this.handleDocumentFocusin);
     document.removeEventListener('focusin', this.handleDocumentFocusin);
     document.removeEventListener('keydown', this.handleKeydown);
+  }
+
+  private requestState(state: boolean) {
+    if (state === this.open) {
+      return;
+    }
+
+    const requestEvent = new YatlDropdownToggleRequest(state);
+    this.dispatchEvent(requestEvent);
+    if (requestEvent.defaultPrevented) {
+      return;
+    }
+
+    this.open = state;
+    this.dispatchEvent(new YatlDropdownToggleEvent(state));
   }
 
   private getActiveItem(items: YatlOption[]) {

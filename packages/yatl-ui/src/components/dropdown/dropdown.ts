@@ -118,7 +118,7 @@ export class YatlDropdown extends YatlBase {
     const selectEvent = new YatlDropdownSelectEvent(item);
     this.dispatchEvent(selectEvent);
     if (!selectEvent.defaultPrevented) {
-      this.open = false;
+      this.requestState(false);
     }
   }
 
@@ -137,12 +137,14 @@ export class YatlDropdown extends YatlBase {
   private handleKeydown = (event: KeyboardEvent) => {
     if (this.open) {
       if (event.key === 'Escape') {
-        this.open = false;
-        // If we are in a dialog and press escape to close
-        // the dropdown we don't want it to close the dialog too.
-        event.stopPropagation();
-        event.preventDefault();
-        this.referenceElement?.focus();
+        this.requestState(false);
+        if (!this.open) {
+          // If we are in a dialog and press escape to close
+          // the dropdown we don't want it to close the dialog too.
+          event.stopPropagation();
+          event.preventDefault();
+          this.referenceElement?.focus();
+        }
       } else if (
         ['ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(event.key)
       ) {

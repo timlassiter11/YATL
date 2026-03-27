@@ -69,7 +69,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
     return html`
       <yatl-dropdown
         .open=${live(this.open)}
-        @yatl-dropdown-request=${this.handleDropdownToggle}
+        @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <button class="row" slot="trigger">
           <div class=${classMap(valueClasses)}>${valueText}</div>

@@ -11,7 +11,7 @@ export class YatlDropdownToggleRequest extends YatlEvent {
 export class YatlDropdownToggleEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-dropdown-toggle';
   constructor(public readonly open: boolean) {
-    super(YatlDropdownToggleRequest.EVENT_NAME);
+    super(YatlDropdownToggleEvent.EVENT_NAME);
   }
 }
 

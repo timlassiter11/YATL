@@ -109,7 +109,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   }
 
   public get formValue() {
-    if (!this.name || !this.value) {
+    if (!this.value) {
       return null;
     }
 
@@ -117,14 +117,16 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     if (this.startDate) {
       const startValue = dateConverter.toAttribute(this.startDate);
       if (startValue) {
-        data.append(`${this.name}_start`, startValue);
+        const key = this.name ? `${this.name}_start` : 'start';
+        data.append(key, startValue);
       }
     }
 
     if (this.endDate) {
       const endValue = dateConverter.toAttribute(this.endDate);
       if (endValue) {
-        data.append(`${this.name}_end`, endValue);
+        const key = this.name ? `${this.name}_end` : 'end';
+        data.append(key, endValue);
       }
     }
     return data;

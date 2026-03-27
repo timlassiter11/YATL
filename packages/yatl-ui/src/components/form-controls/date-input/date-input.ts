@@ -72,11 +72,9 @@ export class YatlDateInput extends YatlFormControl<Date> {
         @yatl-dropdown-open=${this.handleDropdownToggle}
         @yatl-dropdown-close=${this.handleDropdownToggle}
       >
-        <button slot="trigger">
-          <div class="row">
-            <div class=${classMap(valueClasses)}>${valueText}</div>
-            <yatl-icon name="calendar"></yatl-icon>
-          </div>
+        <button class="row" slot="trigger">
+          <div class=${classMap(valueClasses)}>${valueText}</div>
+          <yatl-icon name="calendar"></yatl-icon>
         </button>
         <yatl-date-picker
           .min=${this.min}

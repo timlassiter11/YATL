@@ -148,13 +148,11 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
         @yatl-dropdown-open=${this.handleDropdownToggle}
         @yatl-dropdown-close=${this.handleDropdownToggle}
       >
-        <button slot="trigger">
-          <div class="row">
-            <span class=${classMap(valueClasses)} title=${valueText}>
-              ${valueText}
-            </span>
-            <yatl-icon name="calendar"></yatl-icon>
-          </div>
+        <button class="row" slot="trigger">
+          <span class=${classMap(valueClasses)} title=${valueText}>
+            ${valueText}
+          </span>
+          <yatl-icon name="calendar"></yatl-icon>
         </button>
         <yatl-date-range-picker
           .min=${this.min}

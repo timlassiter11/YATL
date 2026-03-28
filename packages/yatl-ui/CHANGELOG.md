@@ -1,5 +1,47 @@
 # @timlassiter11/yatl-ui
 
+## 3.0.0
+
+### Minor Changes
+
+- eae0d78: \* Added dedicated filterStrategy property to table controller for overriding default filter logic with a custom filter function.
+  - Removed the option to set the filters to a callback function.
+
+### Patch Changes
+
+- 5675273: Added new date range filter component
+- bcc2428: Switched date input to use new date picker
+- bfad084: Added new icons for chevron up, left, and right that match chevron down
+- 8544e19: Fixed switch component not visually showing disabled state
+- b292a76: Added new tree and tree item components
+- 8eb00dd: Limit date grid selection and navigation to min / max range
+- 854a505: Improved contrast for search-select options
+- ab0bb80: Fixed typeahead not fetching remote options
+- 4235e26: Improved search and added visual match indication to search select component
+- fe54c2f: Added calendar icon
+- fcd0737: Added minlength and maxlength attributes to typeahead
+- 836b5c8: New components for date grid, date picker, and date range picker.
+- 4d07436: Improved logic for opening typeahead options picker
+- 2dfdfbc: Improved UI/UX of date range filter component
+- b1bf13a: Added ability to define custom form data names to date range input
+- 3ee56e4: Fixed alignment issues with date input and date range input's calendar icon when there is no value text
+- 0beb4d8: Allow consumer to omit value and label properties if response items are strings
+- 559ff75: Fixed checkbox, radio, and switch components not honoring default check state
+- 2b59723: Submit date range picker values as start and end when no name is provided
+- d46d8fa: Sort search-select results by rank
+- c8b0724: Added control for choosing current selection mode (start or end) in date range picker
+- af3f3bf: Improved UI for date range input
+- Updated dependencies [6475918]
+- Updated dependencies [1a6e094]
+- Updated dependencies [b334ce9]
+- Updated dependencies [611cfa7]
+- Updated dependencies [b3a378f]
+- Updated dependencies [a559d42]
+- Updated dependencies [63fde3d]
+- Updated dependencies [f7f1d44]
+- Updated dependencies [eae0d78]
+  - @timlassiter11/yatl@1.4.0
+
 ## 2.0.0
 
 ### Patch Changes

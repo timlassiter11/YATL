@@ -958,7 +958,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         </span>
 
         ${status !== 'clean'
-          ? html`<div part="status-indicator"></div>`
+          ? html`<div part="status-indicator" class="status-indicator"></div>`
           : nothing}
       </div>
     `);

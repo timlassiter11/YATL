@@ -281,7 +281,7 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
    * table.rowIdCallback = (row, index) => `${row.chassisId}-${row.slotNumber}`;
    * ```
    */
-  rowIdCallback: RowIdCallback<T>;
+  rowIdCallback?: RowIdCallback<T>;
 
   /**
    * Configuration options for automatically saving and restoring table state

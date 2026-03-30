@@ -147,3 +147,17 @@ export function toHumanReadable(str: string) {
       .replace(/\b\w/g, char => char.toUpperCase())
   );
 }
+
+export function deferTemplate(
+  strings: TemplateStringsArray,
+  ...keys: number[]
+) {
+  // It returns a closure that waits for the actual values
+  return (...values: unknown[]) => {
+    return strings.reduce((acc, str, i) => {
+      // Look up the provided value based on the positional key
+      const value = keys[i] !== undefined ? values[keys[i]] : '';
+      return acc + str + String(value);
+    }, '');
+  };
+}

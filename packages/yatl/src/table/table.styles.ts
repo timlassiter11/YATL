@@ -142,7 +142,7 @@ export default css`
       justify-content: flex-end;
     }
 
-    [part='status-indicator'] {
+    .status-indicator {
       position: absolute;
       top: 0;
       left: 0;
@@ -153,7 +153,7 @@ export default css`
       pointer-events: none;
     }
 
-    .cell.is-dirty [part='status-indicator'] {
+    .cell.is-dirty .status-indicator {
       border-top-color: var(--yatl-color-brand);
       border-right-color: transparent;
     }
@@ -162,7 +162,7 @@ export default css`
       opacity: 0.6;
     }
 
-    .cell.is-saving [part='status-indicator'] {
+    .cell.is-saving .status-indicator {
       border-top-color: var(--yatl-color-);
       animation: pulse 1.5s infinite alternate ease-in-out;
     }

@@ -24,6 +24,7 @@ import type {
 
 import {
   createState,
+  deferTemplate,
   getColumnStateChanges,
   getNestedValue,
   isDisplayColumn,
@@ -31,8 +32,6 @@ import {
   isRowSelectionMethod,
   setNestedValue,
 } from '../utils';
-
-import { createRankMap } from './utils';
 
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 
@@ -83,13 +82,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private _rowSelectionMethod: RowSelectionMethod | null = null;
   private _selectedRowIds = new Set<RowId>();
   private _storageOptions: StorageOptions | null = null;
-  private _rowIdCallback: RowIdCallback<T> = (row, index) => {
-    if ('id' in row && isRowIdType(row.id)) return row.id;
-    if ('key' in row && isRowIdType(row.key)) return row.key;
-    if ('_id' in row && isRowIdType(row._id)) return row._id;
-    warnMissingId();
-    return index;
-  };
+  private _rowIdCallback?: RowIdCallback<T>;
+
   private _data: T[] = [];
   private _filteredData: T[] = [];
   // The last time the data was updated.
@@ -352,19 +346,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return;
     }
 
-    // Update IDs in metadata for existing data.
-    for (let i = 0; i < this.data.length; ++i) {
-      const row = this.data[i];
-      const oldId = this._rowIdCallback(row, i);
-      const newId = callback(row, i);
-
-      const metadata = this.rowMetadata.get(oldId);
-      this.rowMetadata.delete(oldId);
-      if (metadata) {
-        this.rowMetadata.set(newId, metadata);
-      }
-    }
     this._rowIdCallback = callback;
+    this.rebuildMetadata();
     this.requestUpdate('rowIdCallback');
   }
 
@@ -1224,27 +1207,64 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Utilities
 
+  private generateRowId(
+    row: T,
+    index: number,
+    primaryColumns: ColumnOptions<T>[],
+  ): RowId | null {
+    if (this._rowIdCallback) {
+      return this._rowIdCallback(row, index);
+    }
+
+    // Try to generate a key from all of the primary columns
+    if (primaryColumns.length > 0) {
+      const keys = [];
+      for (const column of primaryColumns) {
+        const value = getNestedValue(row, column.field) ?? '';
+        keys.push(String(value));
+      }
+      return keys.join('::');
+    }
+
+    // Try some obvious fallbacks if they didn't provide anything
+    const commonKeys = ['id', 'key', '_id'];
+    for (const key of commonKeys) {
+      const column = this.getColumn(key as NestedKeyOf<T>);
+      if (column?.primary === false) {
+        // Don't use this column if explicitly told not to.
+        continue;
+      }
+      const value = getNestedValue(row, key);
+      if (key in row && isRowIdType(value)) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
   private rebuildMetadata() {
-    this.idToRowMap = new Map();
+    const newIdToRowMap = new Map<RowId, T>();
+    const newRowToIdMap = new Map<T, RowId>();
+    const newRowMetadata = new Map<RowId, RowMetadata>();
+
+    const primaryColumns = this.columns.filter(c => c.primary);
+
     const rankMaps = new Map<string, Map<unknown, number>>();
-    // TODO: We only need rank maps for sortable columns
-    // but the user could enable sorting later. It's easiest
-    // to just compute them all now regardless.
     for (const column of this.columns) {
-      // Collect all raw values for this column
-      const rawValues = this.data.map(row => {
-        const originalValue = getNestedValue(row, column.field);
-        const modifiedValue = column.sorter?.(originalValue) ?? originalValue;
-        return [originalValue, modifiedValue] as [unknown, unknown];
-      });
-      rankMaps.set(column.field, createRankMap(rawValues));
+      rankMaps.set(column.field, new Map());
     }
 
     this._data.forEach((row, index) => {
-      let rowId = this._rowIdCallback(row, index);
-      if (rowId == null || this.idToRowMap.has(rowId)) {
-        warnInvalidIdFunction(index, rowId, row);
+      let rowId;
+      const generatedId = this.generateRowId(row, index, primaryColumns);
+      if (generatedId === null) {
         rowId = `__yatl_fallback_id_${index}`;
+      } else if (newIdToRowMap.has(generatedId)) {
+        warnDuplicateId(index, generatedId, row);
+        rowId = `__yatl_fallback_id_${index}`;
+      } else {
+        rowId = generatedId;
       }
 
       const metadata =
@@ -1260,18 +1280,40 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
           pendingTransactions: new Map(),
         } as RowMetadata);
 
-      this.rowToIdMap.set(row, rowId);
-      this.idToRowMap.set(rowId, row);
-      this.rowMetadata.set(rowId, metadata);
+      if (
+        generatedId === null &&
+        (metadata.selected ||
+          metadata.pendingEdits.size > 0 ||
+          metadata.pendingTransactions.size > 0)
+      ) {
+        warnIndexId();
+      }
 
       metadata.index = index;
+
+      newIdToRowMap.set(rowId, row);
+      newRowToIdMap.set(row, rowId);
+      newRowMetadata.set(rowId, metadata);
 
       for (const column of this.columns) {
         const value = getNestedValue(row, column.field);
         const rankMap = rankMaps.get(column.field)!;
+
+        if (!rankMap.has(value)) {
+          const modifiedValue = column.sorter?.(value) ?? value;
+          // Note: createRankMap usually assigns a numeric rank.
+          // You may need to adapt this depending on what createRankMap actually did.
+          // If you just need the modified sortable value, store that directly!
+          rankMap.set(value, modifiedValue as number);
+        }
+
         metadata.sortValues[column.field] = rankMap.get(value) ?? null;
       }
     });
+
+    this.idToRowMap = newIdToRowMap;
+    this.rowToIdMap = newRowToIdMap;
+    this.rowMetadata = newRowMetadata;
   }
 
   private updateRowData(row: T, data: object) {
@@ -1520,29 +1562,26 @@ interface RowMetadata {
   pendingTransactions: Map<string, { id: string; value: unknown }>;
 }
 
-let _hasWarnedMissingId = false;
-function warnMissingId() {
-  if (_hasWarnedMissingId) return;
-  _hasWarnedMissingId = true;
-
-  console.warn(
-    `[yatl-table] Data rows are missing a unique 'id' or 'key' property.
-     Falling back to array index.
-     Selection and sorting may behave unexpectedly.
-     Please provide a unique ID via the 'rowIdCallback' property.
-    `,
-  );
+const indexIdMessage = `[yatl-table] using index based row IDs with row selections or editing is not recommend!
+If data is reloaded in a different order, incorrect selections or edits may be applied.
+To use these features you need define unique row IDs using one of the following methods:
+  1. Mark at least one column as primary to declare it as an identity column.
+  2. Provide a rowIdCallback method that returns unique IDs for each row.
+`;
+let hasWarnedIndexId = false;
+function warnIndexId() {
+  if (hasWarnedIndexId) return;
+  hasWarnedIndexId = true;
+  console.warn(indexIdMessage);
 }
 
-let _hasWarnedInvalidIdFunction = false;
-function warnInvalidIdFunction<T>(index: number, rowId: RowId, row: T) {
-  if (_hasWarnedInvalidIdFunction) return;
-  _hasWarnedInvalidIdFunction = true;
-  console.warn(
-    `[yatl-table] rowIdCallback returned non-unique id (${rowId}) for data at index ${index}.
-    Falling back to array index.
-    Selection and sorting may behave unexpectedly.
-  `,
-  );
+const duplicateIdMessage = deferTemplate`[yatl-table] found non-unique row ID (${0}) for data at index ${1}.
+Falling back to index based row ID.
+`;
+let hasWarnedDuplicateId = false;
+function warnDuplicateId<T>(index: number, rowId: RowId, row: T) {
+  if (hasWarnedDuplicateId) return;
+  hasWarnedDuplicateId = true;
+  console.warn(duplicateIdMessage(rowId, index));
   console.debug(row);
 }

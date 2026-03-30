@@ -95,6 +95,11 @@ export interface BaseColumnOptions<T extends object = UnspecifiedRecord> {
   role?: ColumnRole;
 
   /**
+   * If true, this column will be used to generate a unique ID for each row.
+   */
+  primary?: boolean;
+
+  /**
    * Whether the column is sortable.
    */
   sortable?: boolean;

@@ -200,7 +200,7 @@ export class YatlDropdown extends YatlBase {
   private handleDocumentFocusin = (event: Event) => {
     const path = event.composedPath();
     if (!path.includes(this)) {
-      this.open = false;
+      this.requestState(false);
     }
   };
 

@@ -129,6 +129,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
       <input
         tabindex="-1"
         part="input"
+        class="input"
         id=${this.inputId}
         type="text"
         value=${displayValue ?? ''}
@@ -153,7 +154,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
     }
 
     return html`
-      <div part="tags">
+      <div part="tags" class="tags">
         ${repeat(
           selectedOptions.slice(0, this.maxTags),
           option => option.value,
@@ -180,18 +181,29 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
 
     return html`
       <yatl-button
-        part="clear-icon"
+        part="input-button clear-button"
+        class="input-button clear-button"
+        size="small"
+        variant="plain"
         slot="end"
         @click=${this.handleClearButtonClick}
       >
-        <yatl-icon name="close"></yatl-icon>
+        <yatl-icon
+          part="icon clear-icon"
+          class="icon clear-icon"
+          name="close"
+        ></yatl-icon>
       </yatl-button>
     `;
   }
 
   protected renderArrowIcon() {
     return html`
-      <yatl-icon part="arrow-icon" name="chevron-down"></yatl-icon>
+      <yatl-icon
+        part="icon arrow-icon"
+        class="icon arrow-icon"
+        name="chevron-down"
+      ></yatl-icon>
     `;
   }
 

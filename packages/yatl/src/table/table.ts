@@ -88,7 +88,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   public static override styles = [styles];
 
   @query('.table')
-  private tableElement!: HTMLElement;
+  private tableElement?: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
   @queryAll('.header-cell')
@@ -111,11 +111,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   private pinnedOffsets = new Map<NestedKeyOf<T>, number>();
 
   private resizeState: {
-    active: boolean;
     startX: number;
     startWidth: number;
     columnIndex: number;
     columnField: NestedKeyOf<T>;
+    currentWidth: number;
     currentWidths: string[];
   } | null = null;
 
@@ -654,7 +654,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         behavior: 'instant',
       });
     } else {
-      const row = this.tableElement.querySelector(
+      const row = this.tableElement?.querySelector(
         `.row[data-filtered-index="${index}"]`,
       );
       row?.scrollIntoView({
@@ -671,7 +671,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
     if (this.virtualizer) {
       this.virtualizer.scrollTop = px;
-    } else {
+    } else if (this.tableElement) {
       this.tableElement.scrollTop = px;
     }
   }
@@ -1198,10 +1198,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     this.resizeObserver = null;
   }
 
-  protected override update(changedProperties: PropertyValues): void {
-    super.update(changedProperties);
-  }
-
   protected override willUpdate(changedProps: PropertyValues<this>) {
     super.willUpdate(changedProps);
     // Wait until just before render to update our pinned column offsets
@@ -1212,7 +1208,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     super.updated(changedProps);
     if (!this.resizeObserver) {
       this.resizeObserver = new ResizeObserver(() => this.updateColumnWidths());
-      this.resizeObserver.observe(this.tableElement);
+      this.resizeObserver.observe(this.tableElement!);
     }
 
     if (this.editor && document.activeElement !== this.editor) {
@@ -1225,7 +1221,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     }
 
     if (changedProps.has('columnStates')) {
-      this.updateColumnWidths();
+      //this.updateColumnWidths();
     }
   }
 
@@ -1257,6 +1253,15 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
   private redispatchControllerEvent = (event: Event) => {
     if (event instanceof YatlTableControllerEvent) {
+      if (
+        event.type === 'yatl-column-reorder' ||
+        event.type === 'yatl-column-toggle' ||
+        event.type === 'yatl-column-resize'
+      ) {
+        this.updateColumnWidths();
+        this.updatePinnedColumnOffsets();
+      }
+
       this.dispatchEvent(event.clone());
     }
   };
@@ -1280,10 +1285,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
    * Updates the current widths
    */
   private updateColumnWidths() {
-    if (this.resizeState) {
-      return;
-    }
-
     let changed = false;
     const newWidths = new Map<NestedKeyOf<T>, number>();
     for (const header of this.headerCells) {
@@ -1291,7 +1292,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       const state = this.getColumnState(field);
       // If this is run before the render cycle, the width won't be accurate yet
       // Using state.visible lets us run this before the render cycle.
-      const width = state.visible ? header.getBoundingClientRect().width : 0;
+      const width = state.visible
+        ? state.width ?? header.getBoundingClientRect().width
+        : 0;
       const existingWidth = this.headerWidths.get(field);
       if (width !== existingWidth) {
         changed = true;
@@ -1311,7 +1314,17 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     for (const { column, state } of columns) {
       if (!state.visible || !state.pinned) continue;
       newOffsets.set(column.field, currentLeft);
-      currentLeft += this.headerWidths.get(column.field) ?? 0;
+      const width = this.headerWidths.get(column.field) ?? 0;
+
+      const safeField = column.field.replaceAll('.', '-');
+      this.tableElement?.style.setProperty(
+        `--offset-${safeField}`,
+        `${currentLeft}px`,
+      );
+      // This allows pinned columns to slightly overlap which hides
+      // the border on all but the last. It just looks nicer.
+      // TODO: Do this in CSS to allow for configurable border width.
+      currentLeft += width - 2;
     }
 
     this.pinnedOffsets = newOffsets;
@@ -1616,6 +1629,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     event.preventDefault();
     event.stopPropagation();
 
+    const table = this.tableElement!;
     const target = event.target as HTMLElement;
     const header = target.closest('.cell');
     if (!header) {
@@ -1629,72 +1643,56 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return;
     }
 
-    this.tableElement.classList.add('resizing');
+    table.classList.add('resizing');
 
     // Freeze the current widths as soon as the users starts resizing
-    this.tableElement
-      .querySelectorAll<HTMLElement>('.header .cell')
-      .forEach(element => {
-        const field = element.dataset.field as NestedKeyOf<T> | undefined;
-        if (field) {
-          const state = this.getColumnState(field);
-          state.width = element.getBoundingClientRect().width;
-          this.updateColumnState(field, state);
-        }
-      });
+    table.querySelectorAll<HTMLElement>('.header .cell').forEach(element => {
+      const field = element.dataset.field as NestedKeyOf<T> | undefined;
+      if (field) {
+        const state = this.getColumnState(field);
+        // We want to use the .cell-wrapper's width.
+        // When pinned, it has a border so it will have different dimensions
+        const wrapper = element.closest('.cell-wrapper');
+        state.width = wrapper!.getBoundingClientRect().width;
+        this.updateColumnState(field, state);
+      }
+    });
 
     const gridWidths = this.getGridWidths();
+    const startWidth = header.getBoundingClientRect().width;
     this.resizeState = {
-      active: true,
       startX: event.pageX,
-      startWidth: header.getBoundingClientRect().width,
+      startWidth: startWidth,
+      currentWidth: startWidth,
       columnIndex: columnIndex + 2, // row number column + selector column
       columnField: field,
       currentWidths: gridWidths,
     };
 
-    this.tableElement.style.setProperty(
-      '--grid-template',
-      gridWidths.join(' '),
-    );
+    table.style.setProperty('--grid-template', gridWidths.join(' '));
 
     window.addEventListener('mousemove', this.handleResizeMouseMove);
     window.addEventListener('mouseup', this.handleResizeMouseUp);
   }
 
   private handleResizeMouseMove = (event: MouseEvent) => {
-    if (!this.resizeState?.active) return;
+    if (!this.resizeState) return;
 
     requestAnimationFrame(() => {
-      if (!this.resizeState?.active) return;
+      if (!this.resizeState) return;
 
       const deltaX = event.pageX - this.resizeState.startX;
       const newWidth = Math.max(50, this.resizeState.startWidth + deltaX);
       this.headerWidths.set(this.resizeState.columnField, newWidth);
+      this.resizeState.currentWidth = newWidth;
       this.resizeState.currentWidths[
         this.resizeState.columnIndex
       ] = `${newWidth}px`;
-      this.tableElement.style.setProperty(
+      this.tableElement?.style.setProperty(
         '--grid-template',
         this.resizeState.currentWidths.join(' '),
       );
-
-      let currentLeft = 0;
-      const columns = this.getDisplayColumnData();
-      for (const { column, state } of columns) {
-        if (!state.visible || !state.pinned) continue;
-
-        // Sanitize the field name to match the template
-        const safeField = String(column.field).replaceAll('.', '-');
-        // Write the CSS variable to the root table element
-        this.tableElement.style.setProperty(
-          `--offset-${safeField}`,
-          `${currentLeft}px`,
-        );
-
-        // Add this column's width to the running total for the next column
-        currentLeft += this.headerWidths.get(column.field) ?? 0;
-      }
+      this.updatePinnedColumnOffsets();
     });
   };
 
@@ -1702,18 +1700,15 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     window.removeEventListener('mousemove', this.handleResizeMouseMove);
     window.removeEventListener('mouseup', this.handleResizeMouseUp);
 
-    this.tableElement.classList.remove('resizing');
+    this.tableElement?.classList.remove('resizing');
 
-    if (this.resizeState?.active) {
+    if (this.resizeState) {
       event.preventDefault();
       event.stopPropagation();
-
-      // Calculate the final width based on the DOM's current style
-      const finalWidth = parseFloat(
-        this.resizeState.currentWidths[this.resizeState.columnIndex],
+      this.resizeColumn(
+        this.resizeState.columnField,
+        this.resizeState.currentWidth,
       );
-
-      this.resizeColumn(this.resizeState.columnField, finalWidth);
     }
 
     // This is a hacky workaround to prevent the header click event from firing
@@ -1789,9 +1784,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   private handleDragColumnEnd = () => {
     this.dragColumn = null;
     // Clean up just in case
-    this.tableElement
-      .querySelectorAll('.drop-indicator.active')
-      .forEach(element => element.classList.remove('active'));
+    this.tableElement!.querySelectorAll('.drop-indicator.active').forEach(
+      element => element.classList.remove('active'),
+    );
   };
 
   private handleRowSelectionClicked = (event: Event, row: T) => {

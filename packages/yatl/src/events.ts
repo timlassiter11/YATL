@@ -197,6 +197,23 @@ export class YatlTableCommitRequest<
   }
 }
 
+export class YatlTableCommitEvent<
+  T extends object = UnspecifiedRecord,
+> extends YatlTableControllerEvent {
+  public static readonly EVENT_NAME = 'yatl-table-commit';
+
+  constructor(
+    public readonly transaction: YatlCommitTransaction<T>,
+    public readonly action: 'resolve' | 'reject' | 'discard',
+  ) {
+    super(YatlTableCommitEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlTableCommitEvent(this.transaction, this.action);
+  }
+}
+
 export class YatlTableSearchEvent extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-table-search';
 

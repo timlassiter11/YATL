@@ -43,6 +43,7 @@ import {
   YatlColumnSortEvent,
   YatlColumnToggleEvent,
   YatlRowSelectEvent,
+  YatlTableCommitEvent,
   YatlTableSearchEvent,
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
@@ -1478,6 +1479,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       }
     }
     this.pendingTransactions.delete(id);
+    this.dispatchEvent(new YatlTableCommitEvent({ id, records }, action));
     this.requestUpdate();
   }
 
@@ -1610,6 +1612,7 @@ export type ControllerEventMap = {
   [YatlColumnToggleEvent.EVENT_NAME]: YatlColumnToggleEvent;
   [YatlColumnStickEvent.EVENT_NAME]: YatlColumnStickEvent;
   [YatlRowSelectEvent.EVENT_NAME]: YatlRowSelectEvent;
+  [YatlTableCommitEvent.EVENT_NAME]: YatlTableCommitEvent;
   [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
   [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
   [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;

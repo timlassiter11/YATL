@@ -14,7 +14,7 @@ import type {
   RowSelectionMethod,
   SortOrder,
   StorageOptions,
-  TableControllerOptions,
+  YatlTableControllerOptions,
   TableState,
   UnspecifiedRecord,
   YatlCommitRecord,
@@ -373,14 +373,17 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   constructor(
     host?: ReactiveControllerHost,
-    options?: TableControllerOptions<T>,
+    options?: YatlTableControllerOptions<T>,
   ) {
     super();
 
     if (options) {
-      const { data, ...other } = options;
+      const { data, initialState, ...other } = options;
       // Set data after everything else to avoid extra calculations
       Object.assign(this, other);
+      if (initialState) {
+        this.updateTableState(initialState);
+      }
       this.data = data ?? [];
     }
 

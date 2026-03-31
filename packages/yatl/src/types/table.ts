@@ -293,8 +293,10 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
 /**
  * Options for configuring a table controller
  */
-export type TableControllerOptions<T extends object = UnspecifiedRecord> =
-  Partial<YatlTableControllerApi<T>>;
+export type YatlTableControllerOptions<T extends object = UnspecifiedRecord> =
+  Partial<YatlTableControllerApi<T>> & {
+    initialState?: RestorableTableState<T>;
+  };
 
 export interface YatlTableApi<T extends object = UnspecifiedRecord>
   extends YatlTableControllerApi<T> {

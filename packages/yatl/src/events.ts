@@ -1,4 +1,5 @@
 import {
+  ColumnStickyPosition,
   MaybePromise,
   NestedKeyOf,
   RowId,
@@ -166,6 +167,23 @@ export class YatlColumnReorderEvent<
   }
 }
 
+export class YatlColumnStickEvent<
+  T extends object = UnspecifiedRecord,
+> extends YatlTableControllerEvent {
+  public static readonly EVENT_NAME = 'yatl-column-stick';
+
+  constructor(
+    public readonly field: NestedKeyOf<T>,
+    public readonly position: ColumnStickyPosition,
+  ) {
+    super(YatlColumnStickEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlColumnStickEvent<T>(this.field, this.position);
+  }
+}
+
 export class YatlTableCommitRequest<
   T extends object = UnspecifiedRecord,
 > extends YatlEvent {
@@ -238,6 +256,8 @@ declare global {
 
     [YatlColumnReorderRequest.EVENT_NAME]: YatlColumnReorderRequest;
     [YatlColumnReorderEvent.EVENT_NAME]: YatlColumnReorderEvent;
+
+    [YatlColumnStickEvent.EVENT_NAME]: YatlColumnStickEvent;
 
     [YatlTableCommitRequest.EVENT_NAME]: YatlTableCommitRequest;
     [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;

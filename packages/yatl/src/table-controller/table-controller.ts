@@ -20,6 +20,7 @@ import type {
   YatlCommitRecord,
   YatlCommitTransaction,
   YatlTableControllerApi,
+  ColumnStickyPosition,
 } from '../types';
 
 import {
@@ -36,6 +37,7 @@ import {
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 
 import {
+  YatlColumnStickEvent,
   YatlColumnReorderEvent,
   YatlColumnResizeEvent,
   YatlColumnSortEvent,
@@ -59,6 +61,7 @@ const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
   saveColumnSortOrders: true,
   saveColumnVisibility: true,
   saveColumnWidths: true,
+  saveColumnStickyPositions: true,
   saveColumnOrder: true,
   saveSelectedRows: true,
 };
@@ -568,7 +571,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     state.visible = newVisibility;
-    this.columnStates = [state];
+    this.updateColumnState(field, state);
 
     const event = new YatlColumnToggleEvent(field, newVisibility);
     this.dispatchEvent(event);
@@ -618,6 +621,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   public resizeColumn(field: NestedKeyOf<T>, width: number | null) {
     const state = this.getColumnState(field);
+    if (state.width === width) {
+      return;
+    }
+
     state.width = width;
     this.updateColumnState(field, state);
     this.dispatchEvent(new YatlColumnResizeEvent(field, width));
@@ -690,6 +697,47 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    */
   public deselectAll() {
     this.selectedRowIds = [];
+  }
+
+  /**
+   * Toggles the sticky state of a column.
+   * If stickyPosition is provided, that will be used.
+   * Otherwise, if the column is already stuck it will be unstuck
+   * and if it is unstuck it will be stuck to the left.
+   * @param field - The field name of the column to toggle.
+   * @param stickyPosition - The optional position to stick to.
+   */
+  public toggleColumnSticky(
+    field: NestedKeyOf<T>,
+    stickyPosition?: ColumnStickyPosition,
+  ) {
+    const state = this.getColumnState(field);
+    const newStickyPosition =
+      stickyPosition ?? state.stickyPosition ? false : 'left';
+    if (newStickyPosition === state.stickyPosition) {
+      return;
+    }
+
+    state.stickyPosition = newStickyPosition;
+    this.updateColumnState(field, state);
+
+    this.dispatchEvent(new YatlColumnStickEvent(field, newStickyPosition));
+  }
+
+  /**
+   * Sticks a column to the left side of the table.
+   * @param field - The field name of the column to stick.
+   */
+  public stickColumn(field: NestedKeyOf<T>) {
+    this.toggleColumnSticky(field, 'left');
+  }
+
+  /**
+   * Unsticks a column, allowing it to scroll normally with the rest of the table.
+   * @param field - The field name of the column to unstick.
+   */
+  public unstickColumn(field: NestedKeyOf<T>) {
+    this.toggleColumnSticky(field, false);
   }
 
   /**
@@ -1473,6 +1521,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         savedColumnState.width = columnState.width;
       }
 
+      if (options.saveColumnStickyPositions) {
+        savedColumnState.stickyPosition = columnState.stickyPosition;
+      }
+
       savedTableState.columns?.push(savedColumnState);
     }
 
@@ -1502,11 +1554,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       const savedTableState = JSON.parse(json) as RestorableTableState<T>;
       const tableStateToRestore: RestorableTableState<T> = {};
 
-      if (options.saveSearchQuery) {
+      if (options.saveSearchQuery && 'searchQuery' in savedTableState) {
         tableStateToRestore.searchQuery = savedTableState.searchQuery;
       }
 
-      if (options.saveSelectedRows) {
+      if (options.saveSelectedRows && 'selectedRows' in savedTableState) {
         tableStateToRestore.selectedRows = savedTableState.selectedRows;
       }
 
@@ -1517,17 +1569,26 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
             field: savedColumnState.field,
           };
 
-          if (options.saveColumnVisibility) {
+          if (options.saveColumnSortOrders && 'sort' in savedColumnState) {
+            columnStateToRestore.sort = savedColumnState.sort;
+          }
+
+          if (options.saveColumnVisibility && 'visible' in savedColumnState) {
             columnStateToRestore.visible = savedColumnState.visible;
           }
 
-          if (options.saveColumnWidths) {
+          if (options.saveColumnWidths && 'width' in savedColumnState) {
             columnStateToRestore.width = savedColumnState.width;
           }
 
-          if (options.saveColumnSortOrders) {
-            columnStateToRestore.sort = savedColumnState.sort;
+          if (
+            options.saveColumnStickyPositions &&
+            'stickyPosition' in savedColumnState
+          ) {
+            columnStateToRestore.stickyPosition =
+              savedColumnState.stickyPosition;
           }
+
           tableStateToRestore.columns.push(columnStateToRestore);
         }
       }
@@ -1547,6 +1608,7 @@ export type ControllerEventMap = {
   [YatlColumnResizeEvent.EVENT_NAME]: YatlColumnResizeEvent;
   [YatlColumnSortEvent.EVENT_NAME]: YatlColumnSortEvent;
   [YatlColumnToggleEvent.EVENT_NAME]: YatlColumnToggleEvent;
+  [YatlColumnStickEvent.EVENT_NAME]: YatlColumnStickEvent;
   [YatlRowSelectEvent.EVENT_NAME]: YatlRowSelectEvent;
   [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
   [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;

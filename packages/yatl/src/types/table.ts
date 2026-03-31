@@ -106,6 +106,9 @@ export interface StorageOptions {
   /** Save the current column widths */
   saveColumnWidths?: boolean;
 
+  /** Save the current column sticky positions */
+  saveColumnStickyPositions?: boolean;
+
   /** Save the current order of columns */
   saveColumnOrder?: boolean;
 

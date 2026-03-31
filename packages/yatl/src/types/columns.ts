@@ -55,6 +55,16 @@ export type ValueFormatterCallback<T extends object = UnspecifiedRecord> = (
 export type SortValueCallback = (value: unknown) => Compareable;
 
 /**
+ * Defines the sticky behavior of a column during horizontal scrolling.
+ * Unlike forcefully pinned columns, a sticky column remains in its original
+ * visual order until it reaches the specified edge of the viewport, at which
+ * point it "sticks" and remains in view.
+ * - `'left'`: The column sticks to the left edge when scrolled past.
+ * - `false`: The column scrolls naturally and will exit the viewport.
+ */
+export type ColumnStickyPosition = 'left' | false;
+
+/**
  *
  */
 export interface CellEditor<T extends object = UnspecifiedRecord> {

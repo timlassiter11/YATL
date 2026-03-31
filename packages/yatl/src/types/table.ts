@@ -126,6 +126,11 @@ export interface TableState<T extends object = UnspecifiedRecord> {
   columns: ColumnState<T>[];
 
   /**
+   * The display order of the columns from left to right.
+   */
+  columnOrder: NestedKeyOf<T>[];
+
+  /**
    * The current query applied to the table or null if no query is applied.
    */
   searchQuery: string;

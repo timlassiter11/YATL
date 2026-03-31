@@ -428,6 +428,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     return {
       searchQuery: this.searchQuery,
       selectedRows: this.selectedRowIds,
+      columnOrder: this.displayColumns.map(c => c.field),
       columns: this.columnStates.map(column => {
         const state = this.getColumnState(column.field);
         // Always return a copy so the user can't modify it
@@ -447,6 +448,12 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
     if ('selectedRows' in state && state.selectedRows) {
       this.selectedRowIds = state.selectedRows;
+    }
+
+    if ('columnOrder' in state && state.columnOrder) {
+      state.columnOrder.forEach((field, index) => {
+        this.moveColumn(field, index);
+      });
     }
 
     if ('columns' in state && state.columns !== undefined) {
@@ -714,16 +721,15 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     stickyPosition?: ColumnStickyPosition,
   ) {
     const state = this.getColumnState(field);
-    const newStickyPosition =
-      stickyPosition ?? state.stickyPosition ? false : 'left';
-    if (newStickyPosition === state.stickyPosition) {
+    stickyPosition ??= state.stickyPosition ? false : 'left';
+    if (stickyPosition === state.stickyPosition) {
       return;
     }
 
-    state.stickyPosition = newStickyPosition;
+    state.stickyPosition = stickyPosition;
     this.updateColumnState(field, state);
 
-    this.dispatchEvent(new YatlColumnStickEvent(field, newStickyPosition));
+    this.dispatchEvent(new YatlColumnStickEvent(field, stickyPosition));
   }
 
   /**
@@ -1497,6 +1503,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       savedTableState.selectedRows = tableState.selectedRows;
     }
 
+    if (options.saveColumnOrder) {
+      savedTableState.columnOrder = tableState.columnOrder;
+    }
+
     for (const columnState of tableState.columns) {
       const savedColumnState: RestorableColumnState<T> = {
         field: columnState.field,
@@ -1553,6 +1563,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
       if (options.saveSelectedRows && 'selectedRows' in savedTableState) {
         tableStateToRestore.selectedRows = savedTableState.selectedRows;
+      }
+
+      if (options.saveColumnOrder && 'columnOrder' in savedTableState) {
+        tableStateToRestore.columnOrder = savedTableState.columnOrder;
       }
 
       if (savedTableState.columns) {

@@ -169,7 +169,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
           this.sortDirty = true;
         }
 
-        const newState = createState(state.field, state);
+        const newState = createState(state.field, { ...oldState, ...state });
         this._columnStateMap.set(state.field, newState);
       }
     }

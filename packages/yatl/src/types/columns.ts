@@ -234,6 +234,13 @@ export interface ColumnState<T extends object = UnspecifiedRecord> {
    * The currently set width of the column in pixels.
    */
   width: number | null;
+
+  /**
+   * Pins the column to a specific side of the table, keeping it permanently
+   * in view while the user scrolls horizontally.
+   * @default false
+   */
+  pinned: 'left' | false;
 }
 
 /**

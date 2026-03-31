@@ -26,6 +26,12 @@ export function isDisplayColumn<T extends object = UnspecifiedRecord>(
   return col?.role !== 'internal';
 }
 
+/**
+ * Creates a new state object with standard defaults.
+ * @param field
+ * @param defaults
+ * @returns
+ */
 export function createState<T extends object = UnspecifiedRecord>(
   field: NestedKeyOf<T>,
   defaults?: Partial<ColumnState<T>>,
@@ -35,6 +41,7 @@ export function createState<T extends object = UnspecifiedRecord>(
     visible: defaults?.visible ?? true,
     width: defaults?.width ?? null,
     sort: defaults?.sort ? { ...defaults.sort } : null,
+    pinned: defaults?.pinned ?? false,
   };
 }
 
@@ -63,6 +70,10 @@ export function getColumnStateChanges<T extends object = UnspecifiedRecord>(
     oldState.sort?.priority !== newState.sort?.priority
   ) {
     changes.push('sort');
+  }
+
+  if (oldState?.pinned !== newState.pinned) {
+    changes.push('pinned');
   }
 
   return changes;

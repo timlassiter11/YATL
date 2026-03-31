@@ -34,7 +34,13 @@ import {
 } from '../events';
 
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from 'lit';
-import { customElement, property, query, state } from 'lit/decorators.js';
+import {
+  customElement,
+  property,
+  query,
+  queryAll,
+  state,
+} from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -85,6 +91,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   private tableElement!: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
+  @queryAll('.header-cell')
+  private headerCells!: NodeListOf<HTMLElement>;
   @query('.cell.is-editing > *')
   private editor?: HTMLElement;
 
@@ -96,6 +104,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   // #region --- State Data ---
+
+  private resizeObserver: ResizeObserver | null = null;
+  @state()
+  private headerWidths = new Map<NestedKeyOf<T>, number>();
+  private pinnedOffsets = new Map<NestedKeyOf<T>, number>();
 
   private resizeState: {
     active: boolean;
@@ -794,12 +807,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       : nothing;
   }
 
-  protected renderHeaderCell(column: DisplayColumnOptions<T>) {
-    if (!column) {
-      return nothing;
-    }
-
-    const state = this.getColumnState(column.field);
+  protected renderHeaderCell(columnData: ColumnData<T>) {
+    const column = columnData.column;
+    const state = columnData.state;
     const title = column.title ?? column.field;
 
     let ariaSort: 'none' | 'ascending' | 'descending' = 'none';
@@ -811,40 +821,45 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
     const classes = {
       cell: true,
+      'header-cell': true,
       sortable: column.sortable ?? this.sortable,
     };
 
-    return this.renderCellWrapper(html`
-      <div
-        role=${ifDefined(role)}
-        aria-hidden=${ifDefined(hidden)}
-        aria-sort=${ariaSort}
-        aria-label=${title}
-        part="cell header-cell"
-        class=${classMap(classes)}
-        title=${title}
-        draggable=${ifDefined(this.reorderable ? true : undefined)}
-        data-field=${column.field}
-        @dragstart=${(event: DragEvent) =>
-          this.handleDragColumnStart(event, column.field)}
-        @dragenter=${this.handleDragColumnEnter}
-        @dragleave=${this.handleDragColumnLeave}
-        @dragover=${this.handleDragColumnOver}
-        @drop=${(event: DragEvent) =>
-          this.handleDragColumnDrop(event, column.field)}
-        @dragend=${this.handleDragColumnEnd}
-        @click=${(event: MouseEvent) => this.handleHeaderClicked(event, column)}
-      >
-        <div class="header-content">
-          <span class="header-title truncate" part="header-title">
-            ${title}
-          </span>
-          ${this.renderColumnSortIcon(column, state)}
+    return this.renderCellWrapper(
+      html`
+        <div
+          role=${ifDefined(role)}
+          aria-hidden=${ifDefined(hidden)}
+          aria-sort=${ariaSort}
+          aria-label=${title}
+          part="cell header-cell"
+          class=${classMap(classes)}
+          title=${title}
+          draggable=${ifDefined(this.reorderable ? true : undefined)}
+          data-field=${column.field}
+          @dragstart=${(event: DragEvent) =>
+            this.handleDragColumnStart(event, column.field)}
+          @dragenter=${this.handleDragColumnEnter}
+          @dragleave=${this.handleDragColumnLeave}
+          @dragover=${this.handleDragColumnOver}
+          @drop=${(event: DragEvent) =>
+            this.handleDragColumnDrop(event, column.field)}
+          @dragend=${this.handleDragColumnEnd}
+          @click=${(event: MouseEvent) =>
+            this.handleHeaderClicked(event, column)}
+        >
+          <div class="header-content">
+            <span class="header-title truncate" part="header-title">
+              ${title}
+            </span>
+            ${this.renderColumnSortIcon(column, state)}
+          </div>
+          ${this.renderColumnResizer(column, state)}
+          <div part="drop-indicator" class="drop-indicator"></div>
         </div>
-        ${this.renderColumnResizer(column, state)}
-        <div part="drop-indicator" class="drop-indicator"></div>
-      </div>
-    `);
+      `,
+      columnData,
+    );
   }
 
   protected renderRowNumberHeader() {
@@ -860,6 +875,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   protected renderHeader() {
+    const columns = this.getDisplayColumnData();
     const classes = {
       header: true,
       reorderable: this.reorderable,
@@ -868,7 +884,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       <div role="rowgroup" part="header" class=${classMap(classes)}>
         <div role="row" class="row header-row" part="row header-row">
           ${this.renderRowNumberHeader()} ${this.renderSelectionHeader()}
-          ${this.displayColumns.map(column => this.renderHeaderCell(column))}
+          ${columns.map(column => this.renderHeaderCell(column))}
         </div>
       </div>
     `;
@@ -893,7 +909,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     return matchIndicies ? highlightText(String(value), matchIndicies) : value;
   }
 
-  protected renderCell(column: DisplayColumnOptions<T>, row: T) {
+  protected renderCell(columnData: ColumnData<T>, row: T) {
+    const column = columnData.column;
     const status = this.controller.getCellStatus(row, column.field);
     // Try to use the value from any pending edits if they exist.
     let value = this.controller.getLatestValue(row, column.field);
@@ -927,41 +944,48 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       field === this.currentEditCell.field &&
       this.controller.isCellEditable(row, field)
     ) {
-      return this.renderCellWrapper(html`
-        <div
-          role="cell"
-          part="cell body-cell cell-${column.field}"
-          class=${classMap({ ...classes, 'is-editing': true })}
-          data-field=${column.field}
-        >
-          ${column.editor!.render(value, field, row, this.controller)}
-        </div>
-      `);
+      return this.renderCellWrapper(
+        html`
+          <div
+            role="cell"
+            part="cell body-cell cell-${column.field}"
+            class=${classMap({ ...classes, 'is-editing': true })}
+            data-field=${column.field}
+          >
+            ${column.editor!.render(value, field, row, this.controller)}
+          </div>
+        `,
+        columnData,
+      );
     }
 
     if (typeof column.valueFormatter === 'function') {
       value = column.valueFormatter(value, row);
     }
 
-    return this.renderCellWrapper(html`
-      <div
-        role="cell"
-        part="cell body-cell cell-${column.field} ${userParts}"
-        data-field=${column.field}
-        class=${classMap(classes)}
-        title=${ifDefined(value ? String(value) : undefined)}
-        @click=${(event: MouseEvent) => this.handleCellClick(event, row, field)}
-        @dblclick=${() => this.handleCellDoubleClick(row, field)}
-      >
-        <span class="truncate">
-          ${this.renderCellContents(value, column, row)}
-        </span>
+    return this.renderCellWrapper(
+      html`
+        <div
+          role="cell"
+          part="cell body-cell cell-${column.field} ${userParts}"
+          data-field=${column.field}
+          class=${classMap(classes)}
+          title=${ifDefined(value ? String(value) : undefined)}
+          @click=${(event: MouseEvent) =>
+            this.handleCellClick(event, row, field)}
+          @dblclick=${() => this.handleCellDoubleClick(row, field)}
+        >
+          <span class="truncate">
+            ${this.renderCellContents(value, column, row)}
+          </span>
 
-        ${status !== 'clean'
-          ? html`<div part="status-indicator" class="status-indicator"></div>`
-          : nothing}
-      </div>
-    `);
+          ${status !== 'clean'
+            ? html`<div part="status-indicator" class="status-indicator"></div>`
+            : nothing}
+        </div>
+      `,
+      columnData,
+    );
   }
 
   protected renderCheckbox(row: T, selected: boolean) {
@@ -1007,6 +1031,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     };
     const rowIndex = renderIndex + 1;
     const rowId = this.controller.getRowId(row);
+    const columns = this.getDisplayColumnData();
 
     return html`
       <div
@@ -1019,7 +1044,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       >
         ${this.renderRowNumberCell(rowIndex)}
         ${this.renderRowSelectorCell(row, selected)}
-        ${this.displayColumns.map(column => this.renderCell(column, row))}
+        ${columns.map(column => this.renderCell(column, row))}
       </div>
     `;
   }
@@ -1129,8 +1154,24 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     `;
   }
 
-  private renderCellWrapper(content: unknown) {
-    return html` <div class="cell-wrapper">${content}</div> `;
+  private renderCellWrapper(content: unknown, columnData?: ColumnData<T>) {
+    const classes: Record<string, boolean> = {
+      'cell-wrapper': true,
+    };
+    const styles: Record<string, string> = {};
+    if (columnData) {
+      const { column, state } = columnData;
+      if (state.visible && state.pinned) {
+        classes.pinned = !!state.pinned;
+        classes.left = state.pinned === 'left';
+        const propName = column.field.replaceAll('.', '-');
+        const offset = this.pinnedOffsets.get(column.field) ?? 0;
+        styles['--offset'] = `var(--offset-${propName}, ${offset}px)`;
+      }
+    }
+    return html`
+      <div class=${classMap(classes)} style=${styleMap(styles)}>${content}</div>
+    `;
   }
 
   // #endregion
@@ -1152,10 +1193,28 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     // Clean up just in case
     window.removeEventListener('mousemove', this.handleResizeMouseMove);
     window.removeEventListener('mouseup', this.handleResizeMouseUp);
+
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
   }
 
-  public override updated(changedProperties: PropertyValues) {
-    super.updated(changedProperties);
+  protected override update(changedProperties: PropertyValues): void {
+    super.update(changedProperties);
+  }
+
+  protected override willUpdate(changedProps: PropertyValues<this>) {
+    super.willUpdate(changedProps);
+    // Wait until just before render to update our pinned column offsets
+    this.updatePinnedColumnOffsets();
+  }
+
+  protected override updated(changedProps: PropertyValues<this>) {
+    super.updated(changedProps);
+    if (!this.resizeObserver) {
+      this.resizeObserver = new ResizeObserver(() => this.updateColumnWidths());
+      this.resizeObserver.observe(this.tableElement);
+    }
+
     if (this.editor && document.activeElement !== this.editor) {
       setTimeout(() => {
         this.editor?.focus();
@@ -1163,6 +1222,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
           this.editor.select();
         }
       });
+    }
+
+    if (changedProps.has('columnStates')) {
+      this.updateColumnWidths();
     }
   }
 
@@ -1206,12 +1269,64 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     );
   }
 
+  private getDisplayColumnData(): ColumnData<T>[] {
+    return this.displayColumns.map(c => ({
+      column: c,
+      state: this.getColumnState(c.field),
+    }));
+  }
+
+  /**
+   * Updates the current widths
+   */
+  private updateColumnWidths() {
+    if (this.resizeState) {
+      return;
+    }
+
+    let changed = false;
+    const newWidths = new Map<NestedKeyOf<T>, number>();
+    for (const header of this.headerCells) {
+      const field = header.dataset.field as NestedKeyOf<T>;
+      const state = this.getColumnState(field);
+      // If this is run before the render cycle, the width won't be accurate yet
+      // Using state.visible lets us run this before the render cycle.
+      const width = state.visible ? header.getBoundingClientRect().width : 0;
+      const existingWidth = this.headerWidths.get(field);
+      if (width !== existingWidth) {
+        changed = true;
+      }
+      newWidths.set(field, width);
+    }
+
+    if (changed) {
+      this.headerWidths = newWidths;
+    }
+  }
+
+  private updatePinnedColumnOffsets() {
+    let currentLeft = 0;
+    const newOffsets = new Map<NestedKeyOf<T>, number>();
+    const columns = this.getDisplayColumnData();
+    for (const { column, state } of columns) {
+      if (!state.visible || !state.pinned) continue;
+      newOffsets.set(column.field, currentLeft);
+      currentLeft += this.headerWidths.get(column.field) ?? 0;
+    }
+
+    this.pinnedOffsets = newOffsets;
+  }
+
   /**
    * Gets the width of each column in the
    * order they will appear in the grid.
    */
   private getGridWidths() {
     const widths: string[] = [];
+
+    if (this.resizeState) {
+      return this.resizeState.currentWidths;
+    }
 
     if (this.rowNumbers) {
       widths.push('var(--yatl-row-number-column-width, 48px)');
@@ -1555,6 +1670,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
       const deltaX = event.pageX - this.resizeState.startX;
       const newWidth = Math.max(50, this.resizeState.startWidth + deltaX);
+      this.headerWidths.set(this.resizeState.columnField, newWidth);
       this.resizeState.currentWidths[
         this.resizeState.columnIndex
       ] = `${newWidth}px`;
@@ -1562,6 +1678,23 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         '--grid-template',
         this.resizeState.currentWidths.join(' '),
       );
+
+      let currentLeft = 0;
+      const columns = this.getDisplayColumnData();
+      for (const { column, state } of columns) {
+        if (!state.visible || !state.pinned) continue;
+
+        // Sanitize the field name to match the template
+        const safeField = String(column.field).replaceAll('.', '-');
+        // Write the CSS variable to the root table element
+        this.tableElement.style.setProperty(
+          `--offset-${safeField}`,
+          `${currentLeft}px`,
+        );
+
+        // Add this column's width to the running total for the next column
+        currentLeft += this.headerWidths.get(column.field) ?? 0;
+      }
     });
   };
 
@@ -1682,6 +1815,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   };
 
   // #endregion
+}
+
+interface ColumnData<T extends object = UnspecifiedRecord> {
+  column: DisplayColumnOptions<T>;
+  state: ColumnState<T>;
 }
 
 declare global {

@@ -501,6 +501,16 @@ export default css`
     overflow: hidden;
   }
 
+  .cell-wrapper.pinned {
+    position: sticky;
+    z-index: 1;
+  }
+
+  .cell-wrapper.pinned.left {
+    left: var(--offset, 0);
+    border-right: 1px solid var(--table-border-color);
+  }
+
   @media print {
     .table {
       color: black;

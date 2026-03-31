@@ -1469,8 +1469,24 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     event: MouseEvent,
     column: ColumnOptions<T>,
   ) => {
+    const state = this.getColumnState(column.field);
     const cell = event.currentTarget as HTMLElement;
+    if (event.ctrlKey) {
+      // Pin to the left on ctrl + click or unstick if already sticky
+      if (state.stickyPosition) {
+        // Already sticky. Just unstick and leave in place
+        this.controller.unstickColumn(column.field);
+      } else {
+        const index = this.getDisplayColumnData().findLastIndex(
+          d => d.state.visible && d.state.stickyPosition,
+        );
+        this.controller.moveColumn(column.field, index + 1);
+        this.controller.toggleColumnSticky(column.field);
+      }
+      return;
+    }
     if (event.altKey) {
+      // Stick to the left on alt + click
       this.controller.toggleColumnSticky(column.field);
       return;
     }
@@ -1481,7 +1497,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     }
 
     const multiSort = event.shiftKey;
-    const state = this.getColumnState(column.field);
+
     let sortOrder: SortOrder | null = null;
     if (!state?.sort) {
       sortOrder = 'asc';

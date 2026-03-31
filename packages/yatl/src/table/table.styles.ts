@@ -511,6 +511,10 @@ export default css`
     border-right: 1px solid var(--table-border-color);
   }
 
+  .cell-wrapper.sticky.left:has(+ .cell-wrapper.sticky.left) {
+    border-right-width: 0px;
+  }
+
   @media print {
     .table {
       color: black;

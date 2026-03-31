@@ -97,9 +97,8 @@ export class YatlTableView<
     return this.requestReload({ reason, options: { silent } });
   }
 
-  protected override willUpdate(
-    changedProperties: PropertyValues<YatlTableView>,
-  ): void {
+  protected override willUpdate(changedProps: PropertyValues<this>) {
+    super.willUpdate(changedProps);
     // Run fetch task before first update if it was provided and data wasn't.
     if (!this.hasUpdated) {
       if (this.fetchTask && this.autoLoad) {
@@ -107,7 +106,7 @@ export class YatlTableView<
       }
     }
 
-    if (changedProperties.has('controller')) {
+    if (changedProps.has('controller')) {
       this.tableContext.setValue(this.controller);
     }
   }

@@ -115,6 +115,12 @@ export interface BaseColumnOptions<T extends object = UnspecifiedRecord> {
   sortable?: boolean;
 
   /**
+   * If true, null and undefined values will always be sorted
+   * to the end of the data, regardless of sort order.
+   */
+  nullsLast?: boolean;
+
+  /**
    * A function to use for sorting the column.
    * This overrides the default sorting behavior.
    */

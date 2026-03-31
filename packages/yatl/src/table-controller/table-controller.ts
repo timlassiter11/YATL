@@ -51,6 +51,7 @@ import {
 import { YatlSearchEngine } from '../search/search';
 import { throwRowNotFound, YatlError } from '../utils/errors';
 import { TypedEventTarget } from '../utils/typed-event-target';
+import { getComparableValue } from './utils';
 
 // #region Constants
 
@@ -1190,33 +1191,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   // #region Sort Methods
 
-  private compareRows(a: T, b: T, field: NestedKeyOf<T>): number {
-    let aValue, bValue;
-
-    const state = this.getColumnState(field);
-    if (!state.sort) {
-      return 0;
-    }
-
-    const aMetadata = this.getRowMetadata(a);
-    const bMetadata = this.getRowMetadata(b);
-
-    if (state.sort?.order === 'asc') {
-      aValue = aMetadata.sortValues[field];
-      bValue = bMetadata.sortValues[field];
-    } else {
-      aValue = bMetadata.sortValues[field];
-      bValue = aMetadata.sortValues[field];
-    }
-
-    aValue ??= Number.MIN_SAFE_INTEGER;
-    bValue ??= Number.MIN_SAFE_INTEGER;
-
-    if (aValue < bValue) return -1;
-    if (aValue > bValue) return 1;
-    return 0;
-  }
-
   private sortRows() {
     if (this.filterDirty) {
       this.filterRows();
@@ -1228,7 +1202,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       .filter(state => state.visible && state.sort)
       // Sort our columns by their sort priority.
       // This is how sorting by multiple columns is handled.
-      .sort((a, b) => b.sort!.priority - a.sort!.priority);
+      .sort((a, b) => b.sort!.priority - a.sort!.priority)
+      // Map to a single object with both the column options and current state
+      .map(s => ({ column: this.getColumn(s.field)!, state: s }));
+
+    const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
 
     this._filteredData = this._filteredData.toSorted((a, b) => {
       const aMetadata = this.getRowMetadata(a);
@@ -1242,10 +1223,31 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         if (aValue < bValue) return 1;
       }
 
-      for (const state of sortedStates) {
-        const comp = this.compareRows(a, b, state.field);
-        if (comp !== 0) {
-          return comp;
+      for (const { column, state } of sortedStates) {
+        const field = state.field;
+        const direction = state.sort!.order;
+
+        const valA = aMetadata.sortValues[field];
+        const valB = bMetadata.sortValues[field];
+
+        if (valA === valB) continue;
+        if (valA == null && valB == null) continue;
+        if (valA == null)
+          return column.nullsLast ? 1 : direction === 'asc' ? 1 : -1;
+        if (valB == null)
+          return column.nullsLast ? -1 : direction === 'asc' ? -1 : 1;
+
+        let result = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          result = collator.compare(valA, valB);
+        } else if (valA < valB) {
+          result = -1;
+        } else if (valB < valA) {
+          result = 1;
+        }
+
+        if (result !== 0) {
+          return direction === 'asc' ? result : -result;
         }
       }
 
@@ -1302,11 +1304,6 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
     const primaryColumns = this.columns.filter(c => c.primary);
 
-    const rankMaps = new Map<string, Map<unknown, number>>();
-    for (const column of this.columns) {
-      rankMaps.set(column.field, new Map());
-    }
-
     this._data.forEach((row, index) => {
       let rowId;
       const generatedId = this.generateRowId(row, index, primaryColumns);
@@ -1349,17 +1346,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
       for (const column of this.columns) {
         const value = getNestedValue(row, column.field);
-        const rankMap = rankMaps.get(column.field)!;
-
-        if (!rankMap.has(value)) {
-          const modifiedValue = column.sorter?.(value) ?? value;
-          // Note: createRankMap usually assigns a numeric rank.
-          // You may need to adapt this depending on what createRankMap actually did.
-          // If you just need the modified sortable value, store that directly!
-          rankMap.set(value, modifiedValue as number);
+        let sortValue = value;
+        if (column.sorter) {
+          sortValue = column.sorter(value);
         }
-
-        metadata.sortValues[column.field] = rankMap.get(value) ?? null;
+        metadata.sortValues[column.field] = getComparableValue(sortValue);
       }
     });
 
@@ -1618,12 +1609,14 @@ export type ControllerEventMap = {
   [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
 };
 
+type SortValue = string | number | bigint | null | undefined;
+
 interface RowMetadata {
   id: RowId;
   index: number;
   searchScore?: number;
   /** Precomputed sort values */
-  sortValues: Record<string, number | null>;
+  sortValues: Record<string, SortValue>;
   highlightIndices?: RowMatchIndices;
   selected: boolean;
   pendingEdits: Map<string, unknown>;

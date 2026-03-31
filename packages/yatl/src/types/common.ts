@@ -37,7 +37,7 @@ export type RowId = string | number;
 /**
  * Known compareable type
  */
-export type Compareable = string | number | boolean | Date;
+export type Compareable = string | number | bigint | boolean | Date;
 
 /**
  * Safe types for render callbacks

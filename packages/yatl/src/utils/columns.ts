@@ -41,7 +41,7 @@ export function createState<T extends object = UnspecifiedRecord>(
     visible: defaults?.visible ?? true,
     width: defaults?.width ?? null,
     sort: defaults?.sort ? { ...defaults.sort } : null,
-    pinned: defaults?.pinned ?? false,
+    stickyPosition: defaults?.stickyPosition ?? false,
   };
 }
 
@@ -72,8 +72,8 @@ export function getColumnStateChanges<T extends object = UnspecifiedRecord>(
     changes.push('sort');
   }
 
-  if (oldState?.pinned !== newState.pinned) {
-    changes.push('pinned');
+  if (oldState?.stickyPosition !== newState.stickyPosition) {
+    changes.push('stickyPosition');
   }
 
   return changes;

@@ -108,7 +108,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   private resizeObserver: ResizeObserver | null = null;
   @state()
   private headerWidths = new Map<NestedKeyOf<T>, number>();
-  private pinnedOffsets = new Map<NestedKeyOf<T>, number>();
+  private stickyOffsets = new Map<NestedKeyOf<T>, number>();
 
   private resizeState: {
     startX: number;
@@ -1161,11 +1161,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     const styles: Record<string, string> = {};
     if (columnData) {
       const { column, state } = columnData;
-      if (state.visible && state.pinned) {
-        classes.pinned = !!state.pinned;
-        classes.left = state.pinned === 'left';
+      if (state.visible && state.stickyPosition) {
+        classes.sticky = !!state.stickyPosition;
+        classes.left = state.stickyPosition === 'left';
         const propName = column.field.replaceAll('.', '-');
-        const offset = this.pinnedOffsets.get(column.field) ?? 0;
+        const offset = this.stickyOffsets.get(column.field) ?? 0;
         styles['--offset'] = `var(--offset-${propName}, ${offset}px)`;
       }
     }
@@ -1200,8 +1200,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
   protected override willUpdate(changedProps: PropertyValues<this>) {
     super.willUpdate(changedProps);
-    // Wait until just before render to update our pinned column offsets
-    this.updatePinnedColumnOffsets();
+    // Wait until just before render to update our offsets
+    this.updateStickyColumnOffsets();
   }
 
   protected override updated(changedProps: PropertyValues<this>) {
@@ -1233,7 +1233,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     'yatl-column-resize',
     'yatl-column-sort',
     'yatl-column-toggle',
+    'yatl-column-stick',
     'yatl-row-select',
+    'yatl-table-commit',
     'yatl-table-search',
     'yatl-table-state-change',
     'yatl-table-view-change',
@@ -1259,7 +1261,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         event.type === 'yatl-column-resize'
       ) {
         this.updateColumnWidths();
-        this.updatePinnedColumnOffsets();
+        this.updateStickyColumnOffsets();
       }
 
       this.dispatchEvent(event.clone());
@@ -1307,12 +1309,12 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     }
   }
 
-  private updatePinnedColumnOffsets() {
+  private updateStickyColumnOffsets() {
     let currentLeft = 0;
     const newOffsets = new Map<NestedKeyOf<T>, number>();
     const columns = this.getDisplayColumnData();
     for (const { column, state } of columns) {
-      if (!state.visible || !state.pinned) continue;
+      if (!state.visible || !state.stickyPosition) continue;
       newOffsets.set(column.field, currentLeft);
       const width = this.headerWidths.get(column.field) ?? 0;
 
@@ -1321,13 +1323,13 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         `--offset-${safeField}`,
         `${currentLeft}px`,
       );
-      // This allows pinned columns to slightly overlap which hides
+      // This allows sticky columns to slightly overlap which hides
       // the border on all but the last. It just looks nicer.
       // TODO: Do this in CSS to allow for configurable border width.
       currentLeft += width - 2;
     }
 
-    this.pinnedOffsets = newOffsets;
+    this.stickyOffsets = newOffsets;
   }
 
   /**
@@ -1468,6 +1470,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     column: ColumnOptions<T>,
   ) => {
     const cell = event.currentTarget as HTMLElement;
+    if (event.altKey) {
+      this.controller.toggleColumnSticky(column.field);
+      return;
+    }
+
     // Ignore header click events while resizing
     if (!cell.classList.contains('sortable') || this.resizeState) {
       return;
@@ -1651,9 +1658,12 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       if (field) {
         const state = this.getColumnState(field);
         // We want to use the .cell-wrapper's width.
-        // When pinned, it has a border so it will have different dimensions
+        // When sticky, it has a border so it will have different dimensions
         const wrapper = element.closest('.cell-wrapper');
-        state.width = wrapper!.getBoundingClientRect().width;
+        if (state.visible) {
+          // ONLY update the width for visible columns!
+          state.width = wrapper!.getBoundingClientRect().width;
+        }
         this.updateColumnState(field, state);
       }
     });
@@ -1692,7 +1702,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         '--grid-template',
         this.resizeState.currentWidths.join(' '),
       );
-      this.updatePinnedColumnOffsets();
+      this.updateStickyColumnOffsets();
     });
   };
 

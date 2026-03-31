@@ -236,11 +236,11 @@ export interface ColumnState<T extends object = UnspecifiedRecord> {
   width: number | null;
 
   /**
-   * Pins the column to a specific side of the table, keeping it permanently
-   * in view while the user scrolls horizontally.
+   * Sticks the column to a specific side of the table,
+   * keeping it in view when the user horizontally scrolls past it.
    * @default false
    */
-  pinned: 'left' | false;
+  stickyPosition: ColumnStickyPosition;
 }
 
 /**

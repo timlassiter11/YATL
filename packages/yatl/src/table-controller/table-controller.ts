@@ -614,12 +614,16 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   ) {
     const newColumns = this.displayColumns;
     const originalIndex = newColumns.findIndex(col => col.field === field);
-    const newIndex =
+    const dropIndex =
       typeof newPosition === 'number'
         ? newPosition
         : newColumns.findIndex(col => col.field === newPosition);
 
-    if (originalIndex > -1 && newIndex > -1) {
+    if (originalIndex > -1 && dropIndex > -1 && originalIndex !== dropIndex) {
+      // If we are dropping "in front", we have to account for the fact
+      // that the array will shrink from removing this item
+      // causing the drop position to be incorrect
+      const newIndex = dropIndex > originalIndex ? dropIndex - 1 : dropIndex;
       const [movedColumn] = newColumns.splice(originalIndex, 1);
       newColumns.splice(newIndex, 0, movedColumn);
       this.columns = newColumns;

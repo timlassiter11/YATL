@@ -45,6 +45,10 @@ export class YatlDropdown extends YatlBase {
   @property({ type: Boolean, reflect: true })
   public open = false;
 
+  /**
+   * When true, the wdith of the dropdown will always match the width of the trigger.
+   * @attr match-width
+   */
   @property({ type: Boolean, attribute: 'match-width' })
   public matchWidth = false;
 

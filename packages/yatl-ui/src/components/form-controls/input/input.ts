@@ -18,34 +18,70 @@ export type YatlInputType =
 export class YatlInput extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The native HTML input type (e.g., 'text', 'email', 'password', 'number').
+   */
   @property({ type: String })
   public type: YatlInputType = 'text';
 
-  @property({ type: Number })
-  public size?: number;
+  /**
+   * Hints to the browser and password managers what kind of data should be autofilled.
+   * Accepts standard HTML autocomplete tokens (e.g., 'off', 'email', 'new-password').
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
+   */
+  @property({ type: String, reflect: true })
+  public autocomplete: AutoFill | (string & {}) = 'off';
 
-  /** A regular expression pattern to validate input against. */
-  @property()
-  public pattern?: string;
-  /** The input's minimum value. Only applies to date and number input types. */
-
+  /**
+   * The placeholder text to display when the input is empty.
+   */
   @property({ type: String })
   public placeholder = '';
 
-  @property({ type: Boolean, attribute: 'password-toggle' })
-  public passwordToggle = false;
+  /**
+   * The visual width of the input, measured in average character widths.
+   * Note: This only changes the physical width of the control; it does NOT restrict
+   * the number of characters the user can type (use `maxlength` for that).
+   */
+  @property({ type: Number })
+  public size?: number;
 
-  @property({ type: Boolean, attribute: 'hide-text' })
-  public hideText = true;
-
-  /** The minimum length of input that will be considered valid. */
+  /**
+   * The minimum string length that the input will consider valid.
+   */
   @property({ type: Number })
   public minlength?: number;
 
-  /** The maximum length of input that will be considered valid. */
+  /**
+   * The maximum string length that the input will consider valid.
+   */
   @property({ type: Number })
   public maxlength?: number;
 
+  /**
+   * A regular expression pattern to validate input against.
+   */
+  @property()
+  public pattern?: string;
+
+  /**
+   * Displays a button at the end of the input to toggle the visibility of the text.
+   * Typically used for password fields to let the user see what they typed.
+   */
+  @property({ type: Boolean, attribute: 'password-toggle' })
+  public passwordToggle = false;
+
+  /**
+   * When true, masks the input text (like a password field) regardless of the
+   * actual input `type` attribute.
+   */
+  @property({ type: Boolean, attribute: 'hide-text' })
+  public hideText = true;
+
+  /**
+   * When true, displays a live character count at the end of the label.
+   * If `maxlength` is also set, it will display the count relative to the maximum (e.g., "6/20").
+   */
   @property({ type: Boolean, attribute: 'show-count' })
   public showCount = false;
 
@@ -69,6 +105,7 @@ export class YatlInput extends YatlFormControl<string> {
         id=${this.inputId}
         name=${this.name}
         type=${type}
+        autocomplete=${this.autocomplete}
         size=${ifDefined(this.size)}
         .value=${live(this.value)}
         value=${this.defaultValue}
@@ -93,7 +130,7 @@ export class YatlInput extends YatlFormControl<string> {
       'has-label': this.hasLabel,
     };
     return html`
-      <label for="input" class=${classMap(classes)}>
+      <label for=${this.inputId} class=${classMap(classes)}>
         <slot name="label">
           <div part="label">${this.label}</div>
         </slot>
@@ -127,7 +164,7 @@ export class YatlInput extends YatlFormControl<string> {
     `;
   }
 
-  private handleChange(event: Event) {
+  protected handleChange(event: Event) {
     event.stopPropagation();
     const target = event.target as HTMLInputElement;
     this.value = target.value;

@@ -58,6 +58,13 @@ export class YatlDialog extends YatlBase {
   @property({ type: Boolean, reflect: true })
   public fullscreen = false;
 
+  /**
+   * When true, the close button will be hidden.
+   * @attr no-close-button
+   */
+  @property({ type: Boolean, attribute: 'no-close-button' })
+  public noCloseButton = false;
+
   @property({ type: Boolean, reflect: true })
   public get open() {
     return this._open;
@@ -156,6 +163,8 @@ export class YatlDialog extends YatlBase {
           <yatl-button
             slot="header-end"
             variant="plain"
+            part="close-button"
+            ?hidden=${this.noCloseButton}
             @click=${this.handleCloseClick}
             ><yatl-icon name="close"></yatl-icon
           ></yatl-button>

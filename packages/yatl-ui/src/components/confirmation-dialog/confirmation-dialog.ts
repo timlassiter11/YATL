@@ -24,6 +24,13 @@ export class YatlConfirmationDialog extends YatlBase {
   @property({ type: String })
   public label = '';
 
+  /**
+   * When true, the close button will be hidden.
+   * @attr no-close-button
+   */
+  @property({ type: Boolean, attribute: 'no-close-button' })
+  public noCloseButton = false;
+
   @property({ type: String, attribute: 'accept-text' })
   public acceptText = 'Yes';
 
@@ -85,6 +92,7 @@ export class YatlConfirmationDialog extends YatlBase {
         label=${this.label}
         ?open=${this.open}
         ?modal=${this.modal}
+        ?no-close-button=${this.noCloseButton}
         @yatl-dialog-show-request=${this.handleDialogShow}
         @yatl-dialog-hide-request=${this.handleDialogHide}
       >

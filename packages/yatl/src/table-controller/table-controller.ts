@@ -1381,15 +1381,15 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }, STATE_SAVE_DEBOUNCE);
   }
 
-  private getRowOrThrow(row: T | RowId) {
-    if (isRowIdType(row)) {
-      row = this.getRow(row)!;
+  private getRowOrThrow(rowOrId: T | RowId) {
+    if (isRowIdType(rowOrId)) {
+      const row = this.getRow(rowOrId)!;
       if (!row) {
-        throwRowNotFound(row);
+        throwRowNotFound(rowOrId);
       }
       return row;
     }
-    return row;
+    return rowOrId;
   }
 
   private getRowMetadata(row: T | RowId) {

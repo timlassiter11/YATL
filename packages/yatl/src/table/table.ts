@@ -1760,19 +1760,21 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   };
 
   private handleDragColumnEnter = (event: DragEvent) => {
-    const cell = event.currentTarget as HTMLElement;
+    const target = event.currentTarget as HTMLElement;
+    const cell = target.closest('.cell-wrapper')!;
     cell.querySelector('.drop-indicator')?.classList.add('active');
   };
 
   private handleDragColumnLeave = (event: DragEvent) => {
-    const cell = event.currentTarget as HTMLElement;
+    const target = event.currentTarget as HTMLElement;
+    const cell = target.closest('.cell-wrapper')!;
     const enteringElement = event.relatedTarget as Node;
 
     if (cell.contains(enteringElement)) {
       return;
     }
 
-    cell.querySelector('.drop-indicator')?.classList.remove('active');
+    cell.querySelector('.drop-indicator')?.classList.remove('left', 'right');
   };
 
   private handleDragColumnOver = (event: DragEvent) => {
@@ -1780,10 +1782,21 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = 'move';
     }
+
+    const target = event.currentTarget as HTMLElement;
+    const cell = target.closest('.cell-wrapper')!;
+    const rect = cell.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const dropLeft = x <= rect.width / 2;
+    cell.querySelector('.drop-indicator')?.classList.toggle('left', dropLeft);
+    cell.querySelector('.drop-indicator')?.classList.toggle('right', !dropLeft);
   };
 
-  private handleDragColumnDrop = (event: DragEvent, field: NestedKeyOf<T>) => {
-    if (!this.dragColumn || this.dragColumn === field) {
+  private handleDragColumnDrop = (
+    event: DragEvent,
+    dropField: NestedKeyOf<T>,
+  ) => {
+    if (!this.dragColumn) {
       return;
     }
     event.preventDefault();
@@ -1793,25 +1806,36 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     const originalIndex = newColumns.findIndex(
       col => col.field === this.dragColumn,
     );
-    const newIndex = newColumns.findIndex(col => col.field === field);
+    let dropIndex = newColumns.findIndex(col => col.field === dropField);
+
+    const target = event.currentTarget as HTMLElement;
+    const cell = target.closest('.cell-wrapper')!;
+    cell.querySelector('.drop-indicator')?.classList.remove('left', 'right');
+    const rect = cell.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const dropLeft = x <= rect.width / 2;
+    if (!dropLeft) {
+      dropIndex += 1;
+    }
 
     const requestEvent = new YatlColumnReorderRequest(
       this.dragColumn,
       originalIndex,
-      newIndex,
+      dropIndex,
     );
     if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
-    this.moveColumn(this.dragColumn, field);
+    console.log(`moving from ${originalIndex} to ${dropIndex}`);
+    this.moveColumn(this.dragColumn, dropIndex);
   };
 
   private handleDragColumnEnd = () => {
     this.dragColumn = null;
     // Clean up just in case
-    this.tableElement!.querySelectorAll('.drop-indicator.active').forEach(
-      element => element.classList.remove('active'),
+    this.tableElement!.querySelectorAll('.drop-indicator').forEach(element =>
+      element.classList.remove('left', 'right'),
     );
   };
 

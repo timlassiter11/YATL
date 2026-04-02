@@ -296,10 +296,6 @@ export default css`
       background-color: currentcolor;
       width: 2px;
     }
-
-    .drop-indicator {
-      background: var(--table-header-drop-bg);
-    }
   }
 
   @layer selected {
@@ -418,8 +414,14 @@ export default css`
     z-index: calc(var(--header-z-index) + 1);
   }
 
-  .drop-indicator.active {
+  .drop-indicator.left {
     display: block;
+    border-left: 2px solid var(--yatl-color-brand);
+  }
+
+  .drop-indicator.right {
+    display: block;
+    border-right: 2px solid var(--yatl-color-brand);
   }
 
   .sortable {

@@ -38,6 +38,7 @@ export default css`
   [part='base'] {
     display: flex;
     align-items: center;
+    gap: var(--yatl-spacing-s);
     cursor: pointer;
     white-space: nowrap;
     user-select: none;
@@ -71,20 +72,6 @@ export default css`
     color: var(--option-mark-color);
     background-color: var(--option-mark-bg);
     font-weight: var(--option-mark-font-weight);
-  }
-
-  [part='start'],
-  [part='end'] {
-    display: flex;
-    flex: 0 0 0%;
-  }
-
-  [part='start'] {
-    margin-right: var(--yatl-spacing-s);
-  }
-
-  [part='end'] {
-    margin-left: var(--yatl-spacing-s);
   }
 
   [part='check'] {

@@ -16,6 +16,7 @@ export default css`
   summary > yatl-button {
     pointer-events: none;
     visibility: hidden;
+    flex-shrink: 0;
   }
 
   details.has-children > summary > yatl-button {
@@ -38,7 +39,7 @@ export default css`
 
   :host([open]) [part='arrow-icon'] {
     transform: rotate(0deg);
-    transform: transform var(--open-speed) var(--open-curve);
+    transition: transform var(--open-speed) var(--open-curve);
   }
 
   [part='children'] {

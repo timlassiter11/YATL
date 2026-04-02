@@ -358,6 +358,11 @@ export default css`
     top: 0;
   }
 
+  .cell.header-cell {
+    /* For the drop-indicator */
+    overflow: visible;
+  }
+
   .header-content {
     position: relative;
     width: 100%;
@@ -415,18 +420,22 @@ export default css`
   .drop-indicator {
     display: none;
     position: absolute;
-    inset: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
     pointer-events: none;
     z-index: calc(var(--header-z-index) + 1);
   }
 
   .drop-indicator.left {
     display: block;
+    left: -1px;
     border-left: 2px solid var(--yatl-color-brand);
   }
 
   .drop-indicator.right {
     display: block;
+    right: -1px;
     border-right: 2px solid var(--yatl-color-brand);
   }
 
@@ -459,7 +468,6 @@ export default css`
 
   .cell-wrapper {
     padding: 0;
-    overflow: hidden;
     min-width: 0;
   }
 

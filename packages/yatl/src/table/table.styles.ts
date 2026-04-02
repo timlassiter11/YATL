@@ -105,12 +105,14 @@ export default css`
 
     .row {
       position: relative;
+      background-color: var(--table-row-bg);
       /** Use box-shadow to mimic borders. It works better when virtualized */
       box-shadow: inset 0 -1px 0 0 var(--table-row-border-color);
       transition: background-color 50ms;
     }
 
     .row.header-row {
+      background-color: var(--table-header-bg);
       border-bottom: 1px solid var(--table-border-color);
       font-weight: 600;
       color: var(--table-header-text);
@@ -217,6 +219,8 @@ export default css`
 
     .cell-wrapper {
       background-color: var(--table-row-bg);
+      /** Use box-shadow to mimic borders. It works better when virtualized */
+      box-shadow: inset 0 -1px 0 0 var(--table-row-border-color);
     }
 
     .cell-wrapper:has(.cell-index) {
@@ -278,6 +282,7 @@ export default css`
   }
 
   @layer striped {
+    :host([striped]) .row-even,
     :host([striped]) .row-even .cell-wrapper {
       background-color: var(--table-row-stripe-bg);
     }
@@ -288,6 +293,7 @@ export default css`
       background-color: var(--table-header-hover-bg);
     }
 
+    .body .row:hover,
     .body .row:hover .cell-wrapper {
       background-color: var(--table-row-hover-bg);
     }

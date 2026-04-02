@@ -234,8 +234,7 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
 
     // Reward matches where the query length is close to the target length.
     const lengthDifference = target.length - query.length;
-    const specificityBonus = 1 / (1 + lengthDifference);
-
+    const specificityBonus = 1 / Math.sqrt(1 + lengthDifference);
     // The final score is a combination of the match type's importance,
     // the base score from the query length, and the specificity bonus.
     results.score = baseScore * matchTypeWeight * specificityBonus;

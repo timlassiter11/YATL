@@ -27,6 +27,14 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
   @property({ type: Number, attribute: 'max-tags' })
   public maxTags = 3;
 
+  /**
+   * When true, the dropdown will always match the width of the input
+   * regardless of the contents width.
+   * @attr match-width
+   */
+  @property({ type: Boolean, attribute: 'match-width' })
+  public matchWidth = false;
+
   @property({ type: Array, attribute: 'value' })
   public defaultValue: string | string[] = '';
 
@@ -98,6 +106,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
     return html`
       <yatl-dropdown
         .open=${this.open}
+        ?match-width=${this.matchWidth}
         @yatl-dropdown-select=${this.handleDropdownSelect}
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
         @yatl-dropdown-toggle-request=${this.handleDropdownToggleRequest}
@@ -264,7 +273,6 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
 
     if (!item.checked && this.required) {
       item.checked = true;
-      event.preventDefault();
       return;
     }
 

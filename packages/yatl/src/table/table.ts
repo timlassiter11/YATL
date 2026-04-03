@@ -183,6 +183,15 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     return this.controller.displayColumns;
   }
 
+  public get columnOrder() {
+    return this.controller.columnOrder;
+  }
+
+  @property({ attribute: false })
+  public set columnOrder(order) {
+    this.controller.columnOrder = order;
+  }
+
   public get columnStates() {
     return this.controller.columnStates;
   }
@@ -1462,6 +1471,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   private getDropDetails(event: DragEvent, dropField: NestedKeyOf<T>) {
+    if (!this.dragColumn || this.dragColumn === dropField) {
+      return;
+    }
+
     const displayColumns = this.displayColumns;
 
     const target = event.currentTarget as HTMLElement;
@@ -1478,28 +1491,25 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     );
     // The index of the column the drop event was on
     const dropIndex = displayColumns.findIndex(col => col.field === dropField);
+    const dropIndexAfterShift =
+      dropIndex > originalIndex ? dropIndex - 1 : dropIndex;
     // The new index, after accounting for left / right side and array shifts
-    let newIndex = dropIndex;
+    let newIndex = dropIndexAfterShift;
 
-    if (!isLeftDrop) {
-      // If we are dropping on the right, add one to the index
-      // so it goes after the drop column, not before.
-      newIndex += 1;
-    }
-
-    if (dropIndex > originalIndex) {
-      // If the drop column has a higher index it means when we slice
-      // the array to remove this column, it will screw up the indexes.
-      // Account for that by subtracting one.
-      newIndex -= 1;
-    }
-
-    if (newIndex === originalIndex) {
-      // We can't drop on ourselves and this should only ever happen
-      // if the user is doing a left side drop on the column after
-      // the dragging column or a right side drop on the column before.
-      // If that happens, just force this to drop on the other side.
-      isLeftDrop = !isLeftDrop;
+    if (isLeftDrop && dropIndexAfterShift === originalIndex) {
+      // User is on the left side of the header but they can't drop to the left
+      // because that is the column they are dragging, so we force a right drop.
+      // This is more user friendly and the UI makes it obvious.
+      isLeftDrop = false;
+      newIndex = dropIndex;
+    } else if (!isLeftDrop && dropIndexAfterShift + 1 === originalIndex) {
+      // User is on the right side of the header but they can't drop to the right
+      // because that is the column they are dragging, so we force a left drop.
+      // This is more user friendly and the UI makes it obvious.
+      isLeftDrop = true;
+      newIndex = dropIndex;
+    } else if (!isLeftDrop) {
+      newIndex++;
     }
 
     return {
@@ -1825,11 +1835,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     event: DragEvent,
     dropField: NestedKeyOf<T>,
   ) => {
-    if (!this.dragColumn || this.dragColumn === dropField) {
+    const details = this.getDropDetails(event, dropField);
+    if (!details) {
       return;
     }
 
-    const details = this.getDropDetails(event, dropField);
     details.cell
       .querySelector('.drop-indicator')
       ?.classList.toggle('left', details.isLeftDrop);
@@ -1847,24 +1857,24 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     event: DragEvent,
     dropField: NestedKeyOf<T>,
   ) => {
-    if (!this.dragColumn || this.dragColumn === dropField) {
+    const details = this.getDropDetails(event, dropField);
+    if (!details) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
 
-    const details = this.getDropDetails(event, dropField);
     const requestEvent = new YatlColumnReorderRequest(
-      this.dragColumn,
+      this.dragColumn!,
       details.originalIndex,
-      details.dropIndex,
+      details.newIndex,
     );
     if (!this.dispatchEvent(requestEvent)) {
       return;
     }
 
-    this.moveColumn(this.dragColumn, details.dropIndex);
+    this.moveColumn(this.dragColumn!, details.newIndex);
   };
 
   private handleDragColumnEnd = () => {

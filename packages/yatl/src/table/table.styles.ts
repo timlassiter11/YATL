@@ -358,7 +358,8 @@ export default css`
     top: 0;
   }
 
-  .cell.header-cell {
+  .cell-wrapper:has(.drop-indicator.left),
+  .cell-wrapper:has(.drop-indicator.right) {
     /* For the drop-indicator */
     overflow: visible;
   }
@@ -469,11 +470,11 @@ export default css`
   .cell-wrapper {
     padding: 0;
     min-width: 0;
+    overflow: hidden;
   }
 
   .cell {
     white-space: nowrap;
-    overflow: hidden;
     position: relative;
     display: flex;
     align-items: center;

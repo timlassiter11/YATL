@@ -1,5 +1,10 @@
 import { YatlTableController } from '../table-controller/table-controller';
-import { ColumnOptions, ColumnState, RestorableColumnState } from './columns';
+import {
+  ColumnOptions,
+  ColumnState,
+  DisplayColumnOptions,
+  RestorableColumnState,
+} from './columns';
 import { NestedKeyOf, RowId, UnspecifiedRecord } from './common';
 import { FilterCallback, Filters } from './filters';
 import { TokenizerCallback } from './search';
@@ -164,6 +169,31 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
    * This defines the field mapping, titles, sortability, and other static options.
    */
   columns: ColumnOptions<T>[];
+
+  /**
+   * The computed, fully-resolved array of columns intended for visual rendering.
+   * This is a derived View Model. It takes the explicit `columnOrder` intent and
+   * reconciles it against the actual `columns` definitions. It safely handles newly
+   * added columns, filters out undefined fields, and guarantees a strictly-typed array
+   * representing the exact left-to-right visual layout of the data grid.
+   * @readonly This property is intended for template rendering and internal layout math
+   * (such as drag-and-drop boundary calculations). To programmatically mutate the column
+   * layout, set the `columnOrder` property or use the `moveColumn()` API.
+   */
+  readonly displayColumns: DisplayColumnOptions<T>[];
+
+  /**
+   * The explicit, raw visual layout intent for the table's columns.
+   * This property acts as the pure state record. It is strictly symmetrical: reading this
+   * property will return the exact array of field names that was most recently set,
+   * preserving the user's or developer's exact layout preference.
+   * * Use this property when exporting or saving the table's layout state (e.g., to
+   * `localStorage` or a database).
+   * * **Note:** Because this represents intent rather than computed reality, it may contain
+   * fields that are no longer defined, or omit newly added fields. If you need the exact
+   * array of columns currently rendered on the screen, use {@link displayColumns} instead.
+   */
+  columnOrder: NestedKeyOf<T>[];
 
   /**
    * The dynamic runtime state of the table's columns (visibility, width, and sort order).

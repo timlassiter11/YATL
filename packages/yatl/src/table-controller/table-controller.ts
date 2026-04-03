@@ -21,9 +21,11 @@ import type {
   YatlCommitTransaction,
   YatlTableControllerApi,
   ColumnStickyPosition,
+  DisplayColumnOptions,
 } from '../types';
 
 import {
+  arraysEqual,
   createState,
   deferTemplate,
   getColumnStateChanges,
@@ -84,6 +86,12 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   // Options mapped by field for faster lookup
   private _columnDefinitionMap = new Map<NestedKeyOf<T>, ColumnOptions<T>>();
   private _columnStateMap = new Map<NestedKeyOf<T>, Readonly<ColumnState<T>>>();
+  // The exact column order set by the user before sanitization.
+  private _columnOrder: NestedKeyOf<T>[] = [];
+  // The full list of columns to display in order
+  // calculated from the column order + column definitions.
+  private cachedDisplayColumns: DisplayColumnOptions<T>[] | null = null;
+
   private _rowSelectionMethod: RowSelectionMethod | null = null;
   private _selectedRowIds = new Set<RowId>();
   private _storageOptions: StorageOptions | null = null;
@@ -152,7 +160,32 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   public get displayColumns() {
-    return this.columns.filter(isDisplayColumn);
+    if (this.cachedDisplayColumns) {
+      return this.cachedDisplayColumns;
+    }
+
+    const orderedSet = new Set(this._columnOrder);
+    const orderedColumns = this._columnOrder
+      .map(f => this.getDisplayColumn(f))
+      .filter(c => c !== undefined);
+    const missingColumns = this.columns
+      .filter(isDisplayColumn)
+      .filter(c => !orderedSet.has(c.field));
+    this.cachedDisplayColumns = [...orderedColumns, ...missingColumns];
+    return this.cachedDisplayColumns;
+  }
+
+  public get columnOrder() {
+    return this._columnOrder;
+  }
+
+  public set columnOrder(value) {
+    if (arraysEqual(value, this._columnOrder)) {
+      return;
+    }
+
+    this._columnOrder = value;
+    this.requestUpdate('columnOrder');
   }
 
   public get columnStates() {
@@ -451,9 +484,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     if ('columnOrder' in state && state.columnOrder) {
-      state.columnOrder.forEach((field, index) => {
-        this.moveColumn(field, index);
-      });
+      this.columnOrder = state.columnOrder;
     }
 
     if ('columns' in state && state.columns !== undefined) {
@@ -620,14 +651,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         : newColumns.findIndex(col => col.field === newPosition);
 
     if (originalIndex > -1 && dropIndex > -1 && originalIndex !== dropIndex) {
-      // If we are dropping "in front", we have to account for the fact
-      // that the array will shrink from removing this item
-      // causing the drop position to be incorrect
-      const newIndex = dropIndex > originalIndex ? dropIndex - 1 : dropIndex;
       const [movedColumn] = newColumns.splice(originalIndex, 1);
-      newColumns.splice(newIndex, 0, movedColumn);
-      this.columns = newColumns;
-      const event = new YatlColumnReorderEvent(newColumns.map(c => c.field));
+      newColumns.splice(dropIndex, 0, movedColumn);
+      this._columnOrder = newColumns.map(c => c.field);
+      this.requestUpdate('columnOrder');
+      const event = new YatlColumnReorderEvent(this._columnOrder);
       this.dispatchEvent(event);
     }
   }
@@ -1080,6 +1108,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public requestUpdate(...props: (keyof YatlTableController)[]) {
     const SAVE_TRIGGERS: (keyof YatlTableController)[] = [
       'columns',
+      'columnOrder',
       'columnStates',
       'searchQuery',
       'selectedRowIds',
@@ -1090,6 +1119,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       this.dispatchEvent(
         new YatlTableStateChangeEvent(this.getTableState(), triggers),
       );
+    }
+
+    if (props.includes('columns') || props.includes('columnOrder')) {
+      this.cachedDisplayColumns = null;
     }
 
     if (props.includes('data')) {

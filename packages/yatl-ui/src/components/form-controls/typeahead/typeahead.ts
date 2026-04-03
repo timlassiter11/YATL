@@ -1,13 +1,16 @@
-import { html, PropertyValueMap } from 'lit';
+import {
+  deferTemplate,
+  UnspecifiedRecord,
+  YatlSearchEngine,
+  YatlSearchResult,
+} from '@timlassiter11/yatl';
+import { html, nothing, PropertyValueMap, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../../events';
-import { YatlFormControl } from '../form-control/form-control';
+import { YatlInput } from '../input/input';
 import styles from './typeahead.styles';
-import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
-import { YatlOptionData } from '../../../types';
-import { ifDefined } from 'lit/directives/if-defined.js';
 
 /**
  * A hybrid typeahead component that searches local data instantly
@@ -16,31 +19,23 @@ import { ifDefined } from 'lit/directives/if-defined.js';
  * @fires change - Fired when the selected value changes.
  */
 @customElement('yatl-typeahead')
-export class YatlTypeahead extends YatlFormControl {
+export class YatlTypeahead extends YatlInput {
   public static override styles = [...super.styles, styles];
 
-  private hasWarnedMissingUri = false;
-  private hasWarnedMissingFields = false;
   private searchDebounceTimer = 0;
   private abortController: AbortController | null = null;
 
   private cacheDirty = false;
-  private cachedOptions = new Map<string, YatlOptionData>();
-  private searchEngine = new YatlSearchEngine<YatlOptionData>({
-    fields: [{ field: 'label' }],
+  private cachedData = new Map<string, UnspecifiedRecord>();
+  private searchEngine = new YatlSearchEngine<UnspecifiedRecord>({
     tokenizedSearch: true,
     scoredSearch: true,
   });
 
+  @state() private hasFocus = false;
   @state() private userHasSelected = false;
   @state() private state: 'idle' | 'loading' | 'error' = 'idle';
-  @state() private searchResults: YatlSearchResult<YatlOptionData>[] = [];
-
-  /**
-   * Placeholder text shown when the input is empty.
-   */
-  @property({ type: String })
-  public placeholder = '';
+  @state() private searchResults: YatlSearchResult<UnspecifiedRecord>[] = [];
 
   /**
    * The initial, uncontrolled value of the typeahead.
@@ -58,13 +53,13 @@ export class YatlTypeahead extends YatlFormControl {
     return this.value;
   }
 
-  /** The minimum length of input that will be considered valid. */
-  @property({ type: Number })
-  public minlength?: number;
-
-  /** The maximum length of input that will be considered valid. */
-  @property({ type: Number })
-  public maxlength?: number;
+  /**
+   * When true, the dropdown will always match the width
+   * of the input regardless of the contents width.
+   * @attr match-width
+   */
+  @property({ type: Boolean, attribute: 'match-width' })
+  public matchWidth = false;
 
   /**
    * The remote endpoint URL to fetch search results from.
@@ -78,14 +73,14 @@ export class YatlTypeahead extends YatlFormControl {
    * @attr value-field
    */
   @property({ type: String, attribute: 'value-field' })
-  public valueField = '';
+  public valueField: string = 'value';
 
   /**
    * The property key within the data objects to display visually in the dropdown.
    * @attr label-field
    */
   @property({ type: String, attribute: 'label-field' })
-  public labelField = '';
+  public labelField: string = 'label';
 
   /**
    * Maximum number of options to display in the dropdown at one time.
@@ -125,7 +120,18 @@ export class YatlTypeahead extends YatlFormControl {
    * before it is processed by the search engine.
    */
   @property({ attribute: false })
-  public transformResponse?: (value: unknown) => unknown[];
+  public transformResponse?: (value: unknown) => UnspecifiedRecord[];
+
+  /**
+   * A custom render function for dropdown options.
+   *
+   * **Note on Primitives:** If your data source provides a flat array of strings/numbers,
+   * the component automatically wraps them into objects using your `label-field` and
+   * `value-field` properties. Your render function will receive this generated object,
+   * not the original primitive string.
+   */
+  @property({ attribute: false })
+  public renderOption?: (item: UnspecifiedRecord) => unknown;
 
   /**
    * An array of pre-loaded objects to search through locally.
@@ -133,26 +139,29 @@ export class YatlTypeahead extends YatlFormControl {
   @property({ attribute: false })
   public localData?: unknown[];
 
-  protected get open() {
-    return (
-      (this.canSearchCache || this.canSearchRemote) && !this.userHasSelected
-    );
-  }
-
-  protected get hasOptions() {
+  private get hasResults() {
     return this.searchResults.length > 0;
   }
 
-  public get canSearch() {
+  private get canSearch() {
     return this.value.length >= this.minQueryLength;
   }
 
-  protected get canSearchCache() {
+  private get canSearchCache() {
     return this.searchEngine.data.length > 0 && this.canSearch;
   }
 
-  protected get canSearchRemote() {
+  private get canSearchRemote() {
     return !!this.uri && this.canSearch;
+  }
+
+  private get shouldOpen() {
+    return (
+      this.hasFocus &&
+      this.canSearchCache &&
+      !this.userHasSelected &&
+      this.state !== 'error'
+    );
   }
 
   protected override willUpdate(
@@ -166,9 +175,13 @@ export class YatlTypeahead extends YatlFormControl {
       changedProperties.has('valueField') ||
       changedProperties.has('transformResponse')
     ) {
-      // Clear cache if the mapping rules or transformers change
-      this.cachedOptions.clear();
+      // Clear cache if the mapping rules or transformer changes
+      this.cachedData.clear();
       cacheCleared = true;
+
+      if (changedProperties.has('labelField')) {
+        this.searchEngine.searchFields = [{ field: this.labelField }];
+      }
     }
 
     if (changedProperties.has('localData') || cacheCleared) {
@@ -195,53 +208,45 @@ export class YatlTypeahead extends YatlFormControl {
     }
   }
 
-  protected override renderInput() {
+  protected override renderBase(contents: unknown): TemplateResult<1> {
     return html`
       <yatl-dropdown
-        .open=${live(this.open)}
+        .open=${live(this.shouldOpen)}
+        ?match-width=${this.matchWidth}
         @yatl-dropdown-select=${this.handleDropdownSelect}
-        @yatl-dropdown-toggle-request=${this.handleDropdownRequest}
+        @yatl-dropdown-toggle-request=${this.handleDropdownToggleRequest}
+        @focusin=${this.handleFocusin}
+        @focusout=${this.handleFocusout}
       >
-        <input
-          slot="trigger"
-          part="input"
-          id=${this.inputId}
-          name=${this.name}
-          type="text"
-          autocomplete="off"
-          .value=${live(this.value)}
-          value=${this.defaultValue}
-          placeholder=${this.placeholder}
-          minlength=${ifDefined(this.minlength)}
-          maxlength=${ifDefined(this.maxlength)}
-          ?readonly=${this.readonly}
-          ?disabled=${this.disabled}
-          ?required=${this.required}
-          @input=${this.handleChange}
-          @change=${this.handleChange}
-        />
+        <div slot="trigger">${super.renderBase(contents)}</div>
         ${this.renderDropdownContent()}
       </yatl-dropdown>
     `;
   }
 
+  protected override renderInput() {
+    return html`
+      ${super.renderInput()}
+      <yatl-spinner
+        state=${this.state}
+        error-duration="0"
+        success-duration="0"
+        no-overlay
+      ></yatl-spinner>
+    `;
+  }
+
   protected renderDropdownContent() {
-    if (this.state === 'error') {
-      return html`<span class="message" part="error"
-        >Failed to get results</span
-      >`;
-    }
-
-    if (this.state === 'loading' && !this.hasOptions) {
-      return html`<span class="message" part="loading">Loading...</span>`;
-    }
-
-    if (!this.hasOptions && this.value) {
+    if (this.value && !this.hasResults) {
       // Only show the no results message if they actually
       // searched and have options to search through.
-      return html`<span class="message" part="empty-options"
-        >No results found...</span
-      >`;
+      return html`
+        <slot name="empty-message">
+          <span class="message" part="message empty-message"
+            >No results found...</span
+          >
+        </slot>
+      `;
     }
 
     const max = Math.min(this.maxOptions, this.searchResults.length);
@@ -249,19 +254,28 @@ export class YatlTypeahead extends YatlFormControl {
     return repeat(
       results,
       result => result.item,
-      result => this.renderOption(result),
+      result => this.renderResult(result),
     );
   }
 
-  protected renderOption(result: YatlSearchResult<YatlOptionData>) {
+  protected renderResult(result: YatlSearchResult<UnspecifiedRecord>) {
+    // If the user didn't provide any fields it could mean that the data
+    // structure was just a simple list of strings. In that case we
+    // create our own internal structure when we add it to the cache.
+    const label = result.item[this.labelField];
+    const value = result.item[this.valueField];
+    const matches = result.matches[this.labelField];
     return html`<yatl-option
-      value=${result.item.value}
-      label=${result.item.label}
-      .highlightIndices=${result.matches['label']}
-    ></yatl-option>`;
+      exportparts="base:option-base, start:option-start, end:option-end label:option-label"
+      value=${String(value ?? '')}
+      label=${String(label ?? '')}
+      .highlightIndices=${matches}
+    >
+      ${this.renderOption?.(result.item) ?? nothing}
+    </yatl-option>`;
   }
 
-  private handleChange(event: Event) {
+  protected override handleChange(event: Event) {
     event.stopPropagation();
     const target = event.target as HTMLInputElement;
     if (this.value !== target.value) {
@@ -283,9 +297,17 @@ export class YatlTypeahead extends YatlFormControl {
     }
   }
 
-  private handleDropdownRequest(event: Event) {
-    // We want full control on the open state of the dropdown.
+  private handleDropdownToggleRequest(event: Event) {
+    // We want complete control of the open state
     event.preventDefault();
+  }
+
+  private handleFocusin() {
+    this.hasFocus = true;
+  }
+
+  private handleFocusout() {
+    this.hasFocus = false;
   }
 
   private scheduleFetch() {
@@ -357,20 +379,45 @@ export class YatlTypeahead extends YatlFormControl {
       // TODO: Handle error.
     }
 
+    // Set state first, if addDataToCache fails, it will set an error state.
+    this.state = 'idle';
     if (normalizedData) {
       this.addDataToCache(normalizedData);
     }
-    this.state = 'idle';
   }
 
   private addDataToCache(data: unknown[]) {
-    this.cacheDirty = true;
-    const options = this.getOptionsFromData(data);
+    if (!data || data.length === 0) {
+      // No data, so nothing to do.
+      return;
+    }
 
-    for (const option of options) {
-      if (option.value) {
-        // Don't add null, undefined, or empty values
-        this.cachedOptions.set(option.value, option);
+    for (const rawItem of data) {
+      let item: UnspecifiedRecord;
+      if (typeof rawItem === 'object' && rawItem !== null) {
+        // we have an actual object so we need to check it for the fields
+        if (!(this.labelField in rawItem) || !(this.valueField in rawItem)) {
+          // Skip objects with missing fields and warn the user.
+          this.warnMissingFields(rawItem);
+          continue;
+        }
+        item = rawItem;
+      } else if (rawItem != null) {
+        // User provided a list of primitives. Convert them to objects
+        // for our search engine and internal cache.
+        item = {
+          [this.valueField]: String(rawItem),
+          [this.labelField]: String(rawItem),
+        };
+      } else {
+        // Skip null and undefined values
+        continue;
+      }
+
+      const value = item[this.valueField];
+      if (value !== undefined) {
+        this.cacheDirty = true;
+        this.cachedData.set(String(value), item);
       }
     }
     this.updateMatchedOptions();
@@ -378,7 +425,7 @@ export class YatlTypeahead extends YatlFormControl {
 
   private updateMatchedOptions() {
     if (this.cacheDirty) {
-      this.searchEngine.data = [...this.cachedOptions.values()];
+      this.searchEngine.data = [...this.cachedData.values()];
       this.cacheDirty = false;
     }
 
@@ -389,40 +436,31 @@ export class YatlTypeahead extends YatlFormControl {
     }
   }
 
-  private getOptionsFromData(data: unknown[]) {
-    const options: YatlOptionData[] = [];
-    const labelField = this.labelField || this.valueField;
-    const valueField = this.valueField || this.labelField;
-    for (const item of data as Record<string, unknown>[]) {
-      if (typeof item === 'string') {
-        options.push({ label: item, value: item });
-      } else if (labelField in item && valueField in item) {
-        const label = String(item[labelField] ?? '');
-        const value = String(item[valueField] ?? '');
-
-        options.push({ label: label, value: value });
-      } else {
-        this.warnMissingFields();
-        // Abort and return empty options since we can't trust the data.
-        return [];
-      }
-    }
-
-    return options;
-  }
-
+  private hasWarnedMissingUri = false;
   private warnMissingUri() {
-    if (!this.hasWarnedMissingUri) {
-      this.hasWarnedMissingUri = true;
-      console.warn(this.warnHeader + warnMissingUriMessage, this);
-    }
+    if (this.hasWarnedMissingUri) return;
+
+    this.hasWarnedMissingUri = true;
+    console.warn(this.warnHeader + warnMissingUriMessage, this);
   }
 
-  private warnMissingFields() {
-    if (!this.hasWarnedMissingFields) {
-      this.hasWarnedMissingFields = true;
-      console.warn(this.warnHeader + warnMissingFieldsMessage, this);
-    }
+  private hasWarnedMissingFields = false;
+  private warnMissingFields(sample: UnspecifiedRecord) {
+    if (this.hasWarnedMissingFields) return;
+    this.hasWarnedMissingFields = true;
+    const availableKeys = Object.keys(sample)
+      .map(k => `'${k}'`)
+      .join(', ');
+
+    console.warn(
+      this.warnHeader +
+        warnMissingFieldsMessage(
+          this.labelField,
+          this.valueField,
+          availableKeys || 'None',
+        ),
+      this,
+    );
   }
 
   private get warnHeader() {
@@ -440,13 +478,14 @@ To fix this, either:
 2. Set the remote URI via the uri property.
 `;
 
-const warnMissingFieldsMessage = `
-Cannot parse remote data.
-The endpoint returned complex objects, but no 'label-field' or 'value-field' was provided.
+const warnMissingFieldsMessage = deferTemplate`
+Data mapping failed.
+The component is looking for a label field ("${0}") and a value field ("${1}"), but they do not exist on the provided data.
+Available keys on your data object are: ${2}
 
 To fix this, either:
-1. Add mapping attributes (label-field / value-field).
-2. Use 'transformResponse' to convert the payload into a flat array of strings.
+1. Provide the 'label-field' and 'value-field' attributes to match your data structure,
+2. Use 'transformResponse' to map your data to an array of objects with label and value fields.
 `;
 
 declare global {

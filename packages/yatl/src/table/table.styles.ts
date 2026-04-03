@@ -131,6 +131,8 @@ export default css`
       position: relative;
       align-items: center;
       padding: var(--table-cell-padding);
+      /* Without this, the input height overflows when editing */
+      overflow: hidden;
     }
 
     .cell.is-number {

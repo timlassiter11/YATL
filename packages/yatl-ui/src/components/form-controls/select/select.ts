@@ -24,6 +24,11 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
   @property({ type: Boolean, reflect: true })
   public multi = false;
 
+  /**
+   * The maximum number of selected tags to display.
+   * *NOTE*: This only applies when multi is set.
+   * @attr max-tags
+   */
   @property({ type: Number, attribute: 'max-tags' })
   public maxTags = 3;
 
@@ -176,6 +181,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
 
   protected renderTag(option: YatlOption) {
     return html`<yatl-tag
+      part="tag"
       dismissable
       @yatl-tag-dismiss=${(event: Event) =>
         this.handleTagDissmiss(option, event)}

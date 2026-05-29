@@ -19,7 +19,13 @@ export default css`
     user-select: none;
   }
 
-  [part='dismiss-button'] {
+  .text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+  }
+
+  .dismiss-button {
     appearance: none;
     background: none;
     border: none;
@@ -34,12 +40,12 @@ export default css`
     border: none;
   }
 
-  yatl-button[part='dismiss-button']::part(base) {
+  .dismiss-button::part(base) {
     padding: 0;
     margin: 0;
   }
 
-  yatl-button[part='dismiss-button']::part(base):hover {
+  .dismiss-button::part(base):hover {
     color: var(--yatl-text-1);
     background: none;
   }

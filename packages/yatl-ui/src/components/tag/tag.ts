@@ -16,7 +16,12 @@ export class YatlTag extends YatlBase {
   public dismissable = false;
 
   protected override render() {
-    return html`<slot></slot>${this.renderClearIcon()}`;
+    return html`
+      <span part="text" class="text">
+        <slot></slot>
+      </span>
+      ${this.renderClearIcon()}
+    `;
   }
 
   protected renderClearIcon() {
@@ -29,6 +34,7 @@ export class YatlTag extends YatlBase {
         variant="plain"
         color="muted"
         part="dismiss-button"
+        class="dismiss-button"
         size="small"
         @click=${this.dismissClick}
       >

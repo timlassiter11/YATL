@@ -3,6 +3,7 @@ import { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getTableContext } from '../../../context';
 import {
+  FilterOption,
   getNestedValue,
   NestedKeyOf,
   setNestedValue,
@@ -15,7 +16,7 @@ export class YatlBaseFilter<
   TValue,
   TData extends object = UnspecifiedRecord,
 > extends YatlBase {
-  private _filterOptions?: Map<TValue, number>;
+  private _filterOptions?: FilterOption[];
 
   private _controller?: YatlTableController<TData>;
 
@@ -83,20 +84,20 @@ export class YatlBaseFilter<
   protected get options() {
     // No controller, just return an empty map.
     if (!this.controller) {
-      return new Map<TValue, number>();
+      return [];
     }
 
     // If we don't have a value, we want to keep updating
     // the current options. Once the user sets a value we need
     // to lock in the current options so we don't filter ourselves.
     if (!this.value || !this._filterOptions) {
-      const options = this.controller.getColumnFilterValues(
+      this._filterOptions = this.controller.getColumnFilterValues(
         this.field as NestedKeyOf<TData>,
-      ) as Map<TValue, number>;
+      );
 
       // Sort options. This keeps them consistent when sorting
       // changes and makes it easier for the user to find things.
-      this._filterOptions = new Map([...options.entries()].sort());
+      this._filterOptions.sort((a, b) => a.label.localeCompare(b.label));
     }
     return this._filterOptions;
   }

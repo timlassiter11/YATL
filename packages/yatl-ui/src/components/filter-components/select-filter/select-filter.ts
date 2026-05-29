@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import type { YatlSelect } from '../../form-controls/select/select';
 import { YatlBaseFilter } from '../base-filter/base-filter';
 import styles from './select-filter.styles';
+import { FilterOption } from '@timlassiter11/yatl';
 
 @customElement('yatl-select-filter')
 export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
@@ -12,6 +13,11 @@ export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
   @property({ type: String })
   public placeholder = '';
 
+  /**
+   * The maximum number of selected tags to display.
+   * *NOTE*: This only applies when multi is set.
+   * @attr max-tags
+   */
   @property({ type: Number, attribute: 'max-tags' })
   public maxTags = 3;
 
@@ -24,6 +30,7 @@ export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
   protected override render() {
     return html`
       <yatl-select
+        exportparts="base, tags, tag"
         name=${this.field}
         label=${this.label}
         placeholder=${this.placeholder}
@@ -45,16 +52,19 @@ export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
     }
 
     return repeat(
-      this.options.entries(),
-      ([value, _count]) => value,
-      ([value, count]) => this.renderDropdownOption(String(value ?? ''), count),
+      this.options,
+      option => option.value,
+      option => this.renderDropdownOption(option),
     );
   }
 
-  protected renderDropdownOption(value: string, count: number) {
+  protected renderDropdownOption(option: FilterOption) {
+    const value = option.value ?? '';
+    const label = option.label ?? '';
+
     return html`
-      <yatl-option value=${value} label=${value} checkable>
-        <span part="option-count" slot="end">${count}</span>
+      <yatl-option value=${String(value)} label=${label} checkable>
+        <span part="option-count" slot="end">${option.count}</span>
       </yatl-option>
     `;
   }

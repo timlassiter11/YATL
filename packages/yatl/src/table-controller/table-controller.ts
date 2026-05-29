@@ -22,6 +22,7 @@ import type {
   YatlTableControllerApi,
   ColumnStickyPosition,
   DisplayColumnOptions,
+  FilterOption,
 } from '../types';
 
 import {
@@ -522,23 +523,38 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   public getColumnFilterValues(field: NestedKeyOf<T>, includeNull = false) {
     const column = this.getDisplayColumn(field);
-    const values = new Map<unknown, number>();
-    for (const row of this.filteredData) {
-      let value = getNestedValue(row, field);
-      if (column?.valueFormatter) {
-        value = column.valueFormatter(value, row);
-      }
-      if (!Array.isArray(value)) {
-        value = [value];
-      }
-      for (const item of value as unknown[]) {
-        if (item != null || includeNull) {
-          const valueCount = values.get(item) ?? 0;
-          values.set(item, valueCount + 1);
+    const optionsMap = new Map<unknown, FilterOption>();
+
+    // If the value of a row is an array, flatten it.
+    const values = this.filteredData.flatMap(row => {
+      const value = getNestedValue(row, field);
+      return Array.isArray(value) ? value : [value];
+    });
+
+    for (const value of values) {
+      // FIXME: If the user added a column that is expected to store an array
+      // their formatter would be expecting an array, but we are giving it the individual items.
+      // The problem is just ambiguity. No one is going to filter by the full array,
+      // but they might format the array in some way to display in the column.
+      // Should filter options have their own format method?
+      const label = column?.valueFormatter
+        ? column.valueFormatter(value, value)
+        : value;
+
+      if (value != null || includeNull) {
+        const option = optionsMap.get(value);
+        if (!option) {
+          optionsMap.set(value, {
+            value: value,
+            label: String(label),
+            count: 1,
+          });
+        } else {
+          option.count++;
         }
       }
     }
-    return values;
+    return [...optionsMap.values()];
   }
 
   /**

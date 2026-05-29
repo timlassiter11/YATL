@@ -1,7 +1,7 @@
 import { html, TemplateResult } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlTableController } from '../table-controller/table-controller';
-import { NestedKeyOf, UnspecifiedRecord } from '../types';
+import { FilterOption, NestedKeyOf, UnspecifiedRecord } from '../types';
 import { BaseEditor, BaseEditorOptions } from './base';
 import { isTemplateResult } from 'lit/directive-helpers.js';
 
@@ -41,25 +41,21 @@ export class SelectEditor<
 
     const values = controller.getColumnFilterValues(field, false);
     return repeat(
-      values.keys(),
-      option => option,
-      option => this.renderOption(option, option === value),
+      values,
+      option => option.value,
+      option => this.renderOption(option, option.value === value),
     );
   }
 
-  protected renderOption(option: unknown, select: boolean) {
-    const [value, display] = this.options?.labelRenderer?.(option) ?? [
-      String(option),
-      String(option),
-    ];
-    return html`
-      <option value=${value} ?selected=${select}>${display}</option>
-    `;
+  protected renderOption(option: FilterOption, select: boolean) {
+    const value = String(option.value);
+    const label = this.options?.labelRenderer?.(option) ?? option.label;
+    return html` <option value=${value} ?selected=${select}>${label}</option> `;
   }
 }
 
 export interface SelectEditorOptions<T extends object = UnspecifiedRecord>
   extends BaseEditorOptions<T> {
   options?: [string, string][] | TemplateResult;
-  labelRenderer?: (value: unknown) => [string, string];
+  labelRenderer?: (option: FilterOption) => string;
 }

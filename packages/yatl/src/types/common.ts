@@ -52,3 +52,9 @@ export type Renderable =
   | DirectiveResult;
 
 export type MaybePromise<T> = Promise<T> | T;
+
+export interface FilterOption {
+  value: unknown;
+  label: string;
+  count: number;
+}

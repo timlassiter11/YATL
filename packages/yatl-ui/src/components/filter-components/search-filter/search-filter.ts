@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import type { YatlSearchSelect } from '../../form-controls/search-select/search-select';
 import { YatlBaseFilter } from '../base-filter/base-filter';
 import styles from './search-filter.styles';
+import { FilterOption } from '@timlassiter11/yatl';
 
 @customElement('yatl-search-filter')
 export class YatlSearchFilter extends YatlBaseFilter<string[]> {
@@ -33,16 +34,18 @@ export class YatlSearchFilter extends YatlBaseFilter<string[]> {
     }
 
     return repeat(
-      this.options.entries(),
-      ([value, _count]) => value,
-      ([value, count]) => this.renderDropdownOption(String(value ?? ''), count),
+      this.options,
+      option => option.value,
+      option => this.renderDropdownOption(option),
     );
   }
 
-  protected renderDropdownOption(value: string, count: number) {
+  protected renderDropdownOption(option: FilterOption) {
+    const value = option.value ?? '';
+    const label = option.label ?? '';
     return html`
-      <yatl-option value=${value} label=${value} checkable>
-        <span part="option-count" slot="end">${count}</span>
+      <yatl-option value=${String(value)} label=${label} checkable>
+        <span part="option-count" slot="end">${option.count}</span>
       </yatl-option>
     `;
   }

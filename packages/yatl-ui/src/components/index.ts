@@ -11,6 +11,7 @@ export * from './divider/divider';
 export * from './dropdown/dropdown';
 export * from './dropzone/dropzone';
 export * from './icon/icon';
+export * from './label/label';
 export * from './loading-overlay/loading-overlay';
 export * from './option/option';
 export * from './remote-options/remote-options';

@@ -62,6 +62,11 @@ export const contract = svg`
   <path class="icon contract" d="M8 21v-5H3" />
 `;
 
+export const copy = svg`
+  <rect class="icon copy" x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+  <path class="icon copy" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+`;
+
 export const download = svg`
   <path class="icon download" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
   <polyline class="icon download" points="7 10 12 15 17 10" />
@@ -234,6 +239,7 @@ export const icons: Record<string, TemplateResult<2>> = {
   close: close,
   columns: columns,
   contract: contract,
+  copy: copy,
   download: download,
   expand: expand,
   eye: eye,

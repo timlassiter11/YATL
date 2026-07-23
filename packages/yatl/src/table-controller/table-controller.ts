@@ -526,19 +526,30 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     const optionsMap = new Map<unknown, FilterOption>();
 
     // If the value of a row is an array, flatten it.
-    const values = this.filteredData.flatMap(row => {
-      const value = getNestedValue(row, field);
-      return Array.isArray(value) ? value : [value];
-    });
+    const values: { value: unknown; row: T }[] = this.filteredData.flatMap(
+      row => {
+        const value = getNestedValue(row, field);
+        const values: { value: unknown; row: T }[] = [];
+        if (Array.isArray(value)) {
+          for (const value of values) {
+            values.push({ value, row });
+          }
+        } else {
+          values.push({ value, row });
+        }
 
-    for (const value of values) {
+        return values;
+      },
+    );
+
+    for (const { value, row } of values) {
       // FIXME: If the user added a column that is expected to store an array
       // their formatter would be expecting an array, but we are giving it the individual items.
       // The problem is just ambiguity. No one is going to filter by the full array,
       // but they might format the array in some way to display in the column.
       // Should filter options have their own format method?
       const label = column?.valueFormatter
-        ? column.valueFormatter(value, value)
+        ? column.valueFormatter(value, row)
         : value;
 
       if (value != null || includeNull) {

@@ -15,9 +15,6 @@ export class YatlTabGroup extends YatlBase {
     const panels = this.getAllPanels();
     const tab = tabs.filter(t => !t.disabled).find(t => t.panel === name);
     const panel = panels.find(p => p.name === name);
-    if (!tab || !panel) {
-      return;
-    }
 
     for (const tab of tabs) {
       tab.active = false;
@@ -26,8 +23,14 @@ export class YatlTabGroup extends YatlBase {
       panel.active = false;
     }
 
-    tab.active = true;
-    panel.active = true;
+    if (tab) {
+      tab.active = true;
+    }
+
+    if (panel) {
+      panel.active = true;
+    }
+
     this.active = name;
   }
 

@@ -6,6 +6,7 @@ import {
   YatlDialogHideRequest,
   YatlDialogShowEvent,
   YatlDialogShowRequest,
+  YatlDialogFullscreenEvent,
 } from '../../events';
 import {
   animateWithClass,
@@ -138,6 +139,15 @@ export class YatlDialog extends YatlBase {
   protected override firstUpdated(_changedProperties: PropertyValues): void {
     if (this.open) {
       this.show();
+    }
+  }
+
+  protected override updated(
+    changedProperties: PropertyValues<YatlDialog>,
+  ): void {
+    if (changedProperties.has('fullscreen')) {
+      const event = new YatlDialogFullscreenEvent(this.fullscreen);
+      this.dispatchEvent(event);
     }
   }
 

@@ -28,11 +28,19 @@ export class YatlDialogHideEvent extends YatlEvent {
   }
 }
 
+export class YatlDialogFullscreenEvent extends YatlEvent {
+  public static readonly EVENT_NAME = 'yatl-dialog-fullscreen';
+  constructor(public readonly fullscreen: boolean) {
+    super(YatlDialogFullscreenEvent.EVENT_NAME);
+  }
+}
+
 declare global {
   interface HTMLElementEventMap {
     [YatlDialogShowRequest.EVENT_NAME]: YatlDialogShowRequest;
     [YatlDialogShowEvent.EVENT_NAME]: YatlDialogShowEvent;
     [YatlDialogHideRequest.EVENT_NAME]: YatlDialogHideRequest;
     [YatlDialogHideEvent.EVENT_NAME]: YatlDialogHideEvent;
+    [YatlDialogFullscreenEvent.EVENT_NAME]: YatlDialogFullscreenEvent;
   }
 }

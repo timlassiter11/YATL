@@ -152,9 +152,10 @@ export default css`
   [part='hint'] {
     color: var(--input-hint-text);
     font-size: var(--input-hint-font-size);
+    padding-top: var(--yatl-spacing-s);
   }
 
-  [part='hint']:not(.has-hint) {
+  slot[name='hint']:not(.has-hint) {
     display: none;
   }
 

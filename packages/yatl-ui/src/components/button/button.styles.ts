@@ -92,6 +92,10 @@ export default css`
     cursor: not-allowed;
   }
 
+  :host([disabled]) [part='base'] {
+    cursor: not-allowed;
+  }
+
   :host(:not([disabled])) [part='base']:hover {
     background-color: var(--button-hover-bg);
   }

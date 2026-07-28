@@ -531,8 +531,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         const value = getNestedValue(row, field);
         const values: { value: unknown; row: T }[] = [];
         if (Array.isArray(value)) {
-          for (const value of values) {
-            values.push({ value, row });
+          for (const entry of value) {
+            values.push({ value: entry, row });
           }
         } else {
           values.push({ value, row });

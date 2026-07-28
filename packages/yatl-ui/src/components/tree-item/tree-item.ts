@@ -63,12 +63,13 @@ export class YatlTreeItem extends YatlBase {
     return html`
       <details
         id=${this.value}
+        part="base"
         class=${classMap({ 'has-children': this.hasChildItems })}
         ?open=${open}
         @toggle=${this.handleDetailsToggle}
         @click=${this.handleDetailsClick}
       >
-        <summary>
+        <summary part="summary">
           <yatl-button
             variant="plain"
             size="small"

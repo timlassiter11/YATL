@@ -176,6 +176,25 @@ export const print = svg`
   <rect class="icon print" x="6" y="14" width="12" height="8"></rect>
 `;
 
+export const qrCode = svg`
+  <!-- Top Left Square -->
+  <rect class="icon qr-code" width="5" height="5" x="3" y="3" rx="1" />
+  <!-- Top Right Square -->
+  <rect class="icon qr-code" width="5" height="5" x="16" y="3" rx="1" />
+  <!-- Bottom Left Square -->
+  <rect class="icon qr-code" width="5" height="5" x="3" y="16" rx="1" />
+  <!-- Center and Bottom Right Data Modules -->
+  <path class="icon qr-code" d="M21 16h-3a2 2 0 0 0-2 2v3" />
+  <path class="icon qr-code" d="M21 21v.01" />
+  <path class="icon qr-code" d="M12 7v3a2 2 0 0 1-2 2H7" />
+  <path class="icon qr-code" d="M3 12h.01" />
+  <path class="icon qr-code" d="M12 3h.01" />
+  <path class="icon qr-code" d="M12 16v.01" />
+  <path class="icon qr-code" d="M16 12h1" />
+  <path class="icon qr-code" d="M21 12v.01" />
+  <path class="icon qr-code" d="M12 21v-1" />
+`;
+
 export const reload = svg`
   <path class="icon reload" d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
   <path class="icon reload" d="M21 3v5h-5" />
@@ -185,6 +204,14 @@ export const save = svg`
   <path class="icon save" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
   <polyline class="icon save" points="17 21 17 13 7 13 7 21"/>
   <polyline class="icon save" points="7 3 7 8 15 8"/>
+`;
+
+export const scan = svg`
+  <path class="icon scan" d="M4 9V5a1 1 0 0 1 1-1h4" />
+  <path class="icon scan" d="M15 4h4a1 1 0 0 1 1 1v4" />
+  <path class="icon scan" d="M4 15v4a1 1 0 0 0 1 1h4" />
+  <path class="icon scan" d="M15 20h4a1 1 0 0 0 1-1v-4" />
+  <line class="icon scan" x1="3" y1="12" x2="21" y2="12" />
 `;
 
 export const share = svg`
@@ -255,8 +282,10 @@ export const icons: Record<string, TemplateResult<2>> = {
   pencil: pencil,
   'pencil-paper': pencilPaper,
   print: print,
+  'qr-code': qrCode,
   reload: reload,
   save: save,
+  scan: scan,
   share: share,
   spinner: spinner,
   sun: sun,

@@ -105,6 +105,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
   // #region --- State Data ---
 
+  @state()
+  private useYatlUi = false;
+
   private resizeObserver: ResizeObserver | null = null;
   @state()
   private headerWidths = new Map<NestedKeyOf<T>, number>();
@@ -998,13 +1001,22 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   protected renderCheckbox(row: T, selected: boolean) {
-    return html`<input
-      part="row-checkbox"
-      class="row-checkbox"
-      type="checkbox"
-      .checked=${live(selected)}
-      @change=${(event: Event) => this.handleRowSelectionClicked(event, row)}
-    />`;
+    return this.useYatlUi
+      ? html`<yatl-checkbox
+          part="row-checkbox"
+          class="row-checkbox"
+          .checked=${selected}
+          @change=${(event: Event) =>
+            this.handleRowSelectionClicked(event, row)}
+        ></yatl-checkbox>`
+      : html`<input
+          part="row-checkbox"
+          class="row-checkbox"
+          type="checkbox"
+          .checked=${selected}
+          @change=${(event: Event) =>
+            this.handleRowSelectionClicked(event, row)}
+        />`;
   }
 
   protected renderRowSelectorCell(row: T, selected: boolean) {
@@ -1191,6 +1203,14 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     this.addControllerListeners(this.controller);
     this.addEventListener('mousedown', this.handleMouseDown);
     this.addEventListener('keydown', this.handleCellInputKeypress);
+
+    // We want to use the checkbox from yatl-ui if it is available.
+    // If it gets defined, rerender with it.
+    if (!this.useYatlUi) {
+      customElements.whenDefined('yatl-checkbox').then(() => {
+        this.useYatlUi = true;
+      });
+    }
   }
 
   public override disconnectedCallback(): void {

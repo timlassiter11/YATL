@@ -259,6 +259,11 @@ export class YatlDropdown extends YatlBase {
         strategy: 'fixed',
         middleware: [
           offset(4),
+          flip({
+            fallbackStrategy: 'initialPlacement',
+            rootBoundary: 'viewport',
+          }),
+          shift({ padding: 5 }),
           size({
             apply: ({ rects, availableHeight, elements }) => {
               const maxHeight = 400;
@@ -279,8 +284,6 @@ export class YatlDropdown extends YatlBase {
             },
             padding: 10,
           }),
-          flip(),
-          shift({ padding: 5 }),
         ],
       }).then(({ x, y }) => {
         Object.assign(menu.style, {

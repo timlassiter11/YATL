@@ -8,6 +8,10 @@ import {
 } from '../../events/confirmation-dialog';
 import { type YatlDialog } from '../dialog/dialog';
 
+/**
+ * @fires yatl-confirmation-dialog-accept when the dialog has been accepted
+ * @fires yatl-confirmation-dialog-reject when the dialog has been rejected
+ */
 @customElement('yatl-confirmation-dialog')
 export class YatlConfirmationDialog extends YatlBase {
   public static override styles = [...super.styles, styles];

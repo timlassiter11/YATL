@@ -27,17 +27,31 @@ export class YatlSpinner extends YatlBase {
   @property({ type: String, reflect: true })
   public state: YatlSpinnerState = 'loading';
 
-  /** Duration the success state will be displayed before clearing */
+  /**
+   * Duration the success state will be displayed before clearing
+   * @attr success-duration
+   */
   @property({ type: Number, attribute: 'success-duration' })
   public successDuration = 3000;
 
-  /** Duration the error state will be displayed before clearing */
+  /**
+   * Duration the error state will be displayed before clearing
+   * @attr error-duration
+   */
   @property({ type: Number, attribute: 'error-duration' })
   public errorDuration = 3000;
 
+  /**
+   * Duration the overlay should remain visible when transitioning states
+   * @attr overlay-duration
+   */
   @property({ type: Number, attribute: 'overlay-duration' })
   public overlayDuration = 3000;
 
+  /**
+   * Disables the overlay
+   * @attr no-overlay
+   */
   @property({ type: Boolean, attribute: 'no-overlay' })
   public noOverlay = false;
 

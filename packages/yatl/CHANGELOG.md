@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.4.1
+
+### Patch Changes
+
+- 668410d: Fixed table displying two row selection checkboxes
+
 ## 1.4.0
 
 ### Minor Changes

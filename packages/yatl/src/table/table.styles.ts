@@ -238,7 +238,7 @@ export default css`
       border-right-style: solid;
     }
 
-    .row-checkbox {
+    input.row-checkbox {
       appearance: none;
       -webkit-appearance: none;
       margin: 0;
@@ -254,12 +254,12 @@ export default css`
       transition: all 0.1s ease-in-out;
     }
 
-    .row-checkbox:checked {
+    input.row-checkbox:checked {
       background-color: var(--checkbox-accent);
       border-color: var(--checkbox-accent);
     }
 
-    .row-checkbox::after {
+    input.row-checkbox::after {
       content: '';
       position: absolute;
       left: 50%;
@@ -274,7 +274,7 @@ export default css`
       transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
-    .row-checkbox:checked::after {
+    input.row-checkbox:checked::after {
       transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
 

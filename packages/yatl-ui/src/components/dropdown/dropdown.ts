@@ -42,6 +42,10 @@ export class YatlDropdown extends YatlBase {
   @queryAssignedElements({ flatten: true })
   private assignedElements!: Array<HTMLElement>;
 
+  /**
+   * Shows or hides the dropdown menu.
+   * @attr open
+   */
   @property({ type: Boolean, reflect: true })
   public open = false;
 

@@ -8,16 +8,31 @@ import { YatlDateGridRange } from '../date-grid/date-grid';
 
 import styles from './date-picker.styles';
 
+/**
+ * @fires change - Fired when the selected date changes.
+ */
 @customElement('yatl-date-picker')
 export class YatlDatePicker extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The earliest selectable date.
+   * @attr min
+   */
   @property({ converter: dateConverter })
   public min?: Date;
 
+  /**
+   * The latest selectable date.
+   * @attr max
+   */
   @property({ converter: dateConverter })
   public max?: Date;
 
+  /**
+   * The currently selected date.
+   * @attr date
+   */
   @property({ converter: dateConverter })
   public date?: Date;
 

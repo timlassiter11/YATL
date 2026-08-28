@@ -7,9 +7,17 @@ import styles from './tab-panel.styles';
 export class YatlTabPanel extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The name used by a `yatl-tab-group` to associate this panel with a tab.
+   * @attr name
+   */
   @property({ type: String })
   public name = '';
 
+  /**
+   * Reflects whether this panel is currently active/visible.
+   * @attr active
+   */
   @property({ type: Boolean, reflect: true })
   public active = false;
 

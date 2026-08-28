@@ -47,6 +47,7 @@ export class YatlToolbar<
   private searchDebounceTimer = 0;
 
   private _controller?: YatlTableController<T>;
+  /** The table controller this toolbar is attached to. */
   @property({ attribute: false })
   public get controller() {
     return this._controller;
@@ -60,12 +61,24 @@ export class YatlToolbar<
     controller?.attach(this);
   }
 
+  /**
+   * Hides the column visibility picker button.
+   * @attr hide-column-picker
+   */
   @property({ type: Boolean, attribute: 'hide-column-picker' })
   public hideColumnPicker = false;
 
+  /**
+   * Hides the export button.
+   * @attr hide-export-button
+   */
   @property({ type: Boolean, attribute: 'hide-export-button' })
   public hideExportButton = false;
 
+  /**
+   * Time in milliseconds to wait after the last keystroke before triggering the search.
+   * @attr searchdebounce
+   */
   @property({ type: Number })
   public searchDebounce = 250;
 

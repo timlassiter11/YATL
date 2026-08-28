@@ -8,12 +8,24 @@ import styles from './icon.styles';
 export class YatlIcon extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The name of the icon to render, looked up in the built-in icon set.
+   * @attr name
+   */
   @property({ type: String })
   public name = '';
 
+  /**
+   * The SVG `viewBox` attribute for the icon.
+   * @attr viewbox
+   */
   @property({ type: String })
   public viewBox = '0 0 24 24';
 
+  /**
+   * An accessible label for the icon. When unset, the icon is hidden from assistive technology.
+   * @attr label
+   */
   @property({ type: String })
   public label = '';
 

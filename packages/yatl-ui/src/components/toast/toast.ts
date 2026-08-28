@@ -18,15 +18,31 @@ export class YatlToast extends YatlBase {
 
   @state() private running = false;
 
+  /**
+   * The visual style of the toast.
+   * @attr variant
+   */
   @property({ type: String })
   public variant: YatlToastVariant = 'neutral';
 
+  /**
+   * The toast's title. Falls back to `message` if not set.
+   * @attr label
+   */
   @property({ type: String })
   public label = '';
 
+  /**
+   * The body text of the toast.
+   * @attr message
+   */
   @property({ type: String })
   public message = '';
 
+  /**
+   * Time in milliseconds before the toast automatically hides. Set to `0` to disable auto-hide.
+   * @attr duration
+   */
   @property({ type: Number, reflect: true })
   public duration = 0;
 

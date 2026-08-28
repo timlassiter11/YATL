@@ -9,6 +9,7 @@ export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
   private _offValue?: unknown;
   private _checked = this.hasAttribute('checked');
 
+  /** The filter value applied when the switch is checked. */
   @property({ attribute: false })
   public get onValue() {
     return this._onValue;
@@ -24,6 +25,7 @@ export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
     this.requestUpdate('onValue', oldValue);
   }
 
+  /** The filter value applied when the switch is unchecked. */
   @property({ attribute: false })
   public get offValue() {
     return this._offValue;
@@ -39,6 +41,7 @@ export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
     this.requestUpdate('offValue', oldValue);
   }
 
+  /** The current check state of the switch. */
   @property({ attribute: false })
   public get checked() {
     return this._checked;

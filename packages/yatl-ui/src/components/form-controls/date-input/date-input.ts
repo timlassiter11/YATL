@@ -15,30 +15,54 @@ const dayFormatter = Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 });
 
+/**
+ * @fires change - Fired when the selected date changes.
+ */
 @customElement('yatl-date-input')
 export class YatlDateInput extends YatlFormControl<Date> {
   public static override styles = [...super.styles, styles];
 
   @state() private open = false;
 
+  /**
+   * The placeholder text to display when no date is selected.
+   * @attr placeholder
+   */
   @property({ type: String })
   public placeholder = 'Pick a date';
 
+  /**
+   * The visual width of the input, measured in average character widths.
+   * @attr size
+   */
   @property({ type: Number })
   public size?: number;
 
+  /**
+   * The earliest selectable date.
+   * @attr min
+   */
   @property({ converter: dateConverter, reflect: true })
   public min?: Date;
 
+  /**
+   * The latest selectable date.
+   * @attr max
+   */
   @property({ converter: dateConverter, reflect: true })
   public max?: Date;
 
+  /**
+   * The initial, uncontrolled value of the input.
+   * @attr value
+   */
   @property({ converter: dateConverter, attribute: 'value' })
   public defaultValue?: Date;
 
   // Mutable value types need to be copied
   // so the user's changes don't mess things up.
   private _value?: Date;
+  /** The current, controlled value of the input. */
   public get value() {
     return this._value ? new Date(this._value) : undefined;
   }

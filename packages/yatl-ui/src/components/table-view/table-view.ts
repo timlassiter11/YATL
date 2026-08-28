@@ -13,7 +13,10 @@ import {
 import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
 import { YatlSpinnerState } from '../spinner/spinner';
 
-/** @inheritdoc */
+/**
+ * @inheritdoc
+ * @fires yatl-table-view-filters-clear - Fired when the filters clear button is clicked.
+ */
 @customElement('yatl-table-view')
 export class YatlTableView<
   T extends object = UnspecifiedRecord,
@@ -28,16 +31,24 @@ export class YatlTableView<
   /** When the user requests a silent reload, show the loading icon in the button. */
   @state() private buttonState: YatlSpinnerState = 'idle';
 
-  /** Text to be display above the filters slot. */
+  /**
+   * Text to be display above the filters slot.
+   * @attr filterslabel
+   */
   @property({ type: String })
   public filtersLabel = 'Filters';
 
   /**
    * Toggles the visibility of the left filters pane and header. Defaults to `false`.
+   * @attr hide-filters
    */
   @property({ type: Boolean, reflect: true, attribute: 'hide-filters' })
   public hideFilters = false;
 
+  /**
+   * Toggles the visibility of the filters clear button. Defaults to `false`.
+   * @attr hide-filters-clear-button
+   */
   @property({
     type: Boolean,
     reflect: true,
@@ -47,24 +58,28 @@ export class YatlTableView<
 
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
+   * @attr hide-column-picker
    */
   @property({ type: Boolean, attribute: 'hide-column-picker' })
   public hideColumnPicker = false;
 
   /**
    * Toggles the visibility of the CSV export button in the toolbar. Defaults to `true`.
+   * @attr hide-export-button
    */
   @property({ type: Boolean, attribute: 'hide-export-button' })
   public hideExportButton = false;
 
   /**
    * Toggles the visibility of the reload button in the toolbar. Defaults to `true`.
+   * @attr hide-reload-button
    */
   @property({ type: Boolean, attribute: 'hide-reload-button' })
   public hideReloadButton = false;
 
   /**
    * When set, displays the loading indicator inside the table.
+   * @attr loading
    */
   @property({ type: Boolean, reflect: true })
   public loading = false;
@@ -72,6 +87,7 @@ export class YatlTableView<
   /**
    * When set and fetch task was provided, automatically start
    * a fetch request before first render.
+   * @attr auto-load
    */
   @property({ type: Boolean, attribute: 'auto-load', hasChanged: () => false })
   public autoLoad?: boolean;

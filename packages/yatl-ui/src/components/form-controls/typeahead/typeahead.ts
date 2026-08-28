@@ -16,7 +16,8 @@ import styles from './typeahead.styles';
  * A hybrid typeahead component that searches local data instantly
  * and falls back to a remote endpoint for asynchronous data fetching.
  * @element yatl-typeahead
- * @fires change - Fired when the selected value changes.
+ * @fires input - Fired synchronously as the user types.
+ * @fires change - Fired when the input value is committed or a result is selected.
  */
 @customElement('yatl-typeahead')
 export class YatlTypeahead extends YatlInput {
@@ -39,6 +40,7 @@ export class YatlTypeahead extends YatlInput {
 
   /**
    * The initial, uncontrolled value of the typeahead.
+   * @attr value
    */
   @property({ type: String, attribute: 'value' })
   public override defaultValue = '';

@@ -13,6 +13,10 @@ export class YatlButtonGroup extends YatlBase {
   @query('slot')
   private defaultSlot!: HTMLSlotElement;
 
+  /**
+   * When set, disables all child controls. Leave unset to let children manage their own disabled state.
+   * @attr disabled
+   */
   @property({ type: Boolean })
   public disabled?: boolean;
 

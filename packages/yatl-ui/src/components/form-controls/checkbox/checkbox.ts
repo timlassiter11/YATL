@@ -5,6 +5,9 @@ import { YatlFormControl } from '../form-control/form-control';
 
 import styles from './checkbox.styles';
 
+/**
+ * @fires change - Fired when the checked state changes.
+ */
 @customElement('yatl-checkbox')
 export class YatlCheckbox extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
@@ -18,6 +21,7 @@ export class YatlCheckbox extends YatlFormControl<string> {
 
   /**
    * The value to store in the form data when the checkbox is checked.
+   * @attr value
    */
   public get value() {
     return this._value;
@@ -69,6 +73,10 @@ export class YatlCheckbox extends YatlFormControl<string> {
     this.updateFormValue();
   }
 
+  /**
+   * The initial, uncontrolled check state of the checkbox.
+   * @attr checked
+   */
   @property({ type: Boolean, reflect: true, attribute: 'checked' })
   public defaultChecked = this.hasAttribute('checked');
 

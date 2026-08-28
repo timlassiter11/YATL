@@ -24,6 +24,10 @@ export class YatlSpinner extends YatlBase {
   @state() private internalState?: 'success' | 'error';
   @state() private showOverlay = false;
 
+  /**
+   * The current state of the spinner.
+   * @attr state
+   */
   @property({ type: String, reflect: true })
   public state: YatlSpinnerState = 'loading';
 

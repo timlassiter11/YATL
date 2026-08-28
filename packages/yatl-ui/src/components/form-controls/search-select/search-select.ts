@@ -10,6 +10,9 @@ import { YatlInput } from '../input/input';
 import styles from './search-select.styles';
 import { live } from 'lit/directives/live.js';
 
+/**
+ * @fires change - Fired when the selected options change.
+ */
 @customElement('yatl-search-select')
 export class YatlSearchSelect extends YatlFormControl<string[]> {
   public static override styles = [...super.styles, styles];
@@ -35,22 +38,43 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
   @state() private noMatch = false;
   @state() private hasFocus = false;
 
+  /**
+   * The placeholder text to display in the search box.
+   * @attr placeholder
+   */
   @property({ type: String })
   public placeholder = 'Search';
 
+  /**
+   * The text displayed when no options match the search query.
+   * @attr no-results-text
+   */
   @property({ type: String, attribute: 'no-results-text' })
   public noResultsText = 'No matching options...';
 
+  /**
+   * When true, the options list always matches the width of the control.
+   * @attr match-width
+   */
   @property({ type: Boolean, attribute: 'match-width' })
   public matchWidth = true;
 
+  /**
+   * The number of options visible at once without scrolling.
+   * @attr size
+   */
   @property({ type: Number, reflect: true })
   public size = 4;
 
+  /**
+   * The initial, uncontrolled selected values.
+   * @attr value
+   */
   @property({ type: Array, attribute: 'value' })
   public defaultValue = [];
 
   private _value: string[] = [];
+  /** The current, controlled selected values. */
   public get value() {
     return [...this._value];
   }

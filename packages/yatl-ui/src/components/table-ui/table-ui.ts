@@ -28,12 +28,14 @@ export class YatlTableUi<
 
   /**
    * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
+   * @attr hide-column-picker
    */
   @property({ type: Boolean, attribute: 'hide-column-picker' })
   public hideColumnPicker = false;
 
   /**
    * Toggles the visibility of the CSV export button in the toolbar. Defaults to `true`.
+   * @attr hide-export-button
    */
   @property({ type: Boolean, attribute: 'hide-export-button' })
   public hideExportButton = false;

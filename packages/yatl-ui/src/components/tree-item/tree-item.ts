@@ -23,15 +23,31 @@ export class YatlTreeItem extends YatlBase {
   @queryAssignedElements({ flatten: true, slot: 'children' })
   private assignedElements!: Array<HTMLElement>;
 
+  /**
+   * The value used to identify this item.
+   * @attr value
+   */
   @property({ type: String })
   public value = '';
 
+  /**
+   * When true, this item's children are expanded.
+   * @attr open
+   */
   @property({ type: Boolean, reflect: true })
   public open = false;
 
+  /**
+   * Disables selection and expansion of this item.
+   * @attr disabled
+   */
   @property({ type: Boolean, reflect: true })
   public disabled = false;
 
+  /**
+   * Reflects whether this item is currently selected.
+   * @attr selected
+   */
   @property({ type: Boolean, reflect: true })
   public selected = false;
 

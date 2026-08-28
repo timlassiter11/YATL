@@ -5,13 +5,16 @@ import { YatlBase } from '../base/base';
 import styles from './tag.styles';
 
 /**
- * @fires yatl-tag-dismiss-request
- * @fires yatl-tag-dismiss
+ * @fires yatl-tag-dismiss - Fired when the dismiss button is clicked.
  */
 @customElement('yatl-tag')
 export class YatlTag extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * When true, a dismiss button is rendered.
+   * @attr dismissable
+   */
   @property({ type: Boolean, reflect: true })
   public dismissable = false;
 

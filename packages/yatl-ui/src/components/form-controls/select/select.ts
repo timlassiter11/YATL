@@ -11,6 +11,9 @@ import { YatlDropdown } from '../../dropdown/dropdown';
 import { YatlOption } from '../../option/option';
 import styles from './select.styles';
 
+/**
+ * @fires change - Fired when the selected value changes.
+ */
 @customElement('yatl-select')
 export class YatlSelect extends YatlFormControl<string | string[]> {
   public static override styles = [...super.styles, styles];
@@ -18,9 +21,17 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
   @queryAssignedElements({ flatten: true })
   private assignedElements!: Array<HTMLElement>;
 
+  /**
+   * Placeholder text shown when no option is selected.
+   * @attr placeholder
+   */
   @property({ type: String })
   public placeholder = '';
 
+  /**
+   * When true, multiple options may be selected.
+   * @attr multi
+   */
   @property({ type: Boolean, reflect: true })
   public multi = false;
 
@@ -40,18 +51,31 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
   @property({ type: Boolean, attribute: 'match-width' })
   public matchWidth = false;
 
+  /**
+   * The initial, uncontrolled selected value(s).
+   * @attr value
+   */
   @property({ type: Array, attribute: 'value' })
   public defaultValue: string | string[] = '';
 
+  /**
+   * Reflects whether the dropdown is currently open.
+   * @attr open
+   */
   @property({ type: Boolean, reflect: true })
   public open = false;
 
+  /**
+   * When true, a button is shown to clear the selected value.
+   * @attr clearable
+   */
   @property({ type: Boolean, reflect: true })
   public clearable = false;
 
   // Mutable value types need to be copied
   // so the user's changes don't mess things up.
   private _value: string[] = [];
+  /** The current, controlled selected value(s). */
   public get value() {
     if (this.multi) {
       return [...this._value];

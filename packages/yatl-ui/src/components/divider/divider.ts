@@ -7,6 +7,10 @@ import styles from './divider.styles';
 export class YatlDivider extends LitElement {
   public static override styles = [styles];
 
+  /**
+   * The direction the divider line is drawn.
+   * @attr orientation
+   */
   @property({ type: String, reflect: true })
   public orientation: 'horizontal' | 'vertical' = 'horizontal';
 }

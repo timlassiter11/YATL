@@ -24,56 +24,108 @@ export class YatlButton extends YatlFormControl {
   // We don't need the form control styles but we still want the base styles
   public static override styles = [...YatlBase.styles, sizeStyles, styles];
 
+  /**
+   * The initial, uncontrolled value of the button when form associated.
+   * @attr value
+   */
   @property({ type: String, attribute: 'value' })
   public defaultValue = this.getAttribute('value') ?? '';
 
+  /** The current, controlled value of the button when form associated. */
   @property({ attribute: false })
   public value = this.getAttribute('value') ?? '';
 
+  /**
+   * The native button behavior. Only affects buttons associated with a form.
+   * @attr type
+   */
   @property({ type: String, reflect: true })
   public type: 'button' | 'submit' | 'reset' = 'button';
 
+  /**
+   * The size of the button.
+   * @attr size
+   */
   @property({ type: String, reflect: true })
   public size: YatlSize = 'medium';
 
+  /**
+   * The visual variant of the button.
+   * @attr variant
+   */
   @property({ type: String, reflect: true })
   public variant: YatlButtonVariant = 'neutral';
 
+  /**
+   * The color of the button.
+   * @attr color
+   */
   @property({ type: String, reflect: true })
   public color: YatlButtonColor = 'neutral';
 
+  /**
+   * The current state of the button, shown via the embedded spinner.
+   * @attr state
+   */
   @property({ type: String, reflect: true })
   public state: YatlSpinnerState = 'idle';
 
+  /**
+   * Duration the success state will be displayed before clearing.
+   * @attr success-duration
+   */
   @property({ type: Number, attribute: 'success-duration' })
   public successDuration = 3000;
 
+  /**
+   * Duration the error state will be displayed before clearing.
+   * @attr error-duration
+   */
   @property({ type: Number, attribute: 'error-duration' })
   public errorDuration = 3000;
 
+  /**
+   * A function to run when the button is clicked. If it returns a promise,
+   * the button shows a loading state until it resolves, then success or error.
+   */
   @property({ attribute: false })
   public action?: () => MaybePromise<unknown>;
 
-  /** Used to override the form owner's `action` attribute. */
+  /**
+   * Used to override the form owner's `action` attribute.
+   * @attr formaction
+   */
   @property({ attribute: 'formaction' })
   public formAction?: string;
 
-  /** Used to override the form owner's `enctype` attribute.  */
+  /**
+   * Used to override the form owner's `enctype` attribute.
+   * @attr formenctype
+   */
   @property({ attribute: 'formenctype' })
   public formEnctype?:
     | 'application/x-www-form-urlencoded'
     | 'multipart/form-data'
     | 'text/plain';
 
-  /** Used to override the form owner's `method` attribute.  */
+  /**
+   * Used to override the form owner's `method` attribute.
+   * @attr formmethod
+   */
   @property({ attribute: 'formmethod' })
   public formMethod?: 'post' | 'get';
 
-  /** Used to override the form owner's `novalidate` attribute. */
+  /**
+   * Used to override the form owner's `novalidate` attribute.
+   * @attr formnovalidate
+   */
   @property({ attribute: 'formnovalidate', type: Boolean })
   public formNoValidate?: boolean;
 
-  /** Used to override the form owner's `target` attribute. */
+  /**
+   * Used to override the form owner's `target` attribute.
+   * @attr formtarget
+   */
   @property({ attribute: 'formtarget' })
   public formTarget?: '_self' | '_blank' | '_parent' | '_top' | string;
 

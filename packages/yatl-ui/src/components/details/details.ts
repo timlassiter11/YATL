@@ -11,12 +11,24 @@ import { YatlDetailsToggleEvent } from '../../events/details';
 export class YatlDetails extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * Groups details elements so opening one closes the others sharing the same name.
+   * @attr name
+   */
   @property({ type: String, reflect: true })
   public name = '';
 
+  /**
+   * Reflects whether the details is currently expanded.
+   * @attr open
+   */
   @property({ type: Boolean, reflect: true })
   public open = false;
 
+  /**
+   * The summary text displayed in the header.
+   * @attr summary
+   */
   @property({ type: String })
   public summary = '';
 

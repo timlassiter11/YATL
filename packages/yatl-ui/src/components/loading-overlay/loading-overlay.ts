@@ -9,9 +9,17 @@ import { YatlSpinnerStateChangeEvent } from '../../events';
 export class YatlLoadingOverlay extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * Shows or hides the overlay.
+   * @attr show
+   */
   @property({ type: Boolean, reflect: true })
   public show = false;
 
+  /**
+   * The current state of the spinner shown in the overlay.
+   * @attr state
+   */
   @property({ type: String, reflect: true })
   public state: YatlSpinnerState = 'loading';
 

@@ -36,15 +36,28 @@ export class YatlDateGrid extends YatlBase {
 
   @state() private currentMonth = getFirstDayOfMonth(new Date());
 
+  /**
+   * When true, today's date is visually highlighted.
+   * @attr highlight-today
+   */
   @property({ type: Boolean, attribute: 'highlight-today', reflect: true })
   public highlightToday = true;
 
+  /** Date ranges to highlight on the grid, each rendered in the given color. */
   @property({ attribute: false })
   public ranges: YatlDateGridRange[] = [];
 
+  /**
+   * The earliest selectable date.
+   * @attr min
+   */
   @property({ converter: dateConverter })
   public min?: Date;
 
+  /**
+   * The latest selectable date.
+   * @attr max
+   */
   @property({ converter: dateConverter })
   public max?: Date;
 

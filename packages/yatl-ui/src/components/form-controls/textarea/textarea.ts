@@ -6,25 +6,50 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 
 import styles from './textarea.styles';
 
+/**
+ * @fires input - Fired synchronously as the user types.
+ * @fires change - Fired when the input value is committed (e.g., on blur).
+ */
 @customElement('yatl-textarea')
 export class YatlTextArea extends YatlFormControl {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The number of visible text lines.
+   * @attr rows
+   */
   @property({ type: Number })
   public rows?: number;
 
+  /**
+   * The placeholder text to display when the input is empty.
+   * @attr placeholder
+   */
   @property({ type: String })
   public placeholder = '';
 
+  /**
+   * The minimum string length that the input will consider valid.
+   * @attr minlength
+   */
   @property({ type: Number })
   public minlength?: number;
 
+  /**
+   * The maximum string length that the input will consider valid.
+   * @attr maxlength
+   */
   @property({ type: Number })
   public maxlength?: number;
 
+  /**
+   * The initial, uncontrolled value of the textarea.
+   * @attr value
+   */
   @property({ type: String, attribute: 'value' })
   public defaultValue = '';
 
+  /** The current, controlled value of the textarea. */
   @property({ attribute: false })
   public value = '';
 

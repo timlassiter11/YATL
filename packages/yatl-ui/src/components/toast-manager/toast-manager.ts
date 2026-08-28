@@ -16,12 +16,19 @@ type ToastPosition =
   | 'bottom-center'
   | 'bottom-right';
 
+/**
+ * Listens for `yatl-toast-request` events on `window` and renders the resulting toasts.
+ */
 @customElement('yatl-toast-manager')
 export class YatlToastManager extends YatlBase {
   public static override styles = [...super.styles, styles];
 
   @state() private toasts: ToastData[] = [];
 
+  /**
+   * The corner of the viewport toasts are anchored to.
+   * @attr position
+   */
   @property({ type: String, reflect: true })
   public position: ToastPosition = 'bottom-right';
 

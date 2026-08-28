@@ -36,12 +36,21 @@ export class YatlDropzone extends YatlBase {
   private isValidDrop = false;
   @state() private rejectReason?: string;
 
+  /**
+   * The current drag/drop state of the zone.
+   * @attr state
+   */
   @property({ type: String, reflect: true })
   public state: DropzoneState = 'none';
 
+  /**
+   * Reflects whether the drag hint is currently shown.
+   * @attr show-hint
+   */
   @property({ type: Boolean, reflect: true, attribute: 'show-hint' })
   public showHint = false;
 
+  /** Arbitrary data passed through to drag/drop request and drop events. */
   @property({ attribute: false })
   public context: unknown;
 

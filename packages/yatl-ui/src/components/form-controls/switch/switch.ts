@@ -4,6 +4,9 @@ import { live } from 'lit/directives/live.js';
 import { YatlFormControl } from '../form-control/form-control';
 import styles from './switch.styles';
 
+/**
+ * @fires change - Fired when the checked state changes.
+ */
 @customElement('yatl-switch')
 export class YatlSwitch extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
@@ -17,6 +20,7 @@ export class YatlSwitch extends YatlFormControl<string> {
 
   /**
    * The value to store in the form data when the switch is on.
+   * @attr value
    */
   public get value() {
     return this._value;
@@ -68,6 +72,10 @@ export class YatlSwitch extends YatlFormControl<string> {
     this.updateFormValue();
   }
 
+  /**
+   * The initial, uncontrolled check state of the switch.
+   * @attr checked
+   */
   @property({ type: Boolean, attribute: 'checked' })
   public defaultChecked = this.hasAttribute('checked');
 

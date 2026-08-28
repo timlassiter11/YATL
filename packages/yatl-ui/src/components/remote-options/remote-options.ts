@@ -22,18 +22,22 @@ export class YatlRemoteOptions extends YatlBase {
 
   /**
    * The URI used to fetch the data
+   * @attr uri
    */
   @property({ type: String })
   public uri = '';
 
+  /** A function used to convert the raw fetched data into option data. */
   @property({ attribute: false })
   public parser?: (data: unknown) => YatlOptionData[];
 
+  /** The function used to perform the fetch request. Defaults to `window.fetch`. */
   @property({ attribute: false })
   public fetchClient: FetchApi = uri => window.fetch(uri);
 
   /**
    * If set to false, fresh data will always be loaded instead of using the cache.
+   * @attr no-cache
    */
   @property({ type: Boolean, attribute: 'no-cache' })
   public noCache = false;

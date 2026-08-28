@@ -39,6 +39,9 @@ const defaultFormatter: DateRangeFormatter = range => {
   }
 };
 
+/**
+ * @fires change - Fired when the selected start or end date changes.
+ */
 @customElement('yatl-date-range-input')
 export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   public static override styles = [...super.styles, styles];
@@ -48,23 +51,34 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
 
   @state() private open = false;
 
+  /**
+   * The placeholder text to display when no range is selected.
+   * @attr placeholder
+   */
   @property({ type: String })
   public placeholder = 'Pick a range';
 
+  /** A function used to format the displayed value of the selected range. */
   @property({ attribute: false })
   public formatter: DateRangeFormatter = defaultFormatter;
 
+  /**
+   * The visual width of the input, measured in average character widths.
+   * @attr size
+   */
   @property({ type: Number })
   public size?: number;
 
   /**
    * The minimum allowable date value
+   * @attr min
    */
   @property({ converter: dateConverter })
   public min?: Date;
 
   /**
    * The maximum allowable date value
+   * @attr max
    */
   @property({ converter: dateConverter })
   public max?: Date;
@@ -98,6 +112,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     end: dateConverter.fromAttribute(this.getAttribute('end-date') ?? ''),
   };
 
+  /** The current, controlled value of the range. */
   public get value(): YatlDateRange | undefined {
     if (this.startDate || this.endDate) {
       return { start: this.startDate, end: this.endDate };

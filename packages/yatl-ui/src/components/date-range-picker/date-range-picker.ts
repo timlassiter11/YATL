@@ -7,15 +7,26 @@ import { YatlBase } from '../base/base';
 import { YatlDateGridRange } from '../date-grid/date-grid';
 import styles from './date-range-picker.styles';
 
+/**
+ * @fires change - Fired when the selected start or end date changes.
+ */
 @customElement('yatl-date-range-picker')
 export class YatlDateRangePicker extends YatlBase {
   public static override styles = [...super.styles, styles];
 
   @state() private currentSelection: 'start' | 'end' = 'start';
 
+  /**
+   * The earliest selectable date.
+   * @attr min
+   */
   @property({ converter: dateConverter })
   public min?: Date;
 
+  /**
+   * The latest selectable date.
+   * @attr max
+   */
   @property({ converter: dateConverter })
   public max?: Date;
 

@@ -10,6 +10,10 @@ import { FilterOption } from '@timlassiter11/yatl';
 export class YatlSearchFilter extends YatlBaseFilter<string[]> {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The number of options visible at once without scrolling.
+   * @attr size
+   */
   @property({ type: Number })
   public size = 4;
 

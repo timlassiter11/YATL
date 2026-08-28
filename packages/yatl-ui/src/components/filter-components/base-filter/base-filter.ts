@@ -24,6 +24,7 @@ export class YatlBaseFilter<
     return this._controller;
   }
 
+  /** The table controller this filter is attached to. Provided automatically via context. */
   @consume({
     context: getTableContext<TData>(),
     subscribe: true,
@@ -46,6 +47,7 @@ export class YatlBaseFilter<
   public get value() {
     return this._value;
   }
+  /** The current filter value. */
   @property({ attribute: false })
   public set value(value) {
     const oldValue = this._value;
@@ -57,12 +59,24 @@ export class YatlBaseFilter<
     this.updateFilters();
   }
 
+  /**
+   * The name of the data field this filter applies to.
+   * @attr field
+   */
   @property({ type: String })
   public field = '';
 
+  /**
+   * The label displayed for this filter.
+   * @attr label
+   */
   @property({ type: String })
   public label = '';
 
+  /**
+   * Disables the filter.
+   * @attr disabled
+   */
   @property({ type: Boolean })
   public disabled = false;
 

@@ -10,6 +10,10 @@ import { FilterOption } from '@timlassiter11/yatl';
 export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * Placeholder text shown when no option is selected.
+   * @attr placeholder
+   */
   @property({ type: String })
   public placeholder = '';
 
@@ -21,9 +25,17 @@ export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
   @property({ type: Number, attribute: 'max-tags' })
   public maxTags = 3;
 
+  /**
+   * When true, multiple options may be selected.
+   * @attr multi
+   */
   @property({ type: Boolean, reflect: true })
   public multi = false;
 
+  /**
+   * When true, a button is shown to clear the selected value.
+   * @attr clearable
+   */
   @property({ type: Boolean, reflect: true })
   public clearable = false;
 

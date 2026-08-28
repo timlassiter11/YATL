@@ -17,6 +17,13 @@ import { YatlBase } from '../base/base';
 
 import styles from './dialog.styles';
 
+/**
+ * @fires yatl-dialog-show-request - Fired before the dialog is shown. Cancellable
+ * @fires yatl-dialog-show - Fired after the dialog is shown.
+ * @fires yatl-dialog-hide-request - Fired before the dialog is hidden. Cancellable
+ * @fires yatl-dialog-hide - Fired after the dialog is hidden.
+ * @fires yatl-dialog-fullscreen - Fired when the `fullscreen` property changes.
+ */
 @customElement('yatl-dialog')
 export class YatlDialog extends YatlBase {
   public static override styles = [...super.styles, styles];
@@ -50,12 +57,24 @@ export class YatlDialog extends YatlBase {
   @query('dialog')
   private dialogElement?: HTMLDialogElement;
 
+  /**
+   * The dialog's title, displayed in the header.
+   * @attr label
+   */
   @property({ type: String })
   public label = '';
 
+  /**
+   * When true, clicking the backdrop or pressing escape will not close the dialog.
+   * @attr modal
+   */
   @property({ type: Boolean })
   public modal = false;
 
+  /**
+   * When true, the dialog fills the entire viewport.
+   * @attr fullscreen
+   */
   @property({ type: Boolean, reflect: true })
   public fullscreen = false;
 
@@ -66,6 +85,10 @@ export class YatlDialog extends YatlBase {
   @property({ type: Boolean, attribute: 'no-close-button' })
   public noCloseButton = false;
 
+  /**
+   * Shows or hides the dialog.
+   * @attr open
+   */
   @property({ type: Boolean, reflect: true })
   public get open() {
     return this._open;
@@ -145,6 +168,8 @@ export class YatlDialog extends YatlBase {
   protected override updated(
     changedProperties: PropertyValues<YatlDialog>,
   ): void {
+    // TODO: This should really only be fired from user interaction...
+    // It might be best to remove this and let the user handle it in their button logic.
     if (changedProperties.has('fullscreen')) {
       const event = new YatlDialogFullscreenEvent(this.fullscreen);
       this.dispatchEvent(event);

@@ -9,9 +9,17 @@ import styles from './group-filter.styles';
 export class YatlGroupFilter extends YatlBaseFilter<unknown | unknown[]> {
   public static override styles = [styles];
 
+  /**
+   * Requires at least one child to remain checked.
+   * @attr required
+   */
   @property({ type: Boolean })
   public required = false;
 
+  /**
+   * When true, multiple children may be checked at once.
+   * @attr multi
+   */
   @property({ type: Boolean })
   public multi = false;
 

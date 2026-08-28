@@ -3,10 +3,15 @@ import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './tab-group.styles';
 
+/**
+ * @fires yatl-tab-change-request - Fired before the active tab changes. Cancellable.
+ * @fires yatl-tab-change - Fired after the active tab changes.
+ */
 @customElement('yatl-tab-group')
 export class YatlTabGroup extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /** The panel name of the currently active tab. */
   @property({ type: String })
   public active = '';
 

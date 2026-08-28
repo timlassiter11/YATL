@@ -5,25 +5,49 @@ import styles from './option.styles';
 import { YatlOptionToggleRequest } from '../../events/option';
 import { highlightText, MatchIndex } from '@timlassiter11/yatl';
 
+/**
+ * @fires yatl-option-toggle - Fired before a checkable option's checked state changes. Cancellable.
+ */
 @customElement('yatl-option')
 export class YatlOption extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The value associated with this option.
+   * @attr value
+   */
   @property({ type: String, reflect: true })
   public value = 'on';
 
+  /**
+   * When true, this option renders a checkmark and can be toggled.
+   * @attr checkable
+   */
   @property({ type: Boolean, reflect: true })
   public checkable = false;
 
+  /**
+   * Reflects whether this option is currently checked. Only applies when `checkable` is true.
+   * @attr checked
+   */
   @property({ type: Boolean, reflect: true })
   public checked = false;
 
+  /**
+   * Disables selection of this option.
+   * @attr disabled
+   */
   @property({ type: Boolean, reflect: true })
   public disabled = false;
 
+  /**
+   * The text displayed for this option.
+   * @attr label
+   */
   @property({ type: String, reflect: true })
   public label = '';
 
+  /** Character ranges within `label` to visually highlight, e.g. for search matches. */
   @property({ attribute: false })
   public highlightIndices?: MatchIndex[];
 

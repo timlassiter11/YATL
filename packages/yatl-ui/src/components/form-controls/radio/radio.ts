@@ -4,6 +4,9 @@ import { live } from 'lit/directives/live.js';
 import { YatlFormControl } from '../form-control/form-control';
 import styles from './radio.styles';
 
+/**
+ * @fires change - Fired when the checked state changes.
+ */
 @customElement('yatl-radio')
 export class YatlRadio extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
@@ -16,6 +19,7 @@ export class YatlRadio extends YatlFormControl<string> {
 
   /**
    * The value to store in the form data when the radio is selected.
+   * @attr value
    */
   public get value() {
     return this._value;
@@ -42,6 +46,10 @@ export class YatlRadio extends YatlFormControl<string> {
     this.updateFormValue();
   }
 
+  /**
+   * The initial, uncontrolled check state of the radio.
+   * @attr checked
+   */
   @property({ type: Boolean, attribute: 'checked' })
   public defaultChecked = this.hasAttribute('checked');
 

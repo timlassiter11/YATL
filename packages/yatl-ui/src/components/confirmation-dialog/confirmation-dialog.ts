@@ -9,8 +9,8 @@ import {
 import { type YatlDialog } from '../dialog/dialog';
 
 /**
- * @fires yatl-confirmation-dialog-accept when the dialog has been accepted
- * @fires yatl-confirmation-dialog-reject when the dialog has been rejected
+ * @fires yatl-confirmation-dialog-accept - Fired when the dialog has been accepted.
+ * @fires yatl-confirmation-dialog-reject - Fired when the dialog has been rejected.
  */
 @customElement('yatl-confirmation-dialog')
 export class YatlConfirmationDialog extends YatlBase {
@@ -19,12 +19,24 @@ export class YatlConfirmationDialog extends YatlBase {
   @query('yatl-dialog')
   private dialogElement?: YatlDialog;
 
+  /**
+   * Shows or hides the dialog.
+   * @attr open
+   */
   @property({ type: Boolean })
   public open = false;
 
+  /**
+   * When true, clicking the backdrop or pressing escape will not close the dialog.
+   * @attr modal
+   */
   @property({ type: Boolean })
   public modal = false;
 
+  /**
+   * The dialog's title, displayed in the header.
+   * @attr label
+   */
   @property({ type: String })
   public label = '';
 
@@ -35,9 +47,17 @@ export class YatlConfirmationDialog extends YatlBase {
   @property({ type: Boolean, attribute: 'no-close-button' })
   public noCloseButton = false;
 
+  /**
+   * The text displayed on the accept button. Set to an empty string to hide the button.
+   * @attr accept-text
+   */
   @property({ type: String, attribute: 'accept-text' })
   public acceptText = 'Yes';
 
+  /**
+   * The text displayed on the reject button. Set to an empty string to hide the button.
+   * @attr reject-text
+   */
   @property({ type: String, attribute: 'reject-text' })
   public rejectText = 'No';
 

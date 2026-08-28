@@ -12,13 +12,21 @@ type SupportedChildren =
   | YatlSwitch
   | YatlCheckbox;
 
+/**
+ * @fires change - Fired when the selected child's value changes.
+ */
 @customElement('yatl-radio-group')
 export class YatlRadioGroup extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The initial, uncontrolled value of the group.
+   * @attr value
+   */
   @property({ type: String, attribute: 'value' })
   public defaultValue = this.getAttribute('value') ?? '';
 
+  /** The current, controlled value of the group. */
   @property({ type: String, attribute: false })
   public value = this.getAttribute('value') ?? '';
 

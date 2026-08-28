@@ -7,12 +7,24 @@ import styles from './tab.styles';
 export class YatlTab extends YatlBase {
   public static override styles = [...super.styles, styles];
 
+  /**
+   * The name of the `yatl-tab-panel` this tab controls.
+   * @attr panel
+   */
   @property({ type: String })
   public panel = '';
 
+  /**
+   * Reflects whether this tab is currently active.
+   * @attr active
+   */
   @property({ type: Boolean, reflect: true })
   public active = false;
 
+  /**
+   * Disables selection of this tab.
+   * @attr disabled
+   */
   @property({ type: Boolean, reflect: true })
   public disabled = false;
 

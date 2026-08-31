@@ -26,11 +26,13 @@ export default css`
     align-items: center;
     justify-content: start;
 
-    .label {
+    yatl-label {
+      --label-text: inherit;
+      --label-font-size: inherit;
+      --label-font-weight: inherit;
+
       display: inline-flex;
       vertical-align: baseline;
-      color: inherit;
-      font: inherit;
       padding-left: var(--yatl-spacing-m);
       line-height: 1;
       user-select: none;
@@ -93,7 +95,7 @@ export default css`
 
   :host(:not([readonly])) {
     .input,
-    .label {
+    yatl-label {
       cursor: pointer;
     }
   }

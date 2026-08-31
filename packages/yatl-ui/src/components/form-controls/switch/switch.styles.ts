@@ -64,16 +64,14 @@ export default css`
     transition: inherit;
   }
 
-  label {
-    display: inline-flex;
-  }
+  yatl-label {
+    --label-text: var(--switch-color);
+    --label-font-size: inherit;
+    --label-font-weight: inherit;
 
-  .label {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     vertical-align: baseline;
-    font: inherit;
-    color: var(--switch-color);
     cursor: pointer;
     padding-left: var(--yatl-spacing-m);
     line-height: var(--height);
@@ -93,7 +91,7 @@ export default css`
 
   :host(:not([readonly])) {
     .input,
-    .label {
+    yatl-label {
       cursor: pointer;
     }
   }

@@ -170,9 +170,10 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
         class="input"
         id=${this.inputId}
         type="text"
+        title=${displayValue ?? ''}
         value=${displayValue ?? ''}
         placeholder=${this.placeholder}
-        ?disabled=${this.disabled}
+        ?disabled=${this.isDisabled}
         readonly
       />
     `;
@@ -225,6 +226,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
         size="small"
         variant="plain"
         slot="end"
+        ?disabled=${this.isDisabled}
         @click=${this.handleClearButtonClick}
       >
         <yatl-icon
@@ -247,7 +249,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
   }
 
   private handleTriggerClick(event: Event) {
-    if (this.disabled || this.readonly) {
+    if (this.isDisabled || this.readonly) {
       event.stopPropagation();
       event.preventDefault();
     }
@@ -266,6 +268,9 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
 
   private handleClearButtonClick(event: Event) {
     event.stopPropagation();
+    if (this.isDisabled || this.readonly) {
+      return;
+    }
     this.value = [];
     this.emitInteraction('change');
   }
@@ -282,7 +287,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
 
   private handleDropdownToggleRequest(event: Event) {
     const target = event.target as YatlDropdown;
-    if (target.open && (this.readonly || this.disabled)) {
+    if (target.open && (this.readonly || this.isDisabled)) {
       event.preventDefault();
     }
   }

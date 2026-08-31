@@ -48,14 +48,18 @@ export abstract class YatlFormControl<TData = string>
 
   // Used to report validity
   @state() private currentValidationText = '';
+  // Whether an ancestor <fieldset disabled> has disabled this control.
+  // See formDisabledCallback() / isDisabled.
+  @state() private internalsDisabled = false;
   protected readonly internals: ElementInternals;
 
   /**
    * A reference to the internal native form control.
-   * Subclasses should ensure they either use an input
-   * element, or override this with their own query.
+   * Subclasses should ensure their native form control has
+   * `id=${this.inputId}` (i.e. `id="input"`), or override this
+   * with their own query.
    */
-  @query('input') protected formControl?: HTMLElement;
+  @query('#input') protected formControl?: HTMLElement;
 
   /** The name of the form control, submitted as a pair with the control's value. */
   @property({ type: String, reflect: true })
@@ -151,23 +155,22 @@ export abstract class YatlFormControl<TData = string>
       this.setFormValue(this.formValue);
     }
 
-    // Update form data when disabled or readonly state changes.
+    // Update form data when disabled or readonly change. (Fieldset-driven
+    // disabling is handled separately in formDisabledCallback(), since
+    // internalsDisabled is private and so can't appear in `changedProps`.)
     if (changedProps.has('disabled') || changedProps.has('readonly')) {
       this.setFormValue(this.formValue);
-      this.toggleState('disabled', this.disabled);
+      this.toggleState('disabled', this.isDisabled);
       this.toggleState('readonly', this.readonly);
     }
   }
 
   protected override updated(changedProps: PropertyValues<YatlFormControl>) {
-    // Update the form value of the actual update so the underlying
-    // form control gets updated and we can use its validity.
     if (changedProps.has('value')) {
+      // setFormValue() also updates validity, so there's no need to
+      // call updateValidity() separately below in this case.
       this.setFormValue(this.formValue);
-    }
-
-    if (
-      changedProps.has('value') ||
+    } else if (
       changedProps.has('requiredText') ||
       changedProps.has('errorText') ||
       changedProps.has('required')
@@ -260,11 +263,16 @@ export abstract class YatlFormControl<TData = string>
     return this.internals.form;
   }
 
-  public setFormValue(value: string | File | FormData | null) {
+  public setFormValue(
+    value: string | File | FormData | null,
+    state?: string | File | FormData | null,
+  ) {
     // Clear form data on empty string
     value ||= null;
-    // Don't add data for disabled controls
-    this.internals.setFormValue(this.disabled ? null : value);
+    // Don't submit a value for disabled controls, but still track state
+    // (defaulting to the un-nulled value) so autofill/bfcache restoration
+    // still works correctly if the control becomes enabled again later.
+    this.internals.setFormValue(this.isDisabled ? null : value, state ?? value);
     this.updateValidity();
   }
 
@@ -301,6 +309,30 @@ export abstract class YatlFormControl<TData = string>
 
   protected onFormReset() {
     this.value = this.defaultValue;
+  }
+
+  /**
+   * Called by the browser when an ancestor `<fieldset disabled>`'s
+   * disabled state changes. This is independent of the `disabled`
+   * property - don't call it directly, and use `isDisabled` (not
+   * `disabled`) for anything that should also respect it.
+   */
+  public formDisabledCallback(disabled: boolean) {
+    this.internalsDisabled = disabled;
+    // internalsDisabled is private, so it can't appear in `changedProps`
+    // for willUpdate() to react to - do the same sync here directly.
+    this.setFormValue(this.formValue);
+    this.toggleState('disabled', this.isDisabled);
+  }
+
+  /**
+   * Whether this control is actually disabled: either `disabled` is set
+   * directly, or an ancestor `<fieldset disabled>` disabled it. Subclasses
+   * should use this - not `disabled` - for anything that affects behavior
+   * or rendering, since `disabled` alone misses the fieldset case.
+   */
+  public get isDisabled() {
+    return this.disabled || this.internalsDisabled;
   }
 
   protected updateValidity() {

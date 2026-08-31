@@ -156,7 +156,11 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
             placeholder=${this.placeholder}
             autocomplete="off"
             .value=${live(this.query)}
+            ?disabled=${this.isDisabled}
+            ?readonly=${this.readonly}
             @input=${this.handleInput}
+            @focusin=${this.handleInputFocusin}
+            @focusout=${this.handleInputFocusout}
           />
         </div>
         <div
@@ -213,15 +217,18 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   private handleOptionClick = (event: Event) => {
     if (event.target instanceof YatlOption) {
-      this.hasFocus = true;
       event.preventDefault();
       event.stopPropagation();
+      if (this.isDisabled || this.readonly) {
+        return;
+      }
+      this.hasFocus = true;
       this.toggleOption(event.target.value, event.target.checked);
       this.emitInteraction('change');
     }
   };
 
-  private handleFocus = (event: FocusEvent) => {
+  private handleFocus = (event: PointerEvent) => {
     const path = event.composedPath();
     if (!path.includes(this)) {
       this.hasFocus = false;
@@ -233,6 +240,24 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     }
   };
 
+  private handleInputFocusin() {
+    this.hasFocus = true;
+  }
+
+  private handleInputFocusout(event: FocusEvent) {
+    // Don't treat focus moving to something else within this component
+    // (e.g. a selected chip's trash icon) as leaving it - only the
+    // document-level pointerdown/focusin handling above should do that.
+    const related = event.relatedTarget as Node | null;
+    if (
+      related &&
+      (this.contains(related) || this.shadowRoot?.contains(related))
+    ) {
+      return;
+    }
+    this.hasFocus = false;
+  }
+
   private handleInput(event: Event) {
     event.stopPropagation();
     const target = event.target as YatlInput;
@@ -243,6 +268,9 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   private handleSelectedOptionClick(event: Event) {
     event.stopPropagation();
+    if (this.isDisabled || this.readonly) {
+      return;
+    }
     const target = event.currentTarget as YatlOption;
     this.toggleOption(target.value, false);
     target.remove();

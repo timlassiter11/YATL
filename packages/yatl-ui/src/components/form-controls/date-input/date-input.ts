@@ -95,7 +95,11 @@ export class YatlDateInput extends YatlFormControl<Date> {
         .open=${live(this.open)}
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
-        <button class="row" slot="trigger">
+        <button
+          class="row"
+          slot="trigger"
+          ?disabled=${this.isDisabled || this.readonly}
+        >
           <div class=${classMap(valueClasses)}>${valueText}</div>
           <yatl-icon name="calendar"></yatl-icon>
         </button>
@@ -111,6 +115,7 @@ export class YatlDateInput extends YatlFormControl<Date> {
               color="danger"
               size="small"
               title="Clear date"
+              ?disabled=${this.isDisabled}
               @click=${this.handleClearClick}
               >Clear</yatl-button
             >
@@ -121,6 +126,9 @@ export class YatlDateInput extends YatlFormControl<Date> {
   }
 
   private handleChange(event: Event) {
+    if (this.isDisabled || this.readonly) {
+      return;
+    }
     const target = event.target as YatlDatePicker;
     this.value = target.date;
     this.open = false;
@@ -128,6 +136,9 @@ export class YatlDateInput extends YatlFormControl<Date> {
   }
 
   private handleClearClick() {
+    if (this.isDisabled) {
+      return;
+    }
     this.value = undefined;
     this.open = false;
     this.emitInteraction('change');

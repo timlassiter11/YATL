@@ -1,5 +1,6 @@
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
 import { YatlFormControl } from '../form-control/form-control';
 import { live } from 'lit/directives/live.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -11,7 +12,7 @@ import styles from './textarea.styles';
  * @fires change - Fired when the input value is committed (e.g., on blur).
  */
 @customElement('yatl-textarea')
-export class YatlTextArea extends YatlFormControl {
+export class YatlTextArea extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
 
   /**
@@ -43,6 +44,14 @@ export class YatlTextArea extends YatlFormControl {
   public maxlength?: number;
 
   /**
+   * When true, displays a live character count at the end of the label.
+   * If `maxlength` is also set, it will display the count relative to the maximum (e.g., "6/20").
+   * @attr show-count
+   */
+  @property({ type: Boolean, attribute: 'show-count' })
+  public showCount = false;
+
+  /**
    * The initial, uncontrolled value of the textarea.
    * @attr value
    */
@@ -57,19 +66,10 @@ export class YatlTextArea extends YatlFormControl {
     return this.value;
   }
 
-  protected override render() {
-    return html`
-      ${this.renderLabel()}
-      <div part="base">${this.renderInput()}</div>
-      ${this.renderHint()} ${this.renderErrorText()}
-    `;
-  }
-
   protected override renderInput() {
     return html`
       <textarea
         part="input"
-        class="text-input"
         id=${this.inputId}
         name=${this.name}
         placeholder=${this.placeholder}
@@ -78,12 +78,37 @@ export class YatlTextArea extends YatlFormControl {
         rows=${ifDefined(this.rows)}
         .value=${live(this.value)}
         ?readonly=${this.readonly}
-        ?disabled=${this.disabled}
+        ?disabled=${this.isDisabled}
         ?required=${this.required}
         @input=${this.handleChange}
         @change=${this.handleChange}
       ></textarea>
     `;
+  }
+
+  protected override renderLabel() {
+    const classes = {
+      label: true,
+      'label-row': true,
+      'has-label': this.hasLabel,
+    };
+    return html`
+      <label for=${this.inputId} class=${classMap(classes)}>
+        <slot name="label">
+          <div part="label">${this.label}</div>
+        </slot>
+        <span class="label-spacer"></span>
+        ${this.showCount ? this.renderCount() : nothing}
+      </label>
+    `;
+  }
+
+  protected renderCount() {
+    const count = this.maxlength
+      ? `${this.value.length}/${this.maxlength}`
+      : `${this.value.length}`;
+
+    return html`<span part="label-count">${count}</span>`;
   }
 
   private handleChange(event: Event) {

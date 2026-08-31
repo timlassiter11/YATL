@@ -8,7 +8,10 @@ import { html, nothing, PropertyValueMap, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { YatlDropdownSelectEvent } from '../../../events';
+import {
+  YatlDropdownSelectEvent,
+  YatlDropdownToggleRequest,
+} from '../../../events';
 import { YatlInput } from '../input/input';
 import styles from './typeahead.styles';
 
@@ -210,6 +213,12 @@ export class YatlTypeahead extends YatlInput {
     }
   }
 
+  public override disconnectedCallback() {
+    super.disconnectedCallback();
+    clearTimeout(this.searchDebounceTimer);
+    this.abortController?.abort();
+  }
+
   protected override renderBase(contents: unknown): TemplateResult<1> {
     return html`
       <yatl-dropdown
@@ -299,9 +308,17 @@ export class YatlTypeahead extends YatlInput {
     }
   }
 
-  private handleDropdownToggleRequest(event: Event) {
-    // We want complete control of the open state
-    event.preventDefault();
+  private handleDropdownToggleRequest(event: YatlDropdownToggleRequest) {
+    // We control opening ourselves via shouldOpen, so block open requests.
+    // Close requests (e.g. the dropdown's own Escape handling) are allowed,
+    // but since `open` is a controlled property we also have to update our
+    // own state - otherwise the next render would just reopen it. Reuse
+    // the same dismissal used after selecting an option.
+    if (event.open) {
+      event.preventDefault();
+    } else {
+      this.userHasSelected = true;
+    }
   }
 
   private handleFocusin() {
@@ -313,14 +330,22 @@ export class YatlTypeahead extends YatlInput {
   }
 
   private scheduleFetch() {
+    // Always clear the pending timer, even if we're not about to schedule a
+    // new one - otherwise an earlier scheduled fetch (e.g. from before the
+    // user deleted back below minQueryLength) would still fire later and
+    // leave `state` stuck on 'loading' forever, since fetchOptions() bails
+    // out early without resetting it.
+    clearTimeout(this.searchDebounceTimer);
+
     if (!this.canSearchRemote) {
+      this.abortController?.abort();
+      this.state = 'idle';
       return;
     }
 
     // Give the user some indication that we are working
     // even if we are just waiting for them to stop typing
     this.state = 'loading';
-    clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = window.setTimeout(
       () => this.fetchOptions(),
       this.searchDebounce,
@@ -468,7 +493,7 @@ export class YatlTypeahead extends YatlInput {
   private get warnHeader() {
     return this.name
       ? `[yatl-typeahead](name=${this.name}) `
-      : '[yatl-typeahed] ';
+      : '[yatl-typeahead] ';
   }
 }
 

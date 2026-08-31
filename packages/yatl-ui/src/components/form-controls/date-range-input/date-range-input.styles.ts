@@ -47,6 +47,7 @@ export default css`
   .value {
     white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .has-placeholder {

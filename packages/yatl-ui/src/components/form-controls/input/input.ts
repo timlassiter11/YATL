@@ -4,7 +4,6 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { YatlFormControl } from '../form-control/form-control';
 import { live } from 'lit/directives/live.js';
-import styles from './input.styles';
 
 export type YatlInputType =
   | 'email'
@@ -20,8 +19,6 @@ export type YatlInputType =
  */
 @customElement('yatl-input')
 export class YatlInput extends YatlFormControl<string> {
-  public static override styles = [...super.styles, styles];
-
   /**
    * The native HTML input type (e.g., 'text', 'email', 'password', 'number').
    * @attr type
@@ -84,8 +81,8 @@ export class YatlInput extends YatlFormControl<string> {
   public passwordToggle = false;
 
   /**
-   * When true, masks the input text (like a password field) regardless of the
-   * actual input `type` attribute.
+   * When `type` is `password`, controls whether the value is masked.
+   * Has no effect for any other `type`.
    * @attr hide-text
    */
   @property({ type: Boolean, attribute: 'hide-text' })
@@ -117,6 +114,8 @@ export class YatlInput extends YatlFormControl<string> {
   protected override renderInput() {
     const type =
       this.type === 'password' && !this.hideText ? 'text' : this.type;
+    // Don't leak a masked password's value through the tooltip.
+    const isMasked = this.type === 'password' && this.hideText;
 
     return html`
       <input
@@ -124,16 +123,16 @@ export class YatlInput extends YatlFormControl<string> {
         id=${this.inputId}
         name=${this.name}
         type=${type}
+        title=${ifDefined(isMasked ? undefined : this.value)}
         autocomplete=${this.autocomplete}
         size=${ifDefined(this.size)}
         .value=${live(this.value)}
-        value=${this.defaultValue}
         placeholder=${this.placeholder}
         minlength=${ifDefined(this.minlength)}
         maxlength=${ifDefined(this.maxlength)}
         pattern=${ifDefined(this.pattern)}
         ?readonly=${this.readonly}
-        ?disabled=${this.disabled}
+        ?disabled=${this.isDisabled}
         ?required=${this.required}
         @input=${this.handleChange}
         @change=${this.handleChange}
@@ -176,6 +175,7 @@ export class YatlInput extends YatlFormControl<string> {
       <yatl-button
         size="small"
         variant="plain"
+        ?disabled=${this.isDisabled}
         @click=${this.handlePasswordToggleClick}
       >
         <yatl-icon name=${this.hideText ? 'eye' : 'eye-slash'}></yatl-icon>

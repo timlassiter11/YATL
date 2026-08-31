@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { dateConverter, datesEqual, getDateOnly } from '../../../utils';
@@ -106,11 +106,13 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     end: string | null;
   };
 
+  /**
+   * The initial, uncontrolled value of the range. Computed automatically
+   * from `startDate`/`endDate` on first render (see firstUpdated()) - only
+   * set this directly if you need to override that default.
+   */
   @property({ attribute: false })
-  public defaultValue: YatlDateRange = {
-    start: dateConverter.fromAttribute(this.getAttribute('start-date') ?? ''),
-    end: dateConverter.fromAttribute(this.getAttribute('end-date') ?? ''),
-  };
+  public defaultValue: YatlDateRange = {};
 
   /** The current, controlled value of the range. */
   public get value(): YatlDateRange | undefined {
@@ -173,7 +175,11 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
         .open=${live(this.open)}
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
-        <button class="row" slot="trigger">
+        <button
+          class="row"
+          slot="trigger"
+          ?disabled=${this.isDisabled || this.readonly}
+        >
           <span class=${classMap(valueClasses)} title=${valueText}>
             ${valueText}
           </span>
@@ -191,6 +197,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
               color="danger"
               size="small"
               title="Clear dates"
+              ?disabled=${this.isDisabled}
               @click=${this.handleClearClick}
               >Clear</yatl-button
             >
@@ -200,6 +207,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
               color="muted"
               size="small"
               title="Cancel"
+              ?disabled=${this.isDisabled}
               @click=${this.handleCancelClick}
               >Cancel</yatl-button
             >
@@ -208,7 +216,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
               color="brand"
               size="small"
               title="Apply"
-              ?disabled=${hasNoSelection}
+              ?disabled=${hasNoSelection || this.isDisabled}
               @click=${this.handleApplyClick}
               >Apply</yatl-button
             >
@@ -219,6 +227,9 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   }
 
   private handleClearClick() {
+    if (this.isDisabled) {
+      return;
+    }
     this.value = undefined;
     this.startDateDraft = undefined;
     this.endDateDraft = undefined;
@@ -231,6 +242,9 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   }
 
   private handleApplyClick() {
+    if (this.isDisabled) {
+      return;
+    }
     // Always update the value so it triggers the form save
     this.value = {
       start: this.startDateDraft,
@@ -314,6 +328,22 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     if (this.defaultValue) {
       this.value = this.defaultValue;
     }
+  }
+
+  protected override firstUpdated(
+    changedProps: PropertyValues<YatlDateRangeInput>,
+  ) {
+    super.firstUpdated(changedProps);
+    // Capture whatever start/end date ended up set by the time we first
+    // render as the "default" to revert to on form reset. This has to
+    // happen here rather than as a field initializer, since startDate/
+    // endDate may have been set via JS properties before the element was
+    // even connected - reading attributes in the constructor would miss
+    // that and always compute an empty default.
+    if (!this.startDate && !this.endDate) {
+      return;
+    }
+    this.defaultValue = { start: this.startDate, end: this.endDate };
   }
 }
 

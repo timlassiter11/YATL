@@ -1,79 +1,15 @@
-import { html, PropertyValues } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { html } from 'lit';
+import { customElement } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
-import { YatlFormControl } from '../form-control/form-control';
+import { YatlCheckableControl } from '../checkable-control/checkable-control';
 import styles from './radio.styles';
 
 /**
  * @fires change - Fired when the checked state changes.
  */
 @customElement('yatl-radio')
-export class YatlRadio extends YatlFormControl<string> {
+export class YatlRadio extends YatlCheckableControl {
   public static override styles = [...super.styles, styles];
-
-  // This control needs to be inline
-  public override inline = true;
-
-  private _value = this.getAttribute('value') ?? 'on';
-  private _checked = this.hasAttribute('checked');
-
-  /**
-   * The value to store in the form data when the radio is selected.
-   * @attr value
-   */
-  public get value() {
-    return this._value;
-  }
-
-  @property({ type: String, reflect: true })
-  public set value(value) {
-    this._value = value;
-    this.updateFormValue();
-  }
-
-  public override get defaultValue() {
-    return this.value;
-  }
-
-  public get checked() {
-    return this._checked;
-  }
-
-  @property({ type: Boolean, attribute: false })
-  public set checked(value) {
-    this._checked = Boolean(value);
-    this.toggleState('checked', value);
-    this.updateFormValue();
-  }
-
-  /**
-   * The initial, uncontrolled check state of the radio.
-   * @attr checked
-   */
-  @property({ type: Boolean, attribute: 'checked' })
-  public defaultChecked = this.hasAttribute('checked');
-
-  public get formValue() {
-    if (this._checked) {
-      return this.value || 'on';
-    }
-    return null;
-  }
-
-  protected override onFormReset() {
-    this.checked = this.defaultChecked;
-  }
-
-  public override connectedCallback() {
-    super.connectedCallback();
-    this.updateFormValue();
-  }
-
-  protected override firstUpdated(changedProps: PropertyValues<YatlRadio>) {
-    super.firstUpdated(changedProps);
-    this._checked = this.defaultChecked;
-    this.toggleState('checked', this._checked);
-  }
 
   protected override render() {
     return html`
@@ -92,8 +28,7 @@ export class YatlRadio extends YatlFormControl<string> {
         type="radio"
         value=${this.value}
         .checked=${live(this.checked)}
-        ?readonly=${this.readonly}
-        ?disabled=${this.disabled}
+        ?disabled=${this.isDisabled || this.readonly}
         ?required=${this.required}
         @change=${this.handleChange}
       />
@@ -101,16 +36,6 @@ export class YatlRadio extends YatlFormControl<string> {
         <circle cx="8" cy="8" r="8" />
       </svg>
     `;
-  }
-
-  private updateFormValue() {
-    this.setFormValue(this.formValue);
-  }
-
-  private handleChange(event: Event) {
-    event.stopPropagation();
-    this.checked = (event.target as HTMLInputElement).checked;
-    this.emitInteraction('change');
   }
 }
 

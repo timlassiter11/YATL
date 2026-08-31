@@ -36,6 +36,8 @@ export default css`
       --yatl-input-placeholder-color,
       var(--yatl-text-2)
     );
+    --input-count-text: var(--yatl-input-count-text, var(--yatl-text-3));
+    --input-count-font-size: var(--yatl-input-count-font-size, small);
 
     display: flex;
     flex-direction: column;
@@ -74,7 +76,7 @@ export default css`
   }
 
   .text-input:focus,
-  .text:focus-visible,
+  .text-input:focus-visible,
   .text-input:has(input:focus),
   .text-input:has(input:focus-visible) {
     outline: var(--input-outline-width) solid var(--input-outline-color);
@@ -93,6 +95,22 @@ export default css`
 
   :host(:not([inline])) .label {
     margin-block-end: var(--yatl-spacing-s);
+  }
+
+  .label-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .label-spacer {
+    flex-grow: 1;
+  }
+
+  [part='label-count'] {
+    color: var(--input-count-text);
+    font-size: var(--input-count-font-size);
   }
 
   :host(:state(disabled)) {
@@ -145,8 +163,18 @@ export default css`
     transition: inherit;
   }
 
+  /*
+   * Text inputs never wrap, so an overflowing value is silently clipped
+   * with no indication there's more to see. Truncate with an ellipsis
+   * instead so overflow is visible, and consumers can rely on a title
+   * attribute (set per-component) to reveal the full value on hover
+   * without ever changing the control's size.
+   */
   input {
     min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   [part='hint'] {

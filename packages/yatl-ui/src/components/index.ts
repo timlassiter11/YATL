@@ -38,6 +38,7 @@ export * from './filter-components/select-filter/select-filter';
 export * from './filter-components/switch-filter/switch-filter';
 
 export * from './form-controls/form-control/form-control';
+export * from './form-controls/checkable-control/checkable-control';
 export * from './form-controls/checkbox/checkbox';
 export * from './form-controls/date-input/date-input';
 export * from './form-controls/date-range-input/date-range-input';
@@ -49,4 +50,5 @@ export * from './form-controls/search-select/search-select';
 export * from './form-controls/select/select';
 export * from './form-controls/switch/switch';
 export * from './form-controls/textarea/textarea';
+export * from './form-controls/toggle-control/toggle-control';
 export * from './form-controls/typeahead/typeahead';

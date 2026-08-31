@@ -1,4 +1,4 @@
-import { html, PropertyValueMap } from 'lit';
+import { html, PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { YatlCheckbox } from '../checkbox/checkbox';
 import { YatlFormControl } from '../form-control/form-control';
@@ -20,11 +20,13 @@ export class YatlRadioGroup extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
 
   /**
-   * The initial, uncontrolled value of the group.
+   * The initial, uncontrolled value of the group. Computed automatically
+   * from `value` (or a pre-checked child) on first render (see
+   * firstUpdated()) - only set this directly if you need to override that.
    * @attr value
    */
   @property({ type: String, attribute: 'value' })
-  public defaultValue = this.getAttribute('value') ?? '';
+  public defaultValue = '';
 
   /** The current, controlled value of the group. */
   @property({ type: String, attribute: false })
@@ -35,9 +37,14 @@ export class YatlRadioGroup extends YatlFormControl<string> {
   }
 
   protected override willUpdate(
-    changedProperties: PropertyValueMap<YatlRadioGroup>,
+    changedProperties: PropertyValues<YatlRadioGroup>,
   ) {
     super.willUpdate(changedProperties);
+
+    if (changedProperties.has('disabled')) {
+      this.propagateDisabled();
+    }
+
     if (!this.hasUpdated) {
       const children = this.getAllChildren();
       if (!this.value) {
@@ -57,6 +64,33 @@ export class YatlRadioGroup extends YatlFormControl<string> {
         child.toggleAttribute('checked', childValue === this.value);
       }
     }
+  }
+
+  protected override firstUpdated(
+    changedProperties: PropertyValues<YatlRadioGroup>,
+  ) {
+    super.firstUpdated(changedProperties);
+    // Capture whatever value ended up set (via property/attribute, or a
+    // pre-checked child, per the willUpdate() logic above) by the time we
+    // first render as the "default" to revert to on form reset. This has
+    // to happen here rather than as a field initializer, since `value` may
+    // have been set via a JS property before the element was even
+    // connected - reading the attribute in the constructor would miss
+    // that and always compute an empty default.
+    if (this.value) {
+      this.defaultValue = this.value;
+    }
+  }
+
+  /**
+   * Called by the browser when an ancestor `<fieldset disabled>`'s
+   * disabled state changes. Also propagates to children, since a
+   * disabled group should behave the same way regardless of whether
+   * it was disabled directly or via an ancestor fieldset.
+   */
+  public override formDisabledCallback(disabled: boolean) {
+    super.formDisabledCallback(disabled);
+    this.propagateDisabled();
   }
 
   protected override render() {
@@ -92,18 +126,49 @@ export class YatlRadioGroup extends YatlFormControl<string> {
   }
 
   private syncChildStates() {
+    // A child could have been added after the group was disabled, so
+    // make sure it picks up the current effective disabled state too.
+    this.propagateDisabled();
+
     for (const element of this.getAllChildren()) {
       element.checked = element.value === this.value;
     }
   }
 
+  /**
+   * Propagates this group's effective disabled state to its children,
+   * the same way an ancestor `<fieldset disabled>` would: without
+   * touching each child's own `disabled` property.
+   */
+  private propagateDisabled() {
+    for (const child of this.getAllChildren(true)) {
+      if ('formDisabledCallback' in child) {
+        child.formDisabledCallback(this.isDisabled);
+      } else {
+        // Plain <input> elements have no such hook to call instead.
+        child.disabled = this.isDisabled;
+      }
+    }
+  }
+
   private getAllChildren(includeDisabled = false) {
-    const elements = [...this.querySelectorAll<SupportedChildren>('*')];
+    // Deep-query (rather than just direct children) so children wrapped
+    // in a layout element are still found, but exclude anything assigned
+    // to a named slot (e.g. our own `label` slot) and anything that
+    // doesn't actually look like a checkable control.
+    const elements = [...this.querySelectorAll('*:not([slot])')].filter(
+      isCheckableElement,
+    );
+
     if (includeDisabled) {
       return elements;
     }
     return elements.filter(c => !c.disabled);
   }
+}
+
+function isCheckableElement(element: Element): element is SupportedChildren {
+  return 'checked' in element && 'value' in element && 'disabled' in element;
 }
 
 declare global {

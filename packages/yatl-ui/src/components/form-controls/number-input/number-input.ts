@@ -87,7 +87,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
   protected renderInput() {
     // Only use the display value if the user isn't editing.
     // Don't want to cut off part of the number and then submit that.
-    const editing = !this.disabled && !this.readonly;
+    const editing = !this.isDisabled && !this.readonly;
     let value = this.formValue;
     if (!editing && this.value !== undefined) {
       if (this.displayPrecision !== undefined) {
@@ -111,6 +111,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
         id=${this.inputId}
         name=${this.name}
         type=${type}
+        title=${value}
         size=${ifDefined(this.size)}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
@@ -118,7 +119,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
         .value=${live(value)}
         autocomplete="off"
         ?readonly=${this.readonly}
-        ?disabled=${this.disabled}
+        ?disabled=${this.isDisabled}
         ?required=${this.required}
         @input=${this.handleChange}
         @change=${this.handleChange}
@@ -137,6 +138,7 @@ export class YatlNumberInput extends YatlFormControl<number> {
         size="small"
         variant="plain"
         part="visibility-toggle"
+        ?disabled=${this.isDisabled}
         @click=${this.handleVisibilityToggleClick}
       >
         <yatl-icon name=${this.hideText ? 'eye' : 'eye-slash'}></yatl-icon>

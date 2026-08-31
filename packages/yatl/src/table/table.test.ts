@@ -15,6 +15,7 @@ import { DisplayColumnOptions } from '../types/columns';
 import { YatlTable } from './table';
 
 import './table';
+import { TextEditor } from '../utils';
 
 // --- Test Data ---
 interface User {

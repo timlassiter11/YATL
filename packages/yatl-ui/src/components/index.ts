@@ -10,6 +10,7 @@ export * from './dialog/dialog';
 export * from './divider/divider';
 export * from './dropdown/dropdown';
 export * from './dropzone/dropzone';
+export * from './flyout/flyout';
 export * from './icon/icon';
 export * from './label/label';
 export * from './loading-overlay/loading-overlay';

@@ -185,6 +185,35 @@
           <yatl-icon name="trash"></yatl-icon>
         </yatl-button>
       </yatl-table-view>
+
+      <yatl-flyout id="rowDetailsFlyout" label="Row Details">
+        <div class="option-group">
+          <div class="inline">
+            <span>Status</span>
+            <span id="rowDetailsStatus"></span>
+          </div>
+          <div class="inline">
+            <span>Modified</span>
+            <span id="rowDetailsModified"></span>
+          </div>
+          <div class="inline">
+            <span>Issues</span>
+            <span id="rowDetailsIssues"></span>
+          </div>
+        </div>
+        <div class="option-group">
+          <span>Tags</span>
+          <div class="tag-list" id="rowDetailsTags"></div>
+        </div>
+        <yatl-button
+          slot="footer-actions"
+          color="danger"
+          id="rowDetailsDeleteButton"
+        >
+          <yatl-icon name="trash"></yatl-icon>
+          Delete Row
+        </yatl-button>
+      </yatl-flyout>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

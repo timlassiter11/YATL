@@ -4,6 +4,7 @@ export * from './details';
 export * from './dialog';
 export * from './dropdown';
 export * from './dropzone';
+export * from './flyout';
 export * from './option';
 export * from './spinner';
 export * from './table-toolbar';

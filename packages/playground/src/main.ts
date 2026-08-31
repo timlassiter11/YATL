@@ -5,6 +5,7 @@ import '@timlassiter11/yatl-ui';
 import {
   YatlButton,
   YatlCheckbox,
+  YatlFlyout,
   YatlFormControl,
   YatlNumberInput,
   YatlSwitch,
@@ -12,6 +13,7 @@ import {
 } from '@timlassiter11/yatl-ui';
 import {
   NumberEditor,
+  RowId,
   SelectEditor,
   TextEditor,
   YatlCommitTransaction,
@@ -50,9 +52,20 @@ interface TableData {
   tags: string;
 }
 
+// Used for formatting the last modified date, both in the table and the details flyout.
+const dateFormatter = new Intl.DateTimeFormat(undefined);
+
 let table: YatlTableView<TableData>;
 let optionsForm: HTMLFormElement;
 let rowCountInput: YatlNumberInput;
+
+let rowDetailsFlyout: YatlFlyout;
+let rowDetailsStatus: HTMLElement;
+let rowDetailsModified: HTMLElement;
+let rowDetailsIssues: HTMLElement;
+let rowDetailsTags: HTMLElement;
+let rowDetailsDeleteButton: YatlButton;
+let currentDetailsRowId: RowId | undefined;
 
 window.addEventListener('load', () => {
   // Stuff for the page, not about YATL.
@@ -87,6 +100,27 @@ window.addEventListener('load', () => {
     }
   });
 
+  // Wire up the row details flyout.
+  rowDetailsFlyout = document.getElementById('rowDetailsFlyout') as YatlFlyout;
+  rowDetailsStatus = document.getElementById('rowDetailsStatus')!;
+  rowDetailsModified = document.getElementById('rowDetailsModified')!;
+  rowDetailsIssues = document.getElementById('rowDetailsIssues')!;
+  rowDetailsTags = document.getElementById('rowDetailsTags')!;
+  rowDetailsDeleteButton = document.getElementById(
+    'rowDetailsDeleteButton',
+  ) as YatlButton;
+  rowDetailsDeleteButton.addEventListener('click', async () => {
+    if (currentDetailsRowId === undefined) {
+      return;
+    }
+    const title = 'Delete Row?';
+    const body = `Are you sure you want to delete "${rowDetailsFlyout.label}"?`;
+    if (await showDialog(title, body)) {
+      table.deleteRow(currentDetailsRowId);
+      rowDetailsFlyout.open = false;
+    }
+  });
+
   /* --- Table Events --- */
 
   // Just to show how to hook into some events
@@ -96,6 +130,7 @@ window.addEventListener('load', () => {
       field: event.field,
       row: event.row,
     });
+    showRowDetails(event.rowId, event.row as TableData);
   });
   table.addEventListener('yatl-row-select', event => {
     console.log('Row selected:', event.selectedIds);
@@ -108,8 +143,6 @@ window.addEventListener('load', () => {
  * Initialize the table settings and data.
  */
 function initTable() {
-  // Used for formatting our last modified data
-  const dateFormatter = new Intl.DateTimeFormat(undefined);
   table.data = generateMockData(rowCountInput.value!);
 
   // Add a fake task for fetching data
@@ -340,6 +373,31 @@ function generateMockData(count: number) {
     generatedData.push(dataRow);
   }
   return generatedData;
+}
+
+/**
+ * Populates and opens the row details flyout for the given row.
+ */
+function showRowDetails(rowId: RowId, row: TableData) {
+  currentDetailsRowId = rowId;
+  rowDetailsFlyout.label = row.name;
+  rowDetailsStatus.textContent = row.status;
+  rowDetailsModified.textContent = dateFormatter.format(row.lastModified);
+  rowDetailsIssues.textContent =
+    row.issueCount != null ? row.issueCount.toLocaleString() : 'None';
+
+  rowDetailsTags.replaceChildren(
+    ...row.tags
+      .split(',')
+      .filter(Boolean)
+      .map(tag => {
+        const element = document.createElement('yatl-tag');
+        element.textContent = tag;
+        return element;
+      }),
+  );
+
+  rowDetailsFlyout.open = true;
 }
 
 async function showDialog(title: string, body: string) {

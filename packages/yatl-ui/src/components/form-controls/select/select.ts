@@ -141,6 +141,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
         @yatl-dropdown-toggle-request=${this.handleDropdownToggleRequest}
       >
         <div
+          id=${this.inputId}
           class="text-input"
           slot="trigger"
           tabindex="0"
@@ -168,7 +169,6 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
         tabindex="-1"
         part="input"
         class="input"
-        id=${this.inputId}
         type="text"
         title=${displayValue ?? ''}
         value=${displayValue ?? ''}

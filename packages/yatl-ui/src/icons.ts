@@ -254,6 +254,11 @@ export const trash = svg`
   <line class="icon trash" x1="14" y1="11" x2="14" y2="17" />
 `;
 
+/**
+ * The icon set used by `<yatl-icon>`, keyed by icon name. Use
+ * {@link registerIcon} or {@link registerIcons} to add to it rather than
+ * mutating it directly.
+ */
 export const icons: Record<string, TemplateResult<2>> = {
   'arrow-left': arrowLeft,
   'arrow-right': arrowRight,
@@ -292,3 +297,31 @@ export const icons: Record<string, TemplateResult<2>> = {
   'sun-moon': sumMoon,
   trash: trash,
 };
+
+/**
+ * Registers a custom icon so it can be used anywhere via
+ * `<yatl-icon name="...">`. Registering a name that already exists
+ * (including a built-in icon) replaces it.
+ *
+ * Icons are typically authored on a 24x24 grid using `stroke="currentColor"`
+ * shapes (matching the built-in set), but any valid SVG content works —
+ * set the `view-box` attribute on `<yatl-icon>` if yours uses a different
+ * coordinate system.
+ *
+ * @example
+ * ```ts
+ * import { registerIcon, svg } from '@timlassiter11/yatl-ui';
+ *
+ * registerIcon('my-custom-icon', svg`<path d="M12 2 2 22h20z" />`);
+ * ```
+ */
+export function registerIcon(name: string, icon: TemplateResult<2>) {
+  icons[name] = icon;
+}
+
+/**
+ * Registers multiple custom icons at once. See {@link registerIcon}.
+ */
+export function registerIcons(newIcons: Record<string, TemplateResult<2>>) {
+  Object.assign(icons, newIcons);
+}

@@ -3,6 +3,7 @@ import './setup-context';
 export * from './components';
 export * from './context';
 export * from './events';
+export * from './icons';
 export * from './types';
 export * from './utils';
 

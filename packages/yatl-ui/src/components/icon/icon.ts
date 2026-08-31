@@ -4,6 +4,11 @@ import { icons } from '../../icons';
 import { YatlBase } from '../base/base';
 import styles from './icon.styles';
 
+/**
+ * Renders an icon from the built-in icon set by name. Use `registerIcon`
+ * or `registerIcons` (exported from the package root) to add custom icons
+ * that can be referenced the same way.
+ */
 @customElement('yatl-icon')
 export class YatlIcon extends YatlBase {
   public static override styles = [...super.styles, styles];

@@ -300,6 +300,10 @@ export default css`
       background-color: var(--table-row-hover-bg);
     }
 
+    .body .cell.is-editable:hover {
+      box-shadow: inset 0 0 0 1px var(--table-accent-color);
+    }
+
     .resizer:hover::after {
       background-color: currentcolor;
       width: 2px;
@@ -444,6 +448,10 @@ export default css`
 
   .sortable {
     cursor: pointer;
+  }
+
+  .cell.is-editable {
+    cursor: text;
   }
 
   /* Footer */

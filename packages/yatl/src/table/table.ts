@@ -939,15 +939,19 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     }
 
     const inputType = this.getInputTypeFromValue(value);
+    const field = column.field;
+    const rowId = this.controller.getRowId(row);
+    const editable =
+      !this.readonly &&
+      this.editTrigger !== 'none' &&
+      this.controller.isCellEditable(row, field);
     const classes = {
       cell: true,
       'is-number': inputType === 'number',
       'is-dirty': status === 'dirty',
       'is-saving': status === 'saving',
+      'is-editable': editable,
     };
-
-    const field = column.field;
-    const rowId = this.controller.getRowId(row);
 
     if (
       !this.readonly &&

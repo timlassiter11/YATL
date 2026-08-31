@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.4.2
+
+### Patch Changes
+
+- 5cb2c4c: Fixed row click events firing when clicking to edit cells
+
 ## 1.4.1
 
 ### Patch Changes

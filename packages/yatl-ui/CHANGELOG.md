@@ -1,5 +1,20 @@
 # @timlassiter11/yatl-ui
 
+## 3.0.1
+
+### Patch Changes
+
+- e34226a: Fixed clicking a yatl-date-input or yatl-date-range-input's label not opening the date picker, since their trigger button had no id for the label to target.
+- 91b590b: Fixed a dropdown-based control (yatl-select, yatl-date-input, yatl-date-range-input) closing and immediately reopening on a second label click instead of toggling closed, caused by two separate issues: the label's press was being read as an outside click by the dropdown's click-away-to-close handler, and its forwarded click was being ignored by a guard meant for keyboard-generated clicks.
+- ece8173: Added ability to register custom icons to use with yatl-icon
+- ba92cfd: Fixed checkbox, switch, and radio labels rendering flush against the control with no gap, and looking bold/oversized like a standard form control label instead of normal body text.
+- c2b8ce9: Fixed clicking a yatl-select's label not opening the dropdown when multi is set, since the decorative display input carrying the label's target id doesn't render in multi mode. Moved the id onto the actual trigger element instead, which is present in both modes.
+- adcd8e7: Built out yatl-label into a real, reusable component matching form control label styling, and wired it into all form controls. Also exposed it for standalone use on custom markup.
+- 8e299ed: Improved disabled state logic for all form controls
+- 2e4f397: Added new yatl-flyout component
+- Updated dependencies [5cb2c4c]
+  - @timlassiter11/yatl@1.4.2
+
 ## 3.0.0
 
 ### Minor Changes

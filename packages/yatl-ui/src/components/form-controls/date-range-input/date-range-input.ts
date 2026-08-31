@@ -176,6 +176,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <button
+          id=${this.inputId}
           class="row"
           slot="trigger"
           ?disabled=${this.isDisabled || this.readonly}

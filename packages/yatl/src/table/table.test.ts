@@ -340,6 +340,76 @@ describe('YatlTable Component', () => {
   });
 
   // #endregion
+  // #region Editing & Row Details
+
+  describe('Editing & Row Details', () => {
+    const getEditableColumns = (): DisplayColumnOptions<User>[] => [
+      { field: 'id', title: 'ID' },
+      { field: 'name', title: 'Name', editor: new TextEditor() },
+      { field: 'role', title: 'Role' },
+      { field: 'age', title: 'Age' },
+    ];
+
+    test('click edit trigger starts editing without firing yatl-row-click', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+      });
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Alice' });
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-row-click', spy);
+
+      await userEvent.click(cell);
+      await table.updateComplete;
+
+      expect(spy).not.toHaveBeenCalled();
+      const editor = tableLocator.getByRole('textbox');
+      await expect.element(editor).toBeVisible();
+    });
+
+    test('dblclick edit trigger does not fire yatl-row-click on a single click of an editable cell', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'dblclick',
+      });
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Alice' });
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-row-click', spy);
+
+      await userEvent.click(cell);
+      await table.updateComplete;
+
+      expect(spy).not.toHaveBeenCalled();
+      // A single click shouldn't start editing either.
+      const editor = tableLocator.getByRole('textbox');
+      await expect.element(editor).not.toBeInTheDocument();
+    });
+
+    test('click edit trigger still fires yatl-row-click for non-editable cells', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+      });
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Admin' });
+      const spy = vi.fn();
+
+      table.addEventListener('yatl-row-click', spy);
+
+      await userEvent.click(cell);
+      await table.updateComplete;
+
+      const event = spy.mock.calls[0][0] as YatlRowClickEvent;
+      expect(spy).toHaveBeenCalledOnce();
+      expect(event.row.name).toBe('Alice');
+    });
+  });
+
+  // #endregion
   // #region Column Visibility
 
   describe('Column Visibility', () => {

@@ -54,7 +54,6 @@ import {
   YatlTableController,
 } from '../table-controller/table-controller';
 import styles from './table.styles';
-import { live } from 'lit/directives/live.js';
 
 // #region --- Constants ---
 
@@ -941,10 +940,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     const inputType = this.getInputTypeFromValue(value);
     const field = column.field;
     const rowId = this.controller.getRowId(row);
-    const editable =
-      !this.readonly &&
-      this.editTrigger !== 'none' &&
-      this.controller.isCellEditable(row, field);
+    const editable = this.canEditCell(row, field);
     const classes = {
       cell: true,
       'is-number': inputType === 'number',
@@ -1431,17 +1427,26 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     return 'text';
   }
 
-  private beginCellEdit(row: T, field: NestedKeyOf<T>) {
-    if (
-      this.readonly ||
-      this.editTrigger === 'none' ||
-      !this.controller.isCellEditable(row, field)
-    ) {
-      return;
+  /**
+   * Whether clicking or double-clicking this cell (per the current
+   * `editTrigger`) would be able to start an edit.
+   */
+  private canEditCell(row: T, field: NestedKeyOf<T>): boolean {
+    return (
+      !this.readonly &&
+      this.editTrigger !== 'none' &&
+      this.controller.isCellEditable(row, field)
+    );
+  }
+
+  private beginCellEdit(row: T, field: NestedKeyOf<T>): boolean {
+    if (!this.canEditCell(row, field)) {
+      return false;
     }
 
     const rowId = this.controller.getRowId(row);
     this.currentEditCell = { rowId, field };
+    return true;
   }
 
   private getNextEditableField(row: T, currentField?: NestedKeyOf<T>) {
@@ -1611,8 +1616,15 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return;
     }
 
-    if (this.editTrigger === 'click') {
-      this.beginCellEdit(row, field);
+    if (this.canEditCell(row, field)) {
+      if (this.editTrigger === 'click') {
+        this.beginCellEdit(row, field);
+      }
+      // This cell can be edited by clicking or double-clicking it, so
+      // don't also treat this click as a row click - even if this
+      // particular click didn't start the edit (e.g. the first click
+      // of a double-click in 'dblclick' mode).
+      return;
     }
 
     // Ignore links and buttons

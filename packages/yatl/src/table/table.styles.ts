@@ -496,12 +496,14 @@ export default css`
   /* Add the padding to the child */
   .cell:has(.row-number-cell),
   .cell:has(.row-selector-cell),
+  .cell:has(.row-detail-cell),
   .row-selector-cell {
     padding: 0;
   }
 
   .row-number-cell,
-  .row-selector-cell > label {
+  .row-selector-cell > label,
+  .row-detail-cell {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -510,6 +512,39 @@ export default css`
     height: 100%;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .row-detail-button {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: var(--yatl-radius-s, 4px);
+    color: var(--table-footer-text);
+    cursor: pointer;
+  }
+
+  .row-detail-button:hover {
+    color: var(--table-text);
+    background-color: var(--table-row-selected-bg);
+  }
+
+  .row-detail-button:focus-visible {
+    outline: 2px solid var(--table-accent-color);
+    outline-offset: 1px;
+  }
+
+  .row-detail-button svg {
+    width: 60%;
+    height: 60%;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 2px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .message {

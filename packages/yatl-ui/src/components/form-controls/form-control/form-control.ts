@@ -1,4 +1,4 @@
-import { html, LitElement, PropertyValues } from 'lit';
+import { html, LitElement, nothing, PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { HasSlotController } from '../../../utils/slot-controller';
 import { classMap } from 'lit/directives/class-map.js';
@@ -197,14 +197,26 @@ export abstract class YatlFormControl<TData = string>
   }
 
   protected renderLabel(): unknown {
-    const classes = { label: true, 'has-label': this.hasLabel };
+    const classes = { 'has-label': this.hasLabel };
     return html`
-      <label for="input" class=${classMap(classes)}>
-        <slot name="label">
-          <div part="label">${this.label}</div>
-        </slot>
-      </label>
+      <yatl-label
+        for=${this.inputId}
+        exportparts="base:label"
+        class=${classMap(classes)}
+      >
+        <slot name="label">${this.label}</slot>
+        ${this.renderLabelEnd()}
+      </yatl-label>
     `;
+  }
+
+  /**
+   * Trailing content rendered in the label's `end` slot, e.g. a character
+   * count. Overridden by subclasses that need it - renders nothing by
+   * default.
+   */
+  protected renderLabelEnd(): unknown {
+    return nothing;
   }
 
   protected renderHint(): unknown {

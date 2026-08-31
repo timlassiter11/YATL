@@ -24,10 +24,6 @@ export default css`
       var(--yatl-color-brand)
     );
     --input-outline-width: var(--yatl-input-outline-width, 3px);
-    --input-label-text: var(--yatl-input-label-text, var(--yatl-text-1));
-    --input-label-font-size: var(--yatl-input-label-font-size, large);
-    --input-label-font-weight: var(--yatl-input-label-font-weight, 700);
-
     --input-hint-text: var(--yatl-input-hint-text, var(--yatl-text-3));
     --input-hint-font-size: var(--yatl-input-hint-font-size, small);
     --input-error-text: var(--yatl-input-error-text, var(--yatl-color-danger));
@@ -83,29 +79,12 @@ export default css`
     outline-offset: calc(var(--input-outline-width) * -1);
   }
 
-  .label {
-    color: var(--input-label-text);
-    font-size: var(--input-label-font-size);
-    font-weight: var(--input-label-font-weight);
-  }
-
-  .label:not(.has-label) {
+  yatl-label:not(.has-label) {
     display: none;
   }
 
-  :host(:not([inline])) .label {
+  :host(:not([inline])) yatl-label {
     margin-block-end: var(--yatl-spacing-s);
-  }
-
-  .label-row {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-
-  .label-spacer {
-    flex-grow: 1;
   }
 
   [part='label-count'] {

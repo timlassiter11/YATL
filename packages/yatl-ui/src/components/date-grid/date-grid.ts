@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 
@@ -35,6 +35,14 @@ export class YatlDateGrid extends YatlBase {
   public static override styles = [...super.styles, styles];
 
   @state() private currentMonth = getFirstDayOfMonth(new Date());
+
+  // Tracks the selection/bounds used the last time we picked
+  // `currentMonth` for the user, so we can tell a *meaningful* change
+  // (a new selection, or min/max moving while nothing is selected) apart
+  // from an unrelated re-render - see willUpdate().
+  private lastSelectionTime?: number;
+  private lastMinTime?: number;
+  private lastMaxTime?: number;
 
   /**
    * When true, today's date is visually highlighted.
@@ -75,6 +83,63 @@ export class YatlDateGrid extends YatlBase {
 
   private get maxMonthTime() {
     return this.max ? getFirstDayOfMonth(this.max).getTime() : undefined;
+  }
+
+  protected override willUpdate(
+    changedProperties: PropertyValues<YatlDateGrid>,
+  ): void {
+    super.willUpdate(changedProperties);
+
+    const selection = this.ranges[0]?.start ?? this.ranges[0]?.end;
+    const selectionTime = selection?.getTime();
+    const minTime = this.minTime;
+    const maxTime = this.maxTime;
+
+    // Jump to a relevant month whenever we haven't shown anything yet, a
+    // selection appears/changes/clears, or (while nothing is selected)
+    // min/max moves - e.g. a filter's computed bounds settling after we
+    // first rendered. Comparing values (not changedProperties) matters
+    // here since consumers like yatl-date-range-picker rebuild `ranges`
+    // as a fresh array on every render, so reference equality alone would
+    // fire constantly.
+    const selectionChanged = selectionTime !== this.lastSelectionTime;
+    const boundsChanged =
+      minTime !== this.lastMinTime || maxTime !== this.lastMaxTime;
+
+    if (
+      !this.hasUpdated ||
+      selectionChanged ||
+      (boundsChanged && selection === undefined)
+    ) {
+      this.currentMonth = this.getRelevantMonth(selection);
+    }
+
+    this.lastSelectionTime = selectionTime;
+    this.lastMinTime = minTime;
+    this.lastMaxTime = maxTime;
+  }
+
+  /**
+   * Picks the most useful month to display: the current selection's month
+   * if there is one, otherwise today's month if it falls within min/max,
+   * otherwise the nearest bound. Without this, a picker whose selectable
+   * range is far from today would open on today's month with every day
+   * disabled, forcing the user to page through months by hand to reach
+   * anything they can actually pick.
+   */
+  private getRelevantMonth(selection: Date | undefined): Date {
+    if (selection) {
+      return getFirstDayOfMonth(selection);
+    }
+
+    const today = getDateOnly(new Date());
+    if (this.minTime !== undefined && today.getTime() < this.minTime) {
+      return getFirstDayOfMonth(this.min!);
+    }
+    if (this.maxTime !== undefined && today.getTime() > this.maxTime) {
+      return getFirstDayOfMonth(this.max!);
+    }
+    return getFirstDayOfMonth(today);
   }
 
   protected override render() {

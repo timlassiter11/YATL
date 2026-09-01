@@ -11,6 +11,17 @@ async function renderGrid() {
   return el;
 }
 
+const monthYearFormatter = Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  year: 'numeric',
+});
+
+function addMonths(date: Date, months: number) {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
 function monthLabel(el: YatlDateGrid) {
   return el
     .shadowRoot!.querySelector('[part~="month-button"]')!
@@ -102,5 +113,90 @@ describe('YatlDateGrid - selection', () => {
     firstDayButton.click();
 
     expect(selected).toBeInstanceOf(Date);
+  });
+});
+
+describe('YatlDateGrid - relevant initial month', () => {
+  test('defaults to the current month when there is no min/max', async () => {
+    const el = await renderGrid();
+    expect(monthLabel(el)).toBe(monthYearFormatter.format(new Date()));
+  });
+
+  test('defaults to the current month when today falls within min/max', async () => {
+    document.body.innerHTML = '<yatl-date-grid></yatl-date-grid>';
+    const el = document.querySelector<YatlDateGrid>('yatl-date-grid')!;
+    el.min = addMonths(new Date(), -6);
+    el.max = addMonths(new Date(), 6);
+    await el.updateComplete;
+
+    expect(monthLabel(el)).toBe(monthYearFormatter.format(new Date()));
+  });
+
+  test('opens on the min month when the whole range is in the future', async () => {
+    document.body.innerHTML = '<yatl-date-grid></yatl-date-grid>';
+    const el = document.querySelector<YatlDateGrid>('yatl-date-grid')!;
+    const min = addMonths(new Date(), 8);
+    el.min = min;
+    el.max = addMonths(new Date(), 10);
+    await el.updateComplete;
+
+    expect(monthLabel(el)).toBe(monthYearFormatter.format(min));
+  });
+
+  test('opens on the max month when the whole range is in the past', async () => {
+    document.body.innerHTML = '<yatl-date-grid></yatl-date-grid>';
+    const el = document.querySelector<YatlDateGrid>('yatl-date-grid')!;
+    el.min = addMonths(new Date(), -10);
+    const max = addMonths(new Date(), -8);
+    el.max = max;
+    await el.updateComplete;
+
+    expect(monthLabel(el)).toBe(monthYearFormatter.format(max));
+  });
+
+  test('opens on an existing selection instead of today, even far away', async () => {
+    document.body.innerHTML = '<yatl-date-grid></yatl-date-grid>';
+    const el = document.querySelector<YatlDateGrid>('yatl-date-grid')!;
+    const selected = addMonths(new Date(), -14);
+    el.ranges = [{ start: selected, end: selected, color: 'brand' }];
+    await el.updateComplete;
+
+    expect(monthLabel(el)).toBe(monthYearFormatter.format(selected));
+  });
+
+  test('does not yank the view back after the user navigates away with an unchanged selection', async () => {
+    const el = await renderGrid();
+    el.ranges = [{ start: new Date(), end: undefined, color: 'brand' }];
+    await el.updateComplete;
+    const selectionLabel = monthLabel(el);
+
+    await clickButton(el, 'next-button');
+    await clickButton(el, 'next-button');
+    const labelAfterNavigating = monthLabel(el);
+    // Confirm navigation actually moved the view - otherwise the
+    // stability check below would trivially pass even if navigation were
+    // completely broken.
+    expect(labelAfterNavigating).not.toBe(selectionLabel);
+
+    // Re-render with the exact same ranges/min/max, as would happen from
+    // an unrelated prop update (e.g. `disabled` toggling) elsewhere.
+    el.requestUpdate();
+    await el.updateComplete;
+
+    expect(monthLabel(el)).toBe(labelAfterNavigating);
+  });
+
+  test('re-picks a relevant month once a selection is cleared', async () => {
+    document.body.innerHTML = '<yatl-date-grid></yatl-date-grid>';
+    const el = document.querySelector<YatlDateGrid>('yatl-date-grid')!;
+    const selected = addMonths(new Date(), -14);
+    el.ranges = [{ start: selected, end: selected, color: 'brand' }];
+    await el.updateComplete;
+    expect(monthLabel(el)).toBe(monthYearFormatter.format(selected));
+
+    el.ranges = [];
+    await el.updateComplete;
+
+    expect(monthLabel(el)).toBe(monthYearFormatter.format(new Date()));
   });
 });

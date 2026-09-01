@@ -57,6 +57,27 @@ describe('YatlFlyout - basic show/hide', () => {
   });
 });
 
+describe('YatlFlyout - show/hide fire exactly once', () => {
+  test('show()/close each dispatch their event exactly once, not twice', async () => {
+    const el = await renderFlyout();
+    let showCount = 0;
+    let hideCount = 0;
+    el.addEventListener('yatl-flyout-show', () => showCount++);
+    el.addEventListener('yatl-flyout-hide', () => hideCount++);
+
+    await el.show();
+    expect(showCount).toBe(1);
+
+    const closeButton = el.shadowRoot!.querySelector(
+      '[part="close-button"]',
+    ) as HTMLElement;
+    closeButton.click();
+    await new Promise(r => setTimeout(r, 400));
+
+    expect(hideCount).toBe(1);
+  });
+});
+
 describe('YatlFlyout - open/close race', () => {
   test('closing while the show animation is still in progress actually closes it', async () => {
     const el = await renderFlyout();

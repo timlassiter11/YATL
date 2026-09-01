@@ -84,6 +84,27 @@ describe('YatlDialog - basic show/hide', () => {
   });
 });
 
+describe('YatlDialog - show/hide fire exactly once', () => {
+  test('show()/close each dispatch their event exactly once, not twice', async () => {
+    const el = await renderDialog();
+    let showCount = 0;
+    let hideCount = 0;
+    el.addEventListener('yatl-dialog-show', () => showCount++);
+    el.addEventListener('yatl-dialog-hide', () => hideCount++);
+
+    await el.show();
+    expect(showCount).toBe(1);
+
+    const closeButton = el.shadowRoot!.querySelector(
+      '[part="close-button"]',
+    ) as HTMLElement;
+    closeButton.click();
+    await new Promise(r => setTimeout(r, 400));
+
+    expect(hideCount).toBe(1);
+  });
+});
+
 describe('YatlDialog - open/close race', () => {
   test('closing while the show animation is still in progress actually closes it', async () => {
     const el = await renderDialog();

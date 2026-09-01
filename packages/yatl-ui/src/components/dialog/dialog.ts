@@ -85,6 +85,13 @@ export class YatlDialog extends YatlBase {
   @property({ type: Boolean, attribute: 'no-close-button' })
   public noCloseButton = false;
 
+  // Guards against show()/requestClose() re-entering themselves: they set
+  // `this.open` as part of work they're already doing, and without this
+  // the setter's own show()/hide() call below would kick off a second,
+  // fully independent run of the same show/hide logic (each dispatching
+  // its own request/complete events) for a single user action.
+  private applyingOpenChange = false;
+
   /**
    * Shows or hides the dialog.
    * @attr open
@@ -101,7 +108,7 @@ export class YatlDialog extends YatlBase {
     const oldValue = this._open;
     this._open = value;
 
-    if (this.hasUpdated) {
+    if (this.hasUpdated && !this.applyingOpenChange) {
       if (this.open) {
         this.show();
       } else {
@@ -110,6 +117,12 @@ export class YatlDialog extends YatlBase {
     }
 
     this.requestUpdate('open', oldValue);
+  }
+
+  private setOpenInternal(value: boolean) {
+    this.applyingOpenChange = true;
+    this.open = value;
+    this.applyingOpenChange = false;
   }
 
   public async show() {
@@ -129,7 +142,7 @@ export class YatlDialog extends YatlBase {
     const requestEvent = new YatlDialogShowRequest();
     this.dispatchEvent(requestEvent);
     if (requestEvent.defaultPrevented) {
-      this.open = false;
+      this.setOpenInternal(false);
       return;
     }
 
@@ -138,7 +151,7 @@ export class YatlDialog extends YatlBase {
     }
 
     this.dialogElement!.showPopover();
-    this.open = true;
+    this.setOpenInternal(true);
     this.dialogElement!.classList.add('show');
     await this.transitionComplete;
     const event = new YatlDialogShowEvent();
@@ -248,12 +261,12 @@ export class YatlDialog extends YatlBase {
     const requestEvent = new YatlDialogHideRequest(source);
     this.dispatchEvent(requestEvent);
     if (requestEvent.defaultPrevented) {
-      this.open = true;
+      this.setOpenInternal(true);
       animateWithClass(this.dialogElement!, 'pulse');
       return;
     }
 
-    this.open = false;
+    this.setOpenInternal(false);
     this.dialogElement!.classList.add('hide');
     await this.transitionComplete;
     this.dialogElement!.hidePopover();

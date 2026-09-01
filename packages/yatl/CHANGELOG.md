@@ -1,5 +1,36 @@
 # @timlassiter11/yatl
 
+## 1.5.0
+
+### Minor Changes
+
+- cdb336a: Added a `searchSortPriority` property (and matching `search-sort-priority` attribute) to control whether search relevance or the user's active column sort takes priority when ordering rows during a scored search. Defaults to `'score'`, matching existing behavior. Persists via `storageOptions` like other table preferences (`saveSearchSortPriority`, defaulting to on).
+
+### Patch Changes
+
+- a73a20a: getColumnFilterValues() no longer passes flattened array elements to valueFormatter (which formats the whole cell value, not one element) - added an array-safe filterOptionFormatter column option for formatting individual flattened option labels
+- 1ff2fe4: Fixed resolveTransaction/rejectTransaction/discardTransaction throwing if a row was removed by a data reload while its commit was still in flight
+- 7c81808: Fixed commitChanges/commitAllChanges leaving stale pending-edit state after committing a change
+- 7c81808: Fixed commitChanges not refreshing the cached sort value for a committed field, leaving sort order stale after an edit
+- 13c8880: Fixed CSV export producing malformed output for values or column titles containing more than one double-quote character, and for headers containing commas or quotes at all
+- 8e7c615: Fixed deleteRowAtIndex deleting the wrong rows when passed multiple indices, since removing an earlier index shifted the positions of later ones before they were processed
+- 7c81808: Fixed displayColumns returning a mutable reference to internal state, allowing moveColumn to corrupt previously-captured references
+- 7c81808: Fixed the cell editor's auto-select misbehaving because focus detection didn't account for the component's shadow DOM
+- 7c81808: Fixed hiding a sorted column not updating the table's row order
+- 7c81808: Fixed filters not matching on nested (dotted-path) fields
+- 7c81808: Fixed cell edits not updating the table's dirty indicator until an unrelated re-render occurred
+- 7c81808: Fixed print() leaking the temporary print table as a permanent host on the shared controller
+- 7c81808: Fixed a background data reload not reconciling removed rows, causing commitAllChanges/revertPendingChanges to throw
+- 7c81808: Fixed revertPendingChanges leaking internal edited-row tracking state
+- f2eb73d: scrollToFilteredIndex() no longer silently no-ops when virtual scroll is disabled - the non-virtualized fallback was looking up rows by a `data-filtered-index` attribute that was never actually rendered onto any row, so it could never find its target; it now uses `data-row-id`, which is. Also documented the known limitation where, with virtual scroll enabled, scrolling to a far-away index can visibly undershoot before settling, due to how lit-labs/virtualizer estimates unmeasured row heights.
+- 2f6129e: scrollToPx() now actually scrolls the table - it was setting scrollTop on the outer .table element (overflow: hidden, never scrolls) or the lit-virtualizer host (only a scroll container when its scroller property is set, which we don't do) instead of .scroller, the element that actually scrolls
+- 91eb0d0: Fixed tokenized search hanging indefinitely when the query contained an empty quoted segment (e.g. "")
+- 7c81808: Fixed pending cell edits not supporting an explicitly cleared (undefined) value
+- 4cf95fa: Sort values are now computed lazily, only for columns actually being sorted by, instead of eagerly for every column on every data or column change - significantly reducing the cost of loading or reloading large datasets, especially with many columns
+- 7c81808: Reduced redundant data copies and per-column allocations on every table render for better performance with large datasets
+- 91eb0d0: Reduced redundant field-getter calls during search for better performance with custom column getters
+- ffd84da: updateRow/updateRowAtIndex no longer rebuild every row's metadata for a single-row edit - they now only rebuild if the edit actually changes that row's own identity (its primary key or rowIdCallback result), falling back to a fast, targeted update otherwise
+
 ## 1.4.2
 
 ### Patch Changes

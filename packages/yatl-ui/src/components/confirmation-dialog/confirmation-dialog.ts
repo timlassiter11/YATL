@@ -79,18 +79,23 @@ export class YatlConfirmationDialog extends YatlBase {
 
   public async confirm() {
     await this.show();
+    // Whichever of accept/reject doesn't fire would otherwise stay
+    // attached forever (only the one that fires is cleaned up by
+    // `once`) - the shared signal removes both once either settles.
+    const controller = new AbortController();
     const ret = await new Promise<boolean>((resolve, _reject) => {
       this.addEventListener(
         'yatl-confirmation-dialog-accept',
         () => resolve(true),
-        { once: true },
+        { once: true, signal: controller.signal },
       );
       this.addEventListener(
         'yatl-confirmation-dialog-reject',
         () => resolve(false),
-        { once: true },
+        { once: true, signal: controller.signal },
       );
     });
+    controller.abort();
     return ret;
   }
 

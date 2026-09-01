@@ -213,11 +213,18 @@ export class YatlTableView<
     this.export(document.title);
   }
 
+  // The reload button is only ever disabled during a non-silent reload
+  // (see renderReloadButton), so overlapping reloads (e.g. rapid clicks on
+  // a silent reload) are always possible. This token makes sure a
+  // slower, older request can't clobber a result from a newer one.
+  private reloadToken = 0;
+
   private async requestReload(context: YatlTableFetchContext) {
     if (!this.fetchTask) {
       return;
     }
 
+    const token = ++this.reloadToken;
     const fetchTask = this.fetchTask(context);
 
     this.buttonState = 'loading';
@@ -231,15 +238,25 @@ export class YatlTableView<
         // Trigger error state if fetch task returns undefined
         throw new Error();
       }
+      if (token !== this.reloadToken) {
+        // A newer reload started while this one was in flight - ignore
+        // this now-stale result.
+        return;
+      }
       this.controller.data = data;
       this.buttonState = 'success';
       setTimeout(() => (this.buttonState = 'idle'), 3000);
       return;
     } catch {
+      if (token !== this.reloadToken) {
+        return;
+      }
       this.buttonState = 'error';
       setTimeout(() => (this.buttonState = 'idle'), 3000);
     } finally {
-      this.loading = false;
+      if (token === this.reloadToken) {
+        this.loading = false;
+      }
     }
   }
 }

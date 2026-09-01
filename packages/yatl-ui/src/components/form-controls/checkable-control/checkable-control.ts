@@ -12,6 +12,11 @@ export abstract class YatlCheckableControl extends YatlFormControl<string> {
 
   private _value = this.getAttribute('value') ?? 'on';
   private _checked = this.hasAttribute('checked');
+  // Whether the `checked` setter has been explicitly called (from outside
+  // this class) - can't rely on Lit's changedProperties for this, since on
+  // the first update it contains every declared property regardless of
+  // whether it was actually touched.
+  private checkedExplicitlySet = false;
 
   /**
    * The value to store in the form data when checked.
@@ -39,6 +44,7 @@ export abstract class YatlCheckableControl extends YatlFormControl<string> {
   @property({ type: Boolean, attribute: false })
   public set checked(value) {
     this._checked = Boolean(value);
+    this.checkedExplicitlySet = true;
     this.toggleState('checked', value);
     this.updateFormValue();
   }
@@ -67,8 +73,13 @@ export abstract class YatlCheckableControl extends YatlFormControl<string> {
     changedProps: PropertyValues<YatlCheckableControl>,
   ) {
     super.firstUpdated(changedProps);
-    this._checked = this.defaultChecked;
-    this.toggleState('checked', this._checked);
+    // Only seed from defaultChecked if `checked` wasn't already set
+    // explicitly (e.g. via a `.checked=${...}` binding) before this first
+    // update - otherwise we'd clobber that explicit value.
+    if (!this.checkedExplicitlySet) {
+      this._checked = this.defaultChecked;
+      this.toggleState('checked', this._checked);
+    }
   }
 
   protected updateFormValue() {

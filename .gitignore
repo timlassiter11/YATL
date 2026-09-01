@@ -137,6 +137,9 @@ out
 dist/
 src/scratchpad.ts
 
+# Claude Code local dev-server launch config (machine-specific absolute paths)
+.claude/launch.json
+
 # Playwright
 /test-results/
 /playwright-report/

@@ -157,14 +157,15 @@ export class YatlToolbar<
   protected renderSearchSortPriorityToggle() {
     const priority = this.controller?.searchSortPriority ?? 'score';
     const isSortPriority = priority === 'sort';
+    // searchSortPriority only affects row order once both a sort and a
+    // search are active - compareByScore() in the controller is a no-op
+    // with no search query, regardless of this setting - so only enable
+    // the toggle when it would actually do something.
     const hasActiveSort =
       this.controller?.columnStates.some(state => state.sort !== null) ?? false;
+    const hasActiveSearch = !!this.controller?.searchQuery;
 
-    const title = !hasActiveSort
-      ? 'Search results are ranked by relevance (no active sort to prioritize instead)'
-      : isSortPriority
-      ? 'Your sort order takes priority over search relevance - click to prioritize relevance instead'
-      : 'Search relevance takes priority over your sort order - click to prioritize your sort instead';
+    const title = isSortPriority ? 'Prioritize relevance' : 'Prioritize sort';
 
     return html`
       <yatl-button
@@ -173,7 +174,7 @@ export class YatlToolbar<
         color="raised"
         title=${title}
         aria-pressed=${isSortPriority ? 'true' : 'false'}
-        ?disabled=${!hasActiveSort}
+        ?disabled=${!hasActiveSort || !hasActiveSearch}
         @click=${this.onToggleSearchSortPriority}
       >
         <yatl-icon

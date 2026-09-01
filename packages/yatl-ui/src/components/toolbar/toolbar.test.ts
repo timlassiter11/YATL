@@ -30,7 +30,7 @@ async function renderToolbar(controller: YatlTableController<Row>) {
 }
 
 describe('YatlToolbar - search/sort priority toggle', () => {
-  test('is disabled when no column is sorted', async () => {
+  test('is disabled with neither a sort nor a search active', async () => {
     const controller = createController();
     const el = await renderToolbar(controller);
     const button = el.shadowRoot!.querySelector(
@@ -42,7 +42,7 @@ describe('YatlToolbar - search/sort priority toggle', () => {
     expect(button.getAttribute('aria-pressed')).toBe('false');
   });
 
-  test('becomes enabled once a column is sorted', async () => {
+  test('stays disabled with only a sort active, no search', async () => {
     const controller = createController();
     const el = await renderToolbar(controller);
 
@@ -52,13 +52,58 @@ describe('YatlToolbar - search/sort priority toggle', () => {
     const button = el.shadowRoot!.querySelector(
       '[part="search-sort-priority-toggle"]',
     ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  test('stays disabled with only a search active, no sort', async () => {
+    const controller = createController();
+    const el = await renderToolbar(controller);
+
+    controller.searchQuery = 'bob';
+    await el.updateComplete;
+
+    const button = el.shadowRoot!.querySelector(
+      '[part="search-sort-priority-toggle"]',
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  test('becomes enabled once both a sort and a search are active', async () => {
+    const controller = createController();
+    const el = await renderToolbar(controller);
+
+    controller.sort('name', 'asc');
+    controller.searchQuery = 'bob';
+    await el.updateComplete;
+
+    const button = el.shadowRoot!.querySelector(
+      '[part="search-sort-priority-toggle"]',
+    ) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
+  });
+
+  test('title reflects the action a click would perform, not the current state', async () => {
+    const controller = createController();
+    const el = await renderToolbar(controller);
+    controller.sort('name', 'asc');
+    controller.searchQuery = 'bob';
+    await el.updateComplete;
+
+    const button = el.shadowRoot!.querySelector(
+      '[part="search-sort-priority-toggle"]',
+    ) as HTMLButtonElement;
+
+    expect(button.title).toBe('Prioritize sort');
+    controller.searchSortPriority = 'sort';
+    await el.updateComplete;
+    expect(button.title).toBe('Prioritize relevance');
   });
 
   test('clicking toggles the controller between score and sort priority', async () => {
     const controller = createController();
     const el = await renderToolbar(controller);
     controller.sort('name', 'asc');
+    controller.searchQuery = 'bob';
     await el.updateComplete;
 
     expect(controller.searchSortPriority).toBe('score');

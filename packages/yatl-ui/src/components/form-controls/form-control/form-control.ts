@@ -417,14 +417,18 @@ interface ValidationElement {
 }
 
 /**
- * Whether `required` should be considered violated for this value. Arrays
- * are objects, so plain falsiness (`!value`) is always `false` for them
- * regardless of contents - an empty array must be checked by length
- * instead.
+ * Whether `required` should be considered violated for this value. Plain
+ * falsiness (`!value`) is wrong for some value types: arrays are objects,
+ * so it's always `false` for them regardless of contents (an empty array
+ * must be checked by length instead), and `0` is a legitimate value for a
+ * number input, not a missing one (only `NaN` should count as missing).
  */
 function isValueMissing(value: unknown): boolean {
   if (Array.isArray(value)) {
     return value.length === 0;
+  }
+  if (typeof value === 'number') {
+    return Number.isNaN(value);
   }
   return !value;
 }

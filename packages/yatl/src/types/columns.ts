@@ -181,6 +181,20 @@ export interface DisplayColumnOptions<T extends object = UnspecifiedRecord>
   valueFormatter?: ValueFormatterCallback<T>;
 
   /**
+   * A function to format the label of an individual option returned by
+   * `getColumnFilterValues()`.
+   *
+   * If this field's value is an array, `getColumnFilterValues()` flattens
+   * it and generates one option per element - `valueFormatter` can't be
+   * reused for that, since it's written to format the cell's whole value
+   * (the full array), not a single flattened element. Provide this to
+   * format each option's label instead; otherwise the raw element value
+   * is used. Not used for non-array fields, where `valueFormatter` (if
+   * set) already receives the same value it would for the cell.
+   */
+  filterOptionFormatter?: ValueFormatterCallback<T>;
+
+  /**
    * A function for conditinally adding classes to a cell.
    */
   cellParts?: CellPartsCallback<T>;

@@ -558,32 +558,35 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     const column = this.getDisplayColumn(field);
     const optionsMap = new Map<unknown, FilterOption>();
 
-    // If the value of a row is an array, flatten it.
-    const values: { value: unknown; row: T }[] = this.filteredData.flatMap(
-      row => {
-        const value = getNestedValue(row, field);
-        const values: { value: unknown; row: T }[] = [];
-        if (Array.isArray(value)) {
-          for (const entry of value) {
-            values.push({ value: entry, row });
-          }
-        } else {
-          values.push({ value, row });
+    // If the value of a row is an array, flatten it - each element
+    // becomes its own filter option.
+    type ValueEntry = { value: unknown; row: T; wasArray: boolean };
+    const values: ValueEntry[] = this.filteredData.flatMap(
+      (row): ValueEntry[] => {
+        const originalValue = getNestedValue(row, field);
+        if (Array.isArray(originalValue)) {
+          return originalValue.map(entry => ({
+            value: entry,
+            row,
+            wasArray: true,
+          }));
         }
-
-        return values;
+        return [{ value: originalValue, row, wasArray: false }];
       },
     );
 
-    for (const { value, row } of values) {
-      // FIXME: If the user added a column that is expected to store an array
-      // their formatter would be expecting an array, but we are giving it the individual items.
-      // The problem is just ambiguity. No one is going to filter by the full array,
-      // but they might format the array in some way to display in the column.
-      // Should filter options have their own format method?
-      const label = column?.valueFormatter
-        ? column.valueFormatter(value, row)
-        : value;
+    for (const { value, row, wasArray } of values) {
+      // valueFormatter is written to format the cell's whole value - for
+      // an array field that's the full array, not one flattened element,
+      // so it can't safely be reused here. filterOptionFormatter (if
+      // provided) is the array-safe alternative; otherwise fall back to
+      // the raw element value.
+      let label: unknown = value;
+      if (column?.filterOptionFormatter) {
+        label = column.filterOptionFormatter(value, row);
+      } else if (column?.valueFormatter && !wasArray) {
+        label = column.valueFormatter(value, row);
+      }
 
       if (value != null || includeNull) {
         const option = optionsMap.get(value);

@@ -839,6 +839,121 @@ describe('YatlTableController - filtering', () => {
 
     expect(options.some(o => o.value === null)).toBe(true);
   });
+
+  test('getColumnFilterValues uses valueFormatter for non-array fields', () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      {
+        field: 'department',
+        valueFormatter: value => `Dept: ${value ?? 'none'}`,
+      },
+      { field: 'salary' },
+    ]);
+
+    const options = controller.getColumnFilterValues('department');
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'Eng', label: 'Dept: Eng' }),
+        expect.objectContaining({ value: 'Sales', label: 'Dept: Sales' }),
+      ]),
+    );
+  });
+
+  test('getColumnFilterValues flattens array fields into one option per element', () => {
+    interface Post {
+      id: number;
+      tags: string[];
+    }
+    const controller = new YatlTableController<Post>();
+    controller.rowIdCallback = row => row.id;
+    controller.columns = [{ field: 'id' }, { field: 'tags' }];
+    controller.data = [
+      { id: 1, tags: ['a', 'b'] },
+      { id: 2, tags: ['b', 'c'] },
+    ];
+
+    const options = controller.getColumnFilterValues('tags');
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'a', count: 1 }),
+        expect.objectContaining({ value: 'b', count: 2 }),
+        expect.objectContaining({ value: 'c', count: 1 }),
+      ]),
+    );
+  });
+
+  test('getColumnFilterValues does not pass flattened array elements to valueFormatter', () => {
+    interface Post {
+      id: number;
+      tags: string[];
+    }
+    const valueFormatter = vi.fn((value: unknown) => `fmt:${value}`);
+    const controller = new YatlTableController<Post>();
+    controller.rowIdCallback = row => row.id;
+    controller.columns = [{ field: 'id' }, { field: 'tags', valueFormatter }];
+    controller.data = [{ id: 1, tags: ['a', 'b'] }];
+
+    const options = controller.getColumnFilterValues('tags');
+    // valueFormatter is written to format the whole cell value (the full
+    // array), not a single flattened element - it must not be called here.
+    expect(valueFormatter).not.toHaveBeenCalled();
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'a', label: 'a' }),
+        expect.objectContaining({ value: 'b', label: 'b' }),
+      ]),
+    );
+  });
+
+  test('getColumnFilterValues uses filterOptionFormatter for flattened array elements', () => {
+    interface Post {
+      id: number;
+      tags: string[];
+    }
+    const valueFormatter = vi.fn((value: unknown) => `fmt:${value}`);
+    const controller = new YatlTableController<Post>();
+    controller.rowIdCallback = row => row.id;
+    controller.columns = [
+      {
+        field: 'id',
+      },
+      {
+        field: 'tags',
+        valueFormatter,
+        filterOptionFormatter: value => `#${value}`,
+      },
+    ];
+    controller.data = [{ id: 1, tags: ['a', 'b'] }];
+
+    const options = controller.getColumnFilterValues('tags');
+    expect(valueFormatter).not.toHaveBeenCalled();
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'a', label: '#a' }),
+        expect.objectContaining({ value: 'b', label: '#b' }),
+      ]),
+    );
+  });
+
+  test('getColumnFilterValues uses filterOptionFormatter for non-array fields too', () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      {
+        field: 'department',
+        filterOptionFormatter: value => `~${value}~`,
+      },
+      { field: 'salary' },
+    ]);
+
+    const options = controller.getColumnFilterValues('department');
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'Eng', label: '~Eng~' }),
+      ]),
+    );
+  });
 });
 
 describe('YatlTableController - row id generation', () => {

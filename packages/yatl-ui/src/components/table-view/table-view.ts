@@ -71,6 +71,14 @@ export class YatlTableView<
   public hideExportButton = false;
 
   /**
+   * Toggles the visibility of the search/sort priority toggle button in the
+   * toolbar. Defaults to `true`.
+   * @attr hide-search-sort-priority-toggle
+   */
+  @property({ type: Boolean, attribute: 'hide-search-sort-priority-toggle' })
+  public hideSearchSortPriorityToggle = false;
+
+  /**
    * Toggles the visibility of the reload button in the toolbar. Defaults to `true`.
    * @attr hide-reload-button
    */
@@ -157,6 +165,7 @@ export class YatlTableView<
           part="toolbar"
           ?hide-column-picker=${this.hideColumnPicker}
           ?hide-export-button=${this.hideExportButton}
+          ?hide-search-sort-priority-toggle=${this.hideSearchSortPriorityToggle}
           .controller=${this.controller}
           @yatl-toolbar-export-click=${this.handleTableExportClick}
         >

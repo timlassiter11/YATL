@@ -214,13 +214,27 @@ export const scan = svg`
   <line class="icon scan" x1="3" y1="12" x2="21" y2="12" />
 `;
 
+export const searchPriority = svg`
+  <circle class="icon search-priority" cx="10" cy="10" r="7"></circle>
+  <line class="icon search-priority" x1="21" y1="21" x2="15.2" y2="15.2"></line>
+  <path class="icon search-priority" d="M10 5l1 4 4 1-4 1-1 4-1-4-4-1 4-1z" fill="currentColor" stroke="none"></path>
+`;
+
 export const share = svg`
   <circle class="icon share" cx="18" cy="5" r="3" />
   <circle class="icon share" cx="6" cy="12" r="3" />
   <circle class="icon share" cx="18" cy="19" r="3" />
-  
+
   <line class="icon share" x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
   <line class="icon share" x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+`;
+
+export const sortPriority = svg`
+  <path class="icon sort-priority" d="M3 6h6"></path>
+  <path class="icon sort-priority" d="M3 12h9"></path>
+  <path class="icon sort-priority" d="M3 18h12"></path>
+  <path class="icon sort-priority" d="M18 4v14"></path>
+  <path class="icon sort-priority" d="M22 14l-4 4-4-4"></path>
 `;
 
 export const spinner = svg`
@@ -291,7 +305,9 @@ export const icons: Record<string, TemplateResult<2>> = {
   reload: reload,
   save: save,
   scan: scan,
+  'search-priority': searchPriority,
   share: share,
+  'sort-priority': sortPriority,
   spinner: spinner,
   sun: sun,
   'sun-moon': sumMoon,

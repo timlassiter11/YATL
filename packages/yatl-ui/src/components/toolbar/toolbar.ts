@@ -6,6 +6,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import {
   DisplayColumnOptions,
   NestedKeyOf,
+  SearchSortPriority,
   UnspecifiedRecord,
   YatlTableController,
 } from '@timlassiter11/yatl';
@@ -76,6 +77,15 @@ export class YatlToolbar<
   public hideExportButton = false;
 
   /**
+   * Hides the button that toggles whether search relevance or the user's
+   * column sort takes priority when both are active. See
+   * {@link YatlTableController.searchSortPriority}.
+   * @attr hide-search-sort-priority-toggle
+   */
+  @property({ type: Boolean, attribute: 'hide-search-sort-priority-toggle' })
+  public hideSearchSortPriorityToggle = false;
+
+  /**
    * Time in milliseconds to wait after the last keystroke before triggering the search.
    * @attr searchdebounce
    */
@@ -94,6 +104,9 @@ export class YatlToolbar<
           @change=${this.onSearchChange}
         ></yatl-input>
         <yatl-button-group>
+          ${this.hideSearchSortPriorityToggle
+            ? nothing
+            : this.renderSearchSortPriorityToggle()}
           ${this.hideColumnPicker ? nothing : this.renderColumnPicker()}
           ${this.hideExportButton ? nothing : this.renderExportButton()}
           <slot name="button-group"></slot>
@@ -141,6 +154,35 @@ export class YatlToolbar<
     `;
   }
 
+  protected renderSearchSortPriorityToggle() {
+    const priority = this.controller?.searchSortPriority ?? 'score';
+    const isSortPriority = priority === 'sort';
+    const hasActiveSort =
+      this.controller?.columnStates.some(state => state.sort !== null) ?? false;
+
+    const title = !hasActiveSort
+      ? 'Search results are ranked by relevance (no active sort to prioritize instead)'
+      : isSortPriority
+      ? 'Your sort order takes priority over search relevance - click to prioritize relevance instead'
+      : 'Search relevance takes priority over your sort order - click to prioritize your sort instead';
+
+    return html`
+      <yatl-button
+        part="search-sort-priority-toggle"
+        type="button"
+        color="raised"
+        title=${title}
+        aria-pressed=${isSortPriority ? 'true' : 'false'}
+        ?disabled=${!hasActiveSort}
+        @click=${this.onToggleSearchSortPriority}
+      >
+        <yatl-icon
+          name=${isSortPriority ? 'sort-priority' : 'search-priority'}
+        ></yatl-icon>
+      </yatl-button>
+    `;
+  }
+
   protected renderExportButton() {
     return html`
       <yatl-button type="button" color="raised" @click=${this.onExportClick}>
@@ -184,6 +226,15 @@ export class YatlToolbar<
 
   private onExportClick = (_event: Event) => {
     this.dispatchEvent(new YatlToolbarExportClick());
+  };
+
+  private onToggleSearchSortPriority = () => {
+    if (!this.controller) {
+      return;
+    }
+    const next: SearchSortPriority =
+      this.controller.searchSortPriority === 'sort' ? 'score' : 'sort';
+    this.controller.searchSortPriority = next;
   };
 }
 

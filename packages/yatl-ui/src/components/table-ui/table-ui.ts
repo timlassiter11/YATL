@@ -40,6 +40,14 @@ export class YatlTableUi<
   @property({ type: Boolean, attribute: 'hide-export-button' })
   public hideExportButton = false;
 
+  /**
+   * Toggles the visibility of the search/sort priority toggle button in the
+   * toolbar. Defaults to `true`.
+   * @attr hide-search-sort-priority-toggle
+   */
+  @property({ type: Boolean, attribute: 'hide-search-sort-priority-toggle' })
+  public hideSearchSortPriorityToggle = false;
+
   protected override render() {
     return html`
       <div part="shell">
@@ -48,6 +56,7 @@ export class YatlTableUi<
           exportparts="search"
           ?hide-column-picker=${this.hideColumnPicker}
           ?hide-export-button=${this.hideExportButton}
+          ?hide-search-sort-priority-toggle=${this.hideSearchSortPriorityToggle}
           .controller=${this.controller}
           @yatl-toolbar-export-click=${this.handleTableExportClicked}
           ><slot name="toolbar-button-group" slot="button-group"></slot

@@ -2,6 +2,10 @@ import { html, PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './tab-group.styles';
+import {
+  YatlTabChangeEvent,
+  YatlTabChangeRequest,
+} from '../../events/tab-group';
 
 /**
  * @fires yatl-tab-change-request - Fired before the active tab changes. Cancellable.
@@ -15,11 +19,21 @@ export class YatlTabGroup extends YatlBase {
   @property({ type: String })
   public active = '';
 
+  /**
+   * Activates the tab/panel pair matching `name`. A `yatl-tab` is optional -
+   * a matching `yatl-tab-panel` is required. Returns whether a matching
+   * panel was found and activated.
+   */
   public setActiveTab(name: string) {
     const tabs = this.getAllTabs();
     const panels = this.getAllPanels();
     const tab = tabs.filter(t => !t.disabled).find(t => t.panel === name);
     const panel = panels.find(p => p.name === name);
+
+    if (panel == undefined) {
+      // We allow for not having a tab but we have to have a panel.
+      return false;
+    }
 
     for (const tab of tabs) {
       tab.active = false;
@@ -32,11 +46,9 @@ export class YatlTabGroup extends YatlBase {
       tab.active = true;
     }
 
-    if (panel) {
-      panel.active = true;
-    }
-
+    panel.active = true;
     this.active = name;
+    return true;
   }
 
   public override connectedCallback() {
@@ -85,11 +97,19 @@ export class YatlTabGroup extends YatlBase {
   private handleClick = (event: Event) => {
     const target = event.target as HTMLElement;
     const tab = target.closest('yatl-tab');
-    if (!tab) {
+    if (!tab || tab.disabled || tab.panel === this.active) {
       return;
     }
 
-    this.setActiveTab(tab.panel);
+    const request = new YatlTabChangeRequest(tab.panel);
+    this.dispatchEvent(request);
+    if (request.defaultPrevented) {
+      return;
+    }
+
+    if (this.setActiveTab(tab.panel)) {
+      this.dispatchEvent(new YatlTabChangeEvent(tab.panel));
+    }
   };
 
   private getAllTabs() {

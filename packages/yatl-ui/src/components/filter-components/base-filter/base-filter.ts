@@ -4,9 +4,8 @@ import { property } from 'lit/decorators.js';
 import { getTableContext } from '../../../context';
 import {
   FilterOption,
-  getNestedValue,
+  Filters,
   NestedKeyOf,
-  setNestedValue,
   UnspecifiedRecord,
   YatlTableController,
 } from '@timlassiter11/yatl';
@@ -80,10 +79,12 @@ export class YatlBaseFilter<
   @property({ type: Boolean })
   public disabled = false;
 
-  protected get filters() {
+  protected get filters(): Filters<TData> | undefined {
     if (!this.controller) {
       return undefined;
     }
+    // Filters is a flat map keyed by (possibly dotted) field name - not a
+    // nested object mirroring the row shape - so a shallow copy is enough.
     return { ...this.controller.filters };
   }
 
@@ -125,7 +126,7 @@ export class YatlBaseFilter<
     }
 
     if (this.field) {
-      const filtersValue = getNestedValue(filters ?? {}, this.field);
+      const filtersValue = filters[this.field as NestedKeyOf<TData>];
       // We can't always check if a value changed since
       // some values are mutable and return copies but
       // we can check if the filter value doesn't exist anymore.
@@ -145,8 +146,8 @@ export class YatlBaseFilter<
       return;
     }
 
-    const filters = this.filters ?? {};
-    setNestedValue(filters, this.field, this.value);
+    const filters: Filters<TData> = this.filters ?? {};
+    filters[this.field as NestedKeyOf<TData>] = this.value;
     this.filters = filters;
   }
 }

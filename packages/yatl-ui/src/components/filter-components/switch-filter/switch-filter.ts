@@ -71,7 +71,14 @@ export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
   }
 
   protected override reset() {
-    this.checked = this.hasAttribute('checked');
+    // Restore the switch's initial visual position, but go through the base
+    // class to actually clear the value - going through the `checked`
+    // setter would re-derive onValue/offValue and immediately reapply a
+    // filter, defeating an external clear (e.g. "Clear Filters").
+    const oldValue = this._checked;
+    this._checked = this.hasAttribute('checked');
+    this.requestUpdate('checked', oldValue);
+    super.reset();
   }
 
   private handleChange(event: Event) {

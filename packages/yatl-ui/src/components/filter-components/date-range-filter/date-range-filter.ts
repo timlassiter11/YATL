@@ -46,6 +46,7 @@ export class YatlDateRangeFilter extends YatlBaseFilter<FilterFunction> {
       changedProperties.has('endDate')
     ) {
       this.correctRanges();
+      this.updateValue();
     }
   }
 

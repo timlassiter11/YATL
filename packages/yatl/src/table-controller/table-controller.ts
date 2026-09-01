@@ -1556,9 +1556,25 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   private updateRowData(row: T, data: object) {
+    const metadata = this.getRowMetadata(row);
     Object.assign(row, data);
-    // TODO: Make this more efficient.
-    this.rebuildMetadata();
+
+    // Editing a row doesn't change its position or any other row's data,
+    // so a full rebuild is only actually needed in the rare case where
+    // the edit changed something that affects this row's own identity
+    // (rowIdCallback, a primary column, or the common-key fallback) -
+    // check cheaply for that instead of unconditionally paying for a
+    // full rebuild on every single edit.
+    const primaryColumns = this.columns.filter(c => c.primary);
+    const newId = this.generateRowId(row, metadata.index, primaryColumns);
+    if (newId !== null && newId !== metadata.id) {
+      this.rebuildMetadata();
+    } else {
+      // Fast path: just invalidate this row's cached sort values, since
+      // some of the edited fields could be sorted on.
+      metadata.sortValues = {};
+    }
+
     this.searchEngine.updateCache(row);
     this.requestUpdate('data');
   }

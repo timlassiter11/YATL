@@ -1411,3 +1411,76 @@ describe('YatlTableController - searchSortPriority', () => {
     expect(controller.filteredData.map(r => r.id)).toEqual([2, 3, 1]);
   });
 });
+
+describe('YatlTableController - targeted single-row updates', () => {
+  test('updateRow refreshes the order when the edited field is actively sorted', () => {
+    const controller = createEmployeeController();
+    controller.sort('salary', 'asc');
+    expect(controller.filteredData.map(r => r.id)).toEqual([4, 2, 3, 1]);
+
+    controller.updateRow(1, { salary: 1 }); // Alice's salary drops to lowest
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 4, 2, 3]);
+  });
+
+  test('updateRowAtIndex works the same way as updateRow', () => {
+    const controller = createEmployeeController();
+    controller.sort('salary', 'asc');
+
+    controller.updateRowAtIndex(0, { salary: 1 }); // Alice is at index 0
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 4, 2, 3]);
+  });
+
+  test('editing one row does not invalidate a different row cached sort value', () => {
+    const nameSorter = vi.fn((value: unknown) => value as string);
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name', sorter: nameSorter },
+      { field: 'department' },
+      { field: 'salary' },
+    ]);
+    controller.sort('name', 'asc');
+    void controller.filteredData;
+    nameSorter.mockClear(); // ignore the initial per-row computation
+
+    controller.updateRow(2, { salary: 999 }); // Bob's salary, not name
+    void controller.filteredData;
+
+    // Editing a row invalidates that row's whole sort-value cache (not
+    // just the edited field), so Bob's own cached name value needs one
+    // recompute - but a full rebuild would have wiped and recomputed
+    // every *other* row's cached name value too. It shouldn't have.
+    expect(nameSorter).toHaveBeenCalledTimes(1);
+  });
+
+  test("updateRow falls back to a full rebuild when the edit changes the row's own identity", () => {
+    interface Sku {
+      id: number;
+      sku: string;
+      name: string;
+    }
+    const controller = new YatlTableController<Sku>();
+    controller.columns = [
+      { field: 'id' },
+      { field: 'sku', primary: true },
+      { field: 'name' },
+    ];
+    controller.data = [
+      { id: 1, sku: 'A100', name: 'Widget' },
+      { id: 2, sku: 'B200', name: 'Gadget' },
+    ];
+
+    const widget = controller.data[0];
+    const oldId = controller.getRowId(widget);
+    expect(oldId).toBe('A100');
+
+    controller.updateRow(oldId, { sku: 'A999' });
+
+    // The row is now findable under its new id, not the old one - only
+    // possible if the id-to-row maps were actually rebuilt.
+    expect(controller.getRow('A999')).toBe(widget);
+    expect(controller.getRow('A100')).toBeUndefined();
+    expect(controller.getRowId(widget)).toBe('A999');
+  });
+});

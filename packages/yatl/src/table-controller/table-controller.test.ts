@@ -953,3 +953,234 @@ describe('YatlTableController - row updates', () => {
     expect(() => controller.updateRow(999, { salary: 1 })).not.toThrow();
   });
 });
+
+describe('YatlTableController - moveColumn', () => {
+  test('moves a column to a numeric index', () => {
+    const controller = createEmployeeController();
+    controller.moveColumn('id', 3);
+    expect(controller.displayColumns.map(c => c.field)).toEqual([
+      'name',
+      'department',
+      'salary',
+      'id',
+    ]);
+  });
+
+  test('moves a column relative to another field', () => {
+    const controller = createEmployeeController();
+    controller.moveColumn('salary', 'id');
+    expect(controller.displayColumns.map(c => c.field)).toEqual([
+      'salary',
+      'id',
+      'name',
+      'department',
+    ]);
+  });
+
+  test('does nothing when moving a column to its own position', () => {
+    const controller = createEmployeeController();
+    const spy = vi.fn();
+    controller.addEventListener('yatl-column-reorder', spy);
+
+    controller.moveColumn('name', 1);
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(controller.displayColumns.map(c => c.field)).toEqual([
+      'id',
+      'name',
+      'department',
+      'salary',
+    ]);
+  });
+
+  test('does nothing for a field that does not exist', () => {
+    const controller = createEmployeeController();
+    const before = controller.displayColumns.map(c => c.field);
+
+    // @ts-expect-error - deliberately invalid field for the runtime check
+    controller.moveColumn('doesNotExist', 0);
+
+    expect(controller.displayColumns.map(c => c.field)).toEqual(before);
+  });
+});
+
+describe('YatlTableController - sticky columns', () => {
+  test('stickColumn/unstickColumn toggle stickyPosition', () => {
+    const controller = createEmployeeController();
+    controller.stickColumn('name');
+    expect(controller.getColumnState('name').stickyPosition).toBe('left');
+
+    controller.unstickColumn('name');
+    expect(controller.getColumnState('name').stickyPosition).toBe(false);
+  });
+
+  test('toggleColumnSticky flips between left and unstuck when no position is given', () => {
+    const controller = createEmployeeController();
+    controller.toggleColumnSticky('name');
+    expect(controller.getColumnState('name').stickyPosition).toBe('left');
+
+    controller.toggleColumnSticky('name');
+    expect(controller.getColumnState('name').stickyPosition).toBe(false);
+  });
+
+  test('setting the same sticky position twice fires no event the second time', () => {
+    const controller = createEmployeeController();
+    controller.stickColumn('name');
+
+    const spy = vi.fn();
+    controller.addEventListener('yatl-column-stick', spy);
+    controller.stickColumn('name');
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('YatlTableController - CSV export', () => {
+  async function exportText(
+    controller: YatlTableController<Employee>,
+    options?: Parameters<YatlTableController<Employee>['export']>[0],
+  ) {
+    return controller.export(options).text();
+  }
+
+  test('exports visible columns and rows as CSV', async () => {
+    const controller = createEmployeeController();
+    const csv = await exportText(controller);
+
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe('"id","name","department","salary"');
+    expect(lines).toHaveLength(5); // header + 4 rows
+    expect(lines[1]).toBe('"1","Alice","Eng","90"');
+  });
+
+  test('escapes every quote character in a value, not just the first', async () => {
+    const controller = createEmployeeController();
+    controller.updateRow(1, { name: 'He said "hi" and "bye"' });
+
+    const csv = await exportText(controller);
+
+    expect(csv).toContain('"He said ""hi"" and ""bye"""');
+  });
+
+  test('escapes quote characters in a column header', async () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name', title: 'The "Name" Field' },
+      { field: 'department' },
+      { field: 'salary' },
+    ]);
+
+    const csv = await exportText(controller);
+
+    expect(csv.split('\n')[0]).toContain('"The ""Name"" Field"');
+  });
+
+  test('excludes hidden columns by default, includes them with includeHiddenColumns', async () => {
+    const controller = createEmployeeController();
+    controller.hideColumn('department');
+
+    const defaultCsv = await exportText(controller);
+    expect(defaultCsv.split('\n')[0]).not.toContain('department');
+
+    const fullCsv = await exportText(controller, {
+      includeHiddenColumns: true,
+    });
+    expect(fullCsv.split('\n')[0]).toContain('department');
+  });
+
+  test('exports only filtered rows by default, all rows with includeAllRows', async () => {
+    const controller = createEmployeeController();
+    controller.filters = { department: 'Eng' };
+
+    const filteredCsv = await exportText(controller);
+    expect(filteredCsv.split('\n')).toHaveLength(3); // header + 2 Eng rows
+
+    const allCsv = await exportText(controller, { includeAllRows: true });
+    expect(allCsv.split('\n')).toHaveLength(5); // header + all 4 rows
+  });
+
+  test('applies a column valueFormatter to exported values', async () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department' },
+      {
+        field: 'salary',
+        valueFormatter: value => `$${value}`,
+      },
+    ]);
+
+    const csv = await exportText(controller);
+    expect(csv.split('\n')[1]).toContain('"$90"');
+  });
+});
+
+describe('YatlTableController - row selection', () => {
+  test('selecting a row has no visible effect until a rowSelectionMethod is set', () => {
+    const controller = createEmployeeController();
+    controller.selectRow(controller.data[0]);
+
+    expect(controller.selectedRowIds).toEqual([]);
+    expect(controller.isRowSelected(controller.data[0])).toBe(false);
+  });
+
+  test('single selection mode replaces the previous selection', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'single';
+
+    controller.selectRow(controller.data[0]);
+    controller.selectRow(controller.data[1]);
+
+    expect(controller.selectedRowIds).toEqual([2]);
+  });
+
+  test('multi selection mode accumulates selections', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'multi';
+
+    controller.selectRow(controller.data[0]);
+    controller.selectRow(controller.data[1]);
+
+    expect(controller.selectedRowIds.sort()).toEqual([1, 2]);
+  });
+
+  test('deselectRow removes just that row from a multi selection', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'multi';
+    controller.selectRow(controller.data[0]);
+    controller.selectRow(controller.data[1]);
+
+    controller.deselectRow(controller.data[0]);
+
+    expect(controller.selectedRowIds).toEqual([2]);
+  });
+
+  test('selectAll is a no-op in single selection mode', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'single';
+
+    controller.selectAll();
+
+    expect(controller.selectedRowIds).toEqual([]);
+  });
+
+  test('selectAll only selects the currently filtered rows, not hidden ones', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'multi';
+    controller.filters = { department: 'Eng' };
+
+    controller.selectAll();
+
+    expect(controller.selectedRowIds.sort()).toEqual([1, 3]);
+  });
+
+  test('deselectAll clears the selection', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'multi';
+    controller.selectAll();
+
+    controller.deselectAll();
+
+    expect(controller.selectedRowIds).toEqual([]);
+  });
+});

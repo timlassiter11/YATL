@@ -832,6 +832,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       ? this.columns
       : this.displayColumns;
 
+    // CSV fields are always quoted, so any quote characters within the
+    // value itself must be escaped - and all of them, not just the first.
+    const escapeCsvField = (value: string) =>
+      `"${value.replaceAll('"', '""')}"`;
+
     const csvHeaders = columnData
       .filter(column => {
         if (options.includeHiddenColumns) {
@@ -840,10 +845,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         return this.getColumnState(column.field).visible;
       })
       .map(column => {
-        if (isDisplayColumn(column)) {
-          return column.title;
-        }
-        return column.field;
+        const header = isDisplayColumn(column)
+          ? column.title ?? column.field
+          : column.field;
+        return escapeCsvField(header);
       })
       .join(',');
 
@@ -860,8 +865,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
             ) {
               value = column.valueFormatter(value, row);
             }
-            value = String(value ?? '').replace('"', '""');
-            list.push(`"${value}"`);
+            list.push(escapeCsvField(String(value ?? '')));
           }
         }
         return list.join(',');

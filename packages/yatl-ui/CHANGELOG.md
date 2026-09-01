@@ -1,5 +1,84 @@
 # @timlassiter11/yatl-ui
 
+## 4.0.0
+
+### Major Changes
+
+- 2c547a4: `yatl-confirmation-dialog` now exposes most of the underlying `yatl-dialog` feature set instead of hiding it behind a fixed accept/reject shape:
+
+  - Added `fullscreen` (passes through to the inner dialog).
+  - Added a third "cancel" outcome, separate from "reject", for choices like Save / Don't Save / Cancel - use the new `cancelText`/`cancelColor`/`cancelVariant` properties and the new `cancel()` method and `confirmWithCancel(): Promise<'accept' | 'reject' | 'cancel'>` method. `confirm(): Promise<boolean>` keeps its existing signature; it now resolves `false` for both reject and cancel.
+  - Added `acceptColor`/`rejectColor`/`cancelColor` and `acceptVariant`/`rejectVariant`/`cancelVariant`, plus `accept-button`/`reject-button`/`cancel-button` CSS parts, so a destructive action can actually be styled as destructive.
+  - Added `header`, `header-actions`, and `footer` slot passthrough (alongside the existing `footer-actions`), and exported the inner dialog's `header`/`footer`/`close-button` parts.
+  - Added `yatl-confirmation-dialog-show`/`-hide` events that mirror the inner dialog's own show/hide lifecycle, and a new `yatl-confirmation-dialog-cancel` event.
+  - Fixed a bug where the dialog's title never actually rendered through the new header slot passthrough (an empty forwarded `<slot>` was suppressing the inner dialog's own title fallback).
+  - Fixed a bug where opening the dialog by setting the `open` property/attribute directly (bypassing `show()`) left the `open` attribute stuck after the dialog was closed via a button - `open` is now a reflecting property, consistent with `yatl-dialog`.
+
+  **Breaking changes**, made deliberately since this component has a single internal consumer today:
+
+  - Dismissing the dialog without an explicit choice - Escape, a backdrop click, or the close button - now fires `yatl-confirmation-dialog-cancel` instead of `yatl-confirmation-dialog-reject`.
+  - `modal` now defaults to `true` (was implicitly `false`, inherited from the wrapped `yatl-dialog`). A confirmation dialog is guarding a decision, so accidental backdrop/Escape dismissal is now off by default; the close button remains the deliberate way to cancel without an explicit choice.
+
+### Minor Changes
+
+- efef7a4: `yatl-date-range-filter` now automatically limits its picker's selectable dates to the actual min/max of the field's data (via the attached table controller), instead of allowing any date to be picked. Like `yatl-select-filter`'s options, the bounds keep tracking whatever other filters are currently active until a start/end date is picked, then freeze so the filter's own selection can't narrow its own bounds.
+- a50a19b: `yatl-tab-group` now fires a cancelable `yatl-tab-change-request` before switching tabs, and `yatl-tab-change` after - both carry the target panel name. `setActiveTab()` also now returns whether a matching panel was found and activated.
+
+  Fixed along the way: clicking a disabled tab no longer switches its panel, clicking the already-active tab no longer fires change events, and calling `setActiveTab()` with an unknown name no longer blanks out the currently active tab/panel before discovering there's nothing to switch to.
+
+- ee1cf8a: Added a search/sort priority toggle button to `yatl-toolbar` (and, through it, `yatl-table-view`/`yatl-table-ui`) that switches the attached controller's `searchSortPriority` between `'score'` and `'sort'`. It's always visible but disabled unless both a sort and a search are currently active, since the setting has no effect otherwise. Opt out with `hideSearchSortPriorityToggle` (`hide-search-sort-priority-toggle` attribute), defaulting to visible so existing consumers get the feature without any changes.
+
+### Patch Changes
+
+- c4a29c9: Added a shared `initialAttributeValue()` helper on YatlFormControl for reading an attribute's initial value from a `value` field initializer, and switched input, textarea, and radio-group over to it in place of their own ad-hoc versions of the same workaround.
+- d97f9c1: Fixed `yatl-checkbox`/`yatl-switch`/`yatl-radio` silently ignoring an explicit `.checked` property set before the element's first render (e.g. a `.checked=${...}` binding from a parent template) - `firstUpdated()` unconditionally re-seeded `checked` from `defaultChecked` afterward, clobbering it back to the attribute-driven default.
+- c72e222: Fixed `yatl-confirmation-dialog`'s `confirm()` leaving a dangling accept or reject listener attached forever after each call (only the direction that actually fired was cleaned up by `once`) - both are now removed together once either resolves.
+- f885f87: Fixed `yatl-date-grid` not navigating to the previous month when a leading day from that month (shown at the start of the grid) was clicked - it only auto-navigated forward for trailing next-month days, leaving the displayed month unchanged (and visually inconsistent with the just-selected date) when going backward.
+- 1b0181d: `yatl-date-grid` (and everything built on it - `yatl-date-picker`, `yatl-date-range-picker`, and their form inputs/filters) no longer always opens on today's month. When the selectable `min`/`max` range doesn't include today, it now opens on the nearest bound instead of a month where every day is disabled; when there's an existing selection, it opens on that month instead. Navigating the calendar is left alone otherwise - reopening or an unrelated re-render won't yank the view back once you've moved around.
+- dc0c708: Fixed `yatl-date-range-filter` not applying `start-date`/`end-date` set via attribute until the user manually changed the range - the dates displayed as if filtering, but no filter was ever applied
+- 19ef9ed: Fixed `yatl-details` throwing (via an unhandled rejection in `willUpdate()`) when its `name` attribute contained a double quote - the accordion-grouping query interpolated `name` directly into a CSS attribute selector without escaping.
+- 2c547a4: Fixed `yatl-dialog` and `yatl-flyout` dispatching `-show`/`-hide` events twice for a single `show()`/close: their `open` property setter called `show()`/`hide()` on any change, but `show()`/`hide()` themselves set `open` as part of their own internal state transition, re-entering the setter and kicking off a second, independent show/hide run. A re-entrancy guard now prevents that internal assignment from triggering a second call.
+- af041ea: Fixed `yatl-dialog` getting stuck open (or closed) when `show()`/`hide()`/`open` was toggled again while the previous open/close transition was still in flight - the in-progress-transition guard silently no-op'd instead of applying the newer request once the transition finished, leaving `open` desynced from whether the dialog was actually visible.
+- 2911704: Fixed `yatl-dropdown` keyboard navigation (Arrow Up/Down, Home, End) landing focus on disabled options - selecting them was already blocked, but they were reachable and counted toward wrap-around, which is inconsistent with standard listbox/menu keyboard conventions.
+- 2911704: Fixed `yatl-dropdown` losing its outside-click/Escape/positioning listeners if it was disconnected and reconnected while open (e.g. a parent moved it to a new location in the DOM) - it would keep rendering as open but stop responding to anything until manually toggled.
+- dc0c708: Fixed filter components (`yatl-select-filter`, `yatl-search-filter`, etc.) bound to a dotted/nested `field` (e.g. `field="user.name"`) silently not filtering anything - they were writing a nested object into the controller's `filters`, but `Filters<T>` is a flat map keyed by the dotted field name itself
+- fa11865: Fixed `yatl-flyout` getting stuck open (or closed) when `show()`/`hide()`/`open` was toggled again while the previous open/close transition was still in flight - same issue as `yatl-dialog`, since the two share the same show/hide logic.
+- 391479b: Fixed `required` validation never triggering on form controls whose value is an array (`yatl-select` in multi mode, `yatl-search-select`) - `!this.value` is always `false` for an array regardless of whether it's empty, so `checkValidity()`/`reportValidity()` always reported valid even with nothing selected.
+- dee6221: Fixed `required` validation incorrectly treating `0` as a missing value on `yatl-number-input` - `checkValidity()` reported invalid even when a legitimate value of `0` was set.
+- af041ea: Fixed `getAnimationPromise`'s fallback timeout never actually resolving - an inverted condition caused it to bail out instead of resolving when no matching `animationend`/`animationcancel` event ever fired, so anything waiting on it (`yatl-dialog`, `yatl-flyout`, `yatl-toast`) could hang indefinitely instead of falling back after the timeout as intended.
+- f4ae30d: Fixed `yatl-remote-options` race conditions: a slower fetch for a previous `uri` could overwrite options loaded for a newer `uri` if it resolved later, a failed fetch could delete the wrong `uri`'s cache entry if `uri` had changed again while the request was in flight, and a fetch failure was an unhandled promise rejection since `fetchOptions()` is called fire-and-forget.
+- 391479b: Fixed `yatl-select` with `multi required` blocking unchecking _any_ option, even when another option would remain selected - it should only prevent the selection from becoming entirely empty.
+- dc0c708: Fixed `yatl-switch-filter` re-applying its `onValue`/`offValue` when filters were cleared externally (e.g. via the "Clear Filters" button) if its default toggle position mapped to a defined value - clearing now always results in no filter, while still restoring the switch's initial visual position
+- 5812e9f: Fixed `yatl-table-view` reload requests racing: since the reload button always calls `reloadData` silently and is never disabled mid-flight, rapid clicks could start overlapping fetches, and a slower/older request finishing after a newer one could overwrite fresher data (or clear the loading indicator while a newer reload was still in flight). Only the most recently started reload's result is now applied.
+- 37157a7: Fixed `yatl-table-view`'s sidebar (`sidebar-start`/`sidebar-end` slots) showing a second, nested scrollbar on slotted content like `yatl-card` when the window got short enough that the sidebar itself needed to scroll. `yatl-card` defaults to `height: 100%`, which inside the sidebar's scrollable flex column meant "100% of the sidebar" rather than "however tall my own content is" - squeezing the card into less space than it needed and forcing it to scroll internally on top of the sidebar's own scrollbar. Sidebar-slotted content now sizes to its natural content height, so only the sidebar scrolls.
+- fa11865: Fixed `yatl-toast-manager`'s popover staying open (in the top layer, even with zero visible toasts) after the last toast was dismissed - `handleToastHide` removed the toast from the list but never re-evaluated whether the popover should still be open, unlike the request path which does.
+- 994f083: Fixed `yatl-tree` multi-select mode not actually selecting anything - it checked the item's stale, pre-click `selected` value instead of the newly-computed target state when deciding whether to add or remove it from the selection, so clicking an item in `selection-method="multi"` was a no-op.
+- e97c79b: Fixed yatl-input and yatl-textarea not displaying their value when set via the `value` attribute (e.g. `<yatl-input value="...">`), while setting the `.value` property directly still worked.
+- Updated dependencies [a73a20a]
+- Updated dependencies [cdb336a]
+- Updated dependencies [1ff2fe4]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [13c8880]
+- Updated dependencies [8e7c615]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [7c81808]
+- Updated dependencies [f2eb73d]
+- Updated dependencies [2f6129e]
+- Updated dependencies [91eb0d0]
+- Updated dependencies [7c81808]
+- Updated dependencies [4cf95fa]
+- Updated dependencies [7c81808]
+- Updated dependencies [91eb0d0]
+- Updated dependencies [ffd84da]
+  - @timlassiter11/yatl@1.5.0
+
 ## 3.0.1
 
 ### Patch Changes

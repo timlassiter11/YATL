@@ -361,6 +361,139 @@ describe('YatlTable Component', () => {
   });
 
   // #endregion
+  // #region Column Drag-and-Drop Math
+
+  // getDropDetails() is private and does pure index arithmetic that isn't
+  // meaningfully DOM-interactive - userEvent.dragAndDrop only supports
+  // dropping at a fixed position with no way to control which half of the
+  // header was targeted, so these call it directly against the real
+  // rendered headers (for accurate bounding rects) rather than fight that
+  // API's limitations for what's really a math problem.
+  describe('Column Drag-and-Drop Math', () => {
+    type DropDetails =
+      | {
+          originalIndex: number;
+          dropIndex: number;
+          newIndex: number;
+          isLeftDrop: boolean;
+        }
+      | undefined;
+
+    function getHeaderCell(table: YatlTable<User>, field: string) {
+      return table.shadowRoot!.querySelector<HTMLElement>(
+        `.header-cell[data-field="${field}"]`,
+      )!;
+    }
+
+    function dropDetailsFor(
+      table: YatlTable<User>,
+      dragField: string,
+      dropField: string,
+      side: 'left' | 'right',
+    ): DropDetails {
+      const targetEl = getHeaderCell(table, dropField);
+      const rect = targetEl.getBoundingClientRect();
+      const clientX =
+        side === 'left'
+          ? rect.left + rect.width * 0.25
+          : rect.left + rect.width * 0.75;
+
+      const internal = table as unknown as {
+        dragColumn: string | null;
+        getDropDetails: (
+          event: { currentTarget: HTMLElement; clientX: number },
+          dropField: string,
+        ) => DropDetails;
+      };
+      internal.dragColumn = dragField;
+      return internal.getDropDetails(
+        { currentTarget: targetEl, clientX },
+        dropField,
+      );
+    }
+
+    // Columns are [id, name, role, age] at indices [0, 1, 2, 3].
+
+    test('dragging a later column onto an earlier one (left drop)', async () => {
+      const table = await renderTable({ reorderable: true });
+      const details = dropDetailsFor(table, 'age', 'id', 'left');
+      expect(details).toEqual(
+        expect.objectContaining({
+          originalIndex: 3,
+          dropIndex: 0,
+          newIndex: 0,
+        }),
+      );
+    });
+
+    test('dragging an earlier column onto a later one (right drop)', async () => {
+      const table = await renderTable({ reorderable: true });
+      const details = dropDetailsFor(table, 'id', 'age', 'right');
+      expect(details).toEqual(
+        expect.objectContaining({
+          originalIndex: 0,
+          dropIndex: 3,
+          newIndex: 3,
+        }),
+      );
+    });
+
+    test('dropping on the right side of the column immediately before is a no-op, forced to a left drop', async () => {
+      const table = await renderTable({ reorderable: true });
+      // 'role' (index 2) is already immediately after 'name' (index 1) -
+      // dropping on name's right half would be a no-op, so it should
+      // flip to a left drop instead (swap to before name).
+      const details = dropDetailsFor(table, 'role', 'name', 'right');
+      expect(details).toEqual(
+        expect.objectContaining({
+          originalIndex: 2,
+          dropIndex: 1,
+          newIndex: 1,
+          isLeftDrop: true,
+        }),
+      );
+    });
+
+    test('dropping on the left side of the column immediately after is a no-op, forced to a right drop', async () => {
+      const table = await renderTable({ reorderable: true });
+      // 'name' (index 1) is already immediately before 'role' (index 2) -
+      // dropping on role's left half would be a no-op, so it should flip
+      // to a right drop instead (swap to after role).
+      const details = dropDetailsFor(table, 'name', 'role', 'left');
+      expect(details).toEqual(
+        expect.objectContaining({
+          originalIndex: 1,
+          dropIndex: 2,
+          newIndex: 2,
+          isLeftDrop: false,
+        }),
+      );
+    });
+
+    test('the computed newIndex matches what moveColumn actually produces', async () => {
+      const table = await renderTable({ reorderable: true });
+      const details = dropDetailsFor(table, 'role', 'name', 'right');
+
+      table.moveColumn('role', details!.newIndex);
+      await table.updateComplete;
+
+      // Forced left drop -> role swaps to before name.
+      expect(table.displayColumns.map(c => c.field)).toEqual([
+        'id',
+        'role',
+        'name',
+        'age',
+      ]);
+    });
+
+    test('returns undefined when dropping a column onto itself', async () => {
+      const table = await renderTable({ reorderable: true });
+      const details = dropDetailsFor(table, 'name', 'name', 'left');
+      expect(details).toBeUndefined();
+    });
+  });
+
+  // #endregion
   // #region Editing & Row Details
 
   describe('Editing & Row Details', () => {

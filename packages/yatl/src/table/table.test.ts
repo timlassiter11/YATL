@@ -910,6 +910,61 @@ describe('YatlTable Component', () => {
   });
 
   // #endregion
+  // #region Scrolling
+
+  describe('Scrolling', () => {
+    const getManyRows = (): User[] =>
+      Array.from({ length: 100 }, (_, i) => ({
+        id: i,
+        name: `User ${i}`,
+        role: 'User',
+        age: 20 + (i % 40),
+      }));
+
+    test('scrollToPx scrolls the actual scroll container, not the outer table element', async () => {
+      const el = await renderTable({
+        data: getManyRows(),
+        virtualScroll: false,
+      });
+      el.style.height = '150px';
+      await el.updateComplete;
+
+      const scroller = el.shadowRoot!.querySelector('.scroller')!;
+      const tableElement = el.shadowRoot!.querySelector('.table')!;
+      expect(scroller.scrollTop).toBe(0);
+
+      await el.scrollToPx(100);
+
+      // .table has overflow: hidden and never scrolls - only .scroller does.
+      expect(tableElement.scrollTop).toBe(0);
+      expect(scroller.scrollTop).toBeGreaterThan(0);
+    });
+
+    test('scrollToPx also works with virtual scrolling enabled', async () => {
+      const el = await renderTable({
+        data: getManyRows(),
+        virtualScroll: true,
+      });
+      el.style.height = '150px';
+      await el.updateComplete;
+
+      const scroller = el.shadowRoot!.querySelector('.scroller')!;
+      expect(scroller.scrollTop).toBe(0);
+
+      // The virtualizer sizes its content asynchronously (its own layout
+      // scheduling, separate from Lit's update cycle) - wait for it to
+      // actually have enough scrollable height before trying to scroll it.
+      await vi.waitFor(() =>
+        expect(scroller.scrollHeight).toBeGreaterThan(150),
+      );
+
+      await el.scrollToPx(100);
+
+      expect(scroller.scrollTop).toBeGreaterThan(0);
+    });
+  });
+
+  // #endregion
   // #region Printing
 
   describe('Printing', () => {

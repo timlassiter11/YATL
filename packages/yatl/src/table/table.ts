@@ -84,6 +84,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
   @query('.table')
   private tableElement?: HTMLElement;
+  @query('.scroller')
+  private scrollerElement?: HTMLElement;
   @query('lit-virtualizer')
   private virtualizer?: LitVirtualizer;
   @queryAll('.header-cell')
@@ -696,14 +698,15 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   public async scrollToPx(px: number) {
-    // FIXME: This doesn't work with lit-virtualizer at all.
-
+    // The actual scroll container is `.scroller`, not `.table` (which has
+    // overflow: hidden so its flex layout can host a non-scrolling footer)
+    // or the <lit-virtualizer> element itself (it only becomes a scroll
+    // container when its `scroller` property is set, which we don't do -
+    // it relies on `.scroller`, its nearest scrollable ancestor, instead).
+    // Setting scrollTop on either of those previously was a silent no-op.
     await this.updateComplete;
-
-    if (this.virtualizer) {
-      this.virtualizer.scrollTop = px;
-    } else if (this.tableElement) {
-      this.tableElement.scrollTop = px;
+    if (this.scrollerElement) {
+      this.scrollerElement.scrollTop = px;
     }
   }
 

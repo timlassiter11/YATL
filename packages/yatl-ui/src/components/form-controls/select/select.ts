@@ -307,8 +307,18 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
     }
 
     if (!item.checked && this.required) {
-      item.checked = true;
-      return;
+      // In multi mode, only block the uncheck if it would leave nothing
+      // selected - any other still-checked option already satisfies
+      // "required". Single mode has no such concept: unchecking the only
+      // option always empties the selection.
+      const value = this.value;
+      const wouldBeEmpty = Array.isArray(value)
+        ? value.filter(v => v !== item.value).length === 0
+        : true;
+      if (wouldBeEmpty) {
+        item.checked = true;
+        return;
+      }
     }
 
     this.toggleOption(item.value, item.checked);

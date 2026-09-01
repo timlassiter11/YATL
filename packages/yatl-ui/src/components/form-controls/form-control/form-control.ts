@@ -351,7 +351,7 @@ export abstract class YatlFormControl<TData = string>
     if (this.errorText) {
       // If the user set an error, that will always take precedence.
       this.setValidity({ customError: true }, this.errorText);
-    } else if (this.required && !this.value) {
+    } else if (this.required && isValueMissing(this.value)) {
       this.setValidity({ valueMissing: true }, this.requiredText);
     } else if (isValidationElement(this.formControl)) {
       // Sync the custom control's validity with the native input's validity
@@ -414,6 +414,19 @@ interface ValidationElement {
   checkValidity: () => boolean;
   validity: ValidityState;
   validationMessage: string;
+}
+
+/**
+ * Whether `required` should be considered violated for this value. Arrays
+ * are objects, so plain falsiness (`!value`) is always `false` for them
+ * regardless of contents - an empty array must be checked by length
+ * instead.
+ */
+function isValueMissing(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  return !value;
 }
 
 function isValidationElement(

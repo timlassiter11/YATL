@@ -227,10 +227,11 @@ export class YatlDateGrid extends YatlBase {
 
   private handleDayClicked(date: Date) {
     const newStartMonth = getFirstDayOfMonth(date);
-    if (newStartMonth.getTime() > this.currentMonth.getTime()) {
-      // User selected a date that is in the next month/year.
+    if (newStartMonth.getTime() !== this.currentMonth.getTime()) {
+      // User selected a date outside the currently displayed month
+      // (a leading/trailing day from the previous/next month).
       // Lets move there to make it easier on them.
-      this.currentMonth = getFirstDayOfMonth(newStartMonth);
+      this.currentMonth = newStartMonth;
     }
     this.dispatchEvent(new YatlDateSelected(date));
   }

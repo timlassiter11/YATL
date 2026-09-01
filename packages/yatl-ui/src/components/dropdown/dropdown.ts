@@ -98,6 +98,16 @@ export class YatlDropdown extends YatlBase {
     }
   }
 
+  public override connectedCallback() {
+    super.connectedCallback();
+    // If we're reconnected while still open (e.g. a parent moved us to a
+    // new location in the DOM), our document-level listeners were torn
+    // down by disconnectedCallback and never restored - restore them.
+    if (this.open) {
+      this.addListeners();
+    }
+  }
+
   public override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeListeners();
@@ -156,8 +166,10 @@ export class YatlDropdown extends YatlBase {
       } else if (
         ['ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(event.key)
       ) {
-        // Handle keyboard navigation logic
-        const items = this.getAllOptions();
+        // Handle keyboard navigation logic - disabled options aren't
+        // interactive (see YatlOption.handleItemClicked), so they
+        // shouldn't be reachable via arrow/Home/End navigation either.
+        const items = this.getAllOptions(false);
         const activeItem = this.getActiveItem(items);
         if (activeItem) {
           activeItem.tabIndex = -1;
@@ -215,6 +227,14 @@ export class YatlDropdown extends YatlBase {
   // #endregion
   // #region Utilities
   private addListeners() {
+    if (this.autoUpdateCleanup) {
+      // Already listening - both connectedCallback and the first
+      // updated() can call this for an element that starts out open, and
+      // re-running startPositioning() would leak the first autoUpdate
+      // binding by overwriting its cleanup before it's ever called.
+      return;
+    }
+
     this.startPositioning();
     document.addEventListener('pointerdown', this.handleDocumentFocusin);
     document.addEventListener('focusin', this.handleDocumentFocusin);
@@ -223,6 +243,7 @@ export class YatlDropdown extends YatlBase {
 
   private removeListeners() {
     this.autoUpdateCleanup?.();
+    this.autoUpdateCleanup = undefined;
     document.removeEventListener('pointerdown', this.handleDocumentFocusin);
     document.removeEventListener('focusin', this.handleDocumentFocusin);
     document.removeEventListener('keydown', this.handleKeydown);

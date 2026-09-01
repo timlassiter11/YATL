@@ -1571,17 +1571,23 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     for (const record of records) {
-      const metadata = this.getRowMetadata(record.rowId);
-      for (const field of record.changedFields) {
-        const pendingData = metadata.pendingTransactions.get(field);
-        if (pendingData?.id === id) {
-          // If the data in pending transactions is still for this transactions
-          if (action === 'reject' && !metadata.pendingEdits.has(field)) {
-            // If the user is rejecting the transaction we want to keep the data
-            metadata.pendingEdits.set(field, pendingData.value);
-            this.editedRows.add(record.rowId);
+      // The row may have disappeared (e.g. a background data reload)
+      // while this transaction was in flight - updateRow() below already
+      // no-ops safely for a missing row, but the metadata bookkeeping
+      // needs its own guard since getRowMetadata() would otherwise throw.
+      const metadata = this.rowMetadata.get(record.rowId);
+      if (metadata) {
+        for (const field of record.changedFields) {
+          const pendingData = metadata.pendingTransactions.get(field);
+          if (pendingData?.id === id) {
+            // If the data in pending transactions is still for this transactions
+            if (action === 'reject' && !metadata.pendingEdits.has(field)) {
+              // If the user is rejecting the transaction we want to keep the data
+              metadata.pendingEdits.set(field, pendingData.value);
+              this.editedRows.add(record.rowId);
+            }
+            metadata.pendingTransactions.delete(field);
           }
-          metadata.pendingTransactions.delete(field);
         }
       }
       if (action === 'resolve') {

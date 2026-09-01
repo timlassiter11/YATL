@@ -1184,3 +1184,114 @@ describe('YatlTableController - row selection', () => {
     expect(controller.selectedRowIds).toEqual([]);
   });
 });
+
+describe('YatlTableController - lazy sort value computation', () => {
+  test('a column sorter is never invoked for a column that is never sorted by', () => {
+    const nameSorter = vi.fn((value: unknown) => value as string | number);
+    const salarySorter = vi.fn((value: unknown) => value as string | number);
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name', sorter: nameSorter },
+      { field: 'department' },
+      { field: 'salary', sorter: salarySorter },
+    ]);
+
+    controller.sort('salary', 'asc');
+    // Sorting itself shouldn't compute anything - only reading the data does.
+    expect(salarySorter).not.toHaveBeenCalled();
+
+    void controller.filteredData;
+
+    expect(salarySorter).toHaveBeenCalledTimes(4); // once per row
+    expect(nameSorter).not.toHaveBeenCalled();
+  });
+
+  test('a column sorter is not re-invoked on repeated, unchanged access', () => {
+    const salarySorter = vi.fn((value: unknown) => value as string | number);
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department' },
+      { field: 'salary', sorter: salarySorter },
+    ]);
+
+    controller.sort('salary', 'asc');
+    void controller.filteredData;
+    void controller.filteredData;
+    void controller.filteredData;
+
+    expect(salarySorter).toHaveBeenCalledTimes(4);
+  });
+
+  test('switching back to a previously-sorted column does not recompute it again', () => {
+    const nameSorter = vi.fn((value: unknown) => value as string | number);
+    const salarySorter = vi.fn((value: unknown) => value as string | number);
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name', sorter: nameSorter },
+      { field: 'department' },
+      { field: 'salary', sorter: salarySorter },
+    ]);
+
+    controller.sort('name', 'asc');
+    void controller.filteredData;
+    expect(nameSorter).toHaveBeenCalledTimes(4);
+
+    controller.sort('salary', 'asc'); // switches the active sort column
+    void controller.filteredData;
+    expect(salarySorter).toHaveBeenCalledTimes(4);
+
+    controller.sort('name', 'asc'); // back to name - no rebuild happened
+    void controller.filteredData;
+    expect(nameSorter).toHaveBeenCalledTimes(4); // still 4, not recomputed
+  });
+
+  test('a data reload invalidates the cache, forcing recomputation for the still-active sort column', () => {
+    const nameSorter = vi.fn((value: unknown) => value as string | number);
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name', sorter: nameSorter },
+      { field: 'department' },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('name', 'asc');
+    void controller.filteredData;
+    expect(nameSorter).toHaveBeenCalledTimes(4);
+
+    controller.data = getEmployeeData(); // fresh row objects, same ids
+    void controller.filteredData;
+
+    expect(nameSorter).toHaveBeenCalledTimes(8);
+  });
+
+  test('reloading data while sorted updates the order to reflect new values, with no manual re-sort call', () => {
+    const controller = createEmployeeController();
+    controller.sort('salary', 'asc');
+    // Dana(60), Bob(70), Charlie(80), Alice(90)
+    expect(controller.filteredData.map(r => r.id)).toEqual([4, 2, 3, 1]);
+
+    // Reload: Dana's salary jumps to the highest. No sort() call here -
+    // the table should already be sorted correctly once we read it.
+    controller.data = [
+      { id: 1, name: 'Alice', department: 'Eng', salary: 90 },
+      { id: 2, name: 'Bob', department: null, salary: 70 },
+      { id: 3, name: 'Charlie', department: 'Eng', salary: 80 },
+      { id: 4, name: 'Dana', department: 'Sales', salary: 999 },
+    ];
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([2, 3, 1, 4]);
+  });
+
+  test('committing an edit to the actively-sorted field updates the order without an explicit re-sort', () => {
+    const controller = createEmployeeController();
+    controller.sort('salary', 'asc');
+    expect(controller.filteredData.map(r => r.id)).toEqual([4, 2, 3, 1]);
+
+    const alice = controller.data.find(r => r.id === 1)!;
+    controller.setPendingValue(alice, 'salary', 1);
+    controller.commitChanges(alice, 'salary');
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 4, 2, 3]);
+  });
+});

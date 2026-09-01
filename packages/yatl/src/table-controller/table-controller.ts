@@ -994,14 +994,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       this.editedRows.delete(metadata.id);
     }
 
-    // Keep the cached sort value and search index for this row in sync
-    // with the value we just committed into it.
-    const column = this.getColumn(field);
-    if (column) {
-      const value = getNestedValue(row, field);
-      const sortValue = column.sorter ? column.sorter(value) : value;
-      metadata.sortValues[field] = getComparableValue(sortValue);
-    }
+    // Invalidate the cached sort value for this field - getSortValue()
+    // will lazily recompute it the next time it's actually needed for a
+    // sort, rather than eagerly redoing the work here.
+    delete metadata.sortValues[field];
     this.searchEngine.updateCache(row);
 
     if (update) {
@@ -1336,11 +1332,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       }
 
       for (const { column, state } of sortedStates) {
-        const field = state.field;
         const direction = state.sort!.order;
 
-        const valA = aMetadata.sortValues[field];
-        const valB = bMetadata.sortValues[field];
+        const valA = this.getSortValue(a, aMetadata, column);
+        const valB = this.getSortValue(b, bMetadata, column);
 
         if (valA === valB) continue;
         if (valA == null && valB == null) continue;
@@ -1367,6 +1362,29 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       return aMetadata.index - bMetadata.index;
     });
     this.sortDirty = false;
+  }
+
+  /**
+   * Gets the comparable sort value for a row's field, computing and
+   * caching it on first use. rebuildMetadata() resets sortValues to {} on
+   * every data/columns change, so a cache hit here is always guaranteed
+   * fresh - it can only have been computed against the current row.
+   */
+  private getSortValue(
+    row: T,
+    metadata: RowMetadata,
+    column: ColumnOptions<T>,
+  ) {
+    const field = column.field;
+    if (Object.hasOwn(metadata.sortValues, field)) {
+      return metadata.sortValues[field];
+    }
+
+    const value = getNestedValue(row, field);
+    const sortValue = column.sorter ? column.sorter(value) : value;
+    const comparable = getComparableValue(sortValue);
+    metadata.sortValues[field] = comparable;
+    return comparable;
   }
 
   // #endregion
@@ -1433,37 +1451,29 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
         ({
           id: rowId,
           index: index,
-          searchTokens: {},
-          searchValues: {},
           sortValues: {},
-          selected: false,
           pendingEdits: new Map(),
           pendingTransactions: new Map(),
         } as RowMetadata);
 
       if (
         generatedId === null &&
-        (metadata.selected ||
-          metadata.pendingEdits.size > 0 ||
+        (metadata.pendingEdits.size > 0 ||
           metadata.pendingTransactions.size > 0)
       ) {
         warnIndexId();
       }
 
       metadata.index = index;
+      // Invalidate any sort values cached from before this rebuild - a
+      // reused row (same id, new object reference after a reload) may
+      // have different field values now, so nothing here can be trusted
+      // until getSortValue() recomputes it on demand.
+      metadata.sortValues = {};
 
       newIdToRowMap.set(rowId, row);
       newRowToIdMap.set(row, rowId);
       newRowMetadata.set(rowId, metadata);
-
-      for (const column of this.columns) {
-        const value = getNestedValue(row, column.field);
-        let sortValue = value;
-        if (column.sorter) {
-          sortValue = column.sorter(value);
-        }
-        metadata.sortValues[column.field] = getComparableValue(sortValue);
-      }
     });
 
     this.idToRowMap = newIdToRowMap;
@@ -1755,10 +1765,9 @@ interface RowMetadata {
   id: RowId;
   index: number;
   searchScore?: number;
-  /** Precomputed sort values */
+  /** Comparable sort values, computed lazily and cached by getSortValue() */
   sortValues: Record<string, SortValue>;
   highlightIndices?: RowMatchIndices;
-  selected: boolean;
   pendingEdits: Map<string, unknown>;
   pendingTransactions: Map<string, { id: string; value: unknown }>;
 }

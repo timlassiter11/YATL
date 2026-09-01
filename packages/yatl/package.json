@@ -57,6 +57,7 @@
     "@types/node": "^22.15.17",
     "@vitest/browser-playwright": "^4.0.18",
     "eslint": "^9.28.0",
+    "jsdom": "^29.1.1",
     "prettier": "^3.5.3",
     "tsup": "^8.4.0",
     "typedoc": "^0.28.13",

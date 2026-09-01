@@ -131,6 +131,7 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
       queryTokens.push(...this.tokenizer(query));
     }
 
+    const keys = this.keys;
     const results = [];
     for (const item of data) {
       const searchResult: YatlSearchResult<T> = {
@@ -140,22 +141,19 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
         matches: {},
       };
       const cacheEntry = this.getOrCreateCacheEntry(item);
-      for (const key of this.keys) {
+      for (const key of keys) {
         const rowMatches = searchResult.matches;
         if (!(key in rowMatches)) {
           rowMatches[key] = [];
         }
         const fieldMatches = searchResult.matches[key]!;
-        const columnOptions = this._fields.get(key);
-        const getter = columnOptions?.getter ?? getNestedValue;
-        const originalValue = getter(item, key);
+        // The value is already resolved via the column's getter (or
+        // getNestedValue) and cached in cacheEntry.values - no need to
+        // call the getter again here just to type-check it.
         const compareValue = cacheEntry?.values[key];
         const columnTokens = cacheEntry.tokens[key];
 
-        if (
-          typeof originalValue !== 'string' ||
-          typeof compareValue !== 'string'
-        ) {
+        if (typeof compareValue !== 'string') {
           continue;
         }
 
@@ -248,7 +246,20 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
   ): FieldSearchResult {
     const result: FieldSearchResult = { score: 0, matches: [] };
 
+    // An empty query token (e.g. from a literal `""` in the raw query
+    // string when tokenizedSearch is on) matches everything and nothing
+    // meaningfully - treat it as a non-match. This also protects
+    // addRangesFromValue below: String.prototype.indexOf('', n) never
+    // returns -1 (it clamps at value.length), so scanning for an empty
+    // searchTerm would loop forever.
+    if (!query.value) {
+      return result;
+    }
+
     const addRangesFromValue = (searchTerm: string) => {
+      if (!searchTerm) {
+        return;
+      }
       let idx = value.indexOf(searchTerm);
       while (idx !== -1) {
         result.matches.push({ start: idx, end: idx + searchTerm.length });

@@ -59,7 +59,7 @@ export class YatlTextArea extends YatlFormControl<string> {
 
   /** The current, controlled value of the textarea. */
   @property({ attribute: false })
-  public value = this.getAttribute('value') ?? '';
+  public value = this.initialAttributeValue('value', '');
 
   public get formValue() {
     return this.value;

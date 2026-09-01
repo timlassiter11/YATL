@@ -382,6 +382,27 @@ export abstract class YatlFormControl<TData = string>
     this.dispatchEvent(new YatlEvent(type));
   }
 
+  /**
+   * Reads an attribute's initial value directly, for use in a field
+   * initializer where Lit's own attribute-to-property sync can't be relied
+   * on yet - a field initializer's own assignment is indistinguishable from
+   * an explicit external set in `changedProperties` on the first render, so
+   * anything seeded that way in willUpdate()/firstUpdated() can silently
+   * lose the attribute-driven case. Only correct when called directly from
+   * a field initializer, before the constructor returns.
+   */
+  protected initialAttributeValue<T = string>(
+    name: string,
+    fallback: T,
+    transform?: (raw: string) => T,
+  ): T {
+    const raw = this.getAttribute(name);
+    if (raw === null) {
+      return fallback;
+    }
+    return transform ? transform(raw) : (raw as unknown as T);
+  }
+
   private handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' && event.target === this.formControl) {
       this.form?.requestSubmit();

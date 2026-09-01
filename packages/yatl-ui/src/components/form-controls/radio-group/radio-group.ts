@@ -30,7 +30,7 @@ export class YatlRadioGroup extends YatlFormControl<string> {
 
   /** The current, controlled value of the group. */
   @property({ type: String, attribute: false })
-  public value = this.getAttribute('value') ?? '';
+  public value = this.initialAttributeValue('value', '');
 
   public override get formValue() {
     return this.value;

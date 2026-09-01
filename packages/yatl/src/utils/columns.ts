@@ -64,10 +64,11 @@ export function getColumnStateChanges<T extends object = UnspecifiedRecord>(
     changes.push('width');
   }
 
+  // `sort` is always a freshly-copied object (see createState), so comparing
+  // it by reference would report a change on every call. Compare by value.
   if (
-    oldState?.sort !== newState.sort ||
-    oldState.sort?.order !== newState.sort?.order ||
-    oldState.sort?.priority !== newState.sort?.priority
+    oldState?.sort?.order !== newState.sort?.order ||
+    oldState?.sort?.priority !== newState.sort?.priority
   ) {
     changes.push('sort');
   }

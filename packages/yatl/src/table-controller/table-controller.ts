@@ -162,7 +162,8 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
   public get displayColumns() {
     if (this.cachedDisplayColumns) {
-      return this.cachedDisplayColumns;
+      // Return a copy so callers can't mutate our cache (see moveColumn).
+      return [...this.cachedDisplayColumns];
     }
 
     const orderedSet = new Set(this._columnOrder);
@@ -173,7 +174,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       .filter(isDisplayColumn)
       .filter(c => !orderedSet.has(c.field));
     this.cachedDisplayColumns = [...orderedColumns, ...missingColumns];
-    return this.cachedDisplayColumns;
+    return [...this.cachedDisplayColumns];
   }
 
   public get columnOrder() {
@@ -204,7 +205,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       const stateChanges = getColumnStateChanges(oldState, state);
       if (stateChanges.length) {
         changed = true;
-        if (stateChanges.includes('sort')) {
+        // sortRows() only applies sort states for visible columns, so a
+        // visibility change on an already-sorted (or newly-sorted) column
+        // needs to invalidate the cached order too, not just an explicit
+        // sort change.
+        if (
+          stateChanges.includes('sort') ||
+          (stateChanges.includes('visible') && (oldState?.sort || state.sort))
+        ) {
           this.sortDirty = true;
         }
 
@@ -881,6 +889,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       metadata.pendingEdits.set(field, value);
       this.editedRows.add(metadata.id);
     }
+
+    // No specific prop name - pending edits are ephemeral and shouldn't
+    // schedule a state save or fire a table-state-change event the way
+    // persisted state (columns, sort, etc) does.
+    this.requestUpdate();
   }
 
   /**
@@ -895,14 +908,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     row = this.getRowOrThrow(row);
     const metadata = this.getRowMetadata(row);
 
-    let value = metadata.pendingEdits.get(field);
-    if (value !== undefined) {
-      return value;
+    // Use .has() rather than checking the retrieved value against
+    // undefined - a pending edit can legitimately be undefined itself.
+    if (metadata.pendingEdits.has(field)) {
+      return metadata.pendingEdits.get(field);
     }
 
-    value = metadata.pendingTransactions.get(field)?.value;
-    if (value !== undefined) {
-      return value;
+    if (metadata.pendingTransactions.has(field)) {
+      return metadata.pendingTransactions.get(field)!.value;
     }
 
     return getNestedValue(row, field);
@@ -964,13 +977,31 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public commitChanges(row: T | RowId, field: NestedKeyOf<T>, update = true) {
     row = this.getRowOrThrow(row);
     const metadata = this.getRowMetadata(row);
+    if (!metadata.pendingEdits.has(field)) {
+      return;
+    }
+
     const currentValue = metadata.pendingEdits.get(field);
-    if (currentValue !== undefined) {
-      setNestedValue(row, field, currentValue);
+    setNestedValue(row, field, currentValue);
+    metadata.pendingEdits.delete(field);
+    // Only clear the row from editedRows once none of its fields
+    // still have pending edits - it may have edits for other fields.
+    if (metadata.pendingEdits.size === 0) {
       this.editedRows.delete(metadata.id);
-      if (update) {
-        this.requestUpdate('data');
-      }
+    }
+
+    // Keep the cached sort value and search index for this row in sync
+    // with the value we just committed into it.
+    const column = this.getColumn(field);
+    if (column) {
+      const value = getNestedValue(row, field);
+      const sortValue = column.sorter ? column.sorter(value) : value;
+      metadata.sortValues[field] = getComparableValue(sortValue);
+    }
+    this.searchEngine.updateCache(row);
+
+    if (update) {
+      this.requestUpdate('data');
     }
   }
 
@@ -990,6 +1021,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       const metadata = this.getRowMetadata(row);
       metadata.pendingEdits.clear();
     }
+    this.editedRows.clear();
     this.requestUpdate();
   }
 
@@ -1216,7 +1248,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     for (const field in this.filters) {
-      const filter = getNestedValue(this.filters, field);
+      // `field` is already a flat (possibly dotted) key of the Filters
+      // object itself, not a path to walk within it - unlike `row`, which
+      // is a genuinely nested object that `field` indexes into.
+      const filter = this.filters[field as NestedKeyOf<T>];
       const value = getNestedValue(row, field);
       if (typeof filter === 'function') {
         if (!filter(value)) {
@@ -1427,6 +1462,20 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.idToRowMap = newIdToRowMap;
     this.rowToIdMap = newRowToIdMap;
     this.rowMetadata = newRowMetadata;
+
+    // A data reload can drop rows outright, unlike deleteRow(), which
+    // already cleans this bookkeeping up. Reconcile it here too so it never
+    // keeps referencing an id that no longer exists.
+    for (const rowId of this.editedRows) {
+      if (!newIdToRowMap.has(rowId)) {
+        this.editedRows.delete(rowId);
+      }
+    }
+    for (const rowId of this._selectedRowIds) {
+      if (!newIdToRowMap.has(rowId)) {
+        this._selectedRowIds.delete(rowId);
+      }
+    }
   }
 
   private updateRowData(row: T, data: object) {

@@ -338,6 +338,26 @@ describe('YatlTable Component', () => {
       expect(headers.nth(2)).toHaveAccessibleName('Age');
       expect(headers.nth(3)).toHaveAccessibleName('ID');
     });
+
+    test('moveColumn does not mutate a previously captured displayColumns reference', async () => {
+      const table = await renderTable();
+
+      // Simulate a caller holding onto an earlier snapshot of displayColumns
+      // (e.g. a render loop, or another consumer of the getter).
+      const snapshot = table.controller.displayColumns;
+      const snapshotOrder = snapshot.map(c => c.field);
+
+      table.moveColumn('id', 3);
+      await table.updateComplete;
+
+      expect(snapshot.map(c => c.field)).toEqual(snapshotOrder);
+      expect(table.displayColumns.map(c => c.field)).toEqual([
+        'name',
+        'role',
+        'age',
+        'id',
+      ]);
+    });
   });
 
   // #endregion
@@ -408,6 +428,46 @@ describe('YatlTable Component', () => {
       expect(spy).toHaveBeenCalledOnce();
       expect(event.row.name).toBe('Alice');
     });
+
+    test('renders the placeholder for a cell with an explicit undefined pending edit', async () => {
+      const el = await renderTable({ columns: getEditableColumns() });
+      const [alice] = el.data;
+
+      el.controller.setPendingValue(alice, 'name', undefined);
+      await el.updateComplete;
+
+      const nameCell = page
+        .elementLocator(el)
+        .getByRole('row')
+        .nth(1)
+        .getByRole('cell')
+        .nth(1);
+      await expect.element(nameCell).toHaveTextContent('-');
+    });
+
+    test('typing in an editable cell shows the dirty indicator without leaving edit mode', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+      });
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Alice' });
+
+      await userEvent.click(cell);
+      const editor = tableLocator.getByRole('textbox');
+      await expect.element(editor).toBeVisible();
+
+      // Type character-by-character (rather than a single fill) to make
+      // sure more frequent re-renders don't steal focus or drop input.
+      await userEvent.type(editor, 'Alicia');
+      await expect.element(editor).toHaveValue('Alicia');
+      await table.updateComplete;
+
+      // The cell should reflect dirty status live while still editing -
+      // setPendingValue previously never triggered a re-render at all.
+      const editingCell = editor.element().closest('.cell')!;
+      expect(editingCell.classList.contains('is-dirty')).toBe(true);
+    });
   });
 
   // #endregion
@@ -424,6 +484,28 @@ describe('YatlTable Component', () => {
       // The 'Role' header should no longer exist in the table
       const header = table.getByRole('columnheader', { name: 'Role' });
       await expect.element(header).not.toBeInTheDocument();
+    });
+
+    test('hiding the sorted column drops it from row ordering', async () => {
+      const el = await renderTable();
+      const table = page.elementLocator(el);
+
+      el.sort('age', 'asc');
+      await el.updateComplete;
+
+      // Sorted by age ascending: Bob(25), Alice(30), Charlie(35), David(40)
+      await expect
+        .element(table.getByRole('row').nth(1))
+        .toHaveTextContent(/Bob/);
+
+      el.hideColumn('age');
+      await el.updateComplete;
+
+      // With the only sorted column now hidden, rows should fall back
+      // to their original order: Alice, Bob, Charlie, David.
+      await expect
+        .element(table.getByRole('row').nth(1))
+        .toHaveTextContent(/Alice/);
     });
   });
 
@@ -446,6 +528,63 @@ describe('YatlTable Component', () => {
       const rows = page.elementLocator(el).getByRole('row');
       // +1 for the header row
       await expect.element(rows).toHaveLength(expectedRows + 1);
+    });
+  });
+
+  // #endregion
+  // #region Filters
+
+  describe('Filters', () => {
+    test('filters rows by an exact top-level field match', async () => {
+      const el = await renderTable();
+      el.filters = { role: 'Admin' };
+      await el.updateComplete;
+
+      const rows = page.elementLocator(el).getByRole('row');
+      // +1 for the header row
+      await expect.element(rows).toHaveLength(2);
+    });
+
+    test('clearing filters restores all rows', async () => {
+      const el = await renderTable();
+      el.filters = { role: 'Admin' };
+      await el.updateComplete;
+
+      el.filters = null;
+      await el.updateComplete;
+
+      const rows = page.elementLocator(el).getByRole('row');
+      await expect.element(rows).toHaveLength(5);
+    });
+
+    test('filters rows by a nested (dotted-path) field', async () => {
+      interface NestedRow {
+        name: string;
+        address: { city: string };
+      }
+
+      document.body.innerHTML = '<yatl-table></yatl-table>';
+      const el = document.querySelector<YatlTable<NestedRow>>('yatl-table')!;
+      el.columns = [
+        { field: 'name', title: 'Name' },
+        { field: 'address.city', title: 'City' },
+      ];
+      el.data = [
+        { name: 'Alice', address: { city: 'NY' } },
+        { name: 'Bob', address: { city: 'LA' } },
+        { name: 'Charlie', address: { city: 'NY' } },
+      ];
+      await el.updateComplete;
+
+      el.filters = { 'address.city': 'NY' };
+      await el.updateComplete;
+
+      const table = page.elementLocator(el);
+      // +1 for the header row
+      await expect.element(table.getByRole('row')).toHaveLength(3);
+      await expect
+        .element(table.getByRole('row').filter({ hasText: 'Bob' }))
+        .not.toBeInTheDocument();
     });
   });
 
@@ -634,6 +773,35 @@ describe('YatlTable Component', () => {
       await expect
         .element(charlieRow)
         .toHaveAttribute('part', expect.stringContaining('highlight-danger'));
+    });
+  });
+
+  // #endregion
+  // #region Printing
+
+  describe('Printing', () => {
+    test('print() detaches the ephemeral print table from the shared controller when done', async () => {
+      const el = await renderTable();
+      const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+      // requestAnimationFrame doesn't reliably fire in this headless test
+      // environment - run its callback immediately instead of depending on
+      // real frame timing.
+      const rafSpy = vi
+        .spyOn(window, 'requestAnimationFrame')
+        .mockImplementation((cb: FrameRequestCallback) => {
+          cb(0);
+          return 0;
+        });
+      const hosts = (el.controller as unknown as { hosts: Set<unknown> }).hosts;
+      const initialHostCount = hosts.size;
+
+      await el.print();
+
+      expect(printSpy).toHaveBeenCalledOnce();
+      expect(rafSpy).toHaveBeenCalledOnce();
+      // The ephemeral print table should be gone from the controller's
+      // hosts, not left behind forever.
+      expect(hosts.size).toBe(initialHostCount);
     });
   });
 

@@ -16,11 +16,7 @@ import type {
   YatlTableEditTrigger,
 } from '../types';
 
-import {
-  getColumnStateChanges,
-  getNestedValue,
-  isDisplayColumn,
-} from '../utils';
+import { getColumnStateChanges, isDisplayColumn } from '../utils';
 
 import { highlightText, toHumanReadable } from '../utils';
 
@@ -123,6 +119,13 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
   // Column drag & drop state
   private dragColumn: NestedKeyOf<T> | null = null;
+
+  // Snapshotted once at the top of render() so renderHeader/renderRow/
+  // renderBodyContents/renderFooter don't each independently re-copy
+  // filteredData or re-derive column state for every row.
+  private renderData: T[] = [];
+  private renderFilteredData: T[] = [];
+  private renderColumnData: ColumnData<T>[] = [];
 
   @state()
   private currentEditCell: {
@@ -613,6 +616,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     requestAnimationFrame(() => {
       window.print();
       printTable.remove();
+      // printTable shares our controller (see above) - without this it
+      // would stay registered as a host forever, leaking the element and
+      // getting a requestUpdate() call on every future controller change.
+      this.controller.detach(printTable);
       document.adoptedStyleSheets = documentStyleSheets;
     });
   }
@@ -886,7 +893,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   protected renderHeader() {
-    const columns = this.getDisplayColumnData();
+    const columns = this.renderColumnData;
     const classes = {
       header: true,
       reorderable: this.reorderable,
@@ -923,12 +930,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   protected renderCell(columnData: ColumnData<T>, row: T) {
     const column = columnData.column;
     const status = this.controller.getCellStatus(row, column.field);
-    // Try to use the value from any pending edits if they exist.
+    // Prioritizes any pending edit, falling back to the row's actual value.
     let value = this.controller.getLatestValue(row, column.field);
-    if (value === undefined) {
-      // If not, fallback to the actual value.
-      value = getNestedValue(row, column.field);
-    }
 
     // Get the user parts from the raw value
     // before we call the value formatter.
@@ -1052,7 +1055,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     };
     const rowIndex = renderIndex + 1;
     const rowId = this.controller.getRowId(row);
-    const columns = this.getDisplayColumnData();
+    const columns = this.renderColumnData;
 
     return html`
       <div
@@ -1077,12 +1080,12 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       `;
     }
 
-    if (this.data.length === 0) {
+    if (this.renderData.length === 0) {
       return html`
         <div part="message" class="message">${this.emptyMessage}</div>
       `;
     }
-    if (this.filteredData.length === 0) {
+    if (this.renderFilteredData.length === 0) {
       return html`
         <div part="message" class="message">${this.noResultsMessage}</div>
       `;
@@ -1091,7 +1094,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     if (this.virtualScroll) {
       return html`
         <lit-virtualizer
-          .items=${this.filteredData}
+          .items=${this.renderFilteredData}
           .keyFunction=${(item: T) => this.controller.getRowId(item)}
           .renderItem=${(item: T, index: number) =>
             this.renderRow(item, index) as TemplateResult}
@@ -1102,7 +1105,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
     return html`
       ${repeat(
-        this.filteredData,
+        this.renderFilteredData,
         item => this.controller.getRowId(item),
         (item, index) => this.renderRow(item, index),
       )}
@@ -1114,8 +1117,8 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return nothing;
     }
 
-    const total = this.data.length;
-    const filtered = this.filteredData.length;
+    const total = this.renderData.length;
+    const filtered = this.renderFilteredData.length;
 
     const fmt = new Intl.NumberFormat(undefined);
     const totalStr = fmt.format(total);
@@ -1146,6 +1149,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   protected override render() {
+    this.renderData = this.data;
+    this.renderFilteredData = this.filteredData;
+    this.renderColumnData = this.getDisplayColumnData();
+
     const gridTemplate = this.getGridWidths().join(' ');
     const style = {
       '--grid-template': gridTemplate,
@@ -1159,7 +1166,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       <div
         role="table"
         aria-label="Data Table"
-        aria-rowcount=${this.filteredData.length}
+        aria-rowcount=${this.renderFilteredData.length}
         part="table"
         class="table"
         style=${styleMap(style)}
@@ -1240,7 +1247,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       this.resizeObserver.observe(this.tableElement!);
     }
 
-    if (this.editor && document.activeElement !== this.editor) {
+    if (this.editor && this.shadowRoot?.activeElement !== this.editor) {
       setTimeout(() => {
         this.editor?.focus();
         if (this.editor instanceof HTMLInputElement) {
@@ -1298,11 +1305,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   };
 
   private hasVisibleColumn() {
-    return (
-      this.displayColumns
-        .map(column => this.getColumnState(column.field))
-        .filter(state => state.visible).length > 0
-    );
+    return this.renderColumnData.some(({ state }) => state.visible);
   }
 
   private getDisplayColumnData(): ColumnData<T>[] {

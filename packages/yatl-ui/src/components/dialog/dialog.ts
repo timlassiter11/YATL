@@ -114,7 +114,16 @@ export class YatlDialog extends YatlBase {
 
   public async show() {
     if (this.isTransitioning) {
-      return this.transitionComplete;
+      await this.transitionComplete;
+      // Our target state may have flipped (e.g. hide() was requested)
+      // while we were waiting on the previous transition.
+      if (!this.open) {
+        return;
+      }
+      if (this.dialogElement?.matches(':popover-open')) {
+        // Already open - whatever we were waiting on got us there.
+        return;
+      }
     }
 
     const requestEvent = new YatlDialogShowRequest();
@@ -224,7 +233,16 @@ export class YatlDialog extends YatlBase {
     }
 
     if (this.isTransitioning) {
-      return this.transitionComplete;
+      await this.transitionComplete;
+      // Our target state may have flipped (e.g. show() was requested)
+      // while we were waiting on the previous transition.
+      if (this.open) {
+        return;
+      }
+      if (!this.dialogElement?.matches(':popover-open')) {
+        // Already closed - whatever we were waiting on got us there.
+        return;
+      }
     }
 
     const requestEvent = new YatlDialogHideRequest(source);

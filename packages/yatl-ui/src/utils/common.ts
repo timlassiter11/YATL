@@ -114,9 +114,11 @@ export async function getAnimationPromise(
 
     let timer = 0;
     const onEnd = (event?: AnimationEvent) => {
-      // No event means the timeout triggered so we want to abort.
-      // If the user provided an animation name, only cancel if it matches the event.
-      if (!event || (animationName && animationName !== event.animationName)) {
+      // No event means the timeout fired - always resolve in that case,
+      // as a fallback for when the animation never fires at all. A real
+      // event only counts if it matches the requested animation name
+      // (when one was given).
+      if (event && animationName && animationName !== event.animationName) {
         return;
       }
 

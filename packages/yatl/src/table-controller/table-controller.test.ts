@@ -533,3 +533,423 @@ describe('YatlTableController - storage persistence', () => {
     expect(() => vi.advanceTimersByTime(1000)).not.toThrow();
   });
 });
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string | null;
+  salary: number;
+}
+
+const getEmployeeData = (): Employee[] => [
+  { id: 1, name: 'Alice', department: 'Eng', salary: 90 },
+  { id: 2, name: 'Bob', department: null, salary: 70 },
+  { id: 3, name: 'Charlie', department: 'Eng', salary: 80 },
+  { id: 4, name: 'Dana', department: 'Sales', salary: 60 },
+];
+
+function createEmployeeController(
+  columns: import('../types').ColumnOptions<Employee>[] = [
+    { field: 'id' },
+    { field: 'name' },
+    { field: 'department' },
+    { field: 'salary', sortable: true },
+  ],
+) {
+  const controller = new YatlTableController<Employee>();
+  controller.rowIdCallback = row => row.id;
+  controller.columns = columns;
+  controller.data = getEmployeeData();
+  return controller;
+}
+
+describe('YatlTableController - sorting', () => {
+  test('sorts ascending and descending', () => {
+    const controller = createEmployeeController();
+
+    controller.sort('salary', 'asc');
+    expect(controller.filteredData.map(r => r.salary)).toEqual([
+      60, 70, 80, 90,
+    ]);
+
+    controller.sort('salary', 'desc');
+    expect(controller.filteredData.map(r => r.salary)).toEqual([
+      90, 80, 70, 60,
+    ]);
+  });
+
+  test('sorting by the same order twice is a no-op', () => {
+    const controller = createEmployeeController();
+    controller.sort('salary', 'asc');
+    const before = controller.getColumnState('salary').sort;
+
+    controller.sort('salary', 'asc');
+
+    expect(controller.getColumnState('salary').sort).toEqual(before);
+  });
+
+  test('order: null removes sorting for that column', () => {
+    const controller = createEmployeeController();
+    controller.sort('salary', 'asc');
+
+    controller.sort('salary', null);
+
+    expect(controller.getColumnState('salary').sort).toBeNull();
+    // Falls back to original insertion order.
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('multi-column sort: the first-sorted column stays primary over a second (clear: false) sort', () => {
+    const controller = createEmployeeController();
+
+    // Sort by department first (primary), then by salary without clearing
+    // (secondary tiebreaker).
+    controller.sort('department', 'asc');
+    controller.sort('salary', 'desc', false);
+
+    // Within each department group, salary should be descending; groups
+    // should stay ordered by department (nulls last, per column default).
+    expect(controller.filteredData.map(r => [r.department, r.salary])).toEqual([
+      ['Eng', 90],
+      ['Eng', 80],
+      ['Sales', 60],
+      [null, 70],
+    ]);
+  });
+
+  test('a plain sort() call (clear: true) clears any other active sort', () => {
+    const controller = createEmployeeController();
+    controller.sort('department', 'asc');
+    controller.sort('salary', 'desc', false);
+
+    controller.sort('salary', 'asc'); // clear: true (default)
+
+    expect(controller.getColumnState('department').sort).toBeNull();
+    expect(controller.filteredData.map(r => r.salary)).toEqual([
+      60, 70, 80, 90,
+    ]);
+  });
+
+  test('nulls sort last by default for ascending order', () => {
+    const controller = createEmployeeController();
+    controller.sort('department', 'asc');
+    expect(controller.filteredData.at(-1)!.department).toBeNull();
+  });
+
+  test('nulls sort first by default for descending order', () => {
+    const controller = createEmployeeController();
+    controller.sort('department', 'desc');
+    expect(controller.filteredData.at(0)!.department).toBeNull();
+  });
+
+  test('nullsLast forces nulls to the end even when sorting descending', () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department', nullsLast: true },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('department', 'desc');
+
+    expect(controller.filteredData.at(-1)!.department).toBeNull();
+  });
+
+  test('a custom sorter transforms the value used for comparison', () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      // Sort by the length of the name instead of alphabetically.
+      { field: 'name', sorter: value => String(value).length },
+      { field: 'department' },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('name', 'asc');
+
+    // Bob(3), Dana(4), Alice(5), Charlie(7)
+    expect(controller.filteredData.map(r => r.name)).toEqual([
+      'Bob',
+      'Dana',
+      'Alice',
+      'Charlie',
+    ]);
+  });
+});
+
+describe('YatlTableController - filtering', () => {
+  test('filters by an exact value match', () => {
+    const controller = createEmployeeController();
+    controller.filters = { department: 'Eng' };
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 3]);
+  });
+
+  test('an array filter value matches any of its elements (OR)', () => {
+    const controller = createEmployeeController();
+    controller.filters = { department: ['Sales', 'Eng'] };
+    expect(controller.filteredData.map(r => r.id).sort()).toEqual([1, 3, 4]);
+  });
+
+  test('an empty array filter value matches everything', () => {
+    const controller = createEmployeeController();
+    controller.filters = { department: [] };
+    expect(controller.filteredData).toHaveLength(4);
+  });
+
+  test('an array row value matches if any element matches the filter', () => {
+    interface Tagged {
+      id: number;
+      tags: string[];
+    }
+    const controller = new YatlTableController<Tagged>();
+    controller.rowIdCallback = row => row.id;
+    controller.columns = [{ field: 'id' }, { field: 'tags' }];
+    controller.data = [
+      { id: 1, tags: ['red', 'blue'] },
+      { id: 2, tags: ['green'] },
+    ];
+
+    controller.filters = { tags: 'red' };
+    expect(controller.filteredData.map(r => r.id)).toEqual([1]);
+  });
+
+  test('a RegExp filter tests the stringified value', () => {
+    const controller = createEmployeeController();
+    controller.filters = { name: /^[AB]/ };
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 2]);
+  });
+
+  test('a Date filter matches by exact time', () => {
+    interface Event {
+      id: number;
+      when: Date;
+    }
+    const controller = new YatlTableController<Event>();
+    controller.rowIdCallback = row => row.id;
+    controller.columns = [{ field: 'id' }, { field: 'when' }];
+    const target = new Date('2024-01-01T00:00:00Z');
+    controller.data = [
+      { id: 1, when: target },
+      { id: 2, when: new Date('2024-06-01T00:00:00Z') },
+    ];
+
+    controller.filters = { when: new Date('2024-01-01T00:00:00Z') };
+    expect(controller.filteredData.map(r => r.id)).toEqual([1]);
+  });
+
+  test('a function filter value is used as a direct predicate', () => {
+    const controller = createEmployeeController();
+    controller.filters = {
+      salary: (value: unknown) => (value as number) >= 80,
+    };
+    expect(controller.filteredData.map(r => r.id).sort()).toEqual([1, 3]);
+  });
+
+  test('a per-column custom filter callback is used instead of the default comparison', () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department' },
+      {
+        field: 'salary',
+        filter: (value, filter) => (value as number) >= (filter as number),
+      },
+    ]);
+
+    controller.filters = { salary: 75 };
+    expect(controller.filteredData.map(r => r.id).sort()).toEqual([1, 3]);
+  });
+
+  test('filterStrategy completely overrides the default field-by-field filtering', () => {
+    const controller = createEmployeeController();
+    controller.filterStrategy = (row: Employee) => row.salary > 65;
+
+    // The regular filters object should be ignored entirely.
+    controller.filters = { department: 'Sales' };
+
+    expect(controller.filteredData.map(r => r.id).sort()).toEqual([1, 2, 3]);
+  });
+
+  test('a null filters object matches every row', () => {
+    const controller = createEmployeeController();
+    controller.filters = { department: 'Eng' };
+    expect(controller.filteredData).toHaveLength(2);
+
+    controller.filters = null;
+    expect(controller.filteredData).toHaveLength(4);
+  });
+
+  test('getColumnFilterValues returns unique values with counts', () => {
+    const controller = createEmployeeController();
+    const options = controller.getColumnFilterValues('department');
+
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'Eng', count: 2 }),
+        expect.objectContaining({ value: 'Sales', count: 1 }),
+      ]),
+    );
+    // Nulls excluded by default.
+    expect(options.some(o => o.value === null)).toBe(false);
+  });
+
+  test('getColumnFilterValues includes null when includeNull is true', () => {
+    const controller = createEmployeeController();
+    const options = controller.getColumnFilterValues('department', true);
+
+    expect(options.some(o => o.value === null)).toBe(true);
+  });
+});
+
+describe('YatlTableController - row id generation', () => {
+  test('generates a composite id from primary columns, joined with "::"', () => {
+    interface Composite {
+      orgId: number;
+      userId: number;
+      name: string;
+    }
+    const controller = new YatlTableController<Composite>();
+    controller.columns = [
+      { field: 'orgId', primary: true },
+      { field: 'userId', primary: true },
+      { field: 'name' },
+    ];
+    controller.data = [{ orgId: 1, userId: 5, name: 'Alice' }];
+
+    expect(controller.getRowId(controller.data[0])).toBe('1::5');
+  });
+
+  test('falls back to a common id field when there is no callback or primary column', () => {
+    interface Basic {
+      id: number;
+      name: string;
+    }
+    const controller = new YatlTableController<Basic>();
+    controller.columns = [{ field: 'id' }, { field: 'name' }];
+    controller.data = [{ id: 42, name: 'Alice' }];
+
+    expect(controller.getRowId(controller.data[0])).toBe(42);
+  });
+
+  test('a column explicitly marked primary: false is skipped in the common-key fallback', () => {
+    interface Basic {
+      id: number;
+      name: string;
+    }
+    const controller = new YatlTableController<Basic>();
+    controller.columns = [{ field: 'id', primary: false }, { field: 'name' }];
+    controller.data = [{ id: 1, name: 'Alice' }];
+
+    // 'id' is opted out, so it should fall back to an index-based id
+    // instead of using the field value directly.
+    expect(controller.getRowId(controller.data[0])).not.toBe(1);
+  });
+
+  test('falls back to an index-based id when nothing else is available', () => {
+    interface NoId {
+      name: string;
+    }
+    const controller = new YatlTableController<NoId>();
+    controller.columns = [{ field: 'name' }];
+    controller.data = [{ name: 'Alice' }, { name: 'Bob' }];
+
+    const [alice, bob] = controller.data;
+    expect(controller.getRowId(alice)).not.toBe(controller.getRowId(bob));
+    expect(controller.getRow(controller.getRowId(alice))).toBe(alice);
+    expect(controller.getRow(controller.getRowId(bob))).toBe(bob);
+  });
+
+  test('a duplicate generated id falls back to an index-based id for the later row', () => {
+    interface Basic {
+      id: number;
+      name: string;
+    }
+    const controller = new YatlTableController<Basic>();
+    controller.columns = [{ field: 'id' }, { field: 'name' }];
+    controller.data = [
+      { id: 1, name: 'Alice' },
+      { id: 1, name: 'Also Alice' },
+    ];
+
+    const [first, second] = controller.data;
+    const firstId = controller.getRowId(first);
+    const secondId = controller.getRowId(second);
+
+    expect(firstId).not.toBe(secondId);
+    expect(controller.getRow(firstId)!.name).toBe('Alice');
+    expect(controller.getRow(secondId)!.name).toBe('Also Alice');
+  });
+
+  test('getRowId throws for a row object that is not part of the current dataset', () => {
+    const controller = createEmployeeController();
+    const foreignRow = { id: 99, name: 'Ghost', department: null, salary: 0 };
+
+    expect(() => controller.getRowId(foreignRow)).toThrow();
+  });
+});
+
+describe('YatlTableController - finding rows', () => {
+  test('findRow finds the first row matching a field value', () => {
+    const controller = createEmployeeController();
+    expect(controller.findRow('department', 'Eng')?.name).toBe('Alice');
+  });
+
+  test('findRowIndex returns the original index of the matching row', () => {
+    const controller = createEmployeeController();
+    expect(controller.findRowIndex('name', 'Charlie')).toBe(2);
+  });
+
+  test('findRow and findRowIndex report no match', () => {
+    const controller = createEmployeeController();
+    expect(controller.findRow('name', 'Zach')).toBeUndefined();
+    expect(controller.findRowIndex('name', 'Zach')).toBe(-1);
+  });
+});
+
+describe('YatlTableController - row deletion', () => {
+  test('deleteRow removes the row and cleans up selection', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'multi';
+    controller.selectRow(controller.data[0]);
+
+    controller.deleteRow(1);
+
+    expect(controller.data.map(r => r.id)).toEqual([2, 3, 4]);
+    expect(controller.selectedRowIds).toEqual([]);
+  });
+
+  test('deleteRow silently ignores an id that does not exist', () => {
+    const controller = createEmployeeController();
+    expect(() => controller.deleteRow(999)).not.toThrow();
+    expect(controller.data).toHaveLength(4);
+  });
+
+  test('deleteRowAtIndex produces the same result regardless of the order indices are given in', () => {
+    const ascending = createEmployeeController();
+    ascending.deleteRowAtIndex(0, 2); // intends to remove Alice(0) and Charlie(2)
+
+    const descending = createEmployeeController();
+    descending.deleteRowAtIndex(2, 0);
+
+    expect(ascending.data.map(r => r.id)).toEqual([2, 4]);
+    expect(descending.data.map(r => r.id)).toEqual([2, 4]);
+  });
+});
+
+describe('YatlTableController - row updates', () => {
+  test('updateRow applies a partial update by row id', () => {
+    const controller = createEmployeeController();
+    controller.updateRow(1, { salary: 999 });
+    expect(controller.getRow(1)!.salary).toBe(999);
+  });
+
+  test('updateRowAtIndex applies a partial update by original index', () => {
+    const controller = createEmployeeController();
+    controller.updateRowAtIndex(0, { salary: 999 });
+    expect(controller.data[0].salary).toBe(999);
+  });
+
+  test('updateRow silently no-ops for an id that does not exist', () => {
+    const controller = createEmployeeController();
+    expect(() => controller.updateRow(999, { salary: 1 })).not.toThrow();
+  });
+});

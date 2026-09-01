@@ -1117,7 +1117,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
    */
   public deleteRowAtIndex(...indexes: number[]) {
     const newSelectedRows = new Set(this.selectedRowIds);
-    for (const index of indexes) {
+    // Descending order so removing a later row never shifts the position
+    // of an earlier, not-yet-processed index in this same call.
+    const sortedIndexes = [...indexes].sort((a, b) => b - a);
+    for (const index of sortedIndexes) {
       const row = this.data[index];
       if (row) {
         const metadata = this.getRowMetadata(row);

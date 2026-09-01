@@ -39,7 +39,9 @@ export class YatlDetails extends YatlBase {
       if (this.open && this.name) {
         // Close others
         (this.getRootNode() as Document | ShadowRoot)
-          .querySelectorAll<YatlDetails>(`yatl-details[name="${this.name}"]`)
+          .querySelectorAll<YatlDetails>(
+            `yatl-details[name="${CSS.escape(this.name)}"]`,
+          )
           .forEach(element => {
             if (element !== this && element.open) {
               element.open = false;

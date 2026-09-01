@@ -78,6 +78,7 @@ export class YatlToastManager extends YatlBase {
       const toasts = [...this.toasts];
       toasts.splice(index, 1);
       this.toasts = toasts;
+      this.updatePopoverIndex();
     }
   }
 

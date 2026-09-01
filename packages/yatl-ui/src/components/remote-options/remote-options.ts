@@ -108,63 +108,86 @@ export class YatlRemoteOptions extends YatlBase {
       return;
     }
 
-    if (!this.noCache && promiseCache.has(this.uri)) {
-      this._data = await promiseCache.get(this.uri)!;
-    } else {
-      this.isLoading = true;
-      try {
-        const promise = this.promiseToJson();
-        if (!this.noCache) {
-          promiseCache.set(this.uri, promise);
+    // Capture the uri this call is for - willUpdate() calls fetchOptions()
+    // fire-and-forget on every uri change, so an older, slower call can
+    // still be in flight (and resolve later) when a newer one starts.
+    const requestUri = this.uri;
+
+    try {
+      let data: unknown;
+      if (!this.noCache && promiseCache.has(requestUri)) {
+        data = await promiseCache.get(requestUri)!;
+      } else {
+        this.isLoading = true;
+        try {
+          const promise = this.promiseToJson(requestUri);
+          if (!this.noCache) {
+            promiseCache.set(requestUri, promise);
+          }
+          data = await promise;
+        } finally {
+          if (requestUri === this.uri) {
+            this.isLoading = false;
+          }
         }
-        this._data = await promise;
-      } finally {
-        this.isLoading = false;
       }
-    }
 
-    if (this.parser) {
-      this.options = [...this.parser(this.data)];
-    } else if (Array.isArray(this.data)) {
-      this.options = this.data.map(v => {
-        if (isOptionData(v)) {
+      if (requestUri !== this.uri) {
+        // uri changed again while this request was in flight - a newer
+        // fetchOptions() call owns the current uri's options now.
+        return;
+      }
+
+      this._data = data;
+
+      if (this.parser) {
+        this.options = [...this.parser(this.data)];
+      } else if (Array.isArray(this.data)) {
+        this.options = this.data.map(v => {
+          if (isOptionData(v)) {
+            return {
+              value: String(v.value),
+              label: String(v.label),
+            };
+          }
           return {
-            value: String(v.value),
-            label: String(v.label),
+            value: String(v),
+            label: String(v),
           };
-        }
-        return {
-          value: String(v),
-          label: String(v),
-        };
-      });
-    } else {
-      // This shouldn't happen but if we only get one value back
-      // we will just treat it as a single option. Maybe warn user?
-      this.options = [{ value: String(this.data), label: String(this.data) }];
-    }
+        });
+      } else {
+        // This shouldn't happen but if we only get one value back
+        // we will just treat it as a single option. Maybe warn user?
+        this.options = [{ value: String(this.data), label: String(this.data) }];
+      }
 
-    await this.updateComplete;
-    // We know the select looks for a slot change to update it's options.
-    // Just hook into that to let it know new options are available.
-    this.dispatchEvent(
-      new Event('slotchange', {
-        bubbles: true,
-        composed: true,
-      }),
-    );
+      await this.updateComplete;
+      // We know the select looks for a slot change to update it's options.
+      // Just hook into that to let it know new options are available.
+      this.dispatchEvent(
+        new Event('slotchange', {
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } catch (error) {
+      // fetchOptions() is called fire-and-forget from willUpdate(), so an
+      // uncaught rejection here would be unhandled. Leave any previously
+      // loaded options in place rather than clearing them.
+      console.error(error);
+    }
   }
 
-  private async promiseToJson() {
+  private async promiseToJson(uri: string) {
     try {
-      const response = await this.fetchClient(this.uri);
+      const response = await this.fetchClient(uri);
       if (response instanceof Response) {
         return await response.json();
       } else {
         return response;
       }
     } catch (error) {
-      promiseCache.delete(this.uri);
+      promiseCache.delete(uri);
       throw error;
     }
   }

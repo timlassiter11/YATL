@@ -73,3 +73,40 @@ describe('YatlTableView - reloadData', () => {
     expect(el.loading).toBe(false);
   });
 });
+
+describe('YatlTableView - sidebar layout', () => {
+  test('slotted sidebar content does not scroll on its own - only the sidebar as a whole does', async () => {
+    // yatl-card defaults to height: 100%, which without an override here
+    // would mean 100% of the sidebar itself, squeezing the card into less
+    // space than its own content needs and forcing it to scroll
+    // internally on top of the sidebar's own scrollbar.
+    document.body.innerHTML = `
+      <yatl-table-view style="display: block; height: 300px;">
+        <div slot="sidebar-start" style="min-height: 150px;">other sidebar content</div>
+        <yatl-card slot="sidebar-end">
+          <div style="min-height: 900px;">tall content</div>
+        </yatl-card>
+      </yatl-table-view>
+    `;
+    const el = document.querySelector<YatlTableView<Row>>('yatl-table-view')!;
+    el.columns = [{ field: 'id' }, { field: 'name' }];
+    el.data = [{ id: 1, name: 'initial' }];
+    await el.updateComplete;
+
+    const card = el.querySelector('yatl-card[slot="sidebar-end"]')!;
+    await (card as unknown as { updateComplete: Promise<unknown> })
+      .updateComplete;
+
+    const sidebar = el.shadowRoot!.querySelector(
+      '[part="sidebar"]',
+    ) as HTMLElement;
+    const cardBody = card.shadowRoot!.querySelector(
+      '[part="body"]',
+    ) as HTMLElement;
+
+    // The sidebar as a whole is expected to overflow and scroll...
+    expect(sidebar.scrollHeight).toBeGreaterThan(sidebar.clientHeight);
+    // ...but the card's own body should size to its content, not scroll.
+    expect(cardBody.scrollHeight).toBe(cardBody.clientHeight);
+  });
+});

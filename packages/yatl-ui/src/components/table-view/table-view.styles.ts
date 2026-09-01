@@ -81,6 +81,18 @@ export default css`
     gap: var(--yatl-spacing-l);
   }
 
+  /*
+   * Slotted content (e.g. yatl-card) may default to height: 100%, which
+   * here would mean 100% of the sidebar itself rather than "whatever's
+   * left after its siblings" - forcing it to squeeze into less space than
+   * its own content needs and scroll internally, on top of the sidebar's
+   * own scrollbar. The sidebar already scrolls as a whole, so let slotted
+   * content size to its natural content height instead.
+   */
+  [part='sidebar'] ::slotted(*) {
+    height: auto;
+  }
+
   [part='toolbar'] {
     grid-row: 1;
     grid-column: 2;

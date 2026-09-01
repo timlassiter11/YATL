@@ -72,7 +72,7 @@ export class YatlTree extends YatlBase {
       this._selectedItems.clear();
       this._selectedItems.add(item);
     } else if (this.selectionMethod === 'multi') {
-      if (item.selected) {
+      if (newState) {
         this._selectedItems.add(item);
       } else {
         this._selectedItems.delete(item);

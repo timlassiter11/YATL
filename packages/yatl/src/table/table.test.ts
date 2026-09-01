@@ -962,6 +962,40 @@ describe('YatlTable Component', () => {
 
       expect(scroller.scrollTop).toBeGreaterThan(0);
     });
+
+    test('scrollToFilteredIndex scrolls to the target row without virtual scroll', async () => {
+      const el = await renderTable({
+        data: getManyRows(),
+        virtualScroll: false,
+      });
+      el.style.height = '150px';
+      await el.updateComplete;
+
+      const scroller = el.shadowRoot!.querySelector('.scroller')!;
+      expect(scroller.scrollTop).toBe(0);
+
+      await el.scrollToFilteredIndex(80);
+
+      // scrollIntoView with behavior: 'smooth' animates asynchronously -
+      // wait for the scroll position to settle instead of checking mid-animation.
+      let lastScrollTop = -1;
+      await vi.waitFor(() => {
+        const settled =
+          scroller.scrollTop > 0 && scroller.scrollTop === lastScrollTop;
+        lastScrollTop = scroller.scrollTop;
+        expect(settled).toBe(true);
+      });
+      const target = el.shadowRoot!.querySelector(
+        '.row[data-row-id="80"]',
+      ) as HTMLElement;
+      expect(target).not.toBeNull();
+      // The target row's top should now be at or above the scroller's own
+      // top edge (i.e. actually scrolled into view), not still off-screen
+      // below it.
+      const scrollerRect = scroller.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      expect(targetRect.top).toBeLessThanOrEqual(scrollerRect.bottom);
+    });
   });
 
   // #endregion

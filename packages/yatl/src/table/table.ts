@@ -667,10 +667,16 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   public async scrollToFilteredIndex(index: number) {
-    // FIXME: Scrolling to an index using lit-virtualizer is buggy.
-    // It usually stops short of the requested index.
-    // The amount it stops short seems to be proportinal to how far away the index is.
-    // Scrolling without VS works but since I use sticky headers, it seems to be one row off.
+    // KNOWN LIMITATION: with virtual scroll enabled, this can stop short of
+    // the requested index, more so the further away it is. lit-virtualizer's
+    // default layout estimates the height of any row it hasn't measured yet
+    // using a fixed 100px guess, then self-corrects toward the real position
+    // over the next few reflows as more rows get measured. The further the
+    // target is from what's currently rendered, the more of that estimate
+    // rests on unmeasured rows, so convergence takes visibly longer. There's
+    // no supported way to seed a more accurate initial guess for this
+    // layout (only lit-virtualizer's grid/masonry layouts accept an
+    // itemSize hint - not the row-list layout used here).
 
     const rowData = this.filteredData[index];
     if (!rowData) {
@@ -687,8 +693,9 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         behavior: 'instant',
       });
     } else {
+      const rowId = this.controller.getRowId(rowData);
       const row = this.tableElement?.querySelector(
-        `.row[data-filtered-index="${index}"]`,
+        `.row[data-row-id="${rowId}"]`,
       );
       row?.scrollIntoView({
         block: 'start',

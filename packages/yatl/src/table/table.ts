@@ -300,6 +300,19 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     this.controller.scoredSearch = enable;
   }
 
+  /** @attr search-sort-priority */
+  public get searchSortPriority() {
+    return this.controller.searchSortPriority;
+  }
+
+  @property({ type: String, attribute: 'search-sort-priority' })
+  public set searchSortPriority(value) {
+    if (this.searchSortPriority === value) {
+      return;
+    }
+    this.controller.searchSortPriority = value;
+  }
+
   public get searchTokenizer() {
     return this.controller.searchTokenizer;
   }

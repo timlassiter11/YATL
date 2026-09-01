@@ -434,6 +434,47 @@ describe('YatlTableController - storage persistence', () => {
     expect(saved.searchQuery).toBeUndefined();
   });
 
+  test('searchSortPriority defaults to saved on, unlike searchQuery', () => {
+    const storage = createMemoryStorage();
+    const controller = createController();
+    controller.storageOptions = { key: 'test', storage };
+
+    controller.searchSortPriority = 'sort';
+    vi.advanceTimersByTime(1000);
+
+    const saved = JSON.parse(storage.store.get('test')!);
+    expect(saved.searchSortPriority).toBe('sort');
+  });
+
+  test('saveSearchSortPriority: false opts out of saving it', () => {
+    const storage = createMemoryStorage();
+    const controller = createController();
+    controller.storageOptions = {
+      key: 'test',
+      storage,
+      saveSearchSortPriority: false,
+    };
+
+    controller.searchSortPriority = 'sort';
+    vi.advanceTimersByTime(1000);
+
+    const saved = JSON.parse(storage.store.get('test')!);
+    expect(saved.searchSortPriority).toBeUndefined();
+  });
+
+  test('a saved searchSortPriority is restored on a new controller instance', () => {
+    const storage = createMemoryStorage();
+    const first = createController();
+    first.storageOptions = { key: 'test', storage };
+    first.searchSortPriority = 'sort';
+    vi.advanceTimersByTime(1000);
+
+    const second = createController();
+    second.storageOptions = { key: 'test', storage };
+
+    expect(second.searchSortPriority).toBe('sort');
+  });
+
   test('only saves the per-column categories enabled by their save* flag', () => {
     const storage = createMemoryStorage();
     const controller = createController();
@@ -1293,5 +1334,80 @@ describe('YatlTableController - lazy sort value computation', () => {
     controller.commitChanges(alice, 'salary');
 
     expect(controller.filteredData.map(r => r.id)).toEqual([1, 4, 2, 3]);
+  });
+});
+
+interface Product {
+  id: number;
+  category: string;
+  name: string;
+}
+
+function createSearchPriorityController(
+  searchSortPriority: 'score' | 'sort' = 'score',
+) {
+  const controller = new YatlTableController<Product>();
+  controller.rowIdCallback = row => row.id;
+  controller.columns = [
+    { field: 'id' },
+    { field: 'category' },
+    { field: 'name', searchable: true },
+  ];
+  controller.scoredSearch = true;
+  controller.searchSortPriority = searchSortPriority;
+  controller.data = [
+    { id: 1, category: 'B', name: 'app' }, // exact match
+    { id: 2, category: 'A', name: 'apple' }, // prefix match
+    { id: 3, category: 'A', name: 'pineapple' }, // substring match
+  ];
+  return controller;
+}
+
+describe('YatlTableController - searchSortPriority', () => {
+  test("defaults to 'score': relevance ordering ignores the active column sort", () => {
+    const controller = createSearchPriorityController(); // default 'score'
+    controller.sort('category', 'asc');
+    controller.searchQuery = 'app';
+
+    // Pure relevance order: exact(1) > prefix(2) > substring(3), regardless
+    // of the category sort (which would otherwise put the A's first).
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 2, 3]);
+  });
+
+  test("'sort': the active column sort takes precedence over relevance", () => {
+    const controller = createSearchPriorityController('sort');
+    controller.sort('category', 'asc');
+    controller.searchQuery = 'app';
+
+    // Category groups first (A, A, B) - within category A, relevance
+    // still breaks the tie (prefix match id 2 before substring match id 3).
+    expect(controller.filteredData.map(r => r.id)).toEqual([2, 3, 1]);
+  });
+
+  test("'sort' falls back to relevance ordering when no column sort is active", () => {
+    const controller = createSearchPriorityController('sort');
+    controller.searchQuery = 'app'; // no sort() call
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 2, 3]);
+  });
+
+  test('changing searchSortPriority re-orders existing results without a new query', () => {
+    const controller = createSearchPriorityController('score');
+    controller.sort('category', 'asc');
+    controller.searchQuery = 'app';
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 2, 3]);
+
+    controller.searchSortPriority = 'sort';
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([2, 3, 1]);
+  });
+
+  test('has no effect when scoredSearch is off - the column sort already decides alone', () => {
+    const controller = createSearchPriorityController('sort');
+    controller.scoredSearch = false;
+    controller.sort('category', 'asc');
+    controller.searchQuery = 'app';
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([2, 3, 1]);
   });
 });

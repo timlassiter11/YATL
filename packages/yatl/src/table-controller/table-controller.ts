@@ -12,6 +12,7 @@ import type {
   RowIdCallback,
   RowMatchIndices,
   RowSelectionMethod,
+  SearchSortPriority,
   SortOrder,
   StorageOptions,
   YatlTableControllerOptions,
@@ -69,6 +70,7 @@ const DEFAULT_STORAGE_OPTIONS: Partial<StorageOptions> = {
   saveColumnStickyPositions: true,
   saveColumnOrder: true,
   saveSelectedRows: true,
+  saveSearchSortPriority: true,
 };
 
 // #endregion
@@ -107,6 +109,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private _dataUpdateTimestamp: Date | null = null;
 
   private _searchQuery = '';
+  private _searchSortPriority: SearchSortPriority = 'score';
   private _filters: Filters<T> | null = null;
   private _filterStrategy: FilterCallback<T> | null = null;
 
@@ -331,6 +334,20 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.requestUpdate('scoredSearch');
   }
 
+  public get searchSortPriority() {
+    return this._searchSortPriority;
+  }
+
+  public set searchSortPriority(value) {
+    if (this._searchSortPriority === value) {
+      return;
+    }
+
+    this._searchSortPriority = value;
+    this.sortDirty = true;
+    this.requestUpdate('searchSortPriority');
+  }
+
   public get searchTokenizer() {
     return this.searchEngine.tokenizer;
   }
@@ -469,6 +486,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public getTableState(): TableState<T> {
     return {
       searchQuery: this.searchQuery,
+      searchSortPriority: this.searchSortPriority,
       selectedRows: this.selectedRowIds,
       columnOrder: this.displayColumns.map(c => c.field),
       columns: this.columnStates.map(column => {
@@ -486,6 +504,13 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   public updateTableState(state: RestorableTableState<T>) {
     if ('searchQuery' in state && state.searchQuery !== undefined) {
       this.searchQuery = state.searchQuery;
+    }
+
+    if (
+      'searchSortPriority' in state &&
+      state.searchSortPriority !== undefined
+    ) {
+      this.searchSortPriority = state.searchSortPriority;
     }
 
     if ('selectedRows' in state && state.selectedRows) {
@@ -1173,6 +1198,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       'columnOrder',
       'columnStates',
       'searchQuery',
+      'searchSortPriority',
       'selectedRowIds',
     ];
     const triggers = props.filter(p => SAVE_TRIGGERS.includes(p));
@@ -1319,18 +1345,27 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       sensitivity: 'base',
     });
 
-    this._filteredData = this._filteredData.toSorted((a, b) => {
-      const aMetadata = this.getRowMetadata(a);
-      const bMetadata = this.getRowMetadata(b);
-
-      // Try to sort by search score if we're using scoring and there is a query.
-      if (this.scoredSearch && this.searchQuery) {
-        const aValue = aMetadata.searchScore || 0;
-        const bValue = bMetadata.searchScore || 0;
-        if (aValue > bValue) return -1;
-        if (aValue < bValue) return 1;
+    // Compares by relevance score - 0 (no preference) unless scoring is
+    // on and there's an active query.
+    const compareByScore = (aMetadata: RowMetadata, bMetadata: RowMetadata) => {
+      if (!this.scoredSearch || !this.searchQuery) {
+        return 0;
       }
+      const aValue = aMetadata.searchScore || 0;
+      const bValue = bMetadata.searchScore || 0;
+      if (aValue > bValue) return -1;
+      if (aValue < bValue) return 1;
+      return 0;
+    };
 
+    // Compares by the active column sort(s) - 0 (no preference) if none
+    // are active, or if every active column compares equal.
+    const compareByColumns = (
+      a: T,
+      b: T,
+      aMetadata: RowMetadata,
+      bMetadata: RowMetadata,
+    ) => {
       for (const { column, state } of sortedStates) {
         const direction = state.sort!.order;
 
@@ -1357,6 +1392,31 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
           return direction === 'asc' ? result : -result;
         }
       }
+      return 0;
+    };
+
+    this._filteredData = this._filteredData.toSorted((a, b) => {
+      const aMetadata = this.getRowMetadata(a);
+      const bMetadata = this.getRowMetadata(b);
+
+      // searchSortPriority decides which of these two goes first; the
+      // second is only ever evaluated to break a tie left by the first
+      // (and, since getSortValue() has caching side effects, only
+      // actually computed when it's needed).
+      let result: number;
+      if (this.searchSortPriority === 'sort') {
+        result = compareByColumns(a, b, aMetadata, bMetadata);
+        if (result === 0) {
+          result = compareByScore(aMetadata, bMetadata);
+        }
+      } else {
+        result = compareByScore(aMetadata, bMetadata);
+        if (result === 0) {
+          result = compareByColumns(a, b, aMetadata, bMetadata);
+        }
+      }
+
+      if (result !== 0) return result;
 
       // Always fall back to the index column
       return aMetadata.index - bMetadata.index;
@@ -1635,6 +1695,10 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       savedTableState.searchQuery = tableState.searchQuery;
     }
 
+    if (options.saveSearchSortPriority) {
+      savedTableState.searchSortPriority = tableState.searchSortPriority;
+    }
+
     if (options.saveSelectedRows) {
       savedTableState.selectedRows = tableState.selectedRows;
     }
@@ -1695,6 +1759,14 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
 
       if (options.saveSearchQuery && 'searchQuery' in savedTableState) {
         tableStateToRestore.searchQuery = savedTableState.searchQuery;
+      }
+
+      if (
+        options.saveSearchSortPriority &&
+        'searchSortPriority' in savedTableState
+      ) {
+        tableStateToRestore.searchSortPriority =
+          savedTableState.searchSortPriority;
       }
 
       if (options.saveSelectedRows && 'selectedRows' in savedTableState) {

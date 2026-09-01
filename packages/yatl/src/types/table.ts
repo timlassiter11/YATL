@@ -39,6 +39,18 @@ export type YatlTableEditTrigger = 'click' | 'dblclick' | 'none';
 export type RowSelectionMethod = 'single' | 'multi';
 
 /**
+ * When search scoring is enabled and there's an active query, controls
+ * which one takes priority when ordering rows: the search relevance
+ * score, or the user's active column sort.
+ * * score - Rows are ordered by relevance first; an active column sort
+ *   only breaks ties between equally-relevant rows.
+ * * sort - The active column sort takes priority; relevance score is
+ *   only used to break ties within it. Has no effect when no column
+ *   sort is active - relevance is used in that case either way.
+ */
+export type SearchSortPriority = 'score' | 'sort';
+
+/**
  * A commit record describing the changes to a single row.
  */
 export interface YatlCommitRecord<T extends object = UnspecifiedRecord> {
@@ -102,6 +114,9 @@ export interface StorageOptions {
   /** Save the current search query */
   saveSearchQuery?: boolean;
 
+  /** Save the current search sort priority */
+  saveSearchSortPriority?: boolean;
+
   /** Save the current column sorting */
   saveColumnSortOrders?: boolean;
 
@@ -139,6 +154,12 @@ export interface TableState<T extends object = UnspecifiedRecord> {
    * The current query applied to the table or null if no query is applied.
    */
   searchQuery: string;
+
+  /**
+   * Whether search relevance or the active column sort takes priority
+   * when ordering rows. See {@link SearchSortPriority}.
+   */
+  searchSortPriority: SearchSortPriority;
 
   /**
    * Currently selected row IDs.
@@ -269,6 +290,14 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
    * Rows are sorted by their relevance score descending.
    */
   scoredSearch: boolean;
+
+  /**
+   * When {@link scoredSearch} is enabled and there's an active query,
+   * controls whether search relevance or the user's active column sort
+   * takes priority when ordering rows.
+   * @default 'score'
+   */
+  searchSortPriority: SearchSortPriority;
 
   /**
    * A function that splits the search query into tokens.

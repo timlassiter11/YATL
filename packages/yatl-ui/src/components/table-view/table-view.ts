@@ -39,6 +39,13 @@ export class YatlTableView<
   public filtersLabel = 'Filters';
 
   /**
+   * The placeholder text for the search input.
+   * @attr search-placeholder
+   */
+  @property({ type: String, attribute: 'search-placeholder' })
+  public searchPlaceholder = 'Search';
+
+  /**
    * Toggles the visibility of the left filters pane and header. Defaults to `false`.
    * @attr hide-filters
    */
@@ -163,6 +170,7 @@ export class YatlTableView<
         </div>
         <yatl-toolbar
           part="toolbar"
+          search-placeholder=${this.searchPlaceholder}
           ?hide-column-picker=${this.hideColumnPicker}
           ?hide-export-button=${this.hideExportButton}
           ?hide-search-sort-priority-toggle=${this.hideSearchSortPriorityToggle}

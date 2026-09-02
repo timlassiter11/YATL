@@ -87,10 +87,17 @@ export class YatlToolbar<
 
   /**
    * Time in milliseconds to wait after the last keystroke before triggering the search.
-   * @attr searchdebounce
+   * @attr search-debounce
    */
-  @property({ type: Number })
+  @property({ type: Number, attribute: 'search-debounce' })
   public searchDebounce = 250;
+
+  /**
+   * The placeholder text for the search input.
+   * @attr search-placeholder
+   */
+  @property({ type: String, attribute: 'search-placeholder' })
+  public searchPlaceholder = 'Search';
 
   protected override render() {
     return html`
@@ -98,7 +105,7 @@ export class YatlToolbar<
         <yatl-input
           part="search"
           type="search"
-          placeholder="Search"
+          placeholder=${this.searchPlaceholder}
           .value=${this.controller?.searchQuery ?? ''}
           @input=${this.onSearchInput}
           @change=${this.onSearchChange}

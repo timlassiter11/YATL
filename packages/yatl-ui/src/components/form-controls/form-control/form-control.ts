@@ -379,6 +379,12 @@ export abstract class YatlFormControl<TData = string>
     }
 
     this.hasUserInteracted = true;
+    // Commit the new value to ElementInternals synchronously, right now -
+    // updated() would do this too, but only on Lit's next microtask, and a
+    // listener on this event (e.g. an enclosing <form>'s own `change`
+    // handler reading FormData) needs to see the new value immediately,
+    // not one interaction behind.
+    this.setFormValue(this.formValue);
     this.dispatchEvent(new YatlEvent(type));
   }
 

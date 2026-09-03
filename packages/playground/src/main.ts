@@ -3,6 +3,7 @@ import '@timlassiter11/yatl/theme.css';
 import '@timlassiter11/yatl-ui';
 
 import {
+  toast,
   YatlButton,
   YatlCheckbox,
   YatlFlyout,
@@ -79,7 +80,15 @@ window.addEventListener('load', () => {
   initTable();
 
   rowCountInput.addEventListener('change', () => {
-    table.data = generateMockData(rowCountInput.value!);
+    const count = rowCountInput.value ?? 0;
+    table.data = generateMockData(count);
+    if (count === 0) {
+      toast({
+        variant: 'warning',
+        label: 'No rows to display',
+        message: 'Increase the row count to generate table data.',
+      });
+    }
   });
 
   // Sync option controls and table options
@@ -97,6 +106,14 @@ window.addEventListener('load', () => {
     if (await showDialog(title, body)) {
       table.deleteRow(...table.selectedRowIds);
       deleteRowsButton.disabled = true;
+      toast({
+        variant: 'success',
+        label: selectedRows.length === 1 ? 'Row deleted' : 'Rows deleted',
+        message:
+          selectedRows.length === 1
+            ? '1 row was removed.'
+            : `${selectedRows.length} rows were removed.`,
+      });
     }
   });
 
@@ -114,10 +131,16 @@ window.addEventListener('load', () => {
       return;
     }
     const title = 'Delete Row?';
-    const body = `Are you sure you want to delete "${rowDetailsFlyout.label}"?`;
+    const rowName = rowDetailsFlyout.label;
+    const body = `Are you sure you want to delete "${rowName}"?`;
     if (await showDialog(title, body)) {
       table.deleteRow(currentDetailsRowId);
       rowDetailsFlyout.open = false;
+      toast({
+        variant: 'success',
+        label: 'Row deleted',
+        message: `"${rowName}" was removed.`,
+      });
     }
   });
 
@@ -164,11 +187,51 @@ function initTable() {
 
   table.addEventListener('yatl-table-commit-request', event => {
     const transaction = event.transaction as YatlCommitTransaction<TableData>;
+    const count = transaction.records.length;
+    const plural = count === 1 ? 'change' : 'changes';
+
+    // Same id across all three calls updates one toast in place instead of
+    // stacking a new one per save - a "Saving..." -> "Saved"/"Failed" toast,
+    // like you'd see for an autosave. The interim state is marked
+    // persist: false since it's not worth keeping around once it resolves;
+    // the final outcome overrides that back to the default so it sticks
+    // around in the notification history.
+    const toastId = `table-commit-${transaction.id}`;
+    toast({
+      id: toastId,
+      message: `Saving ${count} ${plural}...`,
+      duration: 0,
+      persist: false,
+    });
+
     const save = async () => {
       await sleep(1000);
+
+      // Simulate an occasional failure so the save flow shows off both
+      // outcomes, same as a real backend that can reject a write.
+      if (Math.random() < 0.15) {
+        toast({
+          id: toastId,
+          variant: 'danger',
+          label: 'Save failed',
+          message: `Could not save ${count} ${plural}. Please try again.`,
+          duration: 6000,
+          persist: true,
+        });
+        return false;
+      }
+
       for (const record of transaction.records) {
         record.originalRow.lastModified = new Date();
       }
+      toast({
+        id: toastId,
+        variant: 'success',
+        label: 'Changes saved',
+        message: `${count} ${plural} saved.`,
+        duration: 4000,
+        persist: true,
+      });
       return true;
     };
     event.respondWith(save());

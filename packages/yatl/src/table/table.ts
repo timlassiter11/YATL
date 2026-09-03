@@ -1700,7 +1700,10 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     this.editor?.blur();
 
     if (event.key === 'Enter') {
-      this.dispatchTransaction();
+      if (this.commitStrategy !== 'batch') {
+        // Never commit with batch editing. That's the user's job.
+        this.dispatchTransaction();
+      }
       this.currentEditCell = null;
     } else if (event.key === 'Tab') {
       this.currentEditCell = null;

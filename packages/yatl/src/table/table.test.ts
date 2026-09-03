@@ -601,6 +601,48 @@ describe('YatlTable Component', () => {
       const editingCell = editor.element().closest('.cell')!;
       expect(editingCell.classList.contains('is-dirty')).toBe(true);
     });
+
+    test('Enter commits immediately for the default (immediate) commit strategy', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+      });
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Alice' });
+      const spy = vi.fn();
+      table.addEventListener('yatl-table-commit-request', spy);
+
+      await userEvent.click(cell);
+      const editor = tableLocator.getByRole('textbox');
+      await userEvent.type(editor, 'Alicia');
+      await userEvent.keyboard('{Enter}');
+      await table.updateComplete;
+
+      expect(spy).toHaveBeenCalledOnce();
+    });
+
+    test('Enter does not commit in batch mode - the edit stays pending, same as Tab and clicking away', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Alice' });
+      const spy = vi.fn();
+      table.addEventListener('yatl-table-commit-request', spy);
+
+      await userEvent.click(cell);
+      const editor = tableLocator.getByRole('textbox');
+      await userEvent.type(editor, 'Alicia');
+      await userEvent.keyboard('{Enter}');
+      await table.updateComplete;
+
+      expect(spy).not.toHaveBeenCalled();
+      const [alice] = table.data;
+      expect(table.controller.getCellStatus(alice, 'name')).toBe('dirty');
+      expect(table.controller.getLatestValue(alice, 'name')).toBe('Alicia');
+    });
   });
 
   // #endregion

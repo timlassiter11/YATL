@@ -65,6 +65,90 @@ describe('ToastStore', () => {
     expect(store.history[0].dismissedAt).toBeUndefined();
   });
 
+  test("silent: 'always' upsert of a dismissed record updates its content without bringing it back live", () => {
+    const id = store.add({ message: 'Hi' });
+    store.dismiss(id);
+    const dismissedAt = store.history[0].dismissedAt;
+
+    store.add({ id, message: 'Hi again', silent: 'always' });
+
+    const record = store.history.find(r => r.id === id);
+    expect(record?.message).toBe('Hi again');
+    expect(record?.dismissedAt).toBe(dismissedAt);
+  });
+
+  test("silent: 'always' upsert of a still-live record leaves it live and just updates the content", () => {
+    const id = store.add({ message: 'Uploading 0%' });
+
+    store.add({ id, message: 'Uploading 50%', silent: 'always' });
+
+    const record = store.history.find(r => r.id === id);
+    expect(record?.message).toBe('Uploading 50%');
+    expect(record?.dismissedAt).toBeUndefined();
+  });
+
+  test("a brand-new toast raised with silent: 'always' is created already dismissed - it never shows live", () => {
+    const id = store.add({
+      message: 'Background sync failed',
+      silent: 'always',
+    });
+
+    const record = store.history.find(r => r.id === id);
+    expect(record?.dismissedAt).toBeDefined();
+  });
+
+  test("silent: 'onUpdate' shows a brand-new toast live, same as no silent option at all", () => {
+    const id = store.add({ message: 'Sync failed', silent: 'onUpdate' });
+
+    expect(store.history.find(r => r.id === id)?.dismissedAt).toBeUndefined();
+  });
+
+  test("silent: 'onUpdate' does not revive an existing record that was already dismissed", () => {
+    const id = store.add({ message: 'Sync failed' });
+    store.dismiss(id);
+    const dismissedAt = store.history[0].dismissedAt;
+
+    store.add({ id, message: 'Sync failed again', silent: 'onUpdate' });
+
+    const record = store.history.find(r => r.id === id);
+    expect(record?.message).toBe('Sync failed again');
+    expect(record?.dismissedAt).toBe(dismissedAt);
+  });
+
+  test("silent: 'onUpdate' leaves a still-live record live and just updates the content", () => {
+    const id = store.add({ message: 'Uploading 0%' });
+
+    store.add({ id, message: 'Uploading 50%', silent: 'onUpdate' });
+
+    const record = store.history.find(r => r.id === id);
+    expect(record?.message).toBe('Uploading 50%');
+    expect(record?.dismissedAt).toBeUndefined();
+  });
+
+  test('a silent upsert still marks the record unread, so the badge still reflects it', () => {
+    const id = store.add({ message: 'Hi' });
+    store.dismiss(id, 'user'); // read
+    expect(store.history[0].read).toBe(true);
+
+    store.add({ id, message: 'Hi again', silent: 'always' });
+
+    expect(store.history.find(r => r.id === id)?.read).toBe(false);
+  });
+
+  test('a silent upsert still bumps updatedAt and moves the record to the front', () => {
+    const id = store.add({ message: 'First' });
+    store.dismiss(id);
+    store.add({ message: 'Second' });
+    const createdAt = store.history.find(r => r.id === id)!.createdAt;
+
+    store.add({ id, message: 'First updated', silent: 'always' });
+
+    const record = store.history.find(r => r.id === id)!;
+    expect(record.createdAt).toBe(createdAt);
+    expect(record.updatedAt).toBeGreaterThanOrEqual(createdAt);
+    expect(store.history[0].id).toBe(id);
+  });
+
   test('add() preserves createdAt but bumps updatedAt on upsert', () => {
     const id = store.add({ message: 'First' });
     const createdAt = store.history[0].createdAt;

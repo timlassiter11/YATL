@@ -121,7 +121,7 @@ export class YatlNotificationCenter extends YatlBase {
             ? html`<span part="item-message">${record.message}</span>`
             : ''}
           <span part="item-time"
-            >${formatRelativeTime(record.createdAt, this.now)}</span
+            >${formatRelativeTime(record.updatedAt, this.now)}</span
           >
         </div>
         <yatl-button

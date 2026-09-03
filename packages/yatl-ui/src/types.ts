@@ -52,4 +52,18 @@ export interface YatlToastData {
    * history once it's dismissed. Defaults to `true`.
    */
   persist?: boolean;
+  /**
+   * Controls whether this call can show/re-show the toast live:
+   * - omitted (default): shows live normally, whether creating or updating.
+   * - `'always'`: never shows live - only creates/updates the
+   *   `yatl-notification-center` entry. A brand-new toast raised this way
+   *   starts already dismissed, so it never shows live, even the first time.
+   * - `'onUpdate'`: shows live when this call creates a brand-new toast,
+   *   but never re-shows it live when this call updates an existing one -
+   *   useful when the caller can't tell whether this is the first attempt
+   *   or a repeat (e.g. a retrying API call with no memory of prior
+   *   attempts), since the store already knows from whether `id` matches
+   *   an existing record.
+   */
+  silent?: 'always' | 'onUpdate';
 }

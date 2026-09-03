@@ -193,6 +193,57 @@ describe('YatlNotificationCenter', () => {
     expect(toastStore.history[0].read).toBe(false);
   });
 
+  test("silent: 'onUpdate' does not bring a dismissed toast back to the live overlay when it's updated again", async () => {
+    document.body.innerHTML = `
+      <yatl-notification-center></yatl-notification-center>
+      <yatl-toast-manager></yatl-toast-manager>
+    `;
+    const el = document.querySelector<YatlNotificationCenter>(
+      'yatl-notification-center',
+    )!;
+    const manager = document.querySelector('yatl-toast-manager')!;
+    await el.updateComplete;
+
+    const id = toast({ message: 'Sync failed' });
+    await el.updateComplete;
+    const toastEl = manager.shadowRoot!.querySelector(
+      'yatl-toast',
+    ) as YatlToast;
+    await toastEl.hide('timeout');
+    await el.updateComplete;
+    expect(manager.shadowRoot!.querySelectorAll('yatl-toast')).toHaveLength(0);
+
+    // A retrying caller that can't tell first attempt from a repeat just
+    // always passes silent: 'onUpdate' - it only takes effect here because
+    // this call finds an existing (dismissed) record for the id.
+    toast({ id, message: 'Sync failed again', silent: 'onUpdate' });
+    await el.updateComplete;
+
+    expect(manager.shadowRoot!.querySelectorAll('yatl-toast')).toHaveLength(0);
+    expect(toastStore.history.find(r => r.id === id)?.message).toBe(
+      'Sync failed again',
+    );
+  });
+
+  test("silent: 'onUpdate' still shows live the first time, since there's no existing record yet", async () => {
+    document.body.innerHTML = `
+      <yatl-notification-center></yatl-notification-center>
+      <yatl-toast-manager></yatl-toast-manager>
+    `;
+    const el = document.querySelector<YatlNotificationCenter>(
+      'yatl-notification-center',
+    )!;
+    const manager = document.querySelector('yatl-toast-manager')!;
+    await el.updateComplete;
+
+    // Same call a retrying caller would always make - the very first
+    // attempt still has nothing to find, so it shows live like normal.
+    toast({ id: 'endpoint-x', message: 'Sync failed', silent: 'onUpdate' });
+    await el.updateComplete;
+
+    expect(manager.shadowRoot!.querySelectorAll('yatl-toast')).toHaveLength(1);
+  });
+
   test('manually closing a toast (not waiting for the timer) marks it read and clears the badge', async () => {
     document.body.innerHTML = `
       <yatl-notification-center></yatl-notification-center>
@@ -287,6 +338,29 @@ describe('YatlNotificationCenter', () => {
       expect(
         el.shadowRoot!.querySelector('[part="item-time"]')?.textContent,
       ).toBe('5 minutes ago');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('the displayed time reflects the most recent update, not when the toast was first created', async () => {
+    const start = new Date('2024-01-01T00:00:00Z').getTime();
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(start);
+      const el = await renderCenter();
+      const id = toast({ message: 'Uploading...' });
+      await el.updateComplete;
+
+      // 10 minutes pass, then the toast is updated (still the same id).
+      vi.setSystemTime(start + 10 * 60_000);
+      toast({ id, message: 'Upload complete' });
+      await el.updateComplete;
+
+      // Reflects "just now" (the update), not "10 minutes ago" (creation).
+      expect(
+        el.shadowRoot!.querySelector('[part="item-time"]')?.textContent,
+      ).toBe('just now');
     } finally {
       vi.useRealTimers();
     }

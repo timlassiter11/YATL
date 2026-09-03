@@ -42,25 +42,41 @@ export class ToastStore extends EventTarget {
   /**
    * Creates a new toast, or - when `data.id` matches an existing record -
    * updates it in place and brings it back to the front/live. Returns the id.
+   *
+   * `data.silent` opts a call out of that "brings it back live" behavior -
+   * see `YatlToastData.silent` for the exact rules. A record created or
+   * updated silently still gets its content updated and is bumped to the
+   * front of history - only whether it's currently showing is left alone.
    */
   public add(data: YatlToastData): string {
     const id = data.id ?? crypto.randomUUID();
     const now = Date.now();
     const existingIndex = this.records.findIndex(r => r.id === id);
+    const isUpdate = existingIndex >= 0;
+    const silent =
+      data.silent === 'always' || (data.silent === 'onUpdate' && isUpdate);
 
     let record: ToastRecord;
-    if (existingIndex >= 0) {
+    if (isUpdate) {
+      const existing = this.records[existingIndex];
       record = {
-        ...this.records[existingIndex],
+        ...existing,
         ...data,
         id,
         updatedAt: now,
         read: false,
-        dismissedAt: undefined,
+        dismissedAt: silent ? existing.dismissedAt : undefined,
       };
       this.records.splice(existingIndex, 1);
     } else {
-      record = { ...data, id, createdAt: now, updatedAt: now, read: false };
+      record = {
+        ...data,
+        id,
+        createdAt: now,
+        updatedAt: now,
+        read: false,
+        dismissedAt: silent ? now : undefined,
+      };
     }
 
     this.records.unshift(record);

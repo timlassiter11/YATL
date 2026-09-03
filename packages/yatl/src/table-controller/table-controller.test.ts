@@ -870,7 +870,7 @@ describe('YatlTableController - sorting', () => {
     expect(controller.filteredData.at(0)!.department).toBeNull();
   });
 
-  test('nullsLast forces nulls to the end even when sorting descending', () => {
+  test('nullsLast (deprecated) forces nulls to the end even when sorting descending', () => {
     const controller = createEmployeeController([
       { field: 'id' },
       { field: 'name' },
@@ -881,6 +881,79 @@ describe('YatlTableController - sorting', () => {
     controller.sort('department', 'desc');
 
     expect(controller.filteredData.at(-1)!.department).toBeNull();
+  });
+
+  test("nullsOrder: 'smallest' sorts nulls first ascending, last descending", () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department', nullsOrder: 'smallest' },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('department', 'asc');
+    expect(controller.filteredData.at(0)!.department).toBeNull();
+
+    controller.sort('department', 'desc');
+    expect(controller.filteredData.at(-1)!.department).toBeNull();
+  });
+
+  test("nullsOrder: 'largest' sorts nulls last ascending, first descending (same as the default)", () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department', nullsOrder: 'largest' },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('department', 'asc');
+    expect(controller.filteredData.at(-1)!.department).toBeNull();
+
+    controller.sort('department', 'desc');
+    expect(controller.filteredData.at(0)!.department).toBeNull();
+  });
+
+  test("nullsOrder: 'last' pins nulls to the end regardless of sort order", () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department', nullsOrder: 'last' },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('department', 'asc');
+    expect(controller.filteredData.at(-1)!.department).toBeNull();
+
+    controller.sort('department', 'desc');
+    expect(controller.filteredData.at(-1)!.department).toBeNull();
+  });
+
+  test("nullsOrder: 'first' pins nulls to the start regardless of sort order", () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department', nullsOrder: 'first' },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('department', 'asc');
+    expect(controller.filteredData.at(0)!.department).toBeNull();
+
+    controller.sort('department', 'desc');
+    expect(controller.filteredData.at(0)!.department).toBeNull();
+  });
+
+  test('nullsOrder takes precedence over the deprecated nullsLast when both are set', () => {
+    const controller = createEmployeeController([
+      { field: 'id' },
+      { field: 'name' },
+      { field: 'department', nullsLast: true, nullsOrder: 'first' },
+      { field: 'salary' },
+    ]);
+
+    controller.sort('department', 'asc');
+
+    expect(controller.filteredData.at(0)!.department).toBeNull();
   });
 
   test('a custom sorter transforms the value used for comparison', () => {

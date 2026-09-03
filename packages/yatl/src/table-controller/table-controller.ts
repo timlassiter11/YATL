@@ -56,7 +56,7 @@ import {
 import { YatlSearchEngine } from '../search/search';
 import { throwRowNotFound, YatlError } from '../utils/errors';
 import { TypedEventTarget } from '../utils/typed-event-target';
-import { getComparableValue } from './utils';
+import { compareNullTo, getComparableValue } from './utils';
 
 // #region Constants
 
@@ -1417,16 +1417,16 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     ) => {
       for (const { column, state } of sortedStates) {
         const direction = state.sort!.order;
+        const nullsOrder =
+          column.nullsOrder ?? (column.nullsLast ? 'last' : 'largest');
 
         const valA = this.getSortValue(a, aMetadata, column);
         const valB = this.getSortValue(b, bMetadata, column);
 
         if (valA === valB) continue;
         if (valA == null && valB == null) continue;
-        if (valA == null)
-          return column.nullsLast ? 1 : direction === 'asc' ? 1 : -1;
-        if (valB == null)
-          return column.nullsLast ? -1 : direction === 'asc' ? -1 : 1;
+        if (valA == null) return compareNullTo(nullsOrder, direction);
+        if (valB == null) return -compareNullTo(nullsOrder, direction);
 
         let result = 0;
         if (typeof valA === 'string' && typeof valB === 'string') {

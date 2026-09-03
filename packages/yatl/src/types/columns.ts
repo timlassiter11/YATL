@@ -115,10 +115,21 @@ export interface BaseColumnOptions<T extends object = UnspecifiedRecord> {
   sortable?: boolean;
 
   /**
-   * If true, null and undefined values will always be sorted
-   * to the end of the data, regardless of sort order.
+   * @deprecated Use `nullsOrder: 'last'` instead. Still honored if
+   * `nullsOrder` isn't set, but will be removed in a future major version.
    */
   nullsLast?: boolean;
+
+  /**
+   * How null/undefined values compare to others when sorting this column:
+   * - `'largest'` (default): nulls sort as if they were the greatest
+   *   value - last in ascending order, first in descending.
+   * - `'smallest'`: the opposite - first in ascending order, last in
+   *   descending.
+   * - `'last'`: always sorted to the end, regardless of sort order.
+   * - `'first'`: always sorted to the start, regardless of sort order.
+   */
+  nullsOrder?: NullsOrder;
 
   /**
    * A function to use for sorting the column.
@@ -226,6 +237,12 @@ export type ColumnOptions<T extends object = UnspecifiedRecord> =
  * Defines the possible sorting orders for columns.
  */
 export type SortOrder = 'asc' | 'desc';
+
+/**
+ * How null/undefined values compare to others when sorting a column.
+ * See {@link BaseColumnOptions.nullsOrder}.
+ */
+export type NullsOrder = 'smallest' | 'largest' | 'first' | 'last';
 
 /**
  * Represents the current sort state

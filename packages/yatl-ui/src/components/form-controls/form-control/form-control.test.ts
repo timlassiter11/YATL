@@ -1,8 +1,11 @@
+import { html, render } from 'lit';
 import { describe, expect, test } from 'vitest';
 
 import '../../../index';
 import { YatlCheckbox } from '../checkbox/checkbox';
 import { YatlInput } from '../input/input';
+import { YatlTextArea } from '../textarea/textarea';
+import { YatlRadioGroup } from '../radio-group/radio-group';
 import { YatlDateRangeInput } from '../date-range-input/date-range-input';
 
 // Regression coverage for a race condition in the shared
@@ -88,5 +91,77 @@ describe('YatlFormControl - synchronous form value commit on interaction', () =>
       ['range_start', '2024-01-01'],
       ['range_end', '2024-01-31'],
     ]);
+  });
+});
+
+// Regression coverage for a bug where <yatl-input value=${x}> (and
+// textarea/radio-group) silently ignored the value when it arrived via a
+// genuine lit-html AttributePart binding, even though the identical-looking
+// static attribute (`value="literal"`, whether typed by hand or baked into
+// a template as a non-interpolated string) always worked. That masked the
+// bug for a long time: a custom element already registered via
+// customElements.define() is upgraded - constructor and all - synchronously
+// as part of the clone/importNode Lit uses to stamp out template content,
+// which happens *before* Lit commits any bound attribute parts onto that
+// clone. Anything that tries to read the raw attribute directly from a
+// field initializer (as `value`'s used to, to seed itself ahead of
+// YatlFormControl.willUpdate()'s defaultValue -> value sync) sees nothing
+// yet in that case. Rendering through lit-html's own render()/html() here -
+// instead of the innerHTML string parsing every other test in this file
+// uses - is what actually exercises that code path.
+describe('YatlFormControl - value seeded from a dynamic lit-html binding', () => {
+  test('yatl-input', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const dynamicValue = 'from-a-binding';
+
+    render(html`<yatl-input value=${dynamicValue}></yatl-input>`, container);
+    const el = container.querySelector<YatlInput>('yatl-input')!;
+    await el.updateComplete;
+
+    expect(el.value).toBe(dynamicValue);
+    container.remove();
+  });
+
+  test('yatl-textarea', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const dynamicValue = 'from-a-binding';
+
+    render(
+      html`<yatl-textarea value=${dynamicValue}></yatl-textarea>`,
+      container,
+    );
+    const el = container.querySelector<YatlTextArea>('yatl-textarea')!;
+    await el.updateComplete;
+
+    expect(el.value).toBe(dynamicValue);
+    container.remove();
+  });
+
+  test('yatl-radio-group', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const dynamicValue = 'b';
+
+    render(
+      html`
+        <yatl-radio-group value=${dynamicValue}>
+          <yatl-radio value="a"></yatl-radio>
+          <yatl-radio value="b"></yatl-radio>
+        </yatl-radio-group>
+      `,
+      container,
+    );
+    const group = container.querySelector<YatlRadioGroup>('yatl-radio-group')!;
+    const radios = [...group.querySelectorAll('yatl-radio')] as {
+      updateComplete: Promise<unknown>;
+      checked: boolean;
+    }[];
+    await Promise.all([group, ...radios].map(el => el.updateComplete));
+
+    expect(group.value).toBe(dynamicValue);
+    expect(radios.map(r => r.checked)).toEqual([false, true]);
+    container.remove();
   });
 });

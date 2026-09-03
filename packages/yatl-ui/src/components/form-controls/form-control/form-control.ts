@@ -146,6 +146,11 @@ export abstract class YatlFormControl<TData = string>
   }
 
   protected override willUpdate(changedProps: PropertyValues<YatlFormControl>) {
+    // `!changedProps.has('value')` only tells us "nothing has explicitly set
+    // value yet" if the subclass's `value` field has no initializer of its
+    // own - an initializer's assignment registers as a change identical to
+    // an external set, which permanently defeats this guard (including on
+    // the very first render). See input.ts/textarea.ts/radio-group.ts.
     if (
       changedProps.has('defaultValue') &&
       !changedProps.has('value') &&
@@ -386,27 +391,6 @@ export abstract class YatlFormControl<TData = string>
     // not one interaction behind.
     this.setFormValue(this.formValue);
     this.dispatchEvent(new YatlEvent(type));
-  }
-
-  /**
-   * Reads an attribute's initial value directly, for use in a field
-   * initializer where Lit's own attribute-to-property sync can't be relied
-   * on yet - a field initializer's own assignment is indistinguishable from
-   * an explicit external set in `changedProperties` on the first render, so
-   * anything seeded that way in willUpdate()/firstUpdated() can silently
-   * lose the attribute-driven case. Only correct when called directly from
-   * a field initializer, before the constructor returns.
-   */
-  protected initialAttributeValue<T = string>(
-    name: string,
-    fallback: T,
-    transform?: (raw: string) => T,
-  ): T {
-    const raw = this.getAttribute(name);
-    if (raw === null) {
-      return fallback;
-    }
-    return transform ? transform(raw) : (raw as unknown as T);
   }
 
   private handleKeyDown = (event: KeyboardEvent) => {

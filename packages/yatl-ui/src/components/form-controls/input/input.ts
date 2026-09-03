@@ -104,7 +104,7 @@ export class YatlInput extends YatlFormControl<string> {
 
   /** The current, controlled value of the input. */
   @property({ attribute: false })
-  public value = this.initialAttributeValue('value', '');
+  public value!: string;
 
   public get formValue() {
     return this.value;

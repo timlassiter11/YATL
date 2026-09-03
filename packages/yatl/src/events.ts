@@ -292,6 +292,7 @@ declare global {
     [YatlColumnStickEvent.EVENT_NAME]: YatlColumnStickEvent;
 
     [YatlTableCommitRequest.EVENT_NAME]: YatlTableCommitRequest;
+    [YatlTableCommitEvent.EVENT_NAME]: YatlTableCommitEvent;
     [YatlTablePendingChangeEvent.EVENT_NAME]: YatlTablePendingChangeEvent;
     [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
     [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;

@@ -1066,6 +1066,28 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.requestUpdate('data');
   }
 
+  /**
+   * Discards the pending edit for a single field, leaving any other
+   * pending edits (this field on other rows, or other fields on this row)
+   * untouched. The counterpart to `revertPendingChanges()`, which discards
+   * everything.
+   */
+  public revertPendingChange(row: T | RowId, field: NestedKeyOf<T>) {
+    row = this.getRowOrThrow(row);
+    const metadata = this.getRowMetadata(row);
+    if (!metadata.pendingEdits.has(field)) {
+      return;
+    }
+
+    metadata.pendingEdits.delete(field);
+    if (metadata.pendingEdits.size === 0) {
+      this.editedRows.delete(metadata.id);
+    }
+
+    this.notifyPendingChange();
+    this.requestUpdate();
+  }
+
   public async revertPendingChanges() {
     for (const rowId of this.editedRows) {
       const row = this.getRow(rowId)!;

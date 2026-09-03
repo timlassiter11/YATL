@@ -70,7 +70,8 @@ import styles from './table.styles';
  * @fires yatl-column-resize - Fired after a column has been resized by the user.
  * @fires yatl-column-reorder-request - Fired when the user drops a column into a new position. Cancellable.
  * @fires yatl-column-reorder - Fired after the column order changes.
- * @fires yatl-table-commit-request - Fired when a commit is triggered (Enter/Tab/click-away, per `commitStrategy`, or `requestCommit()`). Respond with `respondWith(true | false | Promise<boolean>)`.
+ * @fires yatl-table-commit-request - Fired when a commit is triggered (Enter/Tab/click-away, per `commitStrategy`, or `requestCommit()`). Respond with `respondWith(true | false | Promise<boolean>)` - an edit is not applied until something does. For local-only edits with no backend, skip this event and call `controller.commitChanges()`/`commitAllChanges()` instead.
+ * @fires yatl-table-commit - Fired after a transaction from yatl-table-commit-request is resolved, rejected, or discarded.
  * @fires yatl-table-pending-change - Fired when the set of outstanding (uncommitted) edits changes.
  * @fires yatl-table-search - Fired when the search query is updated.
  * @fires yatl-table-view-change - Fired when the visible slice of data changes due to sorting, filtering, or data updates. Payload contains the processed rows.
@@ -1501,6 +1502,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
    * already do depending on `commitStrategy`. Useful for a manual "Save"
    * control, e.g. under `commitStrategy: 'batch'` where nothing else
    * triggers a commit. Returns `false` if there was nothing pending.
+   *
+   * Nothing is applied unless a `yatl-table-commit-request` listener calls
+   * `respondWith(true)` - if you don't need that async/backend round trip
+   * at all, use `controller.commitChanges()`/`commitAllChanges()` instead,
+   * which apply pending edits directly with no event involved.
    */
   public requestCommit(): boolean {
     const transaction = this.controller.createCommitTransaction();
@@ -1530,6 +1536,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
     if (!isHandled) {
       // User didn't respond to the event so just reject the edits.
+      warnNoCommitListener();
       this.controller.rejectTransaction(transaction.id);
     }
     return true;
@@ -1711,7 +1718,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
     if (event.key === 'Escape') {
       this.currentEditCell = null;
-      this.controller.revertPendingChanges();
+      this.controller.revertPendingChange(row, field);
       event.stopPropagation();
       event.preventDefault();
       return;
@@ -2000,6 +2007,17 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 interface ColumnData<T extends object = UnspecifiedRecord> {
   column: DisplayColumnOptions<T>;
   state: ColumnState<T>;
+}
+
+const noCommitListenerMessage = `[yatl-table] a commit was requested (via commitStrategy, or requestCommit()) but nothing responded to yatl-table-commit-request, so the edit was not applied and reverted to pending.
+Add a listener that calls event.respondWith(true) to persist edits, or false to reject them.
+If you don't need that async/backend round trip at all, call commitChanges()/commitAllChanges() on the table's controller instead - they apply pending edits directly, no event required.
+`;
+let hasWarnedNoCommitListener = false;
+function warnNoCommitListener() {
+  if (hasWarnedNoCommitListener) return;
+  hasWarnedNoCommitListener = true;
+  console.warn(noCommitListenerMessage);
 }
 
 declare global {

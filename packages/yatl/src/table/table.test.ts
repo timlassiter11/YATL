@@ -610,7 +610,7 @@ describe('YatlTable Component', () => {
       });
       const tableLocator = page.elementLocator(table);
       const cell = tableLocator.getByRole('cell', { name: 'Alice' });
-      const spy = vi.fn();
+      const spy = vi.fn(event => event.respondWith(true));
       table.addEventListener('yatl-table-commit-request', spy);
 
       await userEvent.click(cell);
@@ -641,6 +641,36 @@ describe('YatlTable Component', () => {
 
       expect(spy).not.toHaveBeenCalled();
       const [alice] = table.data;
+      expect(table.controller.getCellStatus(alice, 'name')).toBe('dirty');
+      expect(table.controller.getLatestValue(alice, 'name')).toBe('Alicia');
+    });
+
+    test('Escape only discards the field currently being edited, not every other pending edit', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      const tableLocator = page.elementLocator(table);
+
+      // Edit Alice's name and Tab away without committing (batch mode never
+      // auto-commits) - Tab with no more editable fields in the row moves
+      // into Bob's name cell and starts editing it.
+      await userEvent.click(tableLocator.getByRole('cell', { name: 'Alice' }));
+      await userEvent.type(tableLocator.getByRole('textbox'), 'Alicia');
+      await userEvent.keyboard('{Tab}');
+      await table.updateComplete;
+
+      // Now editing Bob's name - type something, then back out with Escape.
+      await userEvent.type(tableLocator.getByRole('textbox'), 'Bobby');
+      await userEvent.keyboard('{Escape}');
+      await table.updateComplete;
+
+      const [alice, bob] = table.data;
+      // Bob's escaped edit is gone.
+      expect(table.controller.getCellStatus(bob, 'name')).toBe('clean');
+      // Alice's still-pending edit from before must survive the Escape -
+      // it previously wiped every pending edit in the whole table.
       expect(table.controller.getCellStatus(alice, 'name')).toBe('dirty');
       expect(table.controller.getLatestValue(alice, 'name')).toBe('Alicia');
     });
@@ -701,6 +731,28 @@ describe('YatlTable Component', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
+    test('requestCommit() warns to the console when nothing responds to yatl-table-commit-request', async () => {
+      // Must be the first test in this file to leave a commit-request
+      // unhandled - the underlying warning only ever fires once per page
+      // load, same as this codebase's other "you're probably misconfigured"
+      // warnings (see warnDuplicateId/warnIndexId in table-controller.ts).
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      await editAliceName(table, 'Alicia');
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // No listener at all attached - nothing can respond.
+      table.requestCommit();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('yatl-table-commit-request'),
+      );
+      warnSpy.mockRestore();
+    });
+
     test('requestCommit() bundles pending edits into one transaction and fires yatl-table-commit-request', async () => {
       const table = await renderTable({
         columns: getEditableColumns(),
@@ -708,7 +760,7 @@ describe('YatlTable Component', () => {
         commitStrategy: 'batch',
       });
       await editAliceName(table, 'Alicia');
-      const spy = vi.fn();
+      const spy = vi.fn(event => event.respondWith(true));
       table.addEventListener('yatl-table-commit-request', spy);
 
       const didCommit = table.requestCommit();

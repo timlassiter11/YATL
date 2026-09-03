@@ -121,6 +121,57 @@ describe('YatlTableController - commit/edit lifecycle', () => {
     ).toBe(0);
   });
 
+  test('revertPendingChange discards only the given field, leaving other pending edits on the same row intact', () => {
+    const controller = createController();
+    const [alice] = controller.data; // name: 'Alice', age: 30
+
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    controller.setPendingValue(alice, 'age', 31);
+
+    controller.revertPendingChange(alice, 'name');
+
+    expect(controller.getCellStatus(alice, 'name')).toBe('clean');
+    expect(controller.getLatestValue(alice, 'name')).toBe('Alice');
+    // The other field's pending edit must survive.
+    expect(controller.getCellStatus(alice, 'age')).toBe('dirty');
+    expect(controller.getLatestValue(alice, 'age')).toBe(31);
+  });
+
+  test('revertPendingChange leaves other rows entirely untouched', () => {
+    const controller = createController();
+    const [alice, bob] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    controller.setPendingValue(bob, 'name', 'Bobby');
+
+    controller.revertPendingChange(alice, 'name');
+
+    expect(controller.getCellStatus(alice, 'name')).toBe('clean');
+    expect(controller.getCellStatus(bob, 'name')).toBe('dirty');
+    expect(controller.getLatestValue(bob, 'name')).toBe('Bobby');
+  });
+
+  test('revertPendingChange clears editedRows once the row has no pending edits left', () => {
+    const controller = createController();
+    const [alice] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+
+    controller.revertPendingChange(alice, 'name');
+
+    expect(
+      (controller as unknown as { editedRows: Set<unknown> }).editedRows.has(1),
+    ).toBe(false);
+  });
+
+  test('revertPendingChange is a no-op when the field has no pending edit', () => {
+    const controller = createController();
+    const [alice] = controller.data;
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    expect(() => controller.revertPendingChange(alice, 'name')).not.toThrow();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   test('commitChanges refreshes the cached sort value for the committed field', () => {
     const controller = createController();
     const [alice] = controller.data; // Alice: 30, Bob: 25

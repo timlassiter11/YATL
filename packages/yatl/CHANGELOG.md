@@ -1,5 +1,27 @@
 # @timlassiter11/yatl
 
+## 1.6.0
+
+### Minor Changes
+
+- 7865c86: Added a public commit API for building a manual "Save"/"Discard" control (e.g. for `commitStrategy: 'batch'`, where nothing otherwise triggers a commit):
+
+  - `requestCommit(): boolean` bundles every currently pending edit into one transaction and fires `yatl-table-commit-request` for it - the same event Enter/Tab/clicking away already dispatch depending on `commitStrategy`. Returns `false` if there was nothing pending.
+  - `discardPendingChanges()` reverts every pending edit back to its last-committed value.
+  - `hasPendingChanges` reports whether any cell has an uncommitted edit.
+  - A new `yatl-table-pending-change` event fires whenever the set of pending edits changes (a field becoming dirty/clean, or a transaction being rejected back into a pending state), so a Save/Discard control can enable itself reactively instead of polling.
+
+  Previously, doing any of this required reaching into `table.controller` and replicating the table's own internal commit-dispatch logic by hand.
+
+### Patch Changes
+
+- c3aa490: Fixed Enter committing an edit even with `commitStrategy: 'batch'`, unlike Tab and clicking away, which already correctly leave the edit pending. Enter now blurs and closes the cell as before, but no longer dispatches a commit in batch mode - the edit stays pending until something explicitly commits it.
+- 38a6ab0: Fixed Escape while editing a cell discarding every pending edit in the table instead of just the one being edited. Added `revertPendingChange(row, field)` to the controller as the single-field counterpart to `revertPendingChanges()`.
+
+  Also added the previously-missing `yatl-table-commit` to the `HTMLElementEventMap` type augmentation (and its `@fires` doc on `yatl-table`), so `addEventListener('yatl-table-commit', ...)` is correctly typed as `YatlTableCommitEvent` instead of a bare `Event`.
+
+  `requestCommit()` now warns once to the console if a commit is requested but nothing responds to `yatl-table-commit-request` (matching the existing warn-once pattern for misconfiguration, e.g. duplicate row IDs) - previously the edit just silently reverted to pending with no indication why. The warning, and the updated docs on `requestCommit()`/`yatl-table-commit-request`, also point out `controller.commitChanges()`/`commitAllChanges()` as the escape hatch for consumers who want local-only edits with no backend and no listener at all.
+
 ## 1.5.0
 
 ### Minor Changes

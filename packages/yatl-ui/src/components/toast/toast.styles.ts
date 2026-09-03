@@ -127,11 +127,6 @@ export default css`
     }
   }
 
-  :host(:not([variant])) [part='status-icon'],
-  :host([variant='neutral']) [part='status-icon'] {
-    display: none;
-  }
-
   :host([variant='success']) [part='status-icon'] {
     color: var(--yatl-color-success);
   }

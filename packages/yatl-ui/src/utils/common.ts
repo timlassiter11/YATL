@@ -1,5 +1,5 @@
 import { ComplexAttributeConverter } from 'lit';
-import { YatlToastData } from '../types';
+import { YatlToastData, YatlToastVariant } from '../types';
 import { YatlToastRequest } from '../events/toast';
 
 /**
@@ -138,6 +138,57 @@ export async function getAnimationPromise(
   });
 }
 
-export function toast(data: YatlToastData) {
-  window.dispatchEvent(new YatlToastRequest(data));
+/**
+ * Shows a toast via `yatl-toast-manager` and/or records it in
+ * `yatl-notification-center`'s history (whichever are mounted - neither is
+ * required). Returns the toast's id: pass it back as `data.id` on a later
+ * call to update the same toast in place instead of creating a new one.
+ */
+export function toast(data: YatlToastData): string {
+  const id = data.id ?? crypto.randomUUID();
+  window.dispatchEvent(new YatlToastRequest({ ...data, id }));
+  return id;
+}
+
+/** The icon shown for a given toast/notification variant, if any. */
+export function toastVariantIcon(variant: YatlToastVariant = 'neutral') {
+  if (variant === 'danger') {
+    return 'close';
+  } else if (variant === 'success') {
+    return 'check';
+  }
+  // TODO: create exclamation icon for 'warning'
+  return '';
+}
+
+const RELATIVE_TIME_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 1000 * 60 * 60 * 24 * 365],
+  ['month', 1000 * 60 * 60 * 24 * 30],
+  ['week', 1000 * 60 * 60 * 24 * 7],
+  ['day', 1000 * 60 * 60 * 24],
+  ['hour', 1000 * 60 * 60],
+  ['minute', 1000 * 60],
+];
+
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, {
+  numeric: 'auto',
+});
+
+/**
+ * Formats a past timestamp (epoch ms) as a short relative string, e.g.
+ * "5 minutes ago" or "just now" for anything under a minute old.
+ */
+export function formatRelativeTime(
+  timestamp: number,
+  now: number = Date.now(),
+): string {
+  const elapsed = now - timestamp;
+
+  for (const [unit, unitMs] of RELATIVE_TIME_UNITS) {
+    if (elapsed >= unitMs) {
+      return relativeTimeFormatter.format(-Math.floor(elapsed / unitMs), unit);
+    }
+  }
+
+  return 'just now';
 }

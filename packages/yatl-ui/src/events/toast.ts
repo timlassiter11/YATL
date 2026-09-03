@@ -8,9 +8,12 @@ export class YatlToastRequest extends YatlEvent {
   }
 }
 
+/** 'user' for a manual close (e.g. the close button); 'timeout' for the duration timer expiring. */
+export type YatlToastHideReason = 'user' | 'timeout';
+
 export class YatlToastHideEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-toast-hide';
-  constructor() {
+  constructor(public readonly reason: YatlToastHideReason = 'user') {
     super(YatlToastHideEvent.EVENT_NAME);
   }
 }

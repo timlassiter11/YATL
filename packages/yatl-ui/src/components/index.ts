@@ -14,6 +14,7 @@ export * from './flyout/flyout';
 export * from './icon/icon';
 export * from './label/label';
 export * from './loading-overlay/loading-overlay';
+export * from './notification-center/notification-center';
 export * from './option/option';
 export * from './remote-options/remote-options';
 export * from './spinner/spinner';

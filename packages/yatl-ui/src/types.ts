@@ -36,8 +36,20 @@ export interface YatlOptionData {
 }
 
 export interface YatlToastData {
+  /**
+   * Unique id for the toast. Supplying the id of an existing toast updates
+   * it in place (and restarts its duration timer if it's still showing)
+   * instead of creating a new one. Auto-generated when omitted - `toast()`
+   * always returns the id that ends up being used.
+   */
+  id?: string;
   label?: string;
   message: string | TemplateResult;
   variant?: YatlToastVariant;
   duration?: number;
+  /**
+   * When `false`, the toast is not kept in `yatl-notification-center`'s
+   * history once it's dismissed. Defaults to `true`.
+   */
+  persist?: boolean;
 }

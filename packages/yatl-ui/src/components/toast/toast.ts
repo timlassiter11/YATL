@@ -1,20 +1,27 @@
-import { html } from 'lit';
+import { html, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { YatlToastVariant } from '../../types';
 import { YatlBase } from '../base/base';
 import styles from './toast.styles';
-import { YatlToastHideEvent } from '../../events';
-import { animateWithClass, HasSlotController } from '../../utils';
+import { YatlToastHideEvent, YatlToastHideReason } from '../../events';
+import {
+  animateWithClass,
+  HasSlotController,
+  toastVariantIcon,
+} from '../../utils';
 
 /**
- * @fires yatl-toast-hide - When the toast is hidden by the user or from the timer expiring
+ * @fires yatl-toast-hide - When the toast is hidden by the user or from the timer expiring. `event.reason` is 'user' or 'timeout'.
  */
 @customElement('yatl-toast')
 export class YatlToast extends YatlBase {
   public static override styles = [...super.styles, styles];
 
   private slotController = new HasSlotController(this, '[default]', 'label');
+  // Skips the redundant startTimer() call that would otherwise fire from
+  // updated() on the very same cycle connectedCallback() already started it.
+  private isFirstUpdate = true;
 
   @state() private running = false;
 
@@ -70,10 +77,10 @@ export class YatlToast extends YatlBase {
     this.hidden = false;
   }
 
-  public async hide() {
+  public async hide(reason: YatlToastHideReason = 'user') {
     await animateWithClass(this, 'closing', 'fade-and-collapse', 1000);
     this.hidden = true;
-    this.dispatchEvent(new YatlToastHideEvent());
+    this.dispatchEvent(new YatlToastHideEvent(reason));
   }
 
   public override connectedCallback() {
@@ -86,18 +93,20 @@ export class YatlToast extends YatlBase {
     this.stopTimer();
   }
 
+  protected override updated(changedProperties: PropertyValues<this>) {
+    // A toast updated in place via toast({ id, ... }) (see YatlToastManager)
+    // should get a fresh countdown, same as if it were shown for the first time.
+    if (!this.isFirstUpdate && changedProperties.has('duration')) {
+      this.startTimer();
+    }
+    this.isFirstUpdate = false;
+  }
+
   protected override render() {
     const hasMessage = this.slotController.test(null) || !!this.message;
     const hasLabel = this.slotController.test('label') || !!this.label;
     const classes = { 'has-label': hasLabel, 'has-message': hasMessage };
-    let icon = '';
-    if (this.variant === 'danger') {
-      icon = 'close';
-    } else if (this.variant === 'warning') {
-      // TODO: create exclamation icon
-    } else if (this.variant === 'success') {
-      icon = 'check';
-    }
+    const icon = toastVariantIcon(this.variant);
 
     return html`
       <div
@@ -139,7 +148,7 @@ export class YatlToast extends YatlBase {
 
   private handleAnimationEnd(event: AnimationEvent) {
     if (event.animationName === 'toast-timer') {
-      this.hide();
+      this.hide('timeout');
     }
   }
 }

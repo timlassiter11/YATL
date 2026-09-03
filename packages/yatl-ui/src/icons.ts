@@ -10,6 +10,11 @@ export const arrowRight = svg`
   <polyline class="icon arrow-right" points="12 5 19 12 12 19"></polyline>
 `;
 
+export const bell = svg`
+  <path class="icon bell" d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+  <path class="icon bell" d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+`;
+
 export const calendar = svg`
   <rect class="icon calendar" x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
   <line class="icon calendar" x1="16" y1="2" x2="16" y2="6"></line>
@@ -276,6 +281,7 @@ export const trash = svg`
 export const icons: Record<string, TemplateResult<2>> = {
   'arrow-left': arrowLeft,
   'arrow-right': arrowRight,
+  bell: bell,
   calendar: calendar,
   check: check,
   'chevron-down': chevronDown,

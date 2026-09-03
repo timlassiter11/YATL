@@ -6,6 +6,7 @@ import {
   SortOrder,
   TableState,
   UnspecifiedRecord,
+  YatlCommitRecord,
   YatlCommitTransaction,
 } from './types';
 
@@ -214,6 +215,20 @@ export class YatlTableCommitEvent<
   }
 }
 
+export class YatlTablePendingChangeEvent<
+  T extends object = UnspecifiedRecord,
+> extends YatlTableControllerEvent {
+  public static readonly EVENT_NAME = 'yatl-table-pending-change';
+
+  constructor(public readonly changes: YatlCommitRecord<T>[]) {
+    super(YatlTablePendingChangeEvent.EVENT_NAME);
+  }
+
+  public override clone() {
+    return new YatlTablePendingChangeEvent(this.changes);
+  }
+}
+
 export class YatlTableSearchEvent extends YatlTableControllerEvent {
   public static readonly EVENT_NAME = 'yatl-table-search';
 
@@ -277,6 +292,7 @@ declare global {
     [YatlColumnStickEvent.EVENT_NAME]: YatlColumnStickEvent;
 
     [YatlTableCommitRequest.EVENT_NAME]: YatlTableCommitRequest;
+    [YatlTablePendingChangeEvent.EVENT_NAME]: YatlTablePendingChangeEvent;
     [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
     [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;
     [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;

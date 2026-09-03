@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { YatlTableController } from './table-controller';
-import { YatlTableCommitEvent } from '../events';
+import { YatlTableCommitEvent, YatlTablePendingChangeEvent } from '../events';
 import type { StorageInterface } from '../types';
 
 interface Row {
@@ -310,6 +310,142 @@ describe('YatlTableController - commit transactions', () => {
     controller.resolveTransaction(transaction.id);
 
     expect(() => controller.resolveTransaction(transaction.id)).toThrow();
+  });
+});
+
+describe('YatlTableController - yatl-table-pending-change', () => {
+  test('fires when a field transitions from clean to dirty', () => {
+    const controller = createController();
+    const [alice] = controller.data;
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    controller.setPendingValue(alice, 'name', 'Alicia');
+
+    expect(spy).toHaveBeenCalledOnce();
+    const event = spy.mock.calls[0][0] as YatlTablePendingChangeEvent<Row>;
+    expect(event.changes).toEqual([
+      expect.objectContaining({ rowId: 1, changedFields: ['name'] }),
+    ]);
+  });
+
+  test('does not fire again for a second edit that keeps the field dirty', () => {
+    const controller = createController();
+    const [alice] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    controller.setPendingValue(alice, 'name', 'Alicia V2');
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('fires when editing a field back to its original value drops it out of the pending count', () => {
+    const controller = createController();
+    const [alice] = controller.data; // name: 'Alice'
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    // Typing back to the original value clears the pending edit entirely
+    // (see setPendingValue), so the count drops from 1 to 0 - a real
+    // transition, even though nothing was ever explicitly committed.
+    controller.setPendingValue(alice, 'name', 'Alice');
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(
+      (spy.mock.calls[0][0] as YatlTablePendingChangeEvent<Row>).changes,
+    ).toEqual([]);
+  });
+
+  test('fires when committing a field clears the only pending edit', () => {
+    const controller = createController();
+    const [alice] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    controller.commitChanges(alice, 'name');
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(
+      (spy.mock.calls[0][0] as YatlTablePendingChangeEvent<Row>).changes,
+    ).toEqual([]);
+  });
+
+  test('fires when revertPendingChanges clears everything', async () => {
+    const controller = createController();
+    const [alice, bob] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    controller.setPendingValue(bob, 'age', 26);
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    await controller.revertPendingChanges();
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(
+      (spy.mock.calls[0][0] as YatlTablePendingChangeEvent<Row>).changes,
+    ).toEqual([]);
+  });
+
+  test('fires when createCommitTransaction moves an edit from pending to saving', () => {
+    const controller = createEditableController();
+    const [alice] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    controller.createCommitTransaction();
+
+    // Pending count went from 1 (dirty) to 0 (saving, not pending).
+    expect(spy).toHaveBeenCalledOnce();
+    expect(
+      (spy.mock.calls[0][0] as YatlTablePendingChangeEvent<Row>).changes,
+    ).toEqual([]);
+  });
+
+  test('does not fire again on resolveTransaction, since resolving does not change the pending count', () => {
+    const controller = createEditableController();
+    const [alice] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    const transaction = controller.createCommitTransaction()!;
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    controller.resolveTransaction(transaction.id);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('fires on rejectTransaction, since rejecting restores the edit to pending', () => {
+    const controller = createEditableController();
+    const [alice] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    const transaction = controller.createCommitTransaction()!;
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    controller.rejectTransaction(transaction.id);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(
+      (spy.mock.calls[0][0] as YatlTablePendingChangeEvent<Row>).changes,
+    ).toEqual([expect.objectContaining({ rowId: 1, changedFields: ['name'] })]);
+  });
+
+  test('does not fire on discardTransaction, since discarding does not change the pending count', () => {
+    const controller = createEditableController();
+    const [alice] = controller.data;
+    controller.setPendingValue(alice, 'name', 'Alicia');
+    const transaction = controller.createCommitTransaction()!;
+    const spy = vi.fn();
+    controller.addEventListener('yatl-table-pending-change', spy);
+
+    controller.discardTransaction(transaction.id);
+
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 

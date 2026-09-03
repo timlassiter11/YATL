@@ -70,7 +70,8 @@ import styles from './table.styles';
  * @fires yatl-column-resize - Fired after a column has been resized by the user.
  * @fires yatl-column-reorder-request - Fired when the user drops a column into a new position. Cancellable.
  * @fires yatl-column-reorder - Fired after the column order changes.
- * @fires yatl-table-commit-request -
+ * @fires yatl-table-commit-request - Fired when a commit is triggered (Enter/Tab/click-away, per `commitStrategy`, or `requestCommit()`). Respond with `respondWith(true | false | Promise<boolean>)`.
+ * @fires yatl-table-pending-change - Fired when the set of outstanding (uncommitted) edits changes.
  * @fires yatl-table-search - Fired when the search query is updated.
  * @fires yatl-table-view-change - Fired when the visible slice of data changes due to sorting, filtering, or data updates. Payload contains the processed rows.
  * @fires yatl-table-state-change - Fired when any persistable state (width, order, sort, query) changes. Used for syncing with local storage.
@@ -1295,6 +1296,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     'yatl-column-stick',
     'yatl-row-select',
     'yatl-table-commit',
+    'yatl-table-pending-change',
     'yatl-table-search',
     'yatl-table-state-change',
     'yatl-table-view-change',
@@ -1493,10 +1495,17 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     }
   }
 
-  private dispatchTransaction() {
+  /**
+   * Bundles every currently pending edit into one transaction and fires
+   * `yatl-table-commit-request` for it, same as Enter/Tab/clicking away
+   * already do depending on `commitStrategy`. Useful for a manual "Save"
+   * control, e.g. under `commitStrategy: 'batch'` where nothing else
+   * triggers a commit. Returns `false` if there was nothing pending.
+   */
+  public requestCommit(): boolean {
     const transaction = this.controller.createCommitTransaction();
     if (!transaction) {
-      return;
+      return false;
     }
 
     let isHandled = false;
@@ -1523,6 +1532,21 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       // User didn't respond to the event so just reject the edits.
       this.controller.rejectTransaction(transaction.id);
     }
+    return true;
+  }
+
+  /**
+   * Discards every currently pending edit, reverting affected cells back
+   * to their last-committed value. Pairs with `requestCommit()` for a
+   * manual "Save"/"Discard" workflow.
+   */
+  public discardPendingChanges() {
+    return this.controller.revertPendingChanges();
+  }
+
+  /** Whether any cell has an edit that hasn't been committed yet. */
+  public get hasPendingChanges() {
+    return this.controller.getPendingChanges().length > 0;
   }
 
   private getDropDetails(event: DragEvent, dropField: NestedKeyOf<T>) {
@@ -1702,13 +1726,13 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     if (event.key === 'Enter') {
       if (this.commitStrategy !== 'batch') {
         // Never commit with batch editing. That's the user's job.
-        this.dispatchTransaction();
+        this.requestCommit();
       }
       this.currentEditCell = null;
     } else if (event.key === 'Tab') {
       this.currentEditCell = null;
       if (this.commitStrategy === 'immediate') {
-        this.dispatchTransaction();
+        this.requestCommit();
       }
 
       // Try to find the next editable field in this row.
@@ -1737,7 +1761,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       }
 
       if (this.commitStrategy === 'row') {
-        this.dispatchTransaction();
+        this.requestCommit();
       }
 
       this.beginCellEdit(nextRow, nextColumn);
@@ -1767,7 +1791,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     if (!isWithinEdit) {
       if (this.commitStrategy !== 'batch') {
         // Never commit with batch editing. Thats the user's job.
-        this.dispatchTransaction();
+        this.requestCommit();
       }
       this.currentEditCell = null;
     }

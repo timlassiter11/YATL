@@ -10,6 +10,7 @@ import {
   YatlRowClickEvent,
   YatlRowSelectEvent,
   YatlRowSelectRequest,
+  YatlTableCommitRequest,
 } from '../events';
 import { DisplayColumnOptions } from '../types/columns';
 import { YatlTable } from './table';
@@ -642,6 +643,132 @@ describe('YatlTable Component', () => {
       const [alice] = table.data;
       expect(table.controller.getCellStatus(alice, 'name')).toBe('dirty');
       expect(table.controller.getLatestValue(alice, 'name')).toBe('Alicia');
+    });
+  });
+
+  // #endregion
+  // #region Manual Commit (requestCommit / hasPendingChanges / discardPendingChanges)
+
+  describe('Manual Commit', () => {
+    const getEditableColumns = (): DisplayColumnOptions<User>[] => [
+      { field: 'id', title: 'ID' },
+      { field: 'name', title: 'Name', editor: new TextEditor() },
+      { field: 'role', title: 'Role' },
+      { field: 'age', title: 'Age' },
+    ];
+
+    async function editAliceName(table: YatlTable<User>, value: string) {
+      const tableLocator = page.elementLocator(table);
+      const cell = tableLocator.getByRole('cell', { name: 'Alice' });
+      await userEvent.click(cell);
+      const editor = tableLocator.getByRole('textbox');
+      await userEvent.type(editor, value);
+      // Tab away without committing - batch mode never auto-commits on blur.
+      await userEvent.keyboard('{Tab}');
+      await table.updateComplete;
+    }
+
+    test('hasPendingChanges is false with nothing edited', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      expect(table.hasPendingChanges).toBe(false);
+    });
+
+    test('hasPendingChanges is true once a cell has been edited', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+
+      await editAliceName(table, 'Alicia');
+
+      expect(table.hasPendingChanges).toBe(true);
+    });
+
+    test('requestCommit() returns false and dispatches nothing when there is nothing pending', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        commitStrategy: 'batch',
+      });
+      const spy = vi.fn();
+      table.addEventListener('yatl-table-commit-request', spy);
+
+      expect(table.requestCommit()).toBe(false);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    test('requestCommit() bundles pending edits into one transaction and fires yatl-table-commit-request', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      await editAliceName(table, 'Alicia');
+      const spy = vi.fn();
+      table.addEventListener('yatl-table-commit-request', spy);
+
+      const didCommit = table.requestCommit();
+
+      expect(didCommit).toBe(true);
+      expect(spy).toHaveBeenCalledOnce();
+      const event = spy.mock.calls[0][0] as YatlTableCommitRequest<User>;
+      expect(event.transaction.records).toEqual([
+        expect.objectContaining({ rowId: 1, changedFields: ['name'] }),
+      ]);
+    });
+
+    test('requestCommit() applies the edit once the listener resolves true', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      await editAliceName(table, 'Alicia');
+      table.addEventListener('yatl-table-commit-request', event => {
+        event.respondWith(true);
+      });
+
+      table.requestCommit();
+
+      const [alice] = table.data;
+      expect(alice.name).toBe('Alicia');
+      expect(table.hasPendingChanges).toBe(false);
+    });
+
+    test('discardPendingChanges() reverts pending edits without committing them', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      await editAliceName(table, 'Alicia');
+      const commitSpy = vi.fn();
+      table.addEventListener('yatl-table-commit-request', commitSpy);
+
+      await table.discardPendingChanges();
+
+      expect(commitSpy).not.toHaveBeenCalled();
+      expect(table.hasPendingChanges).toBe(false);
+      const [alice] = table.data;
+      expect(alice.name).toBe('Alice');
+    });
+
+    test('yatl-table-pending-change is observable directly on the table element', async () => {
+      const table = await renderTable({
+        columns: getEditableColumns(),
+        editTrigger: 'click',
+        commitStrategy: 'batch',
+      });
+      const spy = vi.fn();
+      table.addEventListener('yatl-table-pending-change', spy);
+
+      await editAliceName(table, 'Alicia');
+
+      expect(spy).toHaveBeenCalledOnce();
     });
   });
 

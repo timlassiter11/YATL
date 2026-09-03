@@ -48,6 +48,7 @@ import {
   YatlColumnToggleEvent,
   YatlRowSelectEvent,
   YatlTableCommitEvent,
+  YatlTablePendingChangeEvent,
   YatlTableSearchEvent,
   YatlTableStateChangeEvent,
   YatlTableViewChangeEvent,
@@ -136,6 +137,9 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   private editedRows = new Set<RowId>();
   // Transactions that have been started but not finished
   private pendingTransactions = new Map<string, YatlCommitRecord<T>[]>();
+  // getPendingChanges().length as of the last yatl-table-pending-change
+  // dispatch, so notifyPendingChange() only fires on an actual transition.
+  private lastPendingChangeCount = 0;
 
   // #endregion
 
@@ -926,6 +930,23 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     // schedule a state save or fire a table-state-change event the way
     // persisted state (columns, sort, etc) does.
     this.requestUpdate();
+    this.notifyPendingChange();
+  }
+
+  /**
+   * Fires yatl-table-pending-change when the number of outstanding pending
+   * edits actually changes, so a "Save"/"Discard" control can react without
+   * polling. Not fired per-keystroke within an already-dirty field - only
+   * on a real transition (a field becoming dirty/clean, or a transaction
+   * being rejected back into pendingEdits).
+   */
+  private notifyPendingChange() {
+    const changes = this.getPendingChanges();
+    if (changes.length === this.lastPendingChangeCount) {
+      return;
+    }
+    this.lastPendingChangeCount = changes.length;
+    this.dispatchEvent(new YatlTablePendingChangeEvent(changes));
   }
 
   /**
@@ -991,6 +1012,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.pendingTransactions.set(transactionId, records);
     // Need to tell the table to update the status
     this.requestUpdate();
+    this.notifyPendingChange();
     return { id: transactionId, records };
   }
 
@@ -1031,6 +1053,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     if (update) {
       this.requestUpdate('data');
     }
+    this.notifyPendingChange();
   }
 
   public async commitAllChanges() {
@@ -1050,6 +1073,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       metadata.pendingEdits.clear();
     }
     this.editedRows.clear();
+    this.notifyPendingChange();
     this.requestUpdate();
   }
 
@@ -1692,6 +1716,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
     this.pendingTransactions.delete(id);
     this.dispatchEvent(new YatlTableCommitEvent({ id, records }, action));
+    this.notifyPendingChange();
     this.requestUpdate();
   }
 
@@ -1845,6 +1870,7 @@ export type ControllerEventMap = {
   [YatlColumnStickEvent.EVENT_NAME]: YatlColumnStickEvent;
   [YatlRowSelectEvent.EVENT_NAME]: YatlRowSelectEvent;
   [YatlTableCommitEvent.EVENT_NAME]: YatlTableCommitEvent;
+  [YatlTablePendingChangeEvent.EVENT_NAME]: YatlTablePendingChangeEvent;
   [YatlTableSearchEvent.EVENT_NAME]: YatlTableSearchEvent;
   [YatlTableStateChangeEvent.EVENT_NAME]: YatlTableStateChangeEvent;
   [YatlTableViewChangeEvent.EVENT_NAME]: YatlTableViewChangeEvent;

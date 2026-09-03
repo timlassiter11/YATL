@@ -95,6 +95,47 @@ window.addEventListener('load', () => {
   optionsForm.addEventListener('change', updateTableOptions);
   updateTableOptions();
 
+  // Wire up the Save/Discard toolbar buttons for manual commits - most
+  // relevant under commitStrategy: 'batch' (nothing else commits there),
+  // but they work the same regardless of the selected strategy.
+  const saveChangesButton = document.getElementById(
+    'saveChangesButton',
+  ) as YatlButton;
+  const discardChangesButton = document.getElementById(
+    'discardChangesButton',
+  ) as YatlButton;
+  const updateCommitButtons = () => {
+    const disabled = !table.hasPendingChanges;
+    saveChangesButton.disabled = disabled;
+    discardChangesButton.disabled = disabled;
+  };
+  updateCommitButtons();
+  // Fires whenever the pending-edit set actually changes (a field going
+  // dirty/clean, or a save failing and going back to pending) - including
+  // while a save is in flight, since a "saving" edit briefly isn't
+  // "pending" either, which correctly disables both buttons mid-save.
+  table.addEventListener('yatl-table-pending-change', updateCommitButtons);
+
+  saveChangesButton.addEventListener('click', () => {
+    // The yatl-table-commit-request handler wired up in initTable() already
+    // shows a "Saving..." -> "Saved"/"Failed" toast for this, same as an
+    // auto-commit from Enter/Tab/clicking away would.
+    table.requestCommit();
+  });
+
+  discardChangesButton.addEventListener('click', () => {
+    const count = table.controller.getPendingChanges().length;
+    table.discardPendingChanges();
+    toast({
+      variant: 'warning',
+      label: 'Changes discarded',
+      message:
+        count === 1
+          ? '1 unsaved change was discarded.'
+          : `${count} unsaved changes were discarded.`,
+    });
+  });
+
   const deleteRowsButton = document.getElementById(
     'deleteRowsButton',
   ) as YatlButton;

@@ -180,6 +180,24 @@
           </div>
         </yatl-card>
         <yatl-button
+          id="saveChangesButton"
+          slot="toolbar-button-group"
+          title="Save pending changes"
+          color="raised"
+          disabled
+        >
+          <yatl-icon name="save"></yatl-icon>
+        </yatl-button>
+        <yatl-button
+          id="discardChangesButton"
+          slot="toolbar-button-group"
+          title="Discard pending changes"
+          color="raised"
+          disabled
+        >
+          <yatl-icon name="close"></yatl-icon>
+        </yatl-button>
+        <yatl-button
           id="deleteRowsButton"
           slot="toolbar-button-group"
           title="Delete selected rows"

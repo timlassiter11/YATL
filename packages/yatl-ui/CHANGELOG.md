@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.0
+
+### Patch Changes
+
+- Updated dependencies [29c117d]
+  - @timlassiter11/yatl@1.7.0
+
 ## 5.0.0
 
 ### Minor Changes

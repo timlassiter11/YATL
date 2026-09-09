@@ -1571,6 +1571,27 @@ describe('YatlTableController - row selection', () => {
     expect(controller.selectedRowIds).toEqual([2]);
   });
 
+  test('toggleRowSelection without a state selects an unselected row', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'multi';
+
+    controller.toggleRowSelection(controller.data[0]);
+
+    expect(controller.selectedRowIds).toEqual([1]);
+    expect(controller.isRowSelected(controller.data[0])).toBe(true);
+  });
+
+  test('toggleRowSelection without a state deselects a selected row', () => {
+    const controller = createEmployeeController();
+    controller.rowSelectionMethod = 'multi';
+    controller.selectRow(controller.data[0]);
+
+    controller.toggleRowSelection(controller.data[0]);
+
+    expect(controller.selectedRowIds).toEqual([]);
+    expect(controller.isRowSelected(controller.data[0])).toBe(false);
+  });
+
   test('selectAll is a no-op in single selection mode', () => {
     const controller = createEmployeeController();
     controller.rowSelectionMethod = 'single';

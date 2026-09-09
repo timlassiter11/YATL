@@ -750,7 +750,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     const rowId = this.getRowId(row);
 
     const isSelected = this.isRowSelected(row);
-    const newSelectionState = state !== undefined ? state : isSelected;
+    const newSelectionState = state !== undefined ? state : !isSelected;
 
     if (newSelectionState === isSelected) {
       return;

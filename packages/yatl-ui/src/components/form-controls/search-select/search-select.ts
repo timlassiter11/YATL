@@ -160,7 +160,6 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
             ?readonly=${this.readonly}
             @input=${this.handleInput}
             @focusin=${this.handleInputFocusin}
-            @focusout=${this.handleInputFocusout}
           />
         </div>
         <div
@@ -228,6 +227,14 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     }
   };
 
+  // This document-level pointerdown listener is the sole authority for
+  // "did the user leave the component" - deliberately not mirrored by a
+  // focusout listener on the search input. A real click on a non-focusable
+  // option (or a selected chip's trash icon) blurs the input with nowhere
+  // else in the component to receive focus, since delegatesFocus is off
+  // above; a focusout handler reacting to that would collapse back to the
+  // summary view mid-interaction, hiding the very option the user was
+  // about to click next.
   private handleFocus = (event: PointerEvent) => {
     const path = event.composedPath();
     if (!path.includes(this)) {
@@ -242,20 +249,6 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
 
   private handleInputFocusin() {
     this.hasFocus = true;
-  }
-
-  private handleInputFocusout(event: FocusEvent) {
-    // Don't treat focus moving to something else within this component
-    // (e.g. a selected chip's trash icon) as leaving it - only the
-    // document-level pointerdown/focusin handling above should do that.
-    const related = event.relatedTarget as Node | null;
-    if (
-      related &&
-      (this.contains(related) || this.shadowRoot?.contains(related))
-    ) {
-      return;
-    }
-    this.hasFocus = false;
   }
 
   private handleInput(event: Event) {

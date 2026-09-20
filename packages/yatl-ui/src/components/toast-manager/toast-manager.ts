@@ -62,11 +62,11 @@ export class YatlToastManager extends YatlBase {
       <yatl-toast
         id=${data.id}
         label=${ifDefined(data.label)}
-        message=${data.message}
         variant=${ifDefined(data.variant)}
         duration=${ifDefined(data.duration)}
         @yatl-toast-hide=${this.handleToastHide}
-      ></yatl-toast>
+        >${data.message}</yatl-toast
+      >
     `;
   }
 

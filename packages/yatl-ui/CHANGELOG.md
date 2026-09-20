@@ -1,5 +1,15 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.0
+
+### Patch Changes
+
+- 9b1e9d2: Fixed `yatl-search-select` making it impossible to select a second option: clicking a non-focusable option (or a selected chip's trash icon) blurs the search input with nowhere else in the component to receive focus, and a `focusout` listener on that input used to react by collapsing straight back to the "selected chips" summary view - hiding the very option the in-flight click was headed for. The component already has a document-level `pointerdown` listener that's the real authority on whether focus left the component; the redundant, and actively wrong, `focusout` handler is removed.
+- c16e3fa: Fixed toast-manager not properly rendering toast messages when using html templates
+- Updated dependencies [29c117d]
+- Updated dependencies [51fcb17]
+  - @timlassiter11/yatl@1.7.0
+
 ## 5.0.0
 
 ### Minor Changes

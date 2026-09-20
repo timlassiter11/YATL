@@ -110,4 +110,19 @@ describe('YatlToast', () => {
 
     expect(startTimerSpy).not.toHaveBeenCalled();
   });
+
+  // Regression test: hasMessage in render() is driven by
+  // slotController.test(null), which used to miss default-slotted content
+  // that's a bare text node with no wrapping element - a very common way
+  // to use a toast (<yatl-toast>Some message</yatl-toast>, no `message`
+  // attribute or span). See HasSlotController's own tests for the
+  // lower-level coverage of the fix.
+  test('bare default-slotted text (no wrapping element) still marks the toast as having a message', async () => {
+    document.body.innerHTML = '<yatl-toast>Something went wrong</yatl-toast>';
+    const el = document.querySelector<YatlToast>('yatl-toast')!;
+    await el.updateComplete;
+
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.classList.contains('has-message')).toBe(true);
+  });
 });

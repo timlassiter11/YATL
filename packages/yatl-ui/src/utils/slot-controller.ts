@@ -1,5 +1,4 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { getEffectiveChildren } from './common';
 
 type SlotName = '[default]' | (string & {});
 
@@ -18,15 +17,21 @@ export class HasSlotController<T extends string = string>
   }
 
   private hasSlot(name: T | null): boolean {
-    const slotContents = name
-      ? this.host.querySelector(`:scope > [slot="${name}"]`)
-      : this.host.querySelector(`:scope > :not([slot])`);
-
-    if (!slotContents) {
-      return false;
+    if (name) {
+      return this.host.querySelector(`:scope > [slot="${name}"]`) !== null;
     }
 
-    return getEffectiveChildren(slotContents).length > 0;
+    // Default-slotted content isn't necessarily an element - a bare text
+    // node (e.g. <yatl-toast>Some message</yatl-toast>, no wrapping
+    // element) is default-slotted too, but only elements can ever match a
+    // CSS selector, so querySelector(':scope > :not([slot])') silently
+    // misses that case. Walk the actual child nodes instead.
+    return [...this.host.childNodes].some(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent!.trim() !== '';
+      }
+      return node instanceof Element && !node.hasAttribute('slot');
+    });
   }
 
   public test(slotName: T | null) {

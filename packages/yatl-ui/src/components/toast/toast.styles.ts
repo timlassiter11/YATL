@@ -58,7 +58,6 @@ export default css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--yatl-spacing-xs);
   }
 
   [part='label-row'] {
@@ -66,7 +65,6 @@ export default css`
     flex-direction: row;
     align-items: center;
     gap: var(--yatl-spacing-s);
-    border-bottom: 1px solid var(--toast-border-color);
     padding: var(--toast-padding);
   }
 
@@ -79,6 +77,18 @@ export default css`
     [part='label-row'] {
       border-bottom: none;
     }
+  }
+
+  [part='base']:not(.has-message) {
+    /* Hide the bottom border when no message */
+    [part='label-row'] {
+      border-bottom: none;
+    }
+  }
+
+  [part='base'].has-label.has-message {
+    /* We only want a gap if we have both a label and message */
+    gap: var(--yatl-spacing-xs);
   }
 
   [part='label'] {

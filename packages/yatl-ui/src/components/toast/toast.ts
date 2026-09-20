@@ -128,9 +128,11 @@ export class YatlToast extends YatlBase {
             <yatl-icon name="close"></yatl-icon>
           </yatl-button>
         </div>
-        <slot>
-          <span part="message"> ${this.message} </span>
-        </slot>
+        <div part="message">
+          <slot>
+            <span> ${this.message} </span>
+          </slot>
+        </div>
         <div class="timer-wrapper">
           <div
             part="timer"

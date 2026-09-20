@@ -65,6 +65,7 @@ export default css`
     flex-direction: row;
     align-items: center;
     gap: var(--yatl-spacing-s);
+    border-bottom: 1px solid var(--toast-border-color);
     padding: var(--toast-padding);
   }
 

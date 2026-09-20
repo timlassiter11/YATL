@@ -105,6 +105,38 @@ describe('YatlDialog - show/hide fire exactly once', () => {
   });
 });
 
+describe('YatlDialog - forwarded footer slot', () => {
+  // yatl-dialog wraps yatl-card internally, forwarding its own `footer`/
+  // `footer-actions` slots straight through via light-DOM <slot> elements
+  // (see dialog.ts's render()). Those forwarding <slot>s are always
+  // present as yatl-card's light-DOM children regardless of whether
+  // anything is actually assigned to them - yatl-card's own has-footer
+  // check (via HasSlotController) needs to see through that to the real,
+  // resolved content, not just the forwarding element's existence.
+  test('a dialog with no footer content does not mark the card footer as present', async () => {
+    const el = await renderDialog();
+
+    const card = el.shadowRoot!.querySelector('yatl-card')!;
+    const footer = card.shadowRoot!.querySelector('[part="footer"]')!;
+    expect(footer.classList.contains('has-footer')).toBe(false);
+  });
+
+  test('assigning footer-actions content marks the card footer as present', async () => {
+    document.body.innerHTML = `
+      <yatl-dialog>
+        content
+        <yatl-button slot="footer-actions">OK</yatl-button>
+      </yatl-dialog>
+    `;
+    const el = document.querySelector<YatlDialog>('yatl-dialog')!;
+    await el.updateComplete;
+
+    const card = el.shadowRoot!.querySelector('yatl-card')!;
+    const footer = card.shadowRoot!.querySelector('[part="footer"]')!;
+    expect(footer.classList.contains('has-footer')).toBe(true);
+  });
+});
+
 describe('YatlDialog - open/close race', () => {
   test('closing while the show animation is still in progress actually closes it', async () => {
     const el = await renderDialog();

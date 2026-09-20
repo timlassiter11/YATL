@@ -17,21 +17,54 @@ export class HasSlotController<T extends string = string>
   }
 
   private hasSlot(name: T | null): boolean {
-    if (name) {
-      return this.host.querySelector(`:scope > [slot="${name}"]`) !== null;
-    }
-
     // Default-slotted content isn't necessarily an element - a bare text
     // node (e.g. <yatl-toast>Some message</yatl-toast>, no wrapping
     // element) is default-slotted too, but only elements can ever match a
-    // CSS selector, so querySelector(':scope > :not([slot])') silently
-    // misses that case. Walk the actual child nodes instead.
+    // CSS selector or carry a `slot` attribute, so we have to walk the
+    // actual child nodes rather than use querySelector.
     return [...this.host.childNodes].some(node => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent!.trim() !== '';
+      if (name) {
+        // Only elements can ever be assigned to a named slot.
+        return (
+          node instanceof Element &&
+          node.getAttribute('slot') === name &&
+          this.hasContent(node)
+        );
       }
-      return node instanceof Element && !node.hasAttribute('slot');
+      // A bare text node can't carry a `slot` attribute, so it's always
+      // default-slotted.
+      if (node instanceof Element && node.hasAttribute('slot')) {
+        return false;
+      }
+      return this.hasContent(node);
     });
+  }
+
+  /**
+   * Whether a node is (or resolves to) real content, recursing through a
+   * forwarding <slot> - a wrapper component re-projecting its own
+   * consumer's content into this host's slot (e.g. a dialog subclass doing
+   * `<yatl-dialog><slot name="footer" slot="footer"></slot></yatl-dialog>`
+   * to pass its own `footer` slot straight through) - to whatever it
+   * actually ends up assigned or falling back to, since the forwarding
+   * <slot> element itself always exists as a light-DOM child regardless.
+   *
+   * Deliberately doesn't reuse getEffectiveChildren()'s slot-resolution:
+   * that helper calls assignedElements()/`.children`, which - same as
+   * querySelector above - only ever see elements, so a forwarded slot that
+   * resolves to bare text would go right back to looking empty. Uses
+   * assignedNodes()/`.childNodes` here instead to catch that too.
+   */
+  private hasContent(node: Node): boolean {
+    if (node instanceof HTMLSlotElement) {
+      const assigned = node.assignedNodes({ flatten: true });
+      const candidates = assigned.length > 0 ? assigned : node.childNodes;
+      return [...candidates].some(child => this.hasContent(child));
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent!.trim() !== '';
+    }
+    return node instanceof Element;
   }
 
   public test(slotName: T | null) {

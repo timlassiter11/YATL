@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.2
+
+### Patch Changes
+
+- e2d5716: Fixed yatl-toast missing border between label (header) and message (body).
+
 ## 6.0.1
 
 ### Patch Changes

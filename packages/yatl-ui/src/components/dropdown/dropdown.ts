@@ -164,7 +164,9 @@ export class YatlDropdown extends YatlBase {
           this.referenceElement?.focus();
         }
       } else if (
-        ['ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(event.key)
+        ['ArrowUp', 'ArrowDown', 'Home', 'End', ' ', 'Enter'].includes(
+          event.key,
+        )
       ) {
         // Handle keyboard navigation logic - disabled options aren't
         // interactive (see YatlOption.handleItemClicked), so they
@@ -199,7 +201,10 @@ export class YatlDropdown extends YatlBase {
           }
           itemToFocus =
             event.key === 'Home' ? items[0] : items[items.length - 1];
-        } else if (event.key === ' ' && activeItemIndex != -1) {
+        } else if (
+          event.key === ' ' ||
+          (event.key === 'Enter' && activeItemIndex != -1)
+        ) {
           // We only want to absorb the space key if we have the active item!
           event.preventDefault();
           event.stopPropagation();

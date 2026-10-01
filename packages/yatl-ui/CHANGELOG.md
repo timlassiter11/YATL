@@ -1,5 +1,13 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.4
+
+### Patch Changes
+
+- 29a479e: Allow using enter to select dropdown options
+- Updated dependencies [1c0c25f]
+  - @timlassiter11/yatl@1.7.1
+
 ## 6.0.3
 
 ### Patch Changes

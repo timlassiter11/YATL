@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.7.1
+
+### Patch Changes
+
+- 1c0c25f: Added public functions for checking if a cell can be edited and opening a cell editor
+
 ## 1.7.0
 
 ### Minor Changes

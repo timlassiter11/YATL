@@ -797,7 +797,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     setTimeout(() => {
       this.editor?.focus();
       if (this.editor instanceof HTMLInputElement) {
-        //this.editor.select();
+        this.editor.select();
       }
     });
 

@@ -16,7 +16,7 @@ import type {
   YatlTableEditTrigger,
 } from '../types';
 
-import { getColumnStateChanges, isDisplayColumn } from '../utils';
+import { getColumnStateChanges, isDisplayColumn, isRowIdType } from '../utils';
 
 import { highlightText, toHumanReadable } from '../utils';
 
@@ -50,6 +50,7 @@ import {
   YatlTableController,
 } from '../table-controller/table-controller';
 import styles from './table.styles';
+import { throwInvalidRowId } from '../utils/errors';
 
 // #region --- Constants ---
 
@@ -761,6 +762,49 @@ export class YatlTable<T extends object = UnspecifiedRecord>
   }
 
   /**
+   * Checks if the cell for the given row and field can be edited.
+   * @param row
+   * @param field
+   */
+  public canEditCell(row: T, field: NestedKeyOf<T>): boolean;
+  public canEditCell(rowId: RowId, field: NestedKeyOf<T>): boolean;
+  public canEditCell(rowOrId: T | RowId, field: NestedKeyOf<T>): boolean {
+    return (
+      !this.readonly &&
+      this.editTrigger !== 'none' &&
+      this.controller.isCellEditable(rowOrId, field)
+    );
+  }
+
+  /**
+   * Opens the cell editor for the given row and field if it can be opened.
+   * @param row
+   * @param field
+   */
+  public openCellEditor(row: T, field: NestedKeyOf<T>): boolean;
+  public openCellEditor(rowId: RowId, field: NestedKeyOf<T>): boolean;
+  public openCellEditor(rowOrId: T | RowId, field: NestedKeyOf<T>): boolean {
+    if (!isRowIdType(rowOrId)) {
+      rowOrId = this.controller.getRowId(rowOrId);
+    }
+
+    if (!this.canEditCell(rowOrId, field)) {
+      return false;
+    }
+
+    this.currentEditCell = { rowId: rowOrId, field };
+
+    setTimeout(() => {
+      this.editor?.focus();
+      if (this.editor instanceof HTMLInputElement) {
+        //this.editor.select();
+      }
+    });
+
+    return true;
+  }
+
+  /**
    * This will force the underlying virtual scroller
    * to re-calculate row sizes and positions and re-render.
    * This is specifically here to fix virtual scroll tables
@@ -1271,19 +1315,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       this.resizeObserver = new ResizeObserver(() => this.updateColumnWidths());
       this.resizeObserver.observe(this.tableElement!);
     }
-
-    if (this.editor && this.shadowRoot?.activeElement !== this.editor) {
-      setTimeout(() => {
-        this.editor?.focus();
-        if (this.editor instanceof HTMLInputElement) {
-          this.editor.select();
-        }
-      });
-    }
-
-    if (changedProps.has('columnStates')) {
-      //this.updateColumnWidths();
-    }
   }
 
   // #endregion
@@ -1454,28 +1485,6 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       return 'date';
     }
     return 'text';
-  }
-
-  /**
-   * Whether clicking or double-clicking this cell (per the current
-   * `editTrigger`) would be able to start an edit.
-   */
-  private canEditCell(row: T, field: NestedKeyOf<T>): boolean {
-    return (
-      !this.readonly &&
-      this.editTrigger !== 'none' &&
-      this.controller.isCellEditable(row, field)
-    );
-  }
-
-  private beginCellEdit(row: T, field: NestedKeyOf<T>): boolean {
-    if (!this.canEditCell(row, field)) {
-      return false;
-    }
-
-    const rowId = this.controller.getRowId(row);
-    this.currentEditCell = { rowId, field };
-    return true;
   }
 
   private getNextEditableField(row: T, currentField?: NestedKeyOf<T>) {
@@ -1675,7 +1684,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
     if (this.canEditCell(row, field)) {
       if (this.editTrigger === 'click') {
-        this.beginCellEdit(row, field);
+        this.openCellEditor(row, field);
       }
       // This cell can be edited by clicking or double-clicking it, so
       // don't also treat this click as a row click - even if this
@@ -1705,7 +1714,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     if (this.editTrigger !== 'dblclick') {
       return;
     }
-    this.beginCellEdit(row, field);
+    this.openCellEditor(row, field);
   }
 
   private handleCellInputKeypress(event: KeyboardEvent) {
@@ -1745,7 +1754,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
       // Try to find the next editable field in this row.
       let nextColumn = this.getNextEditableField(row, field);
       if (nextColumn) {
-        this.beginCellEdit(row, nextColumn);
+        this.openCellEditor(row, nextColumn);
         return;
       }
 
@@ -1771,7 +1780,7 @@ export class YatlTable<T extends object = UnspecifiedRecord>
         this.requestCommit();
       }
 
-      this.beginCellEdit(nextRow, nextColumn);
+      this.openCellEditor(nextRow, nextColumn);
       event.preventDefault();
     }
   }

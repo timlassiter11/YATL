@@ -59,7 +59,6 @@ export class InputEditor<
         step=${ifDefined(this.options?.step)}
         pattern=${ifDefined(this.options?.pattern)}
         placeholder=${ifDefined(this.options?.placeholder)}
-        autofocus
         @input=${save}
       />
     `;

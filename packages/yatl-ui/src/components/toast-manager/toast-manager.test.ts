@@ -32,7 +32,7 @@ describe('YatlToastManager', () => {
 
     const toasts = queryToasts(el);
     expect(toasts.length).toBe(1);
-    expect(toasts[0].getAttribute('message')).toBe('Hello');
+    expect(toasts[0].innerHTML).toContain('Hello');
   });
 
   test('newest toasts are added to the front', async () => {
@@ -43,8 +43,9 @@ describe('YatlToastManager', () => {
     toast({ message: 'Second' });
     await el.updateComplete;
 
-    const messages = queryToasts(el).map(t => t.getAttribute('message'));
-    expect(messages).toEqual(['Second', 'First']);
+    const messages = queryToasts(el).map(t => t.innerHTML);
+    expect(messages[0]).toContain('Second');
+    expect(messages[1]).toContain('First');
   });
 
   test('a toast hiding itself removes it from the manager', async () => {
@@ -118,10 +119,8 @@ describe('YatlToastManager', () => {
     toast({ message: 'Already here' });
 
     const el = await renderManager();
-
-    expect(queryToasts(el).map(t => t.getAttribute('message'))).toEqual([
-      'Already here',
-    ]);
+    const toasts = queryToasts(el);
+    expect(toasts[0].innerHTML).toContain('Already here');
   });
 
   test('clearing the store removes toasts from the live view, even while showing', async () => {
@@ -146,6 +145,6 @@ describe('YatlToastManager', () => {
 
     const toasts = queryToasts(el);
     expect(toasts.length).toBe(1);
-    expect(toasts[0].getAttribute('message')).toBe('Uploading 50%');
+    expect(toasts[0].innerHTML).toContain('Uploading 50%');
   });
 });

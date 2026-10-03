@@ -20,7 +20,7 @@ import styles from './typeahead.styles';
  * and falls back to a remote endpoint for asynchronous data fetching.
  * @element yatl-typeahead
  * @fires input - Fired synchronously as the user types.
- * @fires change - Fired when the input value is committed or a result is selected.
+ * @fires change - Fired when the value changes and is committed: a result is selected, Enter is pressed, or focus leaves the component. Not fired just because focus moves between the input and the dropdown.
  */
 @customElement('yatl-typeahead')
 export class YatlTypeahead extends YatlInput {
@@ -28,6 +28,9 @@ export class YatlTypeahead extends YatlInput {
 
   private searchDebounceTimer = 0;
   private abortController: AbortController | null = null;
+  // The value as of the last `change` we emitted (or, if the user hasn't
+  // touched it, whatever it was when they started). See commit().
+  private committedValue = '';
 
   private cacheDirty = false;
   private cachedData = new Map<string, UnspecifiedRecord>();
@@ -174,6 +177,12 @@ export class YatlTypeahead extends YatlInput {
   ) {
     super.willUpdate(changedProperties);
 
+    if (changedProperties.has('value') && !this.hasFocus) {
+      // Not being edited, so this wasn't the user: there's nothing pending
+      // to commit and it becomes the baseline for the next edit.
+      this.committedValue = this.value;
+    }
+
     let cacheCleared = false;
     if (
       changedProperties.has('labelField') ||
@@ -226,6 +235,7 @@ export class YatlTypeahead extends YatlInput {
         ?match-width=${this.matchWidth}
         @yatl-dropdown-select=${this.handleDropdownSelect}
         @yatl-dropdown-toggle-request=${this.handleDropdownToggleRequest}
+        @keydown=${this.handleKeydown}
         @focusin=${this.handleFocusin}
         @focusout=${this.handleFocusout}
       >
@@ -286,6 +296,30 @@ export class YatlTypeahead extends YatlInput {
     </yatl-option>`;
   }
 
+  /**
+   * Emits `change` if the value is different from the last one we committed.
+   *
+   * The input's own `change` event can't be used for this: it also fires
+   * when focus merely moves from the input into the dropdown (e.g. pressing
+   * the down arrow), which isn't a commit at all. Instead we commit when
+   * the user picks an option, presses Enter, or focus leaves the component.
+   */
+  private commit() {
+    if (this.value === this.committedValue) {
+      return;
+    }
+    this.committedValue = this.value;
+    this.emitInteraction('change');
+  }
+
+  /** Whether the node is part of this component, including the dropdown. */
+  private isInternal(target: EventTarget | null) {
+    return (
+      target instanceof Node &&
+      (this.contains(target) || !!this.shadowRoot?.contains(target))
+    );
+  }
+
   protected override handleChange(event: Event) {
     event.stopPropagation();
     const target = event.target as HTMLInputElement;
@@ -295,16 +329,35 @@ export class YatlTypeahead extends YatlInput {
       this.updateMatchedOptions();
       this.scheduleFetch();
     }
-    this.emitInteraction(event.type as 'change' | 'input');
+
+    // Only `input` is forwarded. The native `change` is ignored, see commit().
+    if (event.type === 'input') {
+      this.emitInteraction('input');
+    }
   }
 
   private handleDropdownSelect(event: YatlDropdownSelectEvent) {
     event.stopPropagation();
 
     this.userHasSelected = true;
-    if (this.value !== event.item.value) {
-      this.value = event.item.value;
-      this.emitInteraction('change');
+    this.value = event.item.value;
+    this.commit();
+
+    setTimeout(() => {
+      // Give time for the dropdown to close.
+      this.focus();
+    });
+  }
+
+  private handleKeydown(event: KeyboardEvent) {
+    // Enter commits what was typed, same as a native input. Enter on a
+    // focused option never gets here as the target - that's a selection.
+    if (
+      event.key === 'Enter' &&
+      !event.isComposing &&
+      event.target instanceof HTMLInputElement
+    ) {
+      this.commit();
     }
   }
 
@@ -321,12 +374,22 @@ export class YatlTypeahead extends YatlInput {
     }
   }
 
-  private handleFocusin() {
+  private handleFocusin(event: FocusEvent) {
     this.hasFocus = true;
+    if (!this.isInternal(event.relatedTarget)) {
+      // Focus came from outside the component. Whatever the value is now
+      // is what a later `change` should be measured against, same as a
+      // native input.
+      this.committedValue = this.value;
+    }
   }
 
-  private handleFocusout() {
+  private handleFocusout(event: FocusEvent) {
     this.hasFocus = false;
+    // Focus moving between the input and the dropdown isn't leaving.
+    if (!this.isInternal(event.relatedTarget)) {
+      this.commit();
+    }
   }
 
   private scheduleFetch() {

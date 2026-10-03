@@ -1,5 +1,15 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.5
+
+### Patch Changes
+
+- 1bce803: Fixed an issue causing the yatl-typeahead to fire change events when navigating to the dropdown to select an item.
+- b5a9937: Added new yatl-typeahead-filter component.
+- 743946c: Fixed issue causing dropdowns to clip or not show when inside a transformed element.
+- Updated dependencies [58b5428]
+  - @timlassiter11/yatl@1.7.2
+
 ## 6.0.4
 
 ### Patch Changes

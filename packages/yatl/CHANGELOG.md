@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.7.2
+
+### Patch Changes
+
+- 58b5428: Fixed bug causing escape in a cell editor to not discard changes.
+
 ## 1.7.1
 
 ### Patch Changes

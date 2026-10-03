@@ -2,6 +2,7 @@ import {
   autoUpdate,
   computePosition,
   flip,
+  hide,
   offset,
   shift,
   size,
@@ -76,7 +77,7 @@ export class YatlDropdown extends YatlBase {
           @click=${this.handleTriggerClick}
           @keydown=${this.handleTriggerKeydown}
         ></slot>
-        <div part="menu" @click=${this.handleItemClick}>
+        <div part="menu" popover="manual" @click=${this.handleItemClick}>
           <slot></slot>
         </div>
       </div>
@@ -91,8 +92,10 @@ export class YatlDropdown extends YatlBase {
 
     if (changedProperties.has('open')) {
       if (this.open) {
+        this.showMenu();
         this.addListeners();
       } else {
+        this.hideMenu();
         this.removeListeners();
       }
     }
@@ -103,7 +106,10 @@ export class YatlDropdown extends YatlBase {
     // If we're reconnected while still open (e.g. a parent moved us to a
     // new location in the DOM), our document-level listeners were torn
     // down by disconnectedCallback and never restored - restore them.
+    // Removing a popover from the document also hides it, so the menu has
+    // to be put back in the top layer too.
     if (this.open) {
+      this.showMenu();
       this.addListeners();
     }
   }
@@ -153,6 +159,9 @@ export class YatlDropdown extends YatlBase {
   }
 
   private handleKeydown = (event: KeyboardEvent) => {
+    const navKeys = ['ArrowUp', 'ArrowDown', 'Home', 'End', ' ', 'Enter'];
+    const selectKeys = [' ', 'Enter'];
+
     if (this.open) {
       if (event.key === 'Escape') {
         this.requestState(false);
@@ -163,11 +172,7 @@ export class YatlDropdown extends YatlBase {
           event.preventDefault();
           this.referenceElement?.focus();
         }
-      } else if (
-        ['ArrowUp', 'ArrowDown', 'Home', 'End', ' ', 'Enter'].includes(
-          event.key,
-        )
-      ) {
+      } else if (navKeys.includes(event.key)) {
         // Handle keyboard navigation logic - disabled options aren't
         // interactive (see YatlOption.handleItemClicked), so they
         // shouldn't be reachable via arrow/Home/End navigation either.
@@ -201,11 +206,8 @@ export class YatlDropdown extends YatlBase {
           }
           itemToFocus =
             event.key === 'Home' ? items[0] : items[items.length - 1];
-        } else if (
-          event.key === ' ' ||
-          (event.key === 'Enter' && activeItemIndex != -1)
-        ) {
-          // We only want to absorb the space key if we have the active item!
+        } else if (selectKeys.includes(event.key) && activeItemIndex != -1) {
+          // We only want to absorb these if we have the active item!
           event.preventDefault();
           event.stopPropagation();
           activeItem?.click();
@@ -231,6 +233,27 @@ export class YatlDropdown extends YatlBase {
 
   // #endregion
   // #region Utilities
+
+  // The menu element doesn't exist until the first render, so this has to
+  // tolerate being called before then (e.g. from connectedCallback).
+  private showMenu() {
+    const menu = this.menuElement as HTMLElement | null;
+    if (menu && !menu.matches(':popover-open')) {
+      menu.showPopover();
+    }
+  }
+
+  // Merely hiding the menu with CSS isn't enough: a popover left showing
+  // keeps its (old) place in the top layer, so the next time it opens it
+  // can end up underneath anything that was shown in the meantime -
+  // e.g. the yatl-dialog the dropdown lives in.
+  private hideMenu() {
+    const menu = this.menuElement as HTMLElement | null;
+    if (menu?.matches(':popover-open')) {
+      menu.hidePopover();
+    }
+  }
+
   private addListeners() {
     if (this.autoUpdateCleanup) {
       // Already listening - both connectedCallback and the first
@@ -243,7 +266,10 @@ export class YatlDropdown extends YatlBase {
     this.startPositioning();
     document.addEventListener('pointerdown', this.handleDocumentFocusin);
     document.addEventListener('focusin', this.handleDocumentFocusin);
+    // We need the document keydown to get the initial focus.
     document.addEventListener('keydown', this.handleKeydown);
+    // After that we want to gate the events from getting out if we consume them.
+    this.addEventListener('keydown', this.handleKeydown);
   }
 
   private removeListeners() {
@@ -252,6 +278,7 @@ export class YatlDropdown extends YatlBase {
     document.removeEventListener('pointerdown', this.handleDocumentFocusin);
     document.removeEventListener('focusin', this.handleDocumentFocusin);
     document.removeEventListener('keydown', this.handleKeydown);
+    this.removeEventListener('keydown', this.handleKeydown);
   }
 
   private requestState(state: boolean) {
@@ -314,8 +341,14 @@ export class YatlDropdown extends YatlBase {
             },
             padding: 10,
           }),
+          hide(),
         ],
-      }).then(({ x, y }) => {
+      }).then(({ x, y, middlewareData }) => {
+        if (middlewareData.hide?.referenceHidden) {
+          // The trigger scrolled out of view. Close the menu
+          this.requestState(false);
+          return;
+        }
         Object.assign(menu.style, {
           left: `${x}px`,
           top: `${y}px`,

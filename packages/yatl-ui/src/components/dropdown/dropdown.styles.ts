@@ -31,8 +31,9 @@ export default css`
 
   [part='menu'] {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: auto;
+    /* The popover UA stylesheet sets color: CanvasText. */
+    color: inherit;
     width: max-content;
     box-sizing: border-box;
     z-index: 1000;

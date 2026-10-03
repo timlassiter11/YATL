@@ -42,4 +42,21 @@ describe('YatlDropdown - disconnect/reconnect while open', () => {
 
     expect(el.open).toBe(false);
   });
+
+  test('is put back in the top layer after being moved to a different parent while open', async () => {
+    const el = await renderDropdown();
+    const menu = el.shadowRoot!.querySelector<HTMLElement>('[part="menu"]')!;
+    expect(menu.matches(':popover-open')).toBe(true);
+
+    // Removing a popover from the document hides it. If the dropdown is
+    // still open when it comes back the menu has to be shown again, or it
+    // falls back to being a plain `position: fixed` box - the very thing
+    // using a popover was meant to get away from.
+    const newParent = document.createElement('div');
+    document.body.appendChild(newParent);
+    newParent.appendChild(el);
+    await el.updateComplete;
+
+    expect(menu.matches(':popover-open')).toBe(true);
+  });
 });

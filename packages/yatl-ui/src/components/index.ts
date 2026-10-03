@@ -37,6 +37,7 @@ export * from './filter-components/group-filter/group-filter';
 export * from './filter-components/search-filter/search-filter';
 export * from './filter-components/select-filter/select-filter';
 export * from './filter-components/switch-filter/switch-filter';
+export * from './filter-components/typeahead-filter/typeahead-filter';
 
 export * from './form-controls/form-control/form-control';
 export * from './form-controls/checkable-control/checkable-control';

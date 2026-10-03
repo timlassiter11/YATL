@@ -50,7 +50,6 @@ import {
   YatlTableController,
 } from '../table-controller/table-controller';
 import styles from './table.styles';
-import { throwInvalidRowId } from '../utils/errors';
 
 // #region --- Constants ---
 
@@ -1727,9 +1726,15 @@ export class YatlTable<T extends object = UnspecifiedRecord>
 
     if (event.key === 'Escape') {
       this.currentEditCell = null;
-      this.controller.revertPendingChange(row, field);
       event.stopPropagation();
       event.preventDefault();
+
+      setTimeout(() => {
+        // Wait until after the cell editor sends it's
+        // last change event before reverting.
+        this.controller.revertPendingChange(row, field);
+      });
+
       return;
     }
 

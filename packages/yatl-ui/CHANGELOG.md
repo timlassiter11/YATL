@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.7
+
+### Patch Changes
+
+- f388d70: Fixed yatl-table-item emitting events with the wrong event type
+
 ## 6.0.6
 
 ### Patch Changes

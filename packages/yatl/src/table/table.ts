@@ -1722,7 +1722,11 @@ export class YatlTable<T extends object = UnspecifiedRecord>
     }
 
     const { rowId, field } = this.currentEditCell;
-    const row = this.getRow(rowId)!;
+    const row = this.getRow(rowId);
+    if (!row) {
+      // This seems to happen when tab hits the checkbox column
+      return;
+    }
 
     if (event.key === 'Escape') {
       this.currentEditCell = null;

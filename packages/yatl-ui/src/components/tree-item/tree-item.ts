@@ -5,14 +5,21 @@ import {
   queryAssignedElements,
 } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
-import { YatlTreeItemSelectEvent } from '../../events/tree-item';
+import {
+  YatlTreeItemSelectEvent,
+  YatlTreeItemToggleEvent,
+  YatlTreeItemToggleRequest,
+} from '../../events/tree-item';
 import { HasSlotController } from '../../utils';
 import { YatlBase } from '../base/base';
 
 import styles from './tree-item.styles';
 
 /**
- * @fires yatl-tree-item-select - When this item is selected
+ * @fires yatl-tree-item-select-request - Before this item is selected. Cancellable.
+ * @fires yatl-tree-item-select - When this item is selected.
+ * @fires yatl-tree-item-toggle-request - Before this item is toggled open or closed. Cancellable.
+ * @fires yatl-tree-item-toggle-event - When this item is opened or closed.
  */
 @customElement('yatl-tree-item')
 export class YatlTreeItem extends YatlBase {
@@ -104,8 +111,17 @@ export class YatlTreeItem extends YatlBase {
 
   private handleDetailsToggle(event: Event) {
     event.stopPropagation();
+
+    const request = new YatlTreeItemToggleRequest(this.value);
+    this.dispatchEvent(request);
+    if (request.defaultPrevented) {
+      return;
+    }
+
     const details = event.target as HTMLDetailsElement;
     this.open = details.open;
+
+    this.dispatchEvent(new YatlTreeItemToggleEvent(this.value));
   }
 
   private handleDetailsClick(event: Event) {
@@ -116,7 +132,7 @@ export class YatlTreeItem extends YatlBase {
       return;
     }
 
-    this.dispatchEvent(new YatlTreeItemSelectEvent());
+    this.dispatchEvent(new YatlTreeItemSelectEvent(this.value));
   }
 
   private handleToggleButtonClick(event: Event) {

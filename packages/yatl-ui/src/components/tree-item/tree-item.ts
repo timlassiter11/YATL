@@ -19,7 +19,7 @@ import styles from './tree-item.styles';
  * @fires yatl-tree-item-select-request - Before this item is selected. Cancellable.
  * @fires yatl-tree-item-select - When this item is selected.
  * @fires yatl-tree-item-toggle-request - Before this item is toggled open or closed. Cancellable.
- * @fires yatl-tree-item-toggle-event - When this item is opened or closed.
+ * @fires yatl-tree-item-toggle - When this item is opened or closed.
  */
 @customElement('yatl-tree-item')
 export class YatlTreeItem extends YatlBase {

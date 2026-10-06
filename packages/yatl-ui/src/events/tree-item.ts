@@ -17,14 +17,14 @@ export class YatlTreeItemSelectEvent extends YatlEvent {
 export class YatlTreeItemToggleRequest extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-tree-item-toggle-request';
   constructor(public readonly value: string) {
-    super(YatlTreeItemSelectRequest.EVENT_NAME, { cancelable: true });
+    super(YatlTreeItemToggleRequest.EVENT_NAME, { cancelable: true });
   }
 }
 
 export class YatlTreeItemToggleEvent extends YatlEvent {
   public static readonly EVENT_NAME = 'yatl-tree-item-toggle';
   constructor(public readonly value: string) {
-    super(YatlTreeItemSelectEvent.EVENT_NAME);
+    super(YatlTreeItemToggleEvent.EVENT_NAME);
   }
 }
 

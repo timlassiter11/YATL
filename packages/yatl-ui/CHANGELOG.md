@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.6
+
+### Patch Changes
+
+- 5c28d0f: Added toggle events to yatl-tree-item
+
 ## 6.0.5
 
 ### Patch Changes

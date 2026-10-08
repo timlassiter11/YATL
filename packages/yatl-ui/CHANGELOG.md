@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.8
+
+### Patch Changes
+
+- 3ea7b3a: Fixed yatl-details briefly showing a scrollbar when opening and closing
+
 ## 6.0.7
 
 ### Patch Changes

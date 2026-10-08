@@ -1,8 +1,9 @@
 import { html, PropertyValues } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
+import { YatlDetailsToggleEvent } from '../../events/details';
 import { YatlBase } from '../base/base';
 import styles from './details.styles';
-import { YatlDetailsToggleEvent } from '../../events/details';
 
 /**
  * @fires yatl-details-toggle - When the details opens or closes
@@ -32,6 +33,20 @@ export class YatlDetails extends YatlBase {
   @property({ type: String })
   public summary = '';
 
+  @state() private transitioning = false;
+
+  public override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener('transitionstart', this.handleTransitionStart);
+    this.addEventListener('transitionend', this.handleTransitionEnd);
+  }
+
+  public override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.removeEventListener('transitionstart', this.handleTransitionStart);
+    this.removeEventListener('transitionend', this.handleTransitionEnd);
+  }
+
   protected override willUpdate(
     changedProperties: PropertyValues<YatlDetails>,
   ): void {
@@ -52,17 +67,28 @@ export class YatlDetails extends YatlBase {
   }
 
   protected override render() {
+    const bodyClasses = classMap({
+      body: true,
+      transitioning: this.transitioning,
+    });
     return html`
       <details
+        class="base"
         part="base"
         ?open=${this.open}
         @toggle=${this.handleDetailsToggle}
       >
-        <summary part="header">
-          <slot name="summary" part="summary">${this.summary}</slot>
-          <yatl-icon part="arrow-icon" name="chevron-down"></yatl-icon>
+        <summary class="header" part="header">
+          <slot class="summary" name="summary" part="summary"
+            >${this.summary}</slot
+          >
+          <yatl-icon
+            class="arrow-icon"
+            part="arrow-icon"
+            name="chevron-down"
+          ></yatl-icon>
         </summary>
-        <div part="body">
+        <div class=${bodyClasses} part="body">
           <slot></slot>
         </div>
       </details>
@@ -75,6 +101,18 @@ export class YatlDetails extends YatlBase {
     this.open = details.open;
     this.dispatchEvent(new YatlDetailsToggleEvent(this.open));
   }
+
+  private handleTransitionStart = (event: TransitionEvent) => {
+    if (event.propertyName === 'flex-grow') {
+      this.transitioning = true;
+    }
+  };
+
+  private handleTransitionEnd = (event: TransitionEvent) => {
+    if (event.propertyName === 'flex-grow') {
+      this.transitioning = false;
+    }
+  };
 }
 
 declare global {

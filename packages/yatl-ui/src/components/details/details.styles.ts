@@ -16,8 +16,8 @@ export default css`
 
     --spacing: var(--yatl-details-spacing, var(--yatl-spacing-l));
 
-    --open-speed: var(--yatl-details-open-speed, 0.5s);
-    --open-curve: var(--yatl-details-open-curve, var(--ease-spring-3));
+    --open-speed: var(--yatl-details-open-speed, 0.2s);
+    --open-curve: var(--yatl-details-open-curve, var(--ease-3));
     --close-speed: var(--yatl-details-close-speed, 0.2s);
     --close-curve: var(--yatl-details-close-curve, var(--ease-3));
 
@@ -46,7 +46,7 @@ export default css`
     height: 100%;
   }
 
-  [part='header'] {
+  .header {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -56,13 +56,13 @@ export default css`
     padding: var(--spacing);
   }
 
-  :host([open]) [part='header'] {
+  :host([open]) .header {
     border-bottom-width: var(--header-border-width);
     border-bottom-style: var(--header-border-style);
     border-bottom-color: var(--header-border-color);
   }
 
-  [part='body'] {
+  .body {
     padding: var(--spacing);
     overflow-y: auto;
     overflow-x: hidden;
@@ -70,12 +70,16 @@ export default css`
     height: 100%;
   }
 
-  [part='arrow-icon'] {
+  .body.transitioning {
+    overflow-y: hidden;
+  }
+
+  .arrow-icon {
     transform: rotate(-90deg);
     transition: transform var(--close-speed) var(--close-curve);
   }
 
-  :host([open]) [part='arrow-icon'] {
+  :host([open]) .arrow-icon {
     transform: rotate(0deg);
     transform: transform var(--open-speed) var(--open-curve);
   }

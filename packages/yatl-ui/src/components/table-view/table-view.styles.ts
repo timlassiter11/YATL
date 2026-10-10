@@ -20,6 +20,15 @@ export default css`
 
     --row-gap: var(--yatl-table-view-row-gap, var(--yatl-spacing-l));
     --column-gap: var(--yatl-table-view-column-gap, var(--yatl-spacing-l));
+
+    --yatl-table-radius: 0 0 var(--yatl-radius-l) var(--yatl-radius-l);
+    --yatl-table-border-width: 0;
+  }
+
+  .base {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
   }
 
   yatl-loading-overlay {
@@ -27,53 +36,43 @@ export default css`
     z-index: 1;
   }
 
-  [part='view'] {
-    display: grid;
-
-    grid-template-rows: auto 1fr;
-    grid-template-columns: var(--filters-width) 1fr;
-
-    grid-row-gap: var(--row-gap);
-    grid-column-gap: var(--column-gap);
-
-    height: 100%;
-    width: 100%;
-
-    transition: grid-template-columns 200ms;
+  :host([hide-filters-clear-button]) .filters-clear-button {
+    display: none;
   }
 
-  :host([hide-filters]) [part='view'] {
-    grid-template-columns: 0 1fr;
-    grid-column-gap: 0;
+  .panel {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--yatl-surface-2);
+    border-radius: var(--yatl-radius-l);
   }
 
-  :host([hide-filters-clear-button]) {
-    [part='filters-clear-button'] {
-      display: none;
-    }
+  .panel-header {
+    padding: var(--yatl-spacing-m);
   }
 
-  [part='filters-header'] {
-    grid-row: 1;
-    grid-column: 1;
-
+  .filters-header {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-
-    overflow: hidden;
+    border-bottom: 1px solid var(--yatl-border-color);
+    /* This makes the border line up with the table toolbar border */
+    --y-padding: calc(var(--yatl-spacing-m) + 2px);
+    padding: var(--y-padding) var(--yatl-spacing-m);
   }
 
-  [part='filters-label'] {
+  .filters-label {
     font-size: var(--filters-label-font-size);
     font-weight: var(--filters-label-font-weight);
   }
 
-  [part='sidebar'] {
-    grid-row: 2;
-    grid-column: 1;
+  .toolbar {
+    border-bottom: 1px solid var(--yatl-border-color);
+  }
 
+  .sidebar {
+    height: 100%;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -89,17 +88,12 @@ export default css`
    * own scrollbar. The sidebar already scrolls as a whole, so let slotted
    * content size to its natural content height instead.
    */
-  [part='sidebar'] ::slotted(*) {
+  .sidebar ::slotted(*) {
     height: auto;
   }
 
-  [part='toolbar'] {
-    grid-row: 1;
-    grid-column: 2;
-  }
-
-  [part='table'] {
-    grid-row: 2;
-    grid-column: 2;
+  /* It's dumb I have to do this... hidden should always win over CSS */
+  [hidden] {
+    display: none !important;
   }
 `;

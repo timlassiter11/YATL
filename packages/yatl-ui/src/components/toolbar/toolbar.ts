@@ -19,6 +19,8 @@ import {
 } from '../../events';
 import { YatlBase } from '../base/base';
 import styles from './toolbar.styles';
+import { consume } from '@lit/context';
+import { getTableContext } from '../../context';
 
 /**
  * A table toolbar component with a search input, column picker, and export button.
@@ -48,20 +50,26 @@ export class YatlToolbar<
   private searchDebounceTimer = 0;
 
   private _controller?: YatlTableController<T>;
-  /** The table controller this toolbar is attached to. */
-  @property({ attribute: false })
+
   public get controller() {
     return this._controller;
   }
+
+  @consume({
+    context: getTableContext<T>(),
+    subscribe: true,
+  })
+  @property({ attribute: false })
   public set controller(controller) {
-    if (this._controller === controller) {
+    const oldValue = this._controller;
+    if (oldValue === controller) {
       return;
     }
 
-    this._controller = controller;
+    oldValue?.detach(this);
     controller?.attach(this);
+    this._controller = controller;
   }
-
   /**
    * Hides the column visibility picker button.
    * @attr hide-column-picker

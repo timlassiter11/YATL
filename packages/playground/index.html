@@ -51,22 +51,20 @@
     <yatl-toast-manager></yatl-toast-manager>
     <main>
       <yatl-table-view>
-        <yatl-card slot="filters">
-          <div class="option-group">
-            <yatl-search-filter field="name" label="Name"></yatl-search-filter>
-            <yatl-select-filter
-              field="status"
-              label="Status"
-              max-tags="1"
-              multi
-              clearable
-            ></yatl-select-filter>
-            <yatl-date-range-filter label="Date Modified" field="lastModified">
-            </yatl-date-range-filter>
-          </div>
-        </yatl-card>
-        <yatl-card slot="sidebar-end">
-          <span slot="header-start">Table Options</span>
+        <div slot="filters" class="option-group">
+          <yatl-search-filter field="name" label="Name"></yatl-search-filter>
+          <yatl-select-filter
+            field="status"
+            label="Status"
+            max-tags="1"
+            multi
+            clearable
+          ></yatl-select-filter>
+          <yatl-date-range-filter label="Date Modified" field="lastModified">
+          </yatl-date-range-filter>
+        </div>
+        <div slot="sidebar-end" class="table-options">
+          <span class="header-text">Table Options</span>
           <div class="option-group">
             <yatl-number-input
               label="Row Count"
@@ -78,7 +76,7 @@
           </div>
           <form id="optionsForm" onsubmit="event.preventDefault();">
             <div class="option-group">
-              <h4>UI</h4>
+              <yatl-label>UI</yatl-label>
               <yatl-switch
                 name="striped"
                 label="Striped"
@@ -98,7 +96,7 @@
               ></yatl-switch>
             </div>
             <div class="option-group">
-              <h4>Interactivity</h4>
+              <yatl-label>Interactivity</yatl-label>
               <yatl-switch
                 name="resizable"
                 label="Resizable Columns"
@@ -117,14 +115,18 @@
                 always-include
                 checked
               ></yatl-switch>
+            </div>
+            <div class="option-group">
               <yatl-radio-group name="rowSelectionMethod">
-                <h4 slot="label">Row Selection Method</h4>
+                <yatl-label slot="label">Row Selection Method</yatl-label>
                 <yatl-radio label="Multi" value="multi" checked></yatl-radio>
                 <yatl-radio label="Single" value="single"></yatl-radio>
                 <yatl-radio label="None" value="null"></yatl-radio>
               </yatl-radio-group>
+            </div>
+            <div class="option-group">
               <yatl-radio-group name="editTrigger">
-                <h4 slot="label">Edit Trigger</h4>
+                <yatl-label slot="label">Edit Trigger</yatl-label>
                 <yatl-radio label="None" value="none"></yatl-radio>
                 <yatl-radio label="Click" value="click"></yatl-radio>
                 <yatl-radio
@@ -133,8 +135,10 @@
                   checked
                 ></yatl-radio>
               </yatl-radio-group>
+            </div>
+            <div class="option-group">
               <yatl-radio-group name="commitStrategy">
-                <h4 slot="label">Commit Strategy</h4>
+                <yatl-label slot="label">Commit Strategy</yatl-label>
                 <yatl-radio
                   label="Immediate"
                   value="immediate"
@@ -145,7 +149,7 @@
               </yatl-radio-group>
             </div>
             <div class="option-group">
-              <h4>Misc</h4>
+              <yatl-label>Misc</yatl-label>
               <yatl-switch
                 name="tokenizedSearch"
                 label="Tokenize Search"
@@ -166,9 +170,7 @@
               ></yatl-switch>
             </div>
           </form>
-        </yatl-card>
-        <yatl-card slot="sidebar-end">
-          <span slot="header-start">Render State</span>
+          <div class="header-text">Render State</div>
           <div class="option-group">
             <div class="inline">
               Rendered Rows: <span id="renderedRows">0</span>
@@ -178,7 +180,7 @@
             </div>
             <div class="inline">Total Rows: <span id="totalRows">0</span></div>
           </div>
-        </yatl-card>
+        </div>
         <yatl-button
           id="saveChangesButton"
           slot="toolbar-button-group"

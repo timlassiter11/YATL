@@ -89,8 +89,21 @@ yatl-icon[name='moon'] {
   display: none;
 }
 
-h4 {
-  margin: 4px 0;
+.header-text {
+  font-size: 1.5em;
+  font-weight: bold;
+  padding: var(--yatl-spacing-m);
+  border-bottom: 1px solid var(--yatl-border-color);
+}
+
+.table-options {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+yatl-table-view::part(sidebar-end) {
+  overflow: hidden;
 }
 
 .option-group {

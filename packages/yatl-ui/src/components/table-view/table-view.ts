@@ -12,6 +12,10 @@ import {
 } from '../../types';
 import { YatlTableViewFiltersClearEvent } from '../../events/table-view';
 import { YatlSpinnerState } from '../spinner/spinner';
+import { HasSlotController } from '../../utils';
+import { YatlSplitPanelPositionEvent } from '../../events/split-panel';
+
+const POSITION_POSTFIX = '-panel-position';
 
 /**
  * @inheritdoc
@@ -27,6 +31,18 @@ export class YatlTableView<
     context: getTableContext<T>(),
     initialValue: this.controller,
   });
+
+  private slotController = new HasSlotController(
+    this,
+    'sidebar-start',
+    'filters',
+    'sidebar-end',
+  );
+
+  // Split panel position. No need to make it a state.
+  // We'll keep it in sync for re-renders but don't want
+  // to trigger re-renders on it.
+  private panelPosition?: number;
 
   /** When the user requests a silent reload, show the loading icon in the button. */
   @state() private buttonState: YatlSpinnerState = 'idle';
@@ -140,55 +156,93 @@ export class YatlTableView<
     if (changedProps.has('controller')) {
       this.tableContext.setValue(this.controller);
     }
+
+    if (this.panelPosition == null && this.storageOptions) {
+      // User hasn't adjusted the panel yet and we have valid storage options.
+      // Let's go ahead and try to pull the saved value.
+      const storage = this.storageOptions.storage ?? window.localStorage;
+      const position = storage.getItem(
+        this.storageOptions.key + POSITION_POSTFIX,
+      );
+      try {
+        this.panelPosition = Number(position);
+      } catch {
+        console.warn('Failed to load the panel position');
+      }
+    }
   }
 
   protected override render() {
     // No point in showing the reload button if there is no fetch task
     const showReload = this.fetchTask && !this.hideReloadButton;
 
+    const hideSidebarStart = !this.slotController.test('sidebar-start');
+    const hideFilters = !this.slotController.test('filters');
+    const hideSidebarEnd = !this.slotController.test('sidebar-end');
+
     return html`
-      <div part="view">
-        <div part="filters-header">
-          <slot name="filters-label">
-            <span part="filters-label"> ${this.filtersLabel} </span>
-          </slot>
-          <yatl-button
-            part="filters-clear-button"
-            variant="plain"
-            title="Clear Filters"
-            @click=${this.handleClearFiltersClick}
-          >
-            <yatl-icon name="close"></yatl-icon>
-          </yatl-button>
-        </div>
-        <div part="sidebar">
-          <slot name="sidebar-start"></slot>
-          <div part="filters">
-            <slot name="filters"></slot>
+      <yatl-split-panel
+        part="base"
+        class="base"
+        orientation="horizontal"
+        position=${this.panelPosition ?? 10}
+        start-min="350"
+        @yatl-split-panel-position=${this.handleSplitPositionChange}
+      >
+        <div slot="start" part="filters-panel" class="filters-panel">
+          <div part="sidebar" class="sidebar">
+            <div part="sidebar-start" class="panel" ?hidden=${hideSidebarStart}>
+              <slot name="sidebar-start"></slot>
+            </div>
+            <div part="filters" class="panel" ?hidden=${hideFilters}>
+              <div part="filters-header" class="filters-header panel-header">
+                <slot name="filters-label">
+                  <span part="filters-label" class="filters-label">
+                    ${this.filtersLabel}
+                  </span>
+                </slot>
+                <yatl-button
+                  part="filters-clear-button"
+                  class="filters-clear-button"
+                  variant="plain"
+                  title="Clear Filters"
+                  @click=${this.handleClearFiltersClick}
+                >
+                  <yatl-icon name="close"></yatl-icon>
+                </yatl-button>
+              </div>
+              <slot name="filters"></slot>
+            </div>
+            <div part="sidebar-end" class="panel" ?hidden=${hideSidebarEnd}>
+              <slot name="sidebar-end"></slot>
+            </div>
           </div>
-          <slot name="sidebar-end"></slot>
         </div>
-        <yatl-toolbar
-          part="toolbar"
-          search-placeholder=${this.searchPlaceholder}
-          ?hide-column-picker=${this.hideColumnPicker}
-          ?hide-export-button=${this.hideExportButton}
-          ?hide-search-sort-priority-toggle=${this.hideSearchSortPriorityToggle}
-          .controller=${this.controller}
-          @yatl-toolbar-export-click=${this.handleTableExportClick}
-        >
-          ${showReload ? this.renderReloadButton() : nothing}
-          <slot name="toolbar-button-group" slot="button-group"></slot
-          ><slot name="toolbar"></slot
-        ></yatl-toolbar>
-        ${super.render()}
-      </div>
+        <div slot="end" part="table-panel" class="panel table-panel">
+          <yatl-toolbar
+            part="toolbar"
+            class="toolbar panel-header"
+            search-placeholder=${this.searchPlaceholder}
+            ?hide-column-picker=${this.hideColumnPicker}
+            ?hide-export-button=${this.hideExportButton}
+            ?hide-search-sort-priority-toggle=${this
+              .hideSearchSortPriorityToggle}
+            @yatl-toolbar-export-click=${this.handleTableExportClick}
+          >
+            ${showReload ? this.renderReloadButton() : nothing}
+            <slot name="toolbar-button-group" slot="button-group"></slot
+            ><slot name="toolbar"></slot
+          ></yatl-toolbar>
+          ${super.render()}
+        </div>
+      </yatl-split-panel>
     `;
   }
 
   protected renderReloadButton() {
     return html`
       <yatl-button
+        part="reload-button"
         color="raised"
         slot="button-group"
         title="Reload data"
@@ -205,10 +259,25 @@ export class YatlTableView<
     return html`
       ${super.renderBodyContents()}
       <yatl-loading-overlay
+        part="loading-overlay"
         ?show=${this.loading}
         state=${this.loading ? 'loading' : 'idle'}
       ></yatl-loading-overlay>
     `;
+  }
+
+  private handleSplitPositionChange(event: YatlSplitPanelPositionEvent) {
+    this.panelPosition = event.position;
+    if (!event.dragging) {
+      // Save when they are done dragging. Don't spam the storage.
+      if (this.storageOptions) {
+        const storage = this.storageOptions.storage ?? window.localStorage;
+        storage.setItem(
+          this.storageOptions.key + POSITION_POSTFIX,
+          String(event.position),
+        );
+      }
+    }
   }
 
   private handleClearFiltersClick() {
@@ -256,6 +325,7 @@ export class YatlTableView<
       setTimeout(() => (this.buttonState = 'idle'), 3000);
       return;
     } catch {
+      // TODO: This currently swallows exceptions and I'm not sure it should...
       if (token !== this.reloadToken) {
         return;
       }

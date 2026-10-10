@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.9
+
+### Patch Changes
+
+- ae41a3b: Switched yatl-table-view to use new yatl-split-panel component for resizeable filters
+- ed71105: Added new yatl-split-panel component used to display two resizeable panels either split vertically or horizontally
+
 ## 6.0.8
 
 ### Patch Changes

@@ -10,6 +10,7 @@ export default css`
     --handle-length: var(--yatl-split-panel-handle-length, 24px);
     --handle-thickness: var(--yatl-split-panel-handle-thickness, 9px);
     --handle-grip: var(--yatl-split-panel-handle-color, var(--yatl-text-3));
+    --hover-thickness: var(--yatl-split-panel-hover-thickness, 6px);
   }
 
   :host([orientation='horizontal']) {
@@ -59,14 +60,31 @@ export default css`
     cursor: default;
   }
 
-  :host([orientation='horizontal']) .divider::before {
-    width: 1px;
+  .divider::after {
+    content: '';
+    position: absolute;
+    transition: 200ms background-color;
+    border-radius: 999px;
+  }
+
+  :host([orientation='horizontal']) .divider::after {
+    width: min(var(--hover-thickness), var(--divider-size));
     height: 100%;
   }
 
-  :host([orientation='vertical']) .divider::before {
-    height: 1px;
+  :host([orientation='vertical']) .divider::after {
+    height: min(var(--hover-thickness), var(--divider-size));
     width: 100%;
+  }
+
+  :host([dragging]) .divider::after,
+  .divider:hover::after {
+    background-color: var(--yatl-color-brand);
+    background-color: color-mix(
+      in srgb,
+      var(--yatl-color-brand),
+      transparent 60%
+    );
   }
 
   .handle {

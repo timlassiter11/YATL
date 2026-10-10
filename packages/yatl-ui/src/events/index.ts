@@ -7,6 +7,7 @@ export * from './dropzone';
 export * from './flyout';
 export * from './option';
 export * from './spinner';
+export * from './split-panel';
 export * from './tab-group';
 export * from './table-toolbar';
 export * from './table-view';

@@ -36,6 +36,12 @@ export default css`
     z-index: 1;
   }
 
+  :host([hide-filters]) {
+    yatl-split-panel {
+      grid-template-columns: 0 0 1fr;
+    }
+  }
+
   :host([hide-filters-clear-button]) .filters-clear-button {
     display: none;
   }

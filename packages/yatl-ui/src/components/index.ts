@@ -18,6 +18,7 @@ export * from './notification-center/notification-center';
 export * from './option/option';
 export * from './remote-options/remote-options';
 export * from './spinner/spinner';
+export * from './split-panel/split-panel';
 export * from './tab/tab';
 export * from './tab-group/tab-group';
 export * from './tab-panel/tab-panel';

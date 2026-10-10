@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.10
+
+### Patch Changes
+
+- af3e292: Fixed yatl-split-panel events not publicly accessible
+- d56b3d1: Fixed yatl-table-view's hide-filters attribute not working
+
 ## 6.0.9
 
 ### Patch Changes

@@ -69,6 +69,8 @@ export default css`
     border-radius: 999px;
     padding: var(--yatl-spacing-xs);
     color: var(--yatl-text-brand);
+    font-size: 0.75rem;
+    font-weight: 400;
   }
 
   :host([hide-filter-count]) .filter-count {

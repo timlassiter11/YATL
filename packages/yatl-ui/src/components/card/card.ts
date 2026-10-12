@@ -11,17 +11,21 @@ export class YatlCard extends YatlBase {
 
   private slotController = new HasSlotController(
     this,
+    'header',
     'header-start',
     'header-end',
+    'footer',
     'footer-start',
     'footer-end',
   );
 
   protected override render() {
     const hasHeader =
+      this.slotController.test('header') ||
       this.slotController.test('header-start') ||
       this.slotController.test('header-end');
     const hasFooter =
+      this.slotController.test('footer') ||
       this.slotController.test('footer-start') ||
       this.slotController.test('footer-end');
 

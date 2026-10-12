@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.11
+
+### Patch Changes
+
+- c4b4f4d: Fixed yatl-button border radius missing with smaller font sizes
+- c124f32: Added a filter count to the yatl-table-view's filters header
+
 ## 6.0.10
 
 ### Patch Changes

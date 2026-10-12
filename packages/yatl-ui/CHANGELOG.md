@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.12
+
+### Patch Changes
+
+- b5d0ee4: Fixed yatl-card not detecting slotted header and footer content
+
 ## 6.0.11
 
 ### Patch Changes

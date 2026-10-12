@@ -55,6 +55,20 @@ export class YatlTableView<
   public filtersLabel = 'Filters';
 
   /**
+   * Smallest the filters panel may get, in pixels.
+   * @attr filters-min-width
+   */
+  @property({ type: Number, attribute: 'filters-min-width' })
+  public filtersMinWidth = 300;
+
+  /**
+   * Filters panel's default size, as a percentage of the space left after the divider.
+   * @attr filters-default-width
+   */
+  @property({ type: Number, attribute: 'filters-default-width' })
+  public filtersDefaultWidth = 15;
+
+  /**
    * The placeholder text for the search input.
    * @attr search-placeholder
    */
@@ -177,10 +191,13 @@ export class YatlTableView<
       const position = storage.getItem(
         this.storageOptions.key + POSITION_POSTFIX,
       );
-      try {
-        this.panelPosition = Number(position);
-      } catch {
-        console.warn('Failed to load the panel position');
+      if (position !== null) {
+        // Number(null) === 0... we don't want that.
+        try {
+          this.panelPosition = Number(position);
+        } catch {
+          console.warn('Failed to load the panel position');
+        }
       }
     }
   }
@@ -194,13 +211,15 @@ export class YatlTableView<
     const hideSidebarEnd = !this.slotController.test('sidebar-end');
     const filterCount = this.getFilterCount();
 
+    console.log(this.panelPosition);
+
     return html`
       <yatl-split-panel
         part="base"
         class="base"
         orientation="horizontal"
-        position=${this.panelPosition ?? 10}
-        start-min="350"
+        position=${this.panelPosition ?? this.filtersDefaultWidth}
+        start-min=${this.filtersMinWidth}
         @yatl-split-panel-position=${this.handleSplitPositionChange}
       >
         <div slot="start" part="filters-panel" class="filters-panel">

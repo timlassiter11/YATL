@@ -47,26 +47,21 @@ export default css`
     flex-direction: column;
     background-color: var(--yatl-surface-2);
     border-radius: var(--yatl-radius-l);
+    height: auto;
   }
 
   .panel-header {
-    padding: var(--yatl-spacing-m);
+    width: 100%;
+    /* helps match the two header heights */
+    min-height: 42px;
   }
 
   .filters-header {
     display: flex;
+
     flex-direction: row;
     align-items: center;
-    border-bottom: 1px solid var(--yatl-border-color);
-    /* This makes the border line up with the table toolbar border */
-    --y-padding: calc(var(--yatl-spacing-m) + 2px);
-    padding: var(--y-padding) var(--yatl-spacing-m);
     gap: var(--yatl-spacing-s);
-  }
-
-  .filters-label {
-    font-size: var(--filters-label-font-size);
-    font-weight: var(--filters-label-font-weight);
   }
 
   .filter-count {
@@ -90,7 +85,8 @@ export default css`
   }
 
   .toolbar {
-    border-bottom: 1px solid var(--yatl-border-color);
+    font-size: initial;
+    font-weight: initial;
   }
 
   .sidebar {

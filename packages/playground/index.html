@@ -63,8 +63,8 @@
           <yatl-date-range-filter label="Date Modified" field="lastModified">
           </yatl-date-range-filter>
         </div>
-        <div slot="sidebar-end" class="table-options">
-          <span class="header-text">Table Options</span>
+        <yatl-card slot="sidebar-end" class="table-options">
+          <span slot="header" class="header-text">Table Options</span>
           <div class="option-group">
             <yatl-number-input
               label="Row Count"
@@ -170,8 +170,8 @@
               ></yatl-switch>
             </div>
           </form>
-          <div class="header-text">Render State</div>
-          <div class="option-group">
+          <div slot="footer" class="footer">
+            <div class="footer-title">Render State</div>
             <div class="inline">
               Rendered Rows: <span id="renderedRows">0</span>
             </div>
@@ -180,7 +180,7 @@
             </div>
             <div class="inline">Total Rows: <span id="totalRows">0</span></div>
           </div>
-        </div>
+        </yatl-card>
         <yatl-button
           id="saveChangesButton"
           slot="toolbar-button-group"

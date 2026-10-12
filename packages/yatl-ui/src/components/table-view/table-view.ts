@@ -208,8 +208,12 @@ export class YatlTableView<
             <div part="sidebar-start" class="panel" ?hidden=${hideSidebarStart}>
               <slot name="sidebar-start"></slot>
             </div>
-            <div part="filters" class="panel" ?hidden=${hideFilters}>
-              <div part="filters-header" class="filters-header panel-header">
+            <yatl-card part="filters" class="panel" ?hidden=${hideFilters}>
+              <div
+                slot="header"
+                part="filters-header"
+                class="filters-header panel-header"
+              >
                 <slot name="filters-label">
                   <span part="filters-label" class="filters-label">
                     ${this.filtersLabel}
@@ -228,21 +232,22 @@ export class YatlTableView<
                   variant="plain"
                   color="danger"
                   title="Clear Filters"
-                  ?disabled=${filterCount === 0}
+                  ?disabled=${filterCount === 0 && !this.searchQuery}
                   @click=${this.handleClearFiltersClick}
                 >
                   Clear
                 </yatl-button>
               </div>
               <slot name="filters"></slot>
-            </div>
+            </yatl-card>
             <div part="sidebar-end" class="panel" ?hidden=${hideSidebarEnd}>
               <slot name="sidebar-end"></slot>
             </div>
           </div>
         </div>
-        <div slot="end" part="table-panel" class="panel table-panel">
+        <yatl-card slot="end" part="table-panel" class="panel table-panel">
           <yatl-toolbar
+            slot="header"
             part="toolbar"
             class="toolbar panel-header"
             search-placeholder=${this.searchPlaceholder}
@@ -257,7 +262,7 @@ export class YatlTableView<
             ><slot name="toolbar"></slot
           ></yatl-toolbar>
           ${super.render()}
-        </div>
+        </yatl-card>
       </yatl-split-panel>
     `;
   }

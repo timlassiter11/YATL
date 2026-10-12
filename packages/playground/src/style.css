@@ -90,16 +90,14 @@ yatl-icon[name='moon'] {
 }
 
 .header-text {
-  font-size: 1.5em;
-  font-weight: bold;
-  padding: var(--yatl-spacing-m);
-  border-bottom: 1px solid var(--yatl-border-color);
+  width: 100%;
 }
 
 .table-options {
   overflow: auto;
   display: flex;
   flex-direction: column;
+  background-color: var(--yatl-surface-2);
 }
 
 yatl-table-view::part(sidebar-end) {
@@ -109,8 +107,20 @@ yatl-table-view::part(sidebar-end) {
 .option-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--yatl-spacing-m);
+  padding: var(--yatl-spacing-l);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--yatl-spacing-m);
+  width: 100%;
+}
+
+.footer-title {
+  font-size: var(--yatl-font-size-l);
+  font-weight: 600;
 }
 
 .inline {

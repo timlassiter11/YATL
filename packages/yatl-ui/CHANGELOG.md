@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.13
+
+### Patch Changes
+
+- bee8670: Added new properties to yatl-table-view for configuring the split panels size
+
 ## 6.0.12
 
 ### Patch Changes

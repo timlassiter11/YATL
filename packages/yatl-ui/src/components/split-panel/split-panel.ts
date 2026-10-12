@@ -34,15 +34,24 @@ export class YatlSplitPanel extends YatlBase {
   @property({ type: Number })
   public position = 50;
 
-  /** Smallest the start panel may get, in pixels. */
+  /**
+   * Smallest the start panel may get, in pixels.
+   * @attr start-min
+   */
   @property({ type: Number, attribute: 'start-min' })
   public startMin = 0;
 
-  /** Smallest the end panel may get, in pixels. */
+  /**
+   * Smallest the end panel may get, in pixels.
+   * @attr end-min
+   */
   @property({ type: Number, attribute: 'end-min' })
   public endMin = 0;
 
-  /** Percentage restored on double-click. Defaults to the initial `position`. */
+  /**
+   * Percentage restored on double-click. Defaults to the initial `position`.
+   * @attr default-position
+   */
   @property({ type: Number, attribute: 'default-position' })
   public defaultPosition?: number;
 
@@ -53,6 +62,10 @@ export class YatlSplitPanel extends YatlBase {
   @property({ type: Boolean, reflect: true })
   public disabled = false;
 
+  /**
+   * The aria label for the divider
+   * @attr divider-label
+   */
   @property({ attribute: 'divider-label' })
   public dividerLabel = 'Resize panels';
 

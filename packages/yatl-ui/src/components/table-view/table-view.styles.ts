@@ -42,10 +42,6 @@ export default css`
     }
   }
 
-  :host([hide-filters-clear-button]) .filters-clear-button {
-    display: none;
-  }
-
   .panel {
     display: flex;
     flex-direction: column;
@@ -60,17 +56,37 @@ export default css`
   .filters-header {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--yatl-border-color);
     /* This makes the border line up with the table toolbar border */
     --y-padding: calc(var(--yatl-spacing-m) + 2px);
     padding: var(--y-padding) var(--yatl-spacing-m);
+    gap: var(--yatl-spacing-s);
   }
 
   .filters-label {
     font-size: var(--filters-label-font-size);
     font-weight: var(--filters-label-font-weight);
+  }
+
+  .filter-count {
+    background-color: var(--yatl-color-brand);
+    border-radius: 999px;
+    padding: var(--yatl-spacing-xs);
+    color: var(--yatl-text-brand);
+  }
+
+  :host([hide-filter-count]) .filter-count {
+    display: none;
+  }
+
+  .filters-clear-button {
+    font-size: 0.75rem;
+    margin-left: auto;
+  }
+
+  :host([hide-filters-clear-button]) .filters-clear-button {
+    display: none;
   }
 
   .toolbar {

@@ -4,7 +4,7 @@ import { customElement } from 'lit/decorators.js';
 import { ContextProvider } from '@lit/context';
 import { getTableContext } from '../../context';
 import styles from './table-view.styles';
-import { UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
+import { NestedKeyOf, UnspecifiedRecord, YatlTable } from '@timlassiter11/yatl';
 import {
   YatlTableFetchContext,
   YatlTableFetchReason,
@@ -49,9 +49,9 @@ export class YatlTableView<
 
   /**
    * Text to be display above the filters slot.
-   * @attr filterslabel
+   * @attr filters-label
    */
-  @property({ type: String })
+  @property({ type: String, attribute: 'filters-label' })
   public filtersLabel = 'Filters';
 
   /**
@@ -62,14 +62,24 @@ export class YatlTableView<
   public searchPlaceholder = 'Search';
 
   /**
-   * Toggles the visibility of the left filters pane and header. Defaults to `false`.
+   * Toggles the visibility of the left filters pane and header.
+   * Defaults to `false`.
    * @attr hide-filters
    */
   @property({ type: Boolean, reflect: true, attribute: 'hide-filters' })
   public hideFilters = false;
 
   /**
-   * Toggles the visibility of the filters clear button. Defaults to `false`.
+   * Toggles the visibility of the filter count chip next to the filters label.
+   * Defaults to `false`.
+   * @attr hide-filter-count
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'hide-filter-count' })
+  public hideFilterCount = false;
+
+  /**
+   * Toggles the visibility of the filters clear button.
+   * Defaults to `false`.
    * @attr hide-filters-clear-button
    */
   @property({
@@ -80,29 +90,32 @@ export class YatlTableView<
   public hideFiltersClearButton = false;
 
   /**
-   * Toggles the visibility of the column picker button in the toolbar. Defaults to `true`.
+   * Toggles the visibility of the column picker button in the toolbar.
+   * Defaults to `true`.
    * @attr hide-column-picker
    */
   @property({ type: Boolean, attribute: 'hide-column-picker' })
   public hideColumnPicker = false;
 
   /**
-   * Toggles the visibility of the CSV export button in the toolbar. Defaults to `true`.
+   * Toggles the visibility of the CSV export button in the toolbar.
+   * Defaults to `true`.
    * @attr hide-export-button
    */
   @property({ type: Boolean, attribute: 'hide-export-button' })
   public hideExportButton = false;
 
   /**
-   * Toggles the visibility of the search/sort priority toggle button in the
-   * toolbar. Defaults to `true`.
+   * Toggles the visibility of the search/sort priority toggle button in the toolbar.
+   * Defaults to `true`.
    * @attr hide-search-sort-priority-toggle
    */
   @property({ type: Boolean, attribute: 'hide-search-sort-priority-toggle' })
   public hideSearchSortPriorityToggle = false;
 
   /**
-   * Toggles the visibility of the reload button in the toolbar. Defaults to `true`.
+   * Toggles the visibility of the reload button in the toolbar.
+   * Defaults to `true`.
    * @attr hide-reload-button
    */
   @property({ type: Boolean, attribute: 'hide-reload-button' })
@@ -179,6 +192,7 @@ export class YatlTableView<
     const hideSidebarStart = !this.slotController.test('sidebar-start');
     const hideFilters = !this.slotController.test('filters');
     const hideSidebarEnd = !this.slotController.test('sidebar-end');
+    const filterCount = this.getFilterCount();
 
     return html`
       <yatl-split-panel
@@ -201,14 +215,23 @@ export class YatlTableView<
                     ${this.filtersLabel}
                   </span>
                 </slot>
+                <yatl-tag
+                  part="filter-count"
+                  class="filter-count"
+                  ?hidden=${filterCount === 0}
+                >
+                  ${filterCount}
+                </yatl-tag>
                 <yatl-button
                   part="filters-clear-button"
                   class="filters-clear-button"
                   variant="plain"
+                  color="danger"
                   title="Clear Filters"
+                  ?disabled=${filterCount === 0}
                   @click=${this.handleClearFiltersClick}
                 >
-                  <yatl-icon name="close"></yatl-icon>
+                  Clear
                 </yatl-button>
               </div>
               <slot name="filters"></slot>
@@ -336,6 +359,18 @@ export class YatlTableView<
         this.loading = false;
       }
     }
+  }
+
+  private getFilterCount() {
+    let count = 0;
+    for (const key in this.filters) {
+      const value = this.filters[key as NestedKeyOf<T>];
+      if (value !== undefined) {
+        // FIXME: What if the filter is a set?
+        count += Array.isArray(value) ? value.length : 1;
+      }
+    }
+    return count;
   }
 }
 

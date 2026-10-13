@@ -6,7 +6,7 @@ export default css`
     overflow: hidden;
     min-width: 0;
     min-height: 0;
-    --divider-size: var(--yatl-split-panel-divider-size, 12px);
+    --divider-size: var(--yatl-split-panel-divider-size, var(--yatl-spacing-s));
     --handle-length: var(--yatl-split-panel-handle-length, 24px);
     --handle-thickness: var(--yatl-split-panel-handle-thickness, 9px);
     --handle-grip: var(--yatl-split-panel-handle-color, var(--yatl-text-3));

@@ -20,9 +20,6 @@ export default css`
 
     --row-gap: var(--yatl-table-view-row-gap, var(--yatl-spacing-l));
     --column-gap: var(--yatl-table-view-column-gap, var(--yatl-spacing-l));
-
-    --yatl-table-radius: 0 0 var(--yatl-radius-l) var(--yatl-radius-l);
-    --yatl-table-border-width: 0;
   }
 
   .base {
@@ -45,15 +42,22 @@ export default css`
   .panel {
     display: flex;
     flex-direction: column;
-    background-color: var(--yatl-surface-2);
-    border-radius: var(--yatl-radius-l);
+
+    border-radius: var(--yatl-radius-m);
     height: auto;
+    flex-grow: 1;
+    /** The card body should handle the overflow */
+    overflow: hidden;
   }
 
   .panel-header {
     width: 100%;
     /* helps match the two header heights */
     min-height: 42px;
+  }
+
+  .filters {
+    background-color: var(--yatl-surface-2);
   }
 
   .filters-header {
@@ -86,9 +90,15 @@ export default css`
     display: none;
   }
 
+  .table-panel {
+    gap: var(--yatl-spacing-s);
+  }
+
   .toolbar {
-    font-size: initial;
-    font-weight: initial;
+    padding: var(--yatl-spacing-m);
+    border: 1px solid var(--yatl-border-color);
+    border-radius: var(--yatl-radius-m);
+    background-color: var(--yatl-surface-2);
   }
 
   .sidebar {
@@ -97,7 +107,7 @@ export default css`
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
-    gap: var(--yatl-spacing-l);
+    gap: var(--yatl-spacing-s);
   }
 
   /*

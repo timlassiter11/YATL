@@ -211,8 +211,6 @@ export class YatlTableView<
     const hideSidebarEnd = !this.slotController.test('sidebar-end');
     const filterCount = this.getFilterCount();
 
-    console.log(this.panelPosition);
-
     return html`
       <yatl-split-panel
         part="base"
@@ -227,7 +225,11 @@ export class YatlTableView<
             <div part="sidebar-start" class="panel" ?hidden=${hideSidebarStart}>
               <slot name="sidebar-start"></slot>
             </div>
-            <yatl-card part="filters" class="panel" ?hidden=${hideFilters}>
+            <yatl-card
+              part="filters"
+              class="panel filters"
+              ?hidden=${hideFilters}
+            >
               <div
                 slot="header"
                 part="filters-header"
@@ -264,9 +266,8 @@ export class YatlTableView<
             </div>
           </div>
         </div>
-        <yatl-card slot="end" part="table-panel" class="panel table-panel">
+        <div slot="end" part="table-panel" class="panel table-panel">
           <yatl-toolbar
-            slot="header"
             part="toolbar"
             class="toolbar panel-header"
             search-placeholder=${this.searchPlaceholder}
@@ -281,7 +282,7 @@ export class YatlTableView<
             ><slot name="toolbar"></slot
           ></yatl-toolbar>
           ${super.render()}
-        </yatl-card>
+        </div>
       </yatl-split-panel>
     `;
   }

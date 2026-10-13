@@ -4,7 +4,7 @@ export default css`
   :host {
     --dialog-bg: var(--yatl-dialog-bg, var(--yatl-surface-3));
     --dialog-text: var(--yatl-dialog-text, var(--yatl-text-1));
-    --dialog-radius: var(--yatl-dialog-radius, var(--yatl-radius-l));
+    --dialog-radius: var(--yatl-dialog-radius, var(--yatl-radius-m));
     --dialog-border-width: var(--yatl-dialog-border-width, 1px);
     --dialog-border-style: var(--yatl-dialog-border-style, solid);
     --dialog-border-color: var(

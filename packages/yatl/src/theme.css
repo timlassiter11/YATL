@@ -20,9 +20,9 @@
   /* Radius */
   --yatl-radius-xs: 2px;
   --yatl-radius-s: 4px;
-  --yatl-radius-m: 8px;
-  --yatl-radius-l: 12px;
-  --yatl-radius-xl: 16px;
+  --yatl-radius-m: 6px;
+  --yatl-radius-l: 8px;
+  --yatl-radius-xl: 12px;
 
   /* Border */
   --yatl-border-color: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));

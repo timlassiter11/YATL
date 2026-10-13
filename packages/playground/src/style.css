@@ -100,6 +100,10 @@ yatl-icon[name='moon'] {
   background-color: var(--yatl-surface-2);
 }
 
+yatl-table-view::part(filters) {
+  /** Defaults to hidden which causes this to shrink. */
+  overflow: unset;
+}
 yatl-table-view::part(sidebar-end) {
   overflow: hidden;
 }
@@ -108,7 +112,7 @@ yatl-table-view::part(sidebar-end) {
   display: flex;
   flex-direction: column;
   gap: var(--yatl-spacing-m);
-  padding: var(--yatl-spacing-l);
+  padding: var(--yatl-spacing-s);
 }
 
 .footer {

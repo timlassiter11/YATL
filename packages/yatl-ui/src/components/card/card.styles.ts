@@ -11,7 +11,7 @@ export default css`
       --yatl-card-border-color,
       var(--yatl-border-color)
     );
-    --card-border-radius: var(--yatl-card-border-radius, var(--yatl-radius-l));
+    --card-border-radius: var(--yatl-card-border-radius, var(--yatl-radius-m));
 
     --card-header-font-size: var(--yatl-card-header-font-size, x-large);
     --card-header-font-wieght: var(--yatl-card-header-font-weight, 700);

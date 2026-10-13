@@ -1,5 +1,11 @@
 # @timlassiter11/yatl
 
+## 1.7.3
+
+### Patch Changes
+
+- e98d3f1: Slightly tweaked theme
+
 ## 1.7.2
 
 ### Patch Changes

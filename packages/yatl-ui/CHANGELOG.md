@@ -1,5 +1,13 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.14
+
+### Patch Changes
+
+- e98d3f1: Slightly tweaked theme
+- Updated dependencies [e98d3f1]
+  - @timlassiter11/yatl@1.7.3
+
 ## 6.0.13
 
 ### Patch Changes

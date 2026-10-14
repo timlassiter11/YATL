@@ -98,13 +98,13 @@ export default css`
 
   :host([orientation='horizontal']) .handle {
     grid-auto-flow: row;
-    width: var(--handle-thickness);
+    width: min(var(--divider-size), var(--handle-thickness));
     height: var(--handle-length);
   }
 
   :host([orientation='vertical']) .handle {
     grid-auto-flow: column;
-    height: var(--handle-thickness);
+    height: min(var(--divider-size), var(--handle-thickness));
     width: var(--handle-length);
   }
 

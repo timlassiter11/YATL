@@ -284,8 +284,4 @@ declare global {
   interface HTMLElementTagNameMap {
     'yatl-split-panel': YatlSplitPanel;
   }
-
-  interface GlobalEventHandlersEventMap {
-    [YatlSplitPanelPositionEvent.EVENT_NAME]: YatlSplitPanelPositionEvent;
-  }
 }

@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.15
+
+### Patch Changes
+
+- 7bd4866: Fixed yatl-split-panel handle not centered
+- 4f1cd9e: Fixed bug causing button success and error overlays to not honor the button's border radius
+
 ## 6.0.14
 
 ### Patch Changes

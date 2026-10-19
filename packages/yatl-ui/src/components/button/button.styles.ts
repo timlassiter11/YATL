@@ -23,10 +23,13 @@ export default css`
     --button-border-width: var(--yatl-button-border-width, 2px);
     --button-border-color: var(--yatl-button-border, transparent);
 
-    color: var(--button-text);
+    color: var(--yatl-text-1);
     font-weight: 500;
+    font-size: var(--button-font-size);
     display: inline-block;
     box-sizing: border-box;
+    overflow: hidden;
+    border-radius: var(--button-radius);
     position: relative;
   }
 
@@ -36,13 +39,11 @@ export default css`
     height: 100%;
     cursor: pointer;
     padding: var(--button-padding);
-    color: inherit;
+    color: var(--button-text);
     font-size: inherit;
     font-weight: inherit;
     background-color: var(--button-bg);
     border: var(--button-border-width) solid var(--button-border-color);
-    border-radius: var(--button-radius);
-    overflow: hidden;
   }
 
   [part='contents'] {

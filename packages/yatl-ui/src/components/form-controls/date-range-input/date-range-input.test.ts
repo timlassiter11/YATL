@@ -95,8 +95,8 @@ describe('YatlDateRangeInput - apply/cancel flow', () => {
       'yatl-date-range-picker',
     ) as YatlDateRangePicker;
 
-    expect(picker.startDate?.getTime()).toBe(new Date(2024, 0, 1).getTime());
-    expect(picker.endDate?.getTime()).toBe(new Date(2024, 0, 10).getTime());
+    expect(picker.startDate?.getTime()).toBe(new Date(2024, 1, 1).getTime());
+    expect(picker.endDate?.getTime()).toBe(new Date(2024, 1, 10).getTime());
   });
 
   test('Clear resets the value and closes without needing Apply', async () => {

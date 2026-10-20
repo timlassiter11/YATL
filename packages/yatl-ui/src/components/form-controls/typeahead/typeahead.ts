@@ -163,7 +163,7 @@ export class YatlTypeahead extends YatlInput {
     return !!this.uri && this.canSearch;
   }
 
-  private get shouldOpen() {
+  public get open() {
     return (
       this.hasFocus &&
       this.canSearchCache &&
@@ -231,7 +231,7 @@ export class YatlTypeahead extends YatlInput {
   protected override renderBase(contents: unknown): TemplateResult<1> {
     return html`
       <yatl-dropdown
-        .open=${live(this.shouldOpen)}
+        .open=${live(this.open)}
         ?match-width=${this.matchWidth}
         @yatl-dropdown-select=${this.handleDropdownSelect}
         @yatl-dropdown-toggle-request=${this.handleDropdownToggleRequest}

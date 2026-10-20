@@ -70,7 +70,7 @@ describe('YatlConfirmationDialog - confirm() resolution', () => {
     let hideCount = 0;
     el.addEventListener('yatl-confirmation-dialog-cancel', () => cancelCount++);
     el.addEventListener('yatl-confirmation-dialog-reject', () => rejectCount++);
-    el.addEventListener('yatl-confirmation-dialog-hide', () => hideCount++);
+    el.addEventListener('yatl-dialog-hide', () => hideCount++);
 
     await innerDialog(el).hide();
 
@@ -296,12 +296,12 @@ describe('YatlConfirmationDialog - button customization', () => {
 });
 
 describe('YatlConfirmationDialog - show/hide event passthrough', () => {
-  test('fires yatl-confirmation-dialog-show and -hide around the transition', async () => {
+  test('fires yatl-dialog-show and -hide around the transition', async () => {
     const el = await renderConfirmationDialog();
     let shown = false;
     let hidden = false;
-    el.addEventListener('yatl-confirmation-dialog-show', () => (shown = true));
-    el.addEventListener('yatl-confirmation-dialog-hide', () => (hidden = true));
+    el.addEventListener('yatl-dialog-show', () => (shown = true));
+    el.addEventListener('yatl-dialog-hide', () => (hidden = true));
 
     await el.show();
     expect(shown).toBe(true);

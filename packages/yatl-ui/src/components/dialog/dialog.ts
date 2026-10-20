@@ -190,8 +190,6 @@ export class YatlDialog extends YatlBase {
   protected override updated(
     changedProperties: PropertyValues<YatlDialog>,
   ): void {
-    // TODO: This should really only be fired from user interaction...
-    // It might be best to remove this and let the user handle it in their button logic.
     if (changedProperties.has('fullscreen')) {
       const event = new YatlDialogFullscreenEvent(this.fullscreen);
       this.dispatchEvent(event);

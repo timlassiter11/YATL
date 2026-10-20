@@ -6,9 +6,7 @@ import styles from './confirmation-dialog.styles';
 import {
   YatlConfirmationDialogAcceptEvent,
   YatlConfirmationDialogCancelEvent,
-  YatlConfirmationDialogHideEvent,
   YatlConfirmationDialogRejectEvent,
-  YatlConfirmationDialogShowEvent,
 } from '../../events/confirmation-dialog';
 import { type YatlDialog } from '../dialog/dialog';
 import { YatlButtonColor, YatlButtonVariant } from '../button/button';
@@ -19,8 +17,6 @@ type ConfirmationOutcome = 'accept' | 'reject' | 'cancel';
  * @fires yatl-confirmation-dialog-accept - Fired when the dialog has been accepted.
  * @fires yatl-confirmation-dialog-reject - Fired when the dialog has been explicitly rejected (the reject button).
  * @fires yatl-confirmation-dialog-cancel - Fired when the dialog was dismissed without an explicit choice (the cancel button, the close button, backdrop click, or Escape).
- * @fires yatl-confirmation-dialog-show - Fired after the dialog has finished showing.
- * @fires yatl-confirmation-dialog-hide - Fired after the dialog has finished hiding, regardless of how it was closed.
  */
 @customElement('yatl-confirmation-dialog')
 export class YatlConfirmationDialog extends YatlBase {
@@ -240,9 +236,7 @@ export class YatlConfirmationDialog extends YatlBase {
         ?fullscreen=${this.fullscreen}
         ?no-close-button=${this.noCloseButton}
         @yatl-dialog-show-request=${this.handleDialogShow}
-        @yatl-dialog-show=${this.handleDialogShown}
         @yatl-dialog-hide-request=${this.handleDialogHide}
-        @yatl-dialog-hide=${this.handleDialogHidden}
       >
         <slot name="header" slot="header">
           <h2 part="label">
@@ -289,10 +283,6 @@ export class YatlConfirmationDialog extends YatlBase {
     this.open = true;
   }
 
-  private handleDialogShown() {
-    this.dispatchEvent(new YatlConfirmationDialogShowEvent());
-  }
-
   private handleDialogHide() {
     if (this.open) {
       this.open = false;
@@ -303,10 +293,6 @@ export class YatlConfirmationDialog extends YatlBase {
       // show/hide events.
       this.dispatchEvent(new YatlConfirmationDialogCancelEvent());
     }
-  }
-
-  private handleDialogHidden() {
-    this.dispatchEvent(new YatlConfirmationDialogHideEvent());
   }
 }
 

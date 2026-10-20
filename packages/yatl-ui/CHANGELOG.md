@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.17
+
+### Patch Changes
+
+- e00a0d9: Tweaked button style
+- b54b963: Added readonly 'open' property to yatl-typeahead
+
 ## 6.0.16
 
 ### Patch Changes

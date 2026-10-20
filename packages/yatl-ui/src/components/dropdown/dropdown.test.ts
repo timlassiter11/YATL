@@ -214,6 +214,6 @@ describe('YatlDropdown - popover rendering', () => {
     await settle(el);
 
     expect(el.open).toBe(false);
-    expect(toggles).toEqual([false]);
+    expect(toggles).toEqual([true, false]);
   });
 });

@@ -98,6 +98,7 @@ export class YatlDropdown extends YatlBase {
         this.hideMenu();
         this.removeListeners();
       }
+      this.dispatchEvent(new YatlDropdownToggleEvent(this.open));
     }
   }
 
@@ -293,7 +294,6 @@ export class YatlDropdown extends YatlBase {
     }
 
     this.open = state;
-    this.dispatchEvent(new YatlDropdownToggleEvent(state));
   }
 
   private getActiveItem(items: YatlOption[]) {

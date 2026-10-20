@@ -20,7 +20,7 @@ export default css`
 
     --button-text: var(--yatl-button-text, var(--appearance-text));
     --button-bg: var(--yatl-button-bg, var(--appearance-color));
-    --button-border-width: var(--yatl-button-border-width, 2px);
+    --button-border-width: var(--yatl-button-border-width, 0px);
     --button-border-color: var(--yatl-button-border, transparent);
 
     color: var(--yatl-text-1);
@@ -29,6 +29,7 @@ export default css`
     display: inline-block;
     box-sizing: border-box;
     overflow: hidden;
+    border: var(--button-border-width) solid var(--button-border-color);
     border-radius: var(--button-radius);
     position: relative;
   }
@@ -43,7 +44,7 @@ export default css`
     font-size: inherit;
     font-weight: inherit;
     background-color: var(--button-bg);
-    border: var(--button-border-width) solid var(--button-border-color);
+    border: none;
   }
 
   [part='contents'] {
@@ -99,36 +100,6 @@ export default css`
 
   :host(:not([disabled])) [part='base']:hover {
     background-color: var(--button-hover-bg);
-  }
-
-  :host([color='brand']) {
-    --appearance-color: var(--yatl-color-brand);
-    --appearance-text: var(--yatl-text-brand);
-  }
-
-  :host([color='danger']) {
-    --appearance-color: var(--yatl-color-danger);
-    --appearance-text: white;
-  }
-
-  :host([color='warning']) {
-    --appearance-color: var(--yatl-color-warning);
-    --appearance-text: white;
-  }
-
-  :host([color='success']) {
-    --appearance-color: var(--yatl-color-success);
-    --appearance-text: white;
-  }
-
-  :host([color='raised']) {
-    --appearance-color: var(--yatl-surface-raised-1);
-    --appearance-text: var(--yatl-text-1);
-  }
-
-  :host([color='muted']) {
-    --appearance-color: var(--yatl-text-3);
-    --appearance-text: white;
   }
 
   :host([variant='outline']) {

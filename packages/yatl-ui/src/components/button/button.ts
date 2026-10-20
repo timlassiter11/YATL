@@ -1,13 +1,14 @@
 import { html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { YatlFormControl } from '../form-controls/form-control/form-control';
-import { YatlBase } from '../base/base';
-import { YatlSpinnerState } from '../spinner/spinner';
-import { MaybePromise, YatlSize } from '../../types';
-
-import styles from './button.styles';
-import sizeStyles from '../../styles/components/size.styles';
 import { YatlSpinnerStateChangeEvent } from '../../events';
+import { MaybePromise, YatlSize } from '../../types';
+import { YatlBase } from '../base/base';
+import { YatlFormControl } from '../form-controls/form-control/form-control';
+import { YatlSpinnerState } from '../spinner/spinner';
+
+import colorStyles from '../../styles/components/color.styles';
+import sizeStyles from '../../styles/components/size.styles';
+import styles from './button.styles';
 
 export type YatlButtonVariant = 'neutral' | 'outline' | 'plain';
 export type YatlButtonColor =
@@ -22,7 +23,12 @@ export type YatlButtonColor =
 @customElement('yatl-button')
 export class YatlButton extends YatlFormControl {
   // We don't need the form control styles but we still want the base styles
-  public static override styles = [...YatlBase.styles, sizeStyles, styles];
+  public static override styles = [
+    ...YatlBase.styles,
+    sizeStyles,
+    colorStyles,
+    styles,
+  ];
 
   /**
    * The initial, uncontrolled value of the button when form associated.

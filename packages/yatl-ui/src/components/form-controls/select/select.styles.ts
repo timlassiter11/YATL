@@ -65,6 +65,7 @@ export default css`
     width: 1em;
     height: 1em;
     flex-shrink: 0;
+    border: none;
     --yatl-button-hover-bg: none;
   }
 

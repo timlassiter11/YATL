@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.16
+
+### Patch Changes
+
+- ab074e9: Removed unnecessary show and hide events from yatl-confirmation-dialog
+- 41799a1: Fixed yatl-dropdown not always firing toggle events
+
 ## 6.0.15
 
 ### Patch Changes

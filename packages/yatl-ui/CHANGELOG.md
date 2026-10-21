@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.18
+
+### Patch Changes
+
+- ff5cdc2: Fixed date-input and date-range-input not showing focus ring
+- 1f17a64: Created new yatl-menu component for displaying and selecting yatl-options with built-in keyboard navigation
+
 ## 6.0.17
 
 ### Patch Changes

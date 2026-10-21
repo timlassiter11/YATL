@@ -19,12 +19,13 @@ async function renderDropdown() {
   `;
   const el = document.querySelector<YatlDropdown>('yatl-dropdown')!;
   await el.updateComplete;
+  const trigger = el.querySelector('button') ?? undefined;
   const [, a, , c] = [...el.querySelectorAll('yatl-option')] as YatlOption[];
-  return { el, a, c };
+  return { el, trigger, a, c };
 }
 
-function dispatchKeydown(key: string) {
-  document.dispatchEvent(
+function dispatchKeydown(key: string, element?: EventTarget | null) {
+  (element ?? document.activeElement ?? document).dispatchEvent(
     new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }),
   );
 }
@@ -45,48 +46,50 @@ function getMenu(el: YatlDropdown) {
 
 describe('YatlDropdown - keyboard navigation skips disabled options', () => {
   test('ArrowDown from nothing focused lands on the first enabled option', async () => {
-    const { a } = await renderDropdown();
-    dispatchKeydown('ArrowDown');
+    const { trigger, a } = await renderDropdown();
+    dispatchKeydown('ArrowDown', trigger);
     expect(document.activeElement).toBe(a);
   });
 
   test('ArrowDown skips a disabled option in the middle', async () => {
-    const { c } = await renderDropdown();
-    dispatchKeydown('ArrowDown'); // -> a
+    const { trigger, c } = await renderDropdown();
+    dispatchKeydown('ArrowDown', trigger); // -> a
     dispatchKeydown('ArrowDown'); // should skip disabled b, -> c
     expect(document.activeElement).toBe(c);
   });
 
   test('ArrowDown from the last enabled option wraps to the first, skipping a trailing disabled option', async () => {
-    const { a } = await renderDropdown();
-    dispatchKeydown('ArrowDown'); // -> a
+    const { trigger, a } = await renderDropdown();
+    dispatchKeydown('ArrowDown', trigger); // -> a
     dispatchKeydown('ArrowDown'); // -> c
     dispatchKeydown('ArrowDown'); // should skip disabled d, wrap to a
     expect(document.activeElement).toBe(a);
   });
 
   test('ArrowUp from nothing focused wraps to the last enabled option', async () => {
-    const { c } = await renderDropdown();
-    dispatchKeydown('ArrowUp');
+    const { trigger, c } = await renderDropdown();
+    dispatchKeydown('ArrowUp', trigger);
     expect(document.activeElement).toBe(c);
   });
 
   test('ArrowUp skips a disabled option in the middle', async () => {
-    const { a } = await renderDropdown();
-    dispatchKeydown('ArrowUp'); // -> c
+    const { trigger, a } = await renderDropdown();
+    dispatchKeydown('ArrowUp', trigger); // -> c
     dispatchKeydown('ArrowUp'); // should skip disabled b, -> a
     expect(document.activeElement).toBe(a);
   });
 
   test('Home lands on the first enabled option, skipping a leading disabled one', async () => {
-    const { a } = await renderDropdown();
+    const { trigger, a } = await renderDropdown();
+    dispatchKeydown('ArrowUp', trigger);
     dispatchKeydown('Home');
     expect(document.activeElement).toBe(a);
   });
 
   test('End lands on the last enabled option, skipping a trailing disabled one', async () => {
-    const { c } = await renderDropdown();
-    dispatchKeydown('End');
+    const { trigger, c } = await renderDropdown();
+    dispatchKeydown('ArrowDown', trigger);
+    dispatchKeydown('End', document.activeElement);
     expect(document.activeElement).toBe(c);
   });
 });

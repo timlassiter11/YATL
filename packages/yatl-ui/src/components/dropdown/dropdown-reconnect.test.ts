@@ -20,6 +20,7 @@ async function renderDropdown() {
 describe('YatlDropdown - disconnect/reconnect while open', () => {
   test('still closes on Escape after being moved to a different parent while open', async () => {
     const el = await renderDropdown();
+    const trigger = el.querySelector('button')!;
     expect(el.open).toBe(true);
 
     // Simulate a parent re-render moving this element in the DOM tree
@@ -31,7 +32,7 @@ describe('YatlDropdown - disconnect/reconnect while open', () => {
 
     expect(el.open).toBe(true); // still reports open
 
-    document.dispatchEvent(
+    trigger.dispatchEvent(
       new KeyboardEvent('keydown', {
         key: 'Escape',
         bubbles: true,

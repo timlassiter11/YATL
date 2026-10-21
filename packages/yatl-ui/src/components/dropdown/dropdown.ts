@@ -8,12 +8,7 @@ import {
   size,
 } from '@floating-ui/dom';
 import { html, PropertyValues } from 'lit';
-import {
-  customElement,
-  property,
-  query,
-  queryAssignedElements,
-} from 'lit/decorators.js';
+import { customElement, property, query } from 'lit/decorators.js';
 
 import {
   YatlDropdownSelectEvent,
@@ -24,6 +19,7 @@ import { activeElements } from '../../utils';
 import { YatlBase } from '../base/base';
 import { YatlOption } from '../option/option';
 import styles from './dropdown.styles';
+import { YatlMenu } from '../menu/menu';
 
 /**
  * @fires yatl-dropdown-select
@@ -36,12 +32,10 @@ export class YatlDropdown extends YatlBase {
 
   private autoUpdateCleanup?: () => void;
 
-  @query('[part="menu"]')
-  private menuElement!: HTMLElement;
+  @query('yatl-menu')
+  private menuElement!: YatlMenu;
   @query('slot[name="trigger"]')
   private triggerSlot?: HTMLSlotElement;
-  @queryAssignedElements({ flatten: true })
-  private assignedElements!: Array<HTMLElement>;
 
   /**
    * Shows or hides the dropdown menu.
@@ -57,16 +51,6 @@ export class YatlDropdown extends YatlBase {
   @property({ type: Boolean, attribute: 'match-width' })
   public matchWidth = false;
 
-  public getAllOptions(includeDisabled = true): YatlOption[] {
-    return this.assignedElements
-      .flatMap(e => {
-        return e instanceof YatlOption
-          ? [e]
-          : [...e.querySelectorAll('yatl-option')];
-      })
-      .filter(o => includeDisabled || !o.disabled);
-  }
-
   // #region Render
 
   protected override render() {
@@ -77,9 +61,14 @@ export class YatlDropdown extends YatlBase {
           @click=${this.handleTriggerClick}
           @keydown=${this.handleTriggerKeydown}
         ></slot>
-        <div part="menu" popover="manual" @click=${this.handleItemClick}>
+        <yatl-menu
+          part="menu"
+          popover="manual"
+          @click=${this.handleItemClick}
+          @keydown=${this.handleMenuKeydown}
+        >
           <slot></slot>
-        </div>
+        </yatl-menu>
       </div>
     `;
   }
@@ -148,6 +137,7 @@ export class YatlDropdown extends YatlBase {
   }
 
   private handleTriggerKeydown(event: KeyboardEvent) {
+    const navKeys = ['Escape', 'ArrowDown', 'ArrowUp'];
     // Open when the user presses the spacebar on the trigger element
     if (!this.open && event.key === ' ') {
       this.requestState(true);
@@ -156,74 +146,25 @@ export class YatlDropdown extends YatlBase {
         event.preventDefault();
         event.stopPropagation();
       }
+    } else if (this.open && navKeys.includes(event.key)) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.key === 'Escape') {
+        this.requestState(false);
+      } else if (event.key === 'ArrowDown') {
+        this.menuElement.focusFirst();
+      } else if (event.key === 'ArrowUp') {
+        this.menuElement.focusLast();
+      }
     }
   }
 
-  private handleKeydown = (event: KeyboardEvent) => {
-    const navKeys = ['ArrowUp', 'ArrowDown', 'Home', 'End', ' ', 'Enter'];
-    const selectKeys = [' ', 'Enter'];
-
-    if (this.open) {
-      if (event.key === 'Escape') {
-        this.requestState(false);
-        if (!this.open) {
-          // If we are in a dialog and press escape to close
-          // the dropdown we don't want it to close the dialog too.
-          event.stopPropagation();
-          event.preventDefault();
-          this.referenceElement?.focus();
-        }
-      } else if (navKeys.includes(event.key)) {
-        // Handle keyboard navigation logic - disabled options aren't
-        // interactive (see YatlOption.handleItemClicked), so they
-        // shouldn't be reachable via arrow/Home/End navigation either.
-        const items = this.getAllOptions(false);
-        const activeItem = this.getActiveItem(items);
-        if (activeItem) {
-          activeItem.tabIndex = -1;
-        }
-
-        let itemToFocus: YatlOption | undefined;
-        const activeItemIndex = activeItem ? items.indexOf(activeItem) : -1;
-        if (event.key === 'ArrowUp') {
-          if (activeItemIndex > 0) {
-            itemToFocus = items[activeItemIndex - 1];
-          } else {
-            itemToFocus = items[items.length - 1];
-          }
-        } else if (event.key === 'ArrowDown') {
-          if (activeItemIndex !== -1 && activeItemIndex < items.length - 1) {
-            itemToFocus = items[activeItemIndex + 1];
-          } else {
-            itemToFocus = items[0];
-          }
-        } else if (event.key === 'Home' || event.key === 'End') {
-          // Ignore home and end when focus is on the tirgger element.
-          // Fixes issues with using inputs as triggers.
-          const composedPath = event.composedPath();
-          const trigger = this.referenceElement;
-          if (trigger && composedPath.includes(trigger)) {
-            return;
-          }
-          itemToFocus =
-            event.key === 'Home' ? items[0] : items[items.length - 1];
-        } else if (selectKeys.includes(event.key) && activeItemIndex != -1) {
-          // We only want to absorb these if we have the active item!
-          event.preventDefault();
-          event.stopPropagation();
-          activeItem?.click();
-        }
-
-        if (itemToFocus) {
-          event.preventDefault();
-          event.stopPropagation();
-          itemToFocus.tabIndex = 0;
-          itemToFocus.focus();
-          return;
-        }
-      }
+  private handleMenuKeydown(event: KeyboardEvent) {
+    if (this.open && event.key === 'Escape') {
+      this.requestState(false);
     }
-  };
+  }
 
   private handleDocumentFocusin = (event: Event) => {
     const path = event.composedPath();
@@ -267,10 +208,6 @@ export class YatlDropdown extends YatlBase {
     this.startPositioning();
     document.addEventListener('pointerdown', this.handleDocumentFocusin);
     document.addEventListener('focusin', this.handleDocumentFocusin);
-    // We need the document keydown to get the initial focus.
-    document.addEventListener('keydown', this.handleKeydown);
-    // After that we want to gate the events from getting out if we consume them.
-    this.addEventListener('keydown', this.handleKeydown);
   }
 
   private removeListeners() {
@@ -278,8 +215,6 @@ export class YatlDropdown extends YatlBase {
     this.autoUpdateCleanup = undefined;
     document.removeEventListener('pointerdown', this.handleDocumentFocusin);
     document.removeEventListener('focusin', this.handleDocumentFocusin);
-    document.removeEventListener('keydown', this.handleKeydown);
-    this.removeEventListener('keydown', this.handleKeydown);
   }
 
   private requestState(state: boolean) {

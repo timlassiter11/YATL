@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { dateConverter, getDateOnly } from '../../../utils';
@@ -83,26 +83,20 @@ export class YatlDateInput extends YatlFormControl<Date> {
     return dateConverter.toAttribute(this.value);
   }
 
-  protected override renderInput() {
-    const valueClasses = {
-      'has-placeholder': this.value === undefined,
-    };
-    const valueText = this.value
-      ? dayFormatter.format(this.value)
-      : this.placeholder;
+  protected override renderBase(contents: unknown) {
     return html`
       <yatl-dropdown
         .open=${live(this.open)}
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <button
-          id=${this.inputId}
-          class="row"
+          part="base"
+          class="base text-input"
           slot="trigger"
           ?disabled=${this.isDisabled || this.readonly}
         >
-          <div class=${classMap(valueClasses)}>${valueText}</div>
-          <yatl-icon name="calendar"></yatl-icon>
+          ${contents}
+          <yatl-icon part="end" class="input-end" name="calendar"></yatl-icon>
         </button>
         <yatl-date-picker
           .min=${this.min}
@@ -123,6 +117,22 @@ export class YatlDateInput extends YatlFormControl<Date> {
           </div>
         </yatl-date-picker>
       </yatl-dropdown>
+    `;
+  }
+
+  protected override renderInput() {
+    const valueClasses = {
+      'has-placeholder': this.value === undefined,
+    };
+    const valueText = this.value
+      ? dayFormatter.format(this.value)
+      : this.placeholder;
+    return html`
+      <div id="${this.inputId}">
+        <span class=${classMap(valueClasses)} title=${valueText}>
+          ${valueText}
+        </span>
+      </div>
     `;
   }
 

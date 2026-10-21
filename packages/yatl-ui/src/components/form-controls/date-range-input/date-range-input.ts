@@ -5,8 +5,9 @@ import { dateConverter, datesEqual, getDateOnly } from '../../../utils';
 import { YatlDateRangePicker } from '../../date-range-picker/date-range-picker';
 import { YatlDropdown } from '../../dropdown/dropdown';
 import { YatlFormControl } from '../form-control/form-control';
-import styles from './date-range-input.styles';
 import { classMap } from 'lit/directives/class-map.js';
+
+import styles from './date-range-input.styles';
 
 export interface YatlDateRange {
   start?: Date;
@@ -158,16 +159,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     return data;
   }
 
-  protected override renderInput() {
-    const valueClasses = {
-      value: true,
-      'has-placeholder': !this.value,
-    };
-
-    const valueText = this.value
-      ? this.formatter(this.value)!
-      : this.placeholder;
-
+  protected override renderBase(contents: unknown) {
     const hasNoSelection = !this.startDateDraft && !this.endDateDraft;
 
     return html`
@@ -176,15 +168,13 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <button
-          id=${this.inputId}
-          class="row"
+          part="base"
+          class="base text-input"
           slot="trigger"
           ?disabled=${this.isDisabled || this.readonly}
         >
-          <span class=${classMap(valueClasses)} title=${valueText}>
-            ${valueText}
-          </span>
-          <yatl-icon name="calendar"></yatl-icon>
+          ${contents}
+          <yatl-icon part="end" class="input-end" name="calendar"></yatl-icon>
         </button>
         <yatl-date-range-picker
           .min=${this.min}
@@ -224,6 +214,25 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
           </div>
         </yatl-date-range-picker>
       </yatl-dropdown>
+    `;
+  }
+
+  protected override renderInput() {
+    const valueClasses = {
+      value: true,
+      'has-placeholder': !this.value,
+    };
+
+    const valueText = this.value
+      ? this.formatter(this.value)!
+      : this.placeholder;
+
+    return html`
+      <div id=${this.inputId}>
+        <span class=${classMap(valueClasses)} title=${valueText}>
+          ${valueText}
+        </span>
+      </div>
     `;
   }
 

@@ -1,35 +1,19 @@
 import { css } from 'lit';
 
 export default css`
-  yatl-dropdown {
-    width: 100%;
-    height: 100%;
-  }
-
-  button {
-    width: 100%;
-    height: 100%;
-    flex: 1 1 0%;
-    box-sizing: border-box;
-    margin: 0px;
-    padding: 0px;
-    padding-block: 0px;
-    border: none;
-    outline: none;
-    box-shadow: none;
-    color: inherit;
-    background-color: transparent;
-    appearance: none;
+  #input {
+    flex-grow: 1;
     text-align: start;
-    cursor: inherit;
-    font: inherit;
   }
 
-  .row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+  .has-placeholder {
+    color: var(--input-placeholder-color);
+  }
+
+  .value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .footer {
@@ -43,10 +27,6 @@ export default css`
 
   .footer > *:first-child {
     margin-right: auto;
-  }
-
-  .has-placeholder {
-    color: var(--input-placeholder-color);
   }
 
   :host(:state(readonly)) {

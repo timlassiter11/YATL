@@ -93,6 +93,9 @@ export class YatlButton extends YatlFormControl {
   /**
    * A function to run when the button is clicked. If it returns a promise,
    * the button shows a loading state until it resolves, then success or error.
+   * If any exceptions are thrown, the error state is shown after the promise resolves.
+   * If a boolean is returned, that value is used to indicate success or failure
+   * with `true` meaning success and `false` meaning failure.
    */
   @property({ attribute: false })
   public action?: () => MaybePromise<unknown>;
@@ -192,13 +195,21 @@ export class YatlButton extends YatlFormControl {
     if (this.type === 'button') {
       if (this.action) {
         try {
-          const action = this.action();
-          if (action instanceof Promise) {
+          let result = this.action();
+          if (result instanceof Promise) {
             this.state = 'loading';
-            await action;
+            result = await result;
+            if (typeof result === 'boolean') {
+              this.state = result ? 'success' : 'error';
+            }
           }
-
-          this.state = 'success';
+          if (typeof result === 'boolean') {
+            // User returned a failure status, use that
+            this.state = result ? 'success' : 'error';
+          } else {
+            // Anything else is a success
+            this.state = 'success';
+          }
         } catch (e) {
           this.state = 'error';
           throw e;

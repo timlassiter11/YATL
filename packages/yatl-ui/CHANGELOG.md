@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.19
+
+### Patch Changes
+
+- 0e3f243: Added ability to return a boolean status from button action to indicate a success or failure state
+
 ## 6.0.18
 
 ### Patch Changes

@@ -145,7 +145,7 @@ export abstract class YatlFormControl<TData = string>
     return root;
   }
 
-  protected override willUpdate(changedProps: PropertyValues<YatlFormControl>) {
+  protected override willUpdate(changedProps: PropertyValues<this>) {
     if (changedProps.has('disabled')) {
       // Reflect before render. The browser calls formDisabledCallback()
       // fixes the internalsDisabled flag from being one render cycle
@@ -179,7 +179,7 @@ export abstract class YatlFormControl<TData = string>
     }
   }
 
-  protected override updated(changedProps: PropertyValues<YatlFormControl>) {
+  protected override updated(changedProps: PropertyValues<this>) {
     // Just to shut the type checker up for private props
     const changed = changedProps as Map<PropertyKey, unknown>;
     if (changed.has('value')) {

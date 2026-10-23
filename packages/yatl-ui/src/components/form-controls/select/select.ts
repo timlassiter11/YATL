@@ -1,4 +1,4 @@
-import { html, nothing } from 'lit';
+import { html, nothing, PropertyValues } from 'lit';
 import {
   customElement,
   property,
@@ -121,6 +121,13 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
     }
 
     this.value = [...newValue];
+  }
+
+  protected override willUpdate(changedProps: PropertyValues<this>) {
+    super.willUpdate(changedProps);
+    if (this.isDisabled && this.open) {
+      this.open = false;
+    }
   }
 
   protected override render() {

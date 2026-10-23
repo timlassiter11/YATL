@@ -1,5 +1,13 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.20
+
+### Patch Changes
+
+- 3ddb61b: Fixed yatl-select menu stuck open when disabled while open
+- 6aca6f8: Fixed a bug causing yatl-input to get stuck in the disabled state
+- ec44bd1: Fix some focus issues with yatl-menu
+
 ## 6.0.19
 
 ### Patch Changes

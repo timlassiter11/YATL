@@ -146,6 +146,14 @@ export abstract class YatlFormControl<TData = string>
   }
 
   protected override willUpdate(changedProps: PropertyValues<YatlFormControl>) {
+    if (changedProps.has('disabled')) {
+      // Reflect before render. The browser calls formDisabledCallback()
+      // fixes the internalsDisabled flag from being one render cycle
+      // behind the disabled state which causes the native input
+      // to stay disabled.
+      this.toggleAttribute('disabled', this.disabled);
+    }
+
     // `!changedProps.has('value')` only tells us "nothing has explicitly set
     // value yet" if the subclass's `value` field has no initializer of its
     // own - an initializer's assignment registers as a change identical to
@@ -157,7 +165,8 @@ export abstract class YatlFormControl<TData = string>
       !this.hasUserInteracted
     ) {
       this.value = this.defaultValue;
-      this.setFormValue(this.formValue);
+      // Don't validate yet. Save that for after the update is done
+      this.setFormValue(this.formValue, undefined, false);
     }
 
     // Update form data when disabled or readonly change. (Fieldset-driven
@@ -171,14 +180,17 @@ export abstract class YatlFormControl<TData = string>
   }
 
   protected override updated(changedProps: PropertyValues<YatlFormControl>) {
-    if (changedProps.has('value')) {
-      // setFormValue() also updates validity, so there's no need to
-      // call updateValidity() separately below in this case.
+    // Just to shut the type checker up for private props
+    const changed = changedProps as Map<PropertyKey, unknown>;
+    if (changed.has('value')) {
       this.setFormValue(this.formValue);
     } else if (
-      changedProps.has('requiredText') ||
-      changedProps.has('errorText') ||
-      changedProps.has('required')
+      changed.has('requiredText') ||
+      changed.has('errorText') ||
+      changed.has('required') ||
+      changed.has('disabled') ||
+      changed.has('readonly') ||
+      changed.has('internalsDisabled')
     ) {
       this.updateValidity();
     }
@@ -283,6 +295,7 @@ export abstract class YatlFormControl<TData = string>
   public setFormValue(
     value: string | File | FormData | null,
     state?: string | File | FormData | null,
+    validate: boolean = true,
   ) {
     // Clear form data on empty string
     value ||= null;
@@ -290,7 +303,10 @@ export abstract class YatlFormControl<TData = string>
     // (defaulting to the un-nulled value) so autofill/bfcache restoration
     // still works correctly if the control becomes enabled again later.
     this.internals.setFormValue(this.isDisabled ? null : value, state ?? value);
-    this.updateValidity();
+
+    if (validate) {
+      this.updateValidity();
+    }
   }
 
   public setValidity(
@@ -329,9 +345,9 @@ export abstract class YatlFormControl<TData = string>
   }
 
   /**
-   * Called by the browser when an ancestor `<fieldset disabled>`'s
-   * disabled state changes. This is independent of the `disabled`
-   * property - don't call it directly, and use `isDisabled` (not
+   * Called by the browser when this host's or an ancestor
+   * `<fieldset disabled>`'s disabled state changes.
+   * Don't call it directly, and use `isDisabled` (not
    * `disabled`) for anything that should also respect it.
    */
   public formDisabledCallback(disabled: boolean) {

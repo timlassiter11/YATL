@@ -15,9 +15,7 @@ import {
   YatlDropdownToggleEvent,
   YatlDropdownToggleRequest,
 } from '../../events';
-import { activeElements } from '../../utils';
 import { YatlBase } from '../base/base';
-import { YatlOption } from '../option/option';
 import styles from './dropdown.styles';
 import { YatlMenu } from '../menu/menu';
 
@@ -229,13 +227,6 @@ export class YatlDropdown extends YatlBase {
     }
 
     this.open = state;
-  }
-
-  private getActiveItem(items: YatlOption[]) {
-    const activeElement = [...activeElements()].find(
-      i => i instanceof YatlOption,
-    );
-    return items.find(item => item === activeElement);
   }
 
   private async startPositioning() {

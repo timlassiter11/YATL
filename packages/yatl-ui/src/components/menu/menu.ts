@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, LitElement } from 'lit';
 import { customElement, queryAssignedElements } from 'lit/decorators.js';
 import { YatlBase } from '../base/base';
 import styles from './menu.styles';
@@ -10,6 +10,11 @@ import { activeElements } from '../../utils';
  */
 @customElement('yatl-menu')
 export class YatlMenu extends YatlBase {
+  public static override shadowRootOptions = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true,
+  };
+
   public static override styles = [...super.styles, styles];
 
   @queryAssignedElements({ flatten: true })

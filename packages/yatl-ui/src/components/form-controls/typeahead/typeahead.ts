@@ -4,7 +4,7 @@ import {
   YatlSearchEngine,
   YatlSearchResult,
 } from '@timlassiter11/yatl';
-import { html, nothing, PropertyValueMap, TemplateResult } from 'lit';
+import { html, nothing, PropertyValues, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -172,9 +172,7 @@ export class YatlTypeahead extends YatlInput {
     );
   }
 
-  protected override willUpdate(
-    changedProperties: PropertyValueMap<YatlTypeahead>,
-  ) {
+  protected override willUpdate(changedProperties: PropertyValues<this>) {
     super.willUpdate(changedProperties);
 
     if (changedProperties.has('value') && !this.hasFocus) {

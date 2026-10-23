@@ -36,9 +36,7 @@ export class YatlRadioGroup extends YatlFormControl<string> {
     return this.value;
   }
 
-  protected override willUpdate(
-    changedProperties: PropertyValues<YatlRadioGroup>,
-  ) {
+  protected override willUpdate(changedProperties: PropertyValues<this>) {
     super.willUpdate(changedProperties);
 
     if (changedProperties.has('disabled')) {

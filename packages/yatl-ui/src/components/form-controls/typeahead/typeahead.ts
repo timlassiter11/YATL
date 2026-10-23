@@ -383,9 +383,9 @@ export class YatlTypeahead extends YatlInput {
   }
 
   private handleFocusout(event: FocusEvent) {
-    this.hasFocus = false;
     // Focus moving between the input and the dropdown isn't leaving.
     if (!this.isInternal(event.relatedTarget)) {
+      this.hasFocus = false;
       this.commit();
     }
   }

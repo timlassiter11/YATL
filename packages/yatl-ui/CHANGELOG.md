@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.22
+
+### Patch Changes
+
+- 8dfb701: Fixed issue causing yatl-split-panel in fixed mode to render the start panel with 0 width
+- a04d200: Fixed yatl-table-view's filter panel default with using incorrect units
+
 ## 6.0.21
 
 ### Patch Changes

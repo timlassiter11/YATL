@@ -121,17 +121,16 @@ export class YatlDateInput extends YatlFormControl<Date> {
   }
 
   protected override renderInput() {
-    const valueClasses = {
+    const classes = {
+      value: true,
       'has-placeholder': this.value === undefined,
     };
     const valueText = this.value
       ? dayFormatter.format(this.value)
       : this.placeholder;
     return html`
-      <div id="${this.inputId}">
-        <span class=${classMap(valueClasses)} title=${valueText}>
-          ${valueText}
-        </span>
+      <div id="${this.inputId}" class=${classMap(classes)} title=${valueText}>
+        ${valueText}
       </div>
     `;
   }

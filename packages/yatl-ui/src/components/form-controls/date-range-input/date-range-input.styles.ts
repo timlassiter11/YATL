@@ -1,16 +1,14 @@
 import { css } from 'lit';
 
 export default css`
-  #input {
-    flex-grow: 1;
-    text-align: start;
-  }
-
   .has-placeholder {
     color: var(--input-placeholder-color);
   }
 
   .value {
+    margin-top: auto;
+    flex-grow: 1;
+    text-align: start;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

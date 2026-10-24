@@ -218,7 +218,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   }
 
   protected override renderInput() {
-    const valueClasses = {
+    const classes = {
       value: true,
       'has-placeholder': !this.value,
     };
@@ -228,10 +228,8 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
       : this.placeholder;
 
     return html`
-      <div id=${this.inputId}>
-        <span class=${classMap(valueClasses)} title=${valueText}>
-          ${valueText}
-        </span>
+      <div id=${this.inputId} class=${classMap(classes)} title=${valueText}>
+        ${valueText}
       </div>
     `;
   }

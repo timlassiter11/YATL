@@ -1,5 +1,12 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.21
+
+### Patch Changes
+
+- a06398c: Added ability to specify a size policy for yatl-split-panel so the split can be either percentage (ratio) or pixel (fixed) based.
+- 3e70a04: Switched yatl-table-view to use the new 'fixed' size policy for it's split panel.
+
 ## 6.0.20
 
 ### Patch Changes

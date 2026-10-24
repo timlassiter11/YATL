@@ -216,6 +216,7 @@ export class YatlTableView<
         part="base"
         class="base"
         orientation="horizontal"
+        size-policy="fixed"
         position=${this.panelPosition ?? this.filtersDefaultWidth}
         start-min=${this.filtersMinWidth}
         @yatl-split-panel-position=${this.handleSplitPositionChange}

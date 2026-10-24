@@ -1,5 +1,11 @@
 # @timlassiter11/yatl-ui
 
+## 6.0.23
+
+### Patch Changes
+
+- c20e851: Fixed spacing issue in yatl-date-input and yatl-date-range-input
+
 ## 6.0.22
 
 ### Patch Changes

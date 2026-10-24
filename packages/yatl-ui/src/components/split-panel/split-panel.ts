@@ -1,11 +1,12 @@
-import { html } from 'lit';
-import { customElement, property, query, state } from 'lit/decorators.js';
+import { html, PropertyValues } from 'lit';
+import { customElement, property, query } from 'lit/decorators.js';
 
 import { YatlSplitPanelPositionEvent } from '../../events/split-panel';
 import { YatlBase } from '../base/base';
 import styles from './split-panel.styles';
 
 export type SplitPanelOrientation = 'horizontal' | 'vertical';
+export type SplitPanelSizePolicy = 'ratio' | 'fixed';
 
 /**
  * Two resizable panels with a draggable divider.
@@ -24,13 +25,22 @@ export type SplitPanelOrientation = 'horizontal' | 'vertical';
  */
 @customElement('yatl-split-panel')
 export class YatlSplitPanel extends YatlBase {
-  public static override styles = [styles];
+  public static override styles = [...super.styles, styles];
 
   /** `horizontal` = panels side by side. `vertical` = panels stacked. */
   @property({ reflect: true })
   public orientation: SplitPanelOrientation = 'horizontal';
 
-  /** Start panel size, as a percentage of the space left after the divider. */
+  /**
+   * The size policy to use for the split
+   * `ratio` = precentage
+   * `fixed` = pixels
+   * @attr size-policy
+   */
+  @property({ type: String, attribute: 'size-policy' })
+  public sizePolicy: SplitPanelSizePolicy = 'ratio';
+
+  /** Start panel size either in px or percentage based on the size policy */
   @property({ type: Number })
   public position = 50;
 
@@ -49,7 +59,7 @@ export class YatlSplitPanel extends YatlBase {
   public endMin = 0;
 
   /**
-   * Percentage restored on double-click. Defaults to the initial `position`.
+   * Position restored on double-click. Defaults to the initial `position`.
    * @attr default-position
    */
   @property({ type: Number, attribute: 'default-position' })
@@ -72,18 +82,17 @@ export class YatlSplitPanel extends YatlBase {
   @property({ type: Boolean, reflect: true })
   private dragging = false;
 
-  /** Host size along the split axis. Kept in state so resizing re-clamps. */
-  @state()
-  private hostSize = 0;
-
   @query('.divider')
   private divider!: HTMLDivElement;
 
-  private resizeObserver?: ResizeObserver;
   private pointerId?: number;
 
   private get isHorizontal() {
     return this.orientation === 'horizontal';
+  }
+
+  private get hostSize() {
+    return this.isHorizontal ? this.clientWidth : this.clientHeight;
   }
 
   /** Space the panels actually share, with the divider track taken out. */
@@ -94,28 +103,37 @@ export class YatlSplitPanel extends YatlBase {
     return Math.max(this.hostSize - (divider ?? 0), 0);
   }
 
-  public override connectedCallback() {
-    super.connectedCallback();
-    this.resizeObserver = new ResizeObserver(() => this.measure());
-    this.resizeObserver.observe(this);
+  private get clampedPosition() {
+    return this.clamp(this.position);
   }
 
-  public override disconnectedCallback() {
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    super.disconnectedCallback();
-  }
+  protected override willUpdate(changedProps: PropertyValues<this>) {
+    super.willUpdate(changedProps);
 
-  protected override firstUpdated() {
-    this.defaultPosition ??= this.position;
-    this.measure();
+    if (!this.hasUpdated) {
+      this.defaultPosition ??= this.position;
+    }
+
+    const oldPolicy = changedProps.get('sizePolicy');
+    if (oldPolicy) {
+      // Size policy changed, make sure the position matches.
+      const position = this.normalizePosition(
+        this.position,
+        oldPolicy,
+        this.sizePolicy,
+      );
+      this.setPosition(position, false);
+      if (this.defaultPosition != null) {
+        this.defaultPosition = this.normalizePosition(
+          this.defaultPosition,
+          oldPolicy,
+          this.sizePolicy,
+        );
+      }
+    }
   }
 
   protected override render() {
-    // Clamp at render time rather than mutating `position`, so a window resize
-    // that squeezes the start panel doesn't destroy the user's preference.
-    const percent = this.clamp(this.position);
-
     return html`
       <div part="panel start" class="panel">
         <slot name="start"></slot>
@@ -128,11 +146,10 @@ export class YatlSplitPanel extends YatlBase {
         tabindex=${this.disabled ? -1 : 0}
         aria-label=${this.dividerLabel}
         aria-orientation=${this.isHorizontal ? 'vertical' : 'horizontal'}
-        aria-valuenow=${Math.round(percent)}
+        aria-valuenow=${Math.round(this.clampedPosition)}
         aria-valuemin="0"
         aria-valuemax="100"
         aria-disabled=${this.disabled ? 'true' : 'false'}
-        style=${`--split-position:${percent}%`}
         @pointerdown=${this.handlePointerDown}
         @pointermove=${this.handlePointerMove}
         @pointerup=${this.handlePointerUp}
@@ -154,40 +171,60 @@ export class YatlSplitPanel extends YatlBase {
 
   protected override updated() {
     // The grid track lives on the host, so it can't be set from the template.
-    this.style.setProperty('--split-position', `${this.clamp(this.position)}%`);
+    const units = this.sizePolicy === 'ratio' ? '%' : 'px';
+    this.style.setProperty(
+      '--split-position',
+      `${this.clampedPosition}${units}`,
+    );
   }
 
-  private measure() {
-    const size = this.isHorizontal ? this.clientWidth : this.clientHeight;
-    if (size !== this.hostSize) {
-      this.hostSize = size;
-    }
-  }
-
-  /** Percent in, clamped percent out, honouring both panels' minimums. */
-  private clamp(percent: number) {
+  /** Percent or pixels in based on size policy,
+   * clamped percent out, honouring both panels' minimums. */
+  private clamp(position: number) {
     const available = this.available;
+    const percent = this.normalizePosition(position, this.sizePolicy, 'ratio');
+
+    let clamped;
     if (available <= 0) {
-      return Math.min(100, Math.max(0, percent));
+      clamped = Math.min(100, Math.max(0, percent));
+    } else {
+      let px = (percent / 100) * available;
+      // Start's minimum wins when the two can't both be satisfied, so the pane
+      // the user is dragging stays predictable in a cramped container.
+      px = Math.min(px, available - this.endMin);
+      px = Math.max(px, this.startMin);
+      px = Math.min(Math.max(px, 0), available);
+      clamped = (px / available) * 100;
     }
 
-    let px = (percent / 100) * available;
-    // Start's minimum wins when the two can't both be satisfied, so the pane
-    // the user is dragging stays predictable in a cramped container.
-    px = Math.min(px, available - this.endMin);
-    px = Math.max(px, this.startMin);
-    px = Math.min(Math.max(px, 0), available);
+    if (this.sizePolicy === 'fixed') {
+      clamped = (clamped / 100) * available;
+    }
 
-    return (px / available) * 100;
+    return clamped;
   }
 
-  private setPosition(percent: number, dragging: boolean) {
-    const next = this.clamp(percent);
+  private setPosition(position: number, dragging: boolean) {
+    const next = this.clamp(position);
     const changed = next !== this.position;
     this.position = next;
 
     if (changed || !dragging) {
       this.dispatchEvent(new YatlSplitPanelPositionEvent(next, dragging));
+    }
+  }
+
+  private normalizePosition(
+    value: number,
+    input: SplitPanelSizePolicy,
+    output: SplitPanelSizePolicy,
+  ) {
+    if (input === output) {
+      return value;
+    } else if (input === 'ratio') {
+      return (value / 100) * this.available;
+    } else {
+      return (value * 100) / this.available;
     }
   }
 
@@ -228,7 +265,9 @@ export class YatlSplitPanel extends YatlBase {
     }
 
     // Centre the cursor on the handle rather than its leading edge.
-    this.setPosition(((offset - dividerSize / 2) / available) * 100, true);
+    const percent = ((offset - dividerSize / 2) / available) * 100;
+    const position = this.normalizePosition(percent, 'ratio', this.sizePolicy);
+    this.setPosition(position, true);
   };
 
   private handlePointerUp = (event: PointerEvent) => {
@@ -259,12 +298,17 @@ export class YatlSplitPanel extends YatlBase {
     const decrease = this.isHorizontal ? 'ArrowLeft' : 'ArrowUp';
     const increase = this.isHorizontal ? 'ArrowRight' : 'ArrowDown';
     const step = event.shiftKey ? this.step * 5 : this.step;
+    const percent = this.normalizePosition(
+      this.position,
+      this.sizePolicy,
+      'ratio',
+    );
 
     let next: number | undefined;
     if (event.key === decrease) {
-      next = this.position - step;
+      next = percent - step;
     } else if (event.key === increase) {
-      next = this.position + step;
+      next = percent + step;
     } else if (event.key === 'Home') {
       next = 0;
     } else if (event.key === 'End') {
@@ -275,6 +319,7 @@ export class YatlSplitPanel extends YatlBase {
 
     if (next !== undefined) {
       event.preventDefault();
+      next = this.normalizePosition(next, 'ratio', this.sizePolicy);
       this.setPosition(next, false);
     }
   };

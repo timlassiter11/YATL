@@ -62,11 +62,11 @@ export class YatlTableView<
   public filtersMinWidth = 300;
 
   /**
-   * Filters panel's default size, as a percentage of the space left after the divider.
+   * Filters panel's default size in pixels.
    * @attr filters-default-width
    */
   @property({ type: Number, attribute: 'filters-default-width' })
-  public filtersDefaultWidth = 15;
+  public filtersDefaultWidth = 300;
 
   /**
    * The placeholder text for the search input.

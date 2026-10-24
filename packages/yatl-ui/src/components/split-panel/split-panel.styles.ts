@@ -14,12 +14,12 @@ export default css`
   }
 
   :host([orientation='horizontal']) {
-    grid-template-columns: var(--split-position) var(--divider-size) 1fr;
+    grid-template-columns: var(--split-position, 0) var(--divider-size) 1fr;
     grid-template-rows: 100%;
   }
 
   :host([orientation='vertical']) {
-    grid-template-rows: var(--split-position) var(--divider-size) 1fr;
+    grid-template-rows: var(--split-position, 0) var(--divider-size) 1fr;
     grid-template-columns: 100%;
   }
 

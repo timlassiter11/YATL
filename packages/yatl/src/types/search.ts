@@ -24,6 +24,48 @@ export interface QueryToken {
 export type TokenizerCallback = (value: string) => QueryToken[];
 
 /**
+ * A search query parsed as plain text.
+ */
+export interface TextSearchQuery {
+  mode: 'text';
+
+  /**
+   * The raw query string.
+   */
+  value: string;
+}
+
+/**
+ * A search query parsed from the `\r/pattern/flags` regex syntax.
+ */
+export interface RegexSearchQuery {
+  mode: 'regex';
+
+  /**
+   * The pattern between the delimiters.
+   */
+  source: string;
+
+  /**
+   * The flags given after the closing delimiter, minus any ignored flags.
+   */
+  flags: string;
+
+  /**
+   * The compiled expression. Always has the `g` flag.
+   * Undefined if the pattern or flags were invalid.
+   */
+  regex?: RegExp;
+
+  /**
+   * The reason the pattern or flags were invalid.
+   */
+  error?: string;
+}
+
+export type ParsedSearchQuery = TextSearchQuery | RegexSearchQuery;
+
+/**
  * A single match index consisting of the start and end positions
  */
 export type MatchIndex = { start: number; end: number };

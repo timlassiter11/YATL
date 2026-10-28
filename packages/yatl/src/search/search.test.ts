@@ -304,4 +304,91 @@ describe('YatlSearchEngine', () => {
   });
 
   // #endregion
+  // #region Regex search
+
+  describe('regex search', () => {
+    const createEngine = (options: { scoredSearch?: boolean } = {}) =>
+      new YatlSearchEngine<Person>({
+        data: getData(),
+        fields: [{ field: 'name' }, { field: 'bio' }],
+        ...options,
+      });
+
+    test('matches with a regular expression', () => {
+      const results = createEngine().search(String.raw`\r/^[AB]\w+ `);
+      expect(results.map(r => r.item.id)).toEqual([1, 2]);
+    });
+
+    test('is case-sensitive without the i flag', () => {
+      const engine = createEngine();
+      expect(engine.search(String.raw`\r/alice`)).toEqual([]);
+      expect(engine.search(String.raw`\r/Alice`).map(r => r.item.id)).toEqual([
+        1,
+      ]);
+    });
+
+    test('is case-insensitive with the i flag', () => {
+      const results = createEngine().search(String.raw`\r/alice/i`);
+      expect(results.map(r => r.item.id)).toEqual([1]);
+    });
+
+    test('returns highlight ranges for every match against the original value', () => {
+      const engine = new YatlSearchEngine<{ id: number; text: string }>({
+        data: [{ id: 1, text: 'Foo bOO' }],
+        fields: [{ field: 'text' }],
+      });
+      const [result] = engine.search(String.raw`\r/o+/i`);
+      expect(result.matches.text).toEqual([
+        { start: 1, end: 3 },
+        { start: 5, end: 7 },
+      ]);
+    });
+
+    test('keeps rows with zero-length matches but has nothing to highlight', () => {
+      const results = createEngine().search(String.raw`\r/^(?=Bob)`);
+      expect(results.map(r => r.item.id)).toEqual([2]);
+      expect(results[0].matches.name).toEqual([]);
+    });
+
+    test('an invalid pattern returns no results', () => {
+      expect(createEngine().search(String.raw`\r/(Alice`)).toEqual([]);
+    });
+
+    test('an empty pattern returns all rows', () => {
+      const results = createEngine().search(String.raw`\r/`);
+      expect(results.map(r => r.item.id)).toEqual([1, 2, 3]);
+    });
+
+    test('ignores tokenized search', () => {
+      const engine = new YatlSearchEngine<Person>({
+        data: getData(),
+        fields: [{ field: 'bio', tokenize: true }],
+        tokenizedSearch: true,
+      });
+      // Tokenized, these words would match rows 1 and 2.
+      expect(engine.search(String.raw`\r/hiking cooking`)).toEqual([]);
+    });
+
+    test('scores exact matches above prefix matches above substring matches', () => {
+      const engine = new YatlSearchEngine<{ id: number; text: string }>({
+        data: [
+          { id: 1, text: 'xx apple' },
+          { id: 2, text: 'apple pie' },
+          { id: 3, text: 'apple' },
+        ],
+        fields: [{ field: 'text' }],
+        scoredSearch: true,
+      });
+
+      const results = engine.search(String.raw`\r/apple`);
+      expect(results.map(r => r.item.id)).toEqual([3, 2, 1]);
+    });
+
+    test('scores every match as 1 when scoredSearch is off', () => {
+      const results = createEngine().search(String.raw`\r/Alice`);
+      expect(results[0].score).toBe(1);
+    });
+  });
+
+  // #endregion
 });

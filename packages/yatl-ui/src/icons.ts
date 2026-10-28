@@ -200,6 +200,13 @@ export const qrCode = svg`
   <path class="icon qr-code" d="M12 21v-1" />
 `;
 
+export const regex = svg`
+  <rect class="icon regex" x="3" y="16" width="5" height="5" rx="1" fill="currentColor" stroke="none" />
+  <line class="icon regex" x1="17" y1="3" x2="17" y2="15" />
+  <line class="icon regex" x1="11.8" y1="6" x2="22.2" y2="12" />
+  <line class="icon regex" x1="11.8" y1="12" x2="22.2" y2="6" />
+`;
+
 export const reload = svg`
   <path class="icon reload" d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
   <path class="icon reload" d="M21 3v5h-5" />
@@ -308,6 +315,7 @@ export const icons: Record<string, TemplateResult<2>> = {
   'pencil-paper': pencilPaper,
   print: print,
   'qr-code': qrCode,
+  regex: regex,
   reload: reload,
   save: save,
   scan: scan,

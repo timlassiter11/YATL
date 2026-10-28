@@ -1,6 +1,6 @@
 {
   "name": "@timlassiter11/yatl-ui",
-  "version": "6.0.23",
+  "version": "7.0.0",
   "description": "UI Components for @timlassiter11/yatl",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -54,7 +54,7 @@
     "provenance": true
   },
   "peerDependencies": {
-    "@timlassiter11/yatl": "^1.7.3",
+    "@timlassiter11/yatl": "^1.8.0",
     "lit": "^3.3.2",
     "open-props": "^1.7.23"
   },

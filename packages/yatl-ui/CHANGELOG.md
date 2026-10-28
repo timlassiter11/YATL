@@ -1,5 +1,16 @@
 # @timlassiter11/yatl-ui
 
+## 7.0.0
+
+### Minor Changes
+
+- fb7cbba: yatl-toolbar shows a regex indicator in the search box for `\r/pattern/flags` queries and flags invalid patterns as you type instead of searching them. Added a `regex` icon.
+
+### Patch Changes
+
+- Updated dependencies [fb7cbba]
+  - @timlassiter11/yatl@1.8.0
+
 ## 6.0.23
 
 ### Patch Changes

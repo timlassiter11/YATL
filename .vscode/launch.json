@@ -8,7 +8,7 @@
       "name": "Debug Playground",
       "type": "chrome",
       "request": "launch",
-      "url": "http://localhost:5174/YATL/",
+      "url": "http://localhost:5175/YATL/",
       "webRoot": "${workspaceFolder}",
       "preLaunchTask": "Serve Playground",
       "resolveSourceMapLocations": [

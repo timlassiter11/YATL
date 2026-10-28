@@ -34,6 +34,15 @@ export default css`
     font-size: large;
   }
 
+  [part='search-regex-indicator'] {
+    color: var(--yatl-color-brand);
+    margin-left: var(--yatl-spacing-s);
+  }
+
+  [part='search-regex-indicator'].invalid {
+    color: var(--yatl-color-danger);
+  }
+
   yatl-button-group yatl-button {
     height: 100%;
   }

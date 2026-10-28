@@ -16,7 +16,7 @@ I needed a free and simple table library for vanilla JS that was easy to customi
 ## Features
 
 - **Virtual Scrolling**: Render 100,000+ rows smoothly with virtual scrolling.
-- **Smart Search**: Tokenized fuzzy search with relevance scoring and highlighting.
+- **Smart Search**: Tokenized fuzzy search with relevance scoring and highlighting, plus regex queries.
 - **State Persistence**: Automatically save and restore column order, visibility, sort, and widths to LocalStorage.
 - **Highly Customizable**: Slot support, CSS Shadow Parts, and custom cell renderers.
 - **Interactive**: Drag-and-drop column reordering, multi-column sorting (`SHIFT+CLICK`), and resizeable headers.
@@ -153,6 +153,24 @@ export class MyComponent extends LitElement {
   </body>
 </html>
 ```
+
+## Regex Search
+
+Start a search query with `\r/` to search with a regular expression instead of plain text. The syntax is `\r/pattern/flags`, where the closing `/` and flags are optional.
+
+| Query         | Matches                                        |
+| ------------- | ---------------------------------------------- |
+| `\r/^Row \d$` | `Row 0` through `Row 9`                        |
+| `\r/^row/i`   | Values starting with `row`, ignoring case      |
+| `\r/a\/b`     | Values containing `a/b` (escape `/` with `\/`) |
+
+- Regex searches are case-sensitive unless the `i` flag is given. The `g` and `d` flags are ignored and the `y` flag isn't supported.
+- Matches are highlighted like any other search. Zero-length matches (e.g. `^` or a lookahead) still match the row but have nothing to highlight.
+- `tokenizedSearch` has no effect on regex searches. With `scoredSearch` enabled, matches covering the whole value rank above matches at the start, which rank above matches anywhere else.
+- An invalid pattern matches no rows.
+- When setting `searchQuery` from JavaScript, remember to escape the backslash: `table.searchQuery = '\\r/^Row \\d$'`.
+
+In the `yatl-ui` toolbar, an icon appears in the search box while in regex mode. Regex searches update as you type like text searches, and invalid patterns are flagged on the icon while the previous results are kept.
 
 ## Styling Guide
 

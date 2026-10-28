@@ -273,6 +273,12 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
   /**
    * The current text string used to filter the table data.
    * Setting this property triggers a new search and render cycle.
+   *
+   * Queries starting with `\r/` are treated as regular expressions using the
+   * `\r/pattern/flags` syntax (e.g. `\r/^err\d+/i`). The closing `/` and flags
+   * are optional. Regex searches are case-sensitive unless the `i` flag is
+   * given, and ignore {@link tokenizedSearch}. Note that in JavaScript source
+   * the prefix must be written as `'\\r/'`.
    */
   searchQuery: string;
 
@@ -281,6 +287,7 @@ export interface YatlTableControllerApi<T extends object = UnspecifiedRecord> {
    * When enabled, the search query is split into individual tokens using the
    * `searchTokenizer` function (defaults to splitting on whitespace).
    * A row is considered a match if **ANY** of the tokens appear in the searchable fields.
+   * Has no effect on regex searches.
    */
   tokenizedSearch: boolean;
 

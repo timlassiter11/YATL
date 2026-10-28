@@ -6,7 +6,11 @@ import {
   YatlSearchOptions,
   YatlSearchResult,
 } from '../types/search';
-import { getNestedValue, whitespaceTokenizer } from '../utils';
+import {
+  getNestedValue,
+  parseSearchQuery,
+  whitespaceTokenizer,
+} from '../utils';
 
 const MATCH_WEIGHTS = {
   EXACT: 100,
@@ -17,6 +21,9 @@ const MATCH_WEIGHTS = {
 type ValueCacheEntry<T> = Partial<Record<NestedKeyOf<T>, string>>;
 type TokenCacheEntry<T> = Partial<Record<NestedKeyOf<T>, string[]>>;
 interface CacheEntry<T> {
+  // Original values, used for regex searches so case can be respected.
+  raw: ValueCacheEntry<T>;
+  // Lowercased values, used for text searches.
   values: ValueCacheEntry<T>;
   tokens: TokenCacheEntry<T>;
 }
@@ -116,7 +123,10 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
 
   public search(query: string, subset?: T[]): YatlSearchResult<T>[] {
     const data = subset ?? this.data;
-    if (query.length === 0) {
+    const parsedQuery = parseSearchQuery(query);
+    const regexQuery = parsedQuery.mode === 'regex' ? parsedQuery : undefined;
+
+    if (query.length === 0 || regexQuery?.source === '') {
       return data.map((item, index) => ({
         item,
         score: 0,
@@ -125,10 +135,19 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
       }));
     }
 
-    const queryTokens = [{ value: query.toLocaleLowerCase(), quoted: true }];
+    // An invalid pattern can't match anything
+    const regex = regexQuery?.regex;
+    if (regexQuery && !regex) {
+      return [];
+    }
 
-    if (this.tokenizedSearch) {
-      queryTokens.push(...this.tokenizer(query));
+    // Regex queries bypass tokenization entirely
+    const queryTokens: QueryToken[] = [];
+    if (!regex) {
+      queryTokens.push({ value: query.toLocaleLowerCase(), quoted: true });
+      if (this.tokenizedSearch) {
+        queryTokens.push(...this.tokenizer(query));
+      }
     }
 
     const keys = this.keys;
@@ -147,6 +166,18 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
           rowMatches[key] = [];
         }
         const fieldMatches = searchResult.matches[key]!;
+
+        if (regex) {
+          const rawValue = cacheEntry.raw[key];
+          if (typeof rawValue !== 'string') {
+            continue;
+          }
+          const results = this.searchFieldRegex(regex, rawValue);
+          searchResult.score += results.score;
+          fieldMatches.push(...results.matches);
+          continue;
+        }
+
         // The value is already resolved via the column's getter (or
         // getNestedValue) and cached in cacheEntry.values - no need to
         // call the getter again here just to type-check it.
@@ -230,13 +261,56 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
       }
     }
 
-    // Reward matches where the query length is close to the target length.
-    const lengthDifference = target.length - query.length;
-    const specificityBonus = 1 / Math.sqrt(1 + lengthDifference);
-    // The final score is a combination of the match type's importance,
-    // the base score from the query length, and the specificity bonus.
-    results.score = baseScore * matchTypeWeight * specificityBonus;
+    results.score = weightedScore(matchTypeWeight, baseScore, target.length);
     return results;
+  }
+
+  /**
+   * Searches a single value with a regular expression.
+   *
+   * Every non-empty match is added as a highlight range. Zero-length matches
+   * (e.g. `^` or a lookahead) still count as a match but have nothing to highlight.
+   *
+   * When scored search is enabled, each match is scored with the same tiers as
+   * {@link calculateSearchScore}, based on where the match falls in the value,
+   * and the best score is used.
+   */
+  private searchFieldRegex(regex: RegExp, value: string): FieldSearchResult {
+    const result: FieldSearchResult = { score: 0, matches: [] };
+
+    let hasMatch = false;
+    let bestScore = 0;
+    // matchAll works on a copy of the regex, so lastIndex never leaks between
+    // values, and it steps past zero-length matches so this can't loop forever.
+    for (const match of value.matchAll(regex)) {
+      hasMatch = true;
+      const start = match.index;
+      const end = start + match[0].length;
+      if (end > start) {
+        result.matches.push({ start, end });
+      }
+
+      if (this.scoredSearch) {
+        let matchTypeWeight = MATCH_WEIGHTS.SUBSTRING;
+        if (start === 0 && end === value.length) {
+          matchTypeWeight = MATCH_WEIGHTS.EXACT;
+        } else if (start === 0) {
+          matchTypeWeight = MATCH_WEIGHTS.PREFIX;
+        }
+        // Zero-length matches still need a score above 0 to keep the row.
+        const matchLength = Math.max(1, end - start);
+        bestScore = Math.max(
+          bestScore,
+          weightedScore(matchTypeWeight, matchLength, value.length),
+        );
+      }
+    }
+
+    if (hasMatch) {
+      result.score = this.scoredSearch ? bestScore : 1;
+    }
+
+    return result;
   }
 
   private searchField(
@@ -325,12 +399,14 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
   private getOrCreateCacheEntry(item: T) {
     let cacheEntry = this.cache.get(item);
     if (!cacheEntry) {
-      cacheEntry = { values: {}, tokens: {} };
+      cacheEntry = { raw: {}, values: {}, tokens: {} };
       for (const key of this.keys) {
         const columnOptions = this._fields.get(key);
         const getter = columnOptions?.getter ?? getNestedValue;
         const rawValue = getter(item, key);
         if (typeof rawValue === 'string') {
+          // Strings are immutable so this is a reference, not a copy.
+          cacheEntry.raw[key] = rawValue;
           const lowerValue = rawValue.toLocaleLowerCase();
           cacheEntry.values[key] = lowerValue;
 
@@ -349,4 +425,19 @@ export class YatlSearchEngine<T extends object = UnspecifiedRecord> {
 interface FieldSearchResult {
   score: number;
   matches: MatchIndex[];
+}
+
+/**
+ * Combines a match type's importance, the length of the match,
+ * and a bonus for matches that cover more of the target.
+ */
+function weightedScore(
+  matchTypeWeight: number,
+  matchLength: number,
+  targetLength: number,
+) {
+  // Reward matches where the match length is close to the target length.
+  const lengthDifference = targetLength - matchLength;
+  const specificityBonus = 1 / Math.sqrt(1 + lengthDifference);
+  return matchLength * matchTypeWeight * specificityBonus;
 }

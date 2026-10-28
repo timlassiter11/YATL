@@ -1,11 +1,14 @@
-import { html, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { html, nothing, PropertyValues } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 
+import { classMap } from 'lit/directives/class-map.js';
 import { repeat } from 'lit/directives/repeat.js';
 
 import {
   DisplayColumnOptions,
   NestedKeyOf,
+  parseSearchQuery,
+  RegexSearchQuery,
   SearchSortPriority,
   UnspecifiedRecord,
   YatlTableController,
@@ -35,8 +38,12 @@ import { getTableContext } from '../../context';
  * @slot column-picker-icon - Replaces the icon for the column picker button.
  * @slot export-button-icon - Replaces the icon for the export button.
  *
+ * Queries starting with `\r/` use the `\r/pattern/flags` regex syntax. While in regex
+ * mode an indicator icon is shown in the search box. Invalid patterns are flagged on the
+ * icon and aren't searched, so the last valid results stay in place.
+ *
  * @fires yatl-toolbar-search-input - Fired synchronously as the user types in the search box. Useful for real-time highlighting or suggestions.
- * @fires yatl-toolbar-search-change - Fired when the user commits a search query (e.g., on 'Enter' or blur). Use this for triggering the actual table filter.
+ * @fires yatl-toolbar-search-change - Fired when the user commits a search query (e.g., on 'Enter' or blur). Use this for triggering the actual table filter. Not fired for invalid regex queries.
  * @fires yatl-toolbar-export-click - Fired when the export button is clicked. Payload indicates the requested format.
  * @fires yatl-column-toggle-request - Fired when a column's visibility is toggled in the dropdown. The consumer must handle this by updating the table state.
  *
@@ -48,6 +55,13 @@ export class YatlToolbar<
   public static override styles = [...super.styles, styles];
 
   private searchDebounceTimer = 0;
+
+  // The search box's current value when it differs from the controller's
+  // query, e.g. while typing a regex that hasn't been committed yet.
+  @state()
+  private searchInputValue?: string;
+
+  private lastSearchQuery?: string;
 
   private _controller?: YatlTableController<T>;
 
@@ -107,7 +121,20 @@ export class YatlToolbar<
   @property({ type: String, attribute: 'search-placeholder' })
   public searchPlaceholder = 'Search';
 
+  protected override willUpdate(changedProperties: PropertyValues<this>) {
+    super.willUpdate(changedProperties);
+    // The search box is showing the controller's query again
+    // once it changes, whether from a search or set externally.
+    const searchQuery = this.controller?.searchQuery ?? '';
+    if (searchQuery !== this.lastSearchQuery) {
+      this.lastSearchQuery = searchQuery;
+      this.searchInputValue = undefined;
+    }
+  }
+
   protected override render() {
+    const searchQuery = parseSearchQuery(this.currentSearchValue);
+
     return html`
       <div part="base">
         <yatl-input
@@ -117,7 +144,11 @@ export class YatlToolbar<
           .value=${this.controller?.searchQuery ?? ''}
           @input=${this.onSearchInput}
           @change=${this.onSearchChange}
-        ></yatl-input>
+        >
+          ${searchQuery.mode === 'regex'
+            ? this.renderRegexIndicator(searchQuery)
+            : nothing}
+        </yatl-input>
         <yatl-button-group>
           ${this.hideSearchSortPriorityToggle
             ? nothing
@@ -199,6 +230,22 @@ export class YatlToolbar<
     `;
   }
 
+  protected renderRegexIndicator(query: RegexSearchQuery) {
+    const label = query.error
+      ? `Invalid regex: ${query.error}`
+      : 'Regex search';
+    return html`
+      <yatl-icon
+        slot="end"
+        part="search-regex-indicator"
+        class=${classMap({ invalid: !!query.error })}
+        name="regex"
+        label=${label}
+        title=${label}
+      ></yatl-icon>
+    `;
+  }
+
   protected renderExportButton() {
     return html`
       <yatl-button type="button" color="raised" @click=${this.onExportClick}>
@@ -224,18 +271,37 @@ export class YatlToolbar<
     this.controller?.toggleColumnVisibility(field, visible);
   };
 
+  private get currentSearchValue() {
+    return this.searchInputValue ?? this.controller?.searchQuery ?? '';
+  }
+
+  private isInvalidSearch(value: string) {
+    const query = parseSearchQuery(value);
+    return query.mode === 'regex' && !!query.error;
+  }
+
   private onSearchInput = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
+    this.searchInputValue = input.value;
     clearTimeout(this.searchDebounceTimer);
-    this.searchDebounceTimer = window.setTimeout(() => {
-      this.controller?.search(input.value);
-    }, this.searchDebounce);
+    // Regex queries are often invalid while being typed. Keep the
+    // last valid results, the indicator shows the error.
+    if (!this.isInvalidSearch(input.value)) {
+      this.searchDebounceTimer = window.setTimeout(() => {
+        this.controller?.search(input.value);
+      }, this.searchDebounce);
+    }
     this.dispatchEvent(new YatlToolbarSearchInput(input.value));
   };
 
   private onSearchChange = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
+    this.searchInputValue = input.value;
     clearTimeout(this.searchDebounceTimer);
+    if (this.isInvalidSearch(input.value)) {
+      return;
+    }
+
     this.controller?.search(input.value);
     this.dispatchEvent(new YatlToolbarSearchChange(input.value));
   };

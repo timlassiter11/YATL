@@ -12,19 +12,9 @@ import styles from './checkbox.styles';
 export class YatlCheckbox extends YatlToggleControl {
   public static override styles = [...super.styles, styles];
 
-  protected override render() {
-    return html`
-      ${this.renderLabel()}
-      <div part="base" class="base">${this.renderInput()}</div>
-      ${this.renderHint()} ${this.renderErrorText()}
-    `;
-  }
-
   protected override renderInput() {
     return html`
       <input
-        part="input"
-        class="input"
         id=${this.inputId}
         name=${this.name}
         type="checkbox"

@@ -37,20 +37,59 @@ export default css`
 
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
   }
 
-  :host([inline]) {
+  .base {
+    width: 100%;
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: var(--yatl-spacing-s);
+    flex-direction: column;
+  }
+
+  /*
+   * Inline puts the label beside the input instead of above it. The host
+   * becomes a two column grid (label | input) so the hint and error line
+   * up under the input - not under the label - whatever width the label is.
+   * The label column is capped so a long label wraps rather than squeezing
+   * the input out of the control.
+   *
+   * Checkable controls (checkbox, switch, radio) lay themselves out, with
+   * the control before its label.
+   */
+  :host([inline]:not(:state(checkable))) {
+    display: grid;
+    grid-template-columns: fit-content(50%) minmax(0, 1fr);
+    align-items: start;
+
+    .base {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: subgrid;
+      align-items: start;
+    }
+
+    .base > :not(yatl-label) {
+      grid-column: 2;
+    }
+
+    /* The label may be hidden, so the margin has to go with it. */
+    yatl-label {
+      margin-inline-end: var(--yatl-spacing-s);
+    }
+
+    [part='hint'],
+    [part='error'],
+    slot[name='hint']::slotted(*),
+    slot[name='error']::slotted(*) {
+      grid-column: 2;
+    }
   }
 
   /** 
   * Concrete classes should apply this to the input element
   * or the element that is meant to look like the input.
   */
-  .text-input {
+  .input {
     display: flex;
     flex-direction: row;
     gap: 0;
@@ -71,10 +110,10 @@ export default css`
     align-items: center;
   }
 
-  .text-input:focus,
-  .text-input:focus-visible,
-  .text-input:has(input:focus),
-  .text-input:has(input:focus-visible) {
+  .input:focus,
+  .input:focus-visible,
+  .input:has(input:focus),
+  .input:has(input:focus-visible) {
     outline: var(--input-outline-width) solid var(--input-outline-color);
     outline-offset: calc(var(--input-outline-width) * -1);
   }
@@ -107,15 +146,16 @@ export default css`
     opacity: 0.8;
   }
 
-  :host(:state(disabled)) .text-input:focus,
-  :host(:state(readonly)) .text-input:focus,
-  :host(:state(disabled)) .text-input:focus-visible,
-  :host(:state(readonly)) .text-input:focus-visible {
+  :host(:state(disabled)) .input:focus,
+  :host(:state(readonly)) .input:focus,
+  :host(:state(disabled)) .input:focus-visible,
+  :host(:state(readonly)) .input:focus-visible {
     outline: none;
   }
 
   textarea,
-  input {
+  input,
+  #input {
     height: 100%;
 
     width: 100%;

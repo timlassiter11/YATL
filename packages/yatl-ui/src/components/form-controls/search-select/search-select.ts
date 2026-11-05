@@ -135,33 +135,11 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
     this.value = [...newValue];
   }
 
-  protected override render() {
-    return html`
-      ${this.renderLabel()}
-      <div part="base" class="base">${this.renderInput()}</div>
-      ${this.renderHint()}${this.renderErrorText()}
-    `;
-  }
-
-  protected renderInput() {
+  protected override renderBase(contents: unknown) {
     const classes = { options: true, 'has-query': this.hasQuery };
     return html`
       <div class="column">
-        <div class="text-input">
-          <input
-            part="input"
-            class="input"
-            id=${this.inputId}
-            type="search"
-            placeholder=${this.placeholder}
-            autocomplete="off"
-            .value=${live(this.query)}
-            ?disabled=${this.isDisabled}
-            ?readonly=${this.readonly}
-            @input=${this.handleInput}
-            @focusin=${this.handleInputFocusin}
-          />
-        </div>
+        ${super.renderBase(contents)}
         <div
           part="options"
           class=${classMap(classes)}
@@ -170,6 +148,22 @@ export class YatlSearchSelect extends YatlFormControl<string[]> {
           ${this.renderContents()}
         </div>
       </div>
+    `;
+  }
+
+  protected renderInput() {
+    return html`
+      <input
+        id=${this.inputId}
+        type="search"
+        placeholder=${this.placeholder}
+        autocomplete="off"
+        .value=${live(this.query)}
+        ?disabled=${this.isDisabled}
+        ?readonly=${this.readonly}
+        @input=${this.handleInput}
+        @focusin=${this.handleInputFocusin}
+      />
     `;
   }
 

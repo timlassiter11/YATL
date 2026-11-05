@@ -10,26 +10,38 @@ export default css`
     --height: var(--yatl-switch-size, 1rem);
     --width: calc(var(--height) * 1.75);
     --thumb-size: 0.75em;
-
-    display: inline-flex;
-    align-items: center;
-    vertical-align: middle;
   }
 
-  :host([inline]) {
+  :host([inline]) .base {
     /* 
      * remove the default gap to prevent 
      * click deadzone between control and label.
      */
     gap: 0;
-  }
-
-  .base {
-    position: relative;
-    width: fit-content;
+    flex-direction: row-reverse;
+    align-items: center;
+    vertical-align: middle;
+    justify-content: flex-end;
   }
 
   .input {
+    position: relative;
+    width: fit-content;
+    border: none;
+    background: none;
+    padding: 0;
+    height: fit-content;
+    border-radius: var(--height);
+    outline: none !important;
+  }
+
+  /* Beats the outline: none !important the wrapper needs to hide the shared ring. */
+  .input:has(#input:focus-visible) {
+    outline: 2px solid var(--switch-accent) !important;
+    outline-offset: 2px;
+  }
+
+  #input {
     position: absolute;
     opacity: 0;
     padding: 0;
@@ -73,10 +85,13 @@ export default css`
     display: inline-flex;
     vertical-align: baseline;
     cursor: pointer;
-    padding-left: var(--yatl-spacing-m);
     line-height: var(--height);
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  :host([inline]) yatl-label {
+    padding-left: var(--yatl-spacing-m);
   }
 
   :host(:state(checked)) .switch {

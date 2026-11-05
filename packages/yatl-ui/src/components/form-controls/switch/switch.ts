@@ -11,18 +11,10 @@ import styles from './switch.styles';
 export class YatlSwitch extends YatlToggleControl {
   public static override styles = [...super.styles, styles];
 
-  protected override render() {
-    return html`
-      <div part="base" class="base">${this.renderInput()}</div>
-      ${this.renderLabel()} ${this.renderHint()} ${this.renderErrorText()}
-    `;
-  }
-
   protected override renderInput() {
     return html`
       <input
         role="switch"
-        class="input"
         id=${this.inputId}
         name=${this.name}
         type="checkbox"

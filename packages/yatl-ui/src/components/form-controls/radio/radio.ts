@@ -11,18 +11,9 @@ import styles from './radio.styles';
 export class YatlRadio extends YatlCheckableControl {
   public static override styles = [...super.styles, styles];
 
-  protected override render() {
-    return html`
-      <div part="base" class="base">${this.renderInput()}</div>
-      ${this.renderLabel()} ${this.renderHint()} ${this.renderErrorText()}
-    `;
-  }
-
   protected override renderInput() {
     return html`
       <input
-        part="input"
-        class="input"
         id=${this.inputId}
         name=${this.name}
         type="radio"

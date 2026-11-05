@@ -91,11 +91,14 @@ export class YatlRadioGroup extends YatlFormControl<string> {
     this.propagateDisabled();
   }
 
-  protected override render() {
+  // The group has no box of its own to look like an input, just the list of
+  // radios, but it still sits where the input would so the label, hint and
+  // error line up like they do on every other control.
+  protected override renderBase(contents: unknown) {
     return html`
-      ${this.renderLabel()}
-      <div part="base" @change=${this.handleChange}>${this.renderInput()}</div>
-      ${this.renderHint()} ${this.renderErrorText()}
+      <div part="input" class="group" @change=${this.handleChange}>
+        ${contents}
+      </div>
     `;
   }
 

@@ -4,7 +4,7 @@ export default css`
   :host {
     --option-height: var(--yatl-select-option-height, 35px);
     --options-gap: var(--yatl-select-options-gap, 0);
-    /* We need individual padding variables to calculate text-input height */
+    /* We need individual padding variables to calculate input height */
     --input-padding-left: var(
       --yatl-select-input-padding-left,
       var(--yatl-spacing-m)
@@ -32,9 +32,10 @@ export default css`
   .column {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
-  .text-input {
+  .input {
     border-bottom-left-radius: 0px;
     border-bottom-right-radius: 0px;
   }

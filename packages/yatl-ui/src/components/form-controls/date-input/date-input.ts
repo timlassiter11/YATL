@@ -1,4 +1,4 @@
-import { html, TemplateResult } from 'lit';
+import { html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { dateConverter, getDateOnly } from '../../../utils';
@@ -90,8 +90,8 @@ export class YatlDateInput extends YatlFormControl<Date> {
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
       >
         <button
-          part="base"
-          class="base text-input"
+          part="input"
+          class="input"
           slot="trigger"
           ?disabled=${this.isDisabled || this.readonly}
         >

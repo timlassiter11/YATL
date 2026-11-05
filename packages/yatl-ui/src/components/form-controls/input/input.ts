@@ -118,7 +118,6 @@ export class YatlInput extends YatlFormControl<string> {
 
     return html`
       <input
-        part="input"
         id=${this.inputId}
         name=${this.name}
         type=${type}

@@ -68,7 +68,6 @@ export class YatlTextArea extends YatlFormControl<string> {
   protected override renderInput() {
     return html`
       <textarea
-        part="input"
         id=${this.inputId}
         name=${this.name}
         placeholder=${this.placeholder}

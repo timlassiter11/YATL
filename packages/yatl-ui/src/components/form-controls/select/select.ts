@@ -130,15 +130,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
     }
   }
 
-  protected override render() {
-    return html`
-      ${this.renderLabel()}
-      <div part="base">${this.renderInput()}</div>
-      ${this.renderHint()}${this.renderErrorText()}
-    `;
-  }
-
-  protected renderInput() {
+  protected override renderBase(contents: unknown) {
     return html`
       <yatl-dropdown
         .open=${this.open}
@@ -147,20 +139,20 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
         @yatl-dropdown-toggle-request=${this.handleDropdownToggleRequest}
       >
-        <div
-          id=${this.inputId}
-          class="text-input"
-          slot="trigger"
-          tabindex="0"
-          @click=${this.handleTriggerClick}
-        >
-          <div class="input-row">
-            ${this.renderDisplayValue()}${this.renderTags()}
-            ${this.renderClearIcon()} ${this.renderArrowIcon()}
-          </div>
+        <div slot="trigger" tabindex="0" @click=${this.handleTriggerClick}>
+          ${super.renderBase(contents)}
         </div>
         <slot @slotchange=${this.handleSlotChange}></slot>
       </yatl-dropdown>
+    `;
+  }
+
+  protected renderInput() {
+    return html`
+      <div id=${this.inputId}>
+        ${this.renderDisplayValue()}${this.renderTags()}
+        ${this.renderClearIcon()} ${this.renderArrowIcon()}
+      </div>
     `;
   }
 
@@ -174,8 +166,7 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
     return html`
       <input
         tabindex="-1"
-        part="input"
-        class="input"
+        part="value"
         type="text"
         title=${displayValue ?? ''}
         value=${displayValue ?? ''}

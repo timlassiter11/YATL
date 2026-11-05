@@ -20,7 +20,25 @@ export default css`
     );
   }
 
-  :host([multi]) .text-input {
+  /*
+   * The trigger wrapper is what actually takes focus, but the ring belongs
+   * on the box inside it, same as every other control.
+   */
+  [slot='trigger'] {
+    outline: none;
+  }
+
+  [slot='trigger']:focus-visible > .input {
+    outline: var(--input-outline-width) solid var(--input-outline-color);
+    outline-offset: calc(var(--input-outline-width) * -1);
+  }
+
+  :host(:state(disabled)) [slot='trigger']:focus-visible > .input,
+  :host(:state(readonly)) [slot='trigger']:focus-visible > .input {
+    outline: none;
+  }
+
+  :host([multi]) .input {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -35,7 +53,7 @@ export default css`
     overflow: hidden;
   }
 
-  .input-row {
+  #input {
     box-sizing: border-box;
     display: flex;
     flex-direction: row;

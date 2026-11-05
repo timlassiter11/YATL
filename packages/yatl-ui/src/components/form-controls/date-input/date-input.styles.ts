@@ -1,17 +1,22 @@
 import { css } from 'lit';
 
 export default css`
-  .has-placeholder {
-    color: var(--input-placeholder-color);
-  }
-
-  .value {
-    margin-top: auto;
-    flex-grow: 1;
+  /*
+   * These have to be #input to beat the shared #input rule. That rule
+   * stretches the element to the full height of the box, which pins a single
+   * line of text to the top of it, so size it to its text instead and let the
+   * box's align-items: center do the centering.
+   */
+  #input {
+    height: auto;
     text-align: start;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  #input.has-placeholder {
+    color: var(--input-placeholder-color);
   }
 
   .footer {
@@ -28,7 +33,7 @@ export default css`
   }
 
   :host(:state(readonly)) {
-    .text-input {
+    .input {
       opacity: 1;
     }
 

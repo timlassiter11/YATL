@@ -15,7 +15,7 @@ export default css`
    * Only apply layout changes when inline 
    * Match normal inputs when the user opts out of inline 
    */
-  :host([inline]) {
+  :host([inline]) .base {
     /* 
      * remove the default gap to prevent 
      * click deadzone between control and label.
@@ -38,23 +38,29 @@ export default css`
       user-select: none;
       -webkit-user-select: none;
     }
-
-    .input:focus-visible {
-      outline: 2px solid var(--checkbox-accent-color);
-      outline-offset: 2px;
-    }
   }
 
-  .base {
+  /* The wrapper only sizes the native input, which draws the checkbox. */
+  .input {
     display: flex;
     align-items: center;
     justify-content: center;
     width: var(--checkbox-size);
     height: var(--checkbox-size);
     flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    outline: none !important;
   }
 
-  .input {
+  #input:focus-visible {
+    outline: 2px solid var(--checkbox-accent-color);
+    outline-offset: 2px;
+  }
+
+  #input {
     appearance: none;
     -webkit-appearance: none;
     margin: 0;
@@ -69,12 +75,12 @@ export default css`
     transition: all 0.1s ease-in-out;
   }
 
-  .input:checked {
+  #input:checked {
     background-color: var(--checkbox-accent-color);
     border-color: var(--checkbox-accent-color);
   }
 
-  .input::after {
+  #input::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -89,7 +95,7 @@ export default css`
     transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
-  .input:checked::after {
+  #input:checked::after {
     transform: translate(-50%, -50%) rotate(45deg) scale(1);
   }
 

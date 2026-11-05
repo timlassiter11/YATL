@@ -20,23 +20,29 @@ export default css`
     --radio-transition: var(--yatl-radio-transition, 0.2s ease-in-out);
   }
 
-  :host([inline]) {
+  :host([inline]) .base {
     /* 
      * remove the default gap to prevent 
      * click deadzone between control and label.
      */
     gap: 0;
+    flex-direction: row-reverse;
     align-items: center;
+    vertical-align: middle;
+    justify-content: flex-end;
   }
 
-  .base {
+  .input {
     flex: 0 0 auto;
     position: relative;
+    /* --radio-size is the circle itself, the border goes around it. */
+    box-sizing: content-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: var(--radio-size);
     height: var(--radio-size);
+    padding: 0;
     border-width: var(--radio-border-width);
     border-style: var(--radio-border-style);
     border-color: var(--radio-border-color);
@@ -46,9 +52,10 @@ export default css`
     transition: background-color 250ms, border-color 250ms, box-shadow 250ms,
       color 250ms;
     transition-timing-function: ease;
+    outline: none !important;
   }
 
-  .input {
+  #input {
     position: absolute;
     opacity: 0;
     padding: 0;
@@ -86,14 +93,15 @@ export default css`
     opacity: 0;
   }
 
-  :host(:state(checked)) .base {
+  :host(:state(checked)) .input {
     color: var(--radio-accent-color);
     border-color: var(--radio-accent-color);
   }
 
-  :host(:focus-visible) .base {
-    outline: var(--radio-focus-color);
-    outline-offset: 3px;
+  /* Beats the outline: none !important the circle needs to hide the shared ring. */
+  .input:has(#input:focus-visible) {
+    outline: 2px solid var(--radio-focus-color) !important;
+    outline-offset: 2px;
   }
 
   :host(:not([readonly])) {

@@ -202,14 +202,16 @@ export abstract class YatlFormControl<TData = string>
 
   protected override render() {
     return html`
-      ${this.renderLabel()} ${this.renderBase(this.renderInput())}
+      <div part="base" class="base">
+        ${this.renderLabel()} ${this.renderBase(this.renderInput())}
+      </div>
       ${this.renderHint()} ${this.renderErrorText()}
     `;
   }
 
   protected renderBase(contents: unknown) {
     return html`
-      <div part="base" class="base text-input">
+      <div part="input" class="input">
         <slot part="start" class="input-start" name="start"></slot>
         ${contents}
         <slot part="end" class="input-end" name="end"></slot>

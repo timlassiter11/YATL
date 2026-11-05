@@ -195,7 +195,7 @@ describe('YatlSelect - disabled/readonly', () => {
       `<yatl-option value="a" label="A"></yatl-option>`,
     );
 
-    const trigger = el.shadowRoot!.querySelector('.text-input') as HTMLElement;
+    const trigger = el.shadowRoot!.querySelector('.input') as HTMLElement;
     trigger.click();
     await el.updateComplete;
 

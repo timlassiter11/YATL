@@ -18,6 +18,13 @@ export abstract class YatlCheckableControl extends YatlFormControl<string> {
   // whether it was actually touched.
   private checkedExplicitlySet = false;
 
+  constructor() {
+    super();
+    // The shared inline (label | input) grid in form-control.styles skips
+    // these; they put the control before its label themselves.
+    this.toggleState('checkable', true);
+  }
+
   /**
    * The value to store in the form data when checked.
    * @attr value

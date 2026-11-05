@@ -1,3 +1,4 @@
+import { YatlSearchEngine, YatlSearchResult } from '@timlassiter11/yatl';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 
@@ -77,6 +78,94 @@ describe('YatlTypeahead - local search', () => {
 
     expect(el.value).toBe('apple');
     expect(changeCount).toBe(1);
+  });
+});
+
+describe('YatlTypeahead - custom search engine', () => {
+  const items = [
+    { id: '46753', name: 'Electrical Assembly' },
+    { id: '51200', name: 'Final Inspection' },
+  ];
+
+  async function renderWithItems() {
+    const el = await renderTypeahead(
+      'min-query-length="1" label-field="name" value-field="id"',
+    );
+    el.localData = items;
+    await el.updateComplete;
+    return el;
+  }
+
+  test('by default only the label field is searched', async () => {
+    const el = await renderWithItems();
+
+    typeInto(el, '46753');
+    await el.updateComplete;
+
+    expect(queryOptions(el).length).toBe(0);
+  });
+
+  test('a provided engine can search fields other than the label', async () => {
+    const el = await renderWithItems();
+    el.searchEngine = new YatlSearchEngine({
+      fields: [{ field: 'id' }, { field: 'name' }],
+    });
+    await el.updateComplete;
+
+    typeInto(el, '46753');
+    await el.updateComplete;
+    expect(queryOptions(el).map(o => o.label)).toEqual(['Electrical Assembly']);
+
+    typeInto(el, 'final');
+    await el.updateComplete;
+    expect(queryOptions(el).map(o => o.label)).toEqual(['Final Inspection']);
+  });
+
+  test('a provided engine gets data loaded before and after it was set', async () => {
+    const el = await renderTypeahead('min-query-length="1"');
+    el.localData = [{ label: 'Apple', value: 'apple' }];
+    await el.updateComplete;
+
+    el.searchEngine = new YatlSearchEngine({ fields: [{ field: 'label' }] });
+    el.localData = [
+      { label: 'Apple', value: 'apple' },
+      { label: 'Apricot', value: 'apricot' },
+    ];
+    await el.updateComplete;
+
+    typeInto(el, 'ap');
+    await el.updateComplete;
+
+    expect(el.searchEngine.data.length).toBe(2);
+    expect(queryOptions(el).length).toBe(2);
+  });
+
+  test('a provided engine keeps its fields when label-field changes', async () => {
+    const el = await renderWithItems();
+    el.searchEngine = new YatlSearchEngine({ fields: [{ field: 'id' }] });
+    el.labelField = 'other';
+    await el.updateComplete;
+
+    expect(el.searchEngine.keys).toEqual(['id']);
+  });
+
+  test('renderOption receives the search result with its matches', async () => {
+    const el = await renderWithItems();
+    el.searchEngine = new YatlSearchEngine({
+      fields: [{ field: 'id' }, { field: 'name' }],
+    });
+    const results: YatlSearchResult[] = [];
+    el.renderOption = (_item, result) => {
+      results.push(result);
+      return null;
+    };
+    await el.updateComplete;
+
+    typeInto(el, '467');
+    await el.updateComplete;
+
+    expect(results.at(-1)?.item).toBe(items[0]);
+    expect(results.at(-1)?.matches.id).toEqual([{ start: 0, end: 3 }]);
   });
 });
 

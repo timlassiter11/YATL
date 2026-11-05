@@ -34,10 +34,13 @@ export class YatlTypeahead extends YatlInput {
 
   private cacheDirty = false;
   private cachedData = new Map<string, UnspecifiedRecord>();
-  private searchEngine = new YatlSearchEngine<UnspecifiedRecord>({
+  private _searchEngine = new YatlSearchEngine<UnspecifiedRecord>({
     tokenizedSearch: true,
     scoredSearch: true,
   });
+  // False once the caller provides their own engine. We only configure
+  // engines we created, so the caller's search options are left alone.
+  private ownsSearchEngine = true;
 
   @state() private hasFocus = false;
   @state() private userHasSelected = false;
@@ -131,7 +134,11 @@ export class YatlTypeahead extends YatlInput {
   public transformResponse?: (value: unknown) => UnspecifiedRecord[];
 
   /**
-   * A custom render function for dropdown options.
+   * A custom render function for dropdown options. Render into the option's
+   * `start` or `end` slot (e.g. `<span slot="end">`); the label is always shown.
+   *
+   * `result` is the item's search result. Use `result.matches[field]` with
+   * `highlightText` to highlight matches in fields other than the label.
    *
    * **Note on Primitives:** If your data source provides a flat array of strings/numbers,
    * the component automatically wraps them into objects using your `label-field` and
@@ -139,7 +146,46 @@ export class YatlTypeahead extends YatlInput {
    * not the original primitive string.
    */
   @property({ attribute: false })
-  public renderOption?: (item: UnspecifiedRecord) => unknown;
+  public renderOption?: (
+    item: UnspecifiedRecord,
+    result: YatlSearchResult<UnspecifiedRecord>,
+  ) => unknown;
+
+  /**
+   * The search engine used to match options. By default the typeahead creates
+   * its own, which searches only the `label-field`.
+   *
+   * Provide your own to control how options are searched, e.g. to search more
+   * fields than the label:
+   *
+   * ```ts
+   * typeahead.searchEngine = new YatlSearchEngine({
+   *   fields: [{ field: 'id' }, { field: 'name' }],
+   *   tokenizedSearch: true,
+   *   scoredSearch: true,
+   * });
+   * ```
+   *
+   * The typeahead still manages the engine's `data`. A provided engine's search
+   * fields and options are never changed, so `label-field` is only searched if
+   * you include it.
+   */
+  public get searchEngine() {
+    return this._searchEngine;
+  }
+
+  @property({ attribute: false })
+  public set searchEngine(engine: YatlSearchEngine<UnspecifiedRecord>) {
+    if (this._searchEngine === engine) {
+      return;
+    }
+
+    this._searchEngine = engine;
+    this.ownsSearchEngine = false;
+    // Hand the new engine everything we've loaded so far
+    this.cacheDirty = true;
+    this.updateMatchedOptions();
+  }
 
   /**
    * An array of pre-loaded objects to search through locally.
@@ -191,7 +237,7 @@ export class YatlTypeahead extends YatlInput {
       this.cachedData.clear();
       cacheCleared = true;
 
-      if (changedProperties.has('labelField')) {
+      if (changedProperties.has('labelField') && this.ownsSearchEngine) {
         this.searchEngine.searchFields = [{ field: this.labelField }];
       }
     }
@@ -290,7 +336,7 @@ export class YatlTypeahead extends YatlInput {
       label=${String(label ?? '')}
       .highlightIndices=${matches}
     >
-      ${this.renderOption?.(result.item) ?? nothing}
+      ${this.renderOption?.(result.item, result) ?? nothing}
     </yatl-option>`;
   }
 

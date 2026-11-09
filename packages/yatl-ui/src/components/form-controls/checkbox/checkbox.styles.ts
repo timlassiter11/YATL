@@ -31,12 +31,15 @@ export default css`
       --label-font-size: inherit;
       --label-font-weight: inherit;
 
-      display: inline-flex;
       vertical-align: baseline;
       padding-left: var(--yatl-spacing-m);
       line-height: 1;
       user-select: none;
       -webkit-user-select: none;
+    }
+
+    yatl-label.has-label {
+      display: inline-flex;
     }
   }
 

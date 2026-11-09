@@ -82,12 +82,15 @@ export default css`
     --label-font-weight: inherit;
 
     position: relative;
-    display: inline-flex;
     vertical-align: baseline;
     cursor: pointer;
     line-height: var(--height);
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  yatl-label.has-label {
+    display: inline-flex;
   }
 
   :host([inline]) yatl-label {

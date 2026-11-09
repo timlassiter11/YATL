@@ -80,13 +80,16 @@ export default css`
     --label-font-weight: inherit;
 
     position: relative;
-    display: inline-flex;
     vertical-align: baseline;
     cursor: pointer;
     padding-left: var(--yatl-spacing-m);
     line-height: 1;
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  yatl-label.has-label {
+    display: inline-flex;
   }
 
   :host(:not(:state(checked))) svg circle {

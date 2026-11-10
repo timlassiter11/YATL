@@ -70,7 +70,8 @@ export default css`
      * dialog defaults. It's deliberately sized to match the card exactly
      * (not the full viewport) so it doesn't swallow clicks meant for other
      * popovers/dialogs opened on top of it — the .backdrop div below is
-     * what catches clicks anywhere else, same as yatl-dialog.
+     * what catches clicks anywhere else, same as yatl-dialog. With
+     * no-backdrop there's no .backdrop, so the page stays usable.
      */
 
     &.show {

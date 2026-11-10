@@ -55,6 +55,47 @@ describe('YatlFlyout - basic show/hide', () => {
 
     expect(el.open).toBe(true);
   });
+
+  test('no-backdrop leaves the page usable and stays open on outside clicks', async () => {
+    document.body.innerHTML = `
+      <button id="outside">outside</button>
+      <yatl-flyout no-backdrop>content</yatl-flyout>`;
+    const el = document.querySelector<YatlFlyout>('yatl-flyout')!;
+    await el.updateComplete;
+    await el.show();
+
+    expect(el.shadowRoot!.querySelector('.backdrop')).toBeNull();
+
+    // Nothing covers the page, so a click there reaches the page
+    const outside = document.getElementById('outside')!;
+    const rect = outside.getBoundingClientRect();
+    const hit = document.elementFromPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+    expect(hit).toBe(outside);
+
+    let clicked = false;
+    outside.addEventListener('click', () => (clicked = true));
+    outside.click();
+    await new Promise(r => setTimeout(r, 400));
+
+    expect(clicked).toBe(true);
+    expect(el.open).toBe(true);
+  });
+
+  test('a no-backdrop flyout still closes with its close button', async () => {
+    const el = await renderFlyout('no-backdrop');
+    await el.show();
+
+    const closeButton = el.shadowRoot!.querySelector(
+      '[part="close-button"]',
+    ) as HTMLElement;
+    closeButton.click();
+    await new Promise(r => setTimeout(r, 400));
+
+    expect(el.open).toBe(false);
+  });
 });
 
 describe('YatlFlyout - show/hide fire exactly once', () => {

@@ -1,5 +1,5 @@
 import { YatlTable } from '@timlassiter11/yatl';
-import { html, PropertyValues } from 'lit';
+import { html, nothing, PropertyValues } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import {
   YatlFlyoutFullscreenEvent,
@@ -79,6 +79,15 @@ export class YatlFlyout extends YatlBase {
    */
   @property({ type: Boolean })
   public modal = false;
+
+  /**
+   * When true, there's no backdrop: the page isn't dimmed and stays usable
+   * while the flyout is open, and clicking it doesn't close the flyout.
+   * Escape and the close button still do (unless `modal` is set).
+   * @attr no-backdrop
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'no-backdrop' })
+  public noBackdrop = false;
 
   /**
    * When true, the flyout fills the entire viewport.
@@ -245,7 +254,9 @@ export class YatlFlyout extends YatlBase {
           ></slot>
         </yatl-card>
       </dialog>
-      <div class="backdrop" @click=${this.handleBackdropClick}></div>
+      ${this.noBackdrop
+        ? nothing
+        : html`<div class="backdrop" @click=${this.handleBackdropClick}></div>`}
     `;
   }
 

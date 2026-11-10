@@ -68,4 +68,24 @@ describe('YatlSwitchFilter', () => {
     ).toBeUndefined();
     expect(el.value).toBeUndefined();
   });
+
+  test('externally clearing filters turns off a checked-by-default switch with only an onValue', async () => {
+    const controller = createController();
+    document.body.innerHTML =
+      '<yatl-switch-filter field="status" checked></yatl-switch-filter>';
+    const el = document.querySelector<YatlSwitchFilter>('yatl-switch-filter')!;
+    el.onValue = 'active';
+    el.controller = controller;
+    await el.updateComplete;
+
+    expect(controller.filters?.status).toBe('active');
+
+    controller.filters = null;
+    await el.updateComplete;
+
+    // Off means "no filter" here, so it shouldn't still look on
+    expect(el.checked).toBe(false);
+    expect(el.value).toBeUndefined();
+    expect(controller.filteredData).toHaveLength(2);
+  });
 });

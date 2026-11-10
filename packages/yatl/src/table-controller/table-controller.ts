@@ -558,26 +558,41 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     this.dispatchEvent(new YatlTableSearchEvent(query));
   }
 
-  public getColumnFilterValues(field: NestedKeyOf<T>, includeNull = false) {
+  /**
+   * The distinct values of `field` in the filtered rows, with labels and
+   * counts, e.g. for a filter's options.
+   *
+   * @param includeNull - Include null/undefined values as an option.
+   * @param ignoreOwnFilter - Leave this field's own filter out, so a filter
+   *  UI keeps offering every option (with the other filters and the search
+   *  still applied) after one is picked. Has no effect with a custom
+   *  `filterStrategy`, which can't be split by field.
+   */
+  public getColumnFilterValues(
+    field: NestedKeyOf<T>,
+    includeNull = false,
+    ignoreOwnFilter = false,
+  ) {
     const column = this.getDisplayColumn(field);
     const optionsMap = new Map<unknown, FilterOption>();
+    const rows = ignoreOwnFilter
+      ? this.getRowsFilteredWithout(field)
+      : this.filteredData;
 
     // If the value of a row is an array, flatten it - each element
     // becomes its own filter option.
     type ValueEntry = { value: unknown; row: T; wasArray: boolean };
-    const values: ValueEntry[] = this.filteredData.flatMap(
-      (row): ValueEntry[] => {
-        const originalValue = getNestedValue(row, field);
-        if (Array.isArray(originalValue)) {
-          return originalValue.map(entry => ({
-            value: entry,
-            row,
-            wasArray: true,
-          }));
-        }
-        return [{ value: originalValue, row, wasArray: false }];
-      },
-    );
+    const values: ValueEntry[] = rows.flatMap((row): ValueEntry[] => {
+      const originalValue = getNestedValue(row, field);
+      if (Array.isArray(originalValue)) {
+        return originalValue.map(entry => ({
+          value: entry,
+          row,
+          wasArray: true,
+        }));
+      }
+      return [{ value: originalValue, row, wasArray: false }];
+    });
 
     for (const { value, row, wasArray } of values) {
       // valueFormatter is written to format the cell's whole value - for
@@ -1315,7 +1330,11 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     return filter === value;
   }
 
-  private filterRow(row: T, index: number): boolean {
+  /**
+   * @param skipField - A field whose filter is ignored, e.g. to list a
+   *  filter's options without it filtering itself.
+   */
+  private filterRow(row: T, index: number, skipField?: string): boolean {
     if (this.filterStrategy) {
       // If there is a custom filter strategy, we run it no matter what
       return this.filterStrategy(row, index, this.filters ?? {});
@@ -1326,6 +1345,9 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
     }
 
     for (const field in this.filters) {
+      if (field === skipField) {
+        continue;
+      }
       // `field` is already a flat (possibly dotted) key of the Filters
       // object itself, not a path to walk within it - unlike `row`, which
       // is a genuinely nested object that `field` indexes into.
@@ -1344,6 +1366,27 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
       }
     }
     return true;
+  }
+
+  /**
+   * The rows that pass every filter except `field`'s, and the search, in
+   * data order. The same as `filteredData` (unsorted aside) when `field`
+   * has no filter or a custom `filterStrategy` is set.
+   */
+  private getRowsFilteredWithout(field: NestedKeyOf<T>): T[] {
+    if (this.filterStrategy || this.filters?.[field] === undefined) {
+      return this.filteredData;
+    }
+
+    const baseData = this._data.filter((row, i) =>
+      this.filterRow(row, i, field),
+    );
+    if (this.searchQuery && this.searchEngine) {
+      return this.searchEngine
+        .search(this.searchQuery, baseData)
+        .map(result => result.item);
+    }
+    return baseData;
   }
 
   private filterRows() {

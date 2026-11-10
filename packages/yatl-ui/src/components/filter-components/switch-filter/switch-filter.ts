@@ -71,12 +71,22 @@ export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
   }
 
   protected override reset() {
-    // Restore the switch's initial visual position, but go through the base
-    // class to actually clear the value - going through the `checked`
-    // setter would re-derive onValue/offValue and immediately reapply a
-    // filter, defeating an external clear (e.g. "Clear Filters").
+    // Show the position that means "no filter", so the switch doesn't look
+    // on while nothing is filtered: off when there's no offValue, on when
+    // there's no onValue. With both set neither position is unfiltered, so
+    // it goes back to its initial position.
+    //
+    // Go through the base class to actually clear the value - going through
+    // the `checked` setter would re-derive onValue/offValue and immediately
+    // reapply a filter, defeating an external clear (e.g. "Clear Filters").
     const oldValue = this._checked;
-    this._checked = this.hasAttribute('checked');
+    if (this.offValue === undefined) {
+      this._checked = false;
+    } else if (this.onValue === undefined) {
+      this._checked = true;
+    } else {
+      this._checked = this.hasAttribute('checked');
+    }
     this.requestUpdate('checked', oldValue);
     super.reset();
   }

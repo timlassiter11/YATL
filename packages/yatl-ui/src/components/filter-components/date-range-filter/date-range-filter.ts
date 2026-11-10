@@ -27,8 +27,12 @@ export class YatlDateRangeFilter extends YatlBaseFilter<FilterFunction> {
 
     let min: Date | undefined;
     let max: Date | undefined;
+    // Without this filter's own range, so picking a range doesn't shrink
+    // the range you can pick from
     for (const option of this.controller.getColumnFilterValues(
       this.field as NestedKeyOf<UnspecifiedRecord>,
+      false,
+      true,
     )) {
       const date =
         option.value instanceof Date

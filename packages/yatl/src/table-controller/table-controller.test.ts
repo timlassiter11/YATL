@@ -1100,6 +1100,41 @@ describe('YatlTableController - filtering', () => {
     expect(options.some(o => o.value === null)).toBe(true);
   });
 
+  test('getColumnFilterValues with ignoreOwnFilter keeps options its own filter hides', () => {
+    const controller = createEmployeeController();
+    controller.filters = { department: 'Sales' };
+
+    // Only Sales rows are left, so normally only Sales is an option
+    expect(
+      controller.getColumnFilterValues('department').map(o => o.value),
+    ).toEqual(['Sales']);
+
+    const options = controller.getColumnFilterValues('department', false, true);
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'Eng', count: 2 }),
+        expect.objectContaining({ value: 'Sales', count: 1 }),
+      ]),
+    );
+    expect(options).toHaveLength(2);
+    // The rows themselves are still filtered
+    expect(controller.filteredData.map(r => r.id)).toEqual([4]);
+  });
+
+  test('getColumnFilterValues with ignoreOwnFilter still applies the other filters', () => {
+    const controller = createEmployeeController();
+    controller.filters = {
+      department: 'Sales',
+      salary: (value: unknown) => (value as number) >= 80,
+    };
+
+    const options = controller.getColumnFilterValues('department', false, true);
+    // Only Alice and Charlie (Eng) earn 80 or more
+    expect(options).toEqual([
+      expect.objectContaining({ value: 'Eng', count: 2 }),
+    ]);
+  });
+
   test('getColumnFilterValues uses valueFormatter for non-array fields', () => {
     const controller = createEmployeeController([
       { field: 'id' },

@@ -27,6 +27,23 @@ describe('YatlSelect - single select', () => {
     expect(options.map(o => o.checked)).toEqual([false, true]);
   });
 
+  test('setting value updates the displayed label', async () => {
+    const el = await renderSelect(
+      '',
+      `
+        <yatl-option value="a" label="A"></yatl-option>
+        <yatl-option value="b" label="B"></yatl-option>
+      `,
+    );
+    el.value = 'b';
+    await el.updateComplete;
+
+    const display = el.shadowRoot!.querySelector<HTMLInputElement>(
+      'input[part="value"]',
+    )!;
+    expect(display.value).toBe('B');
+  });
+
   test('clicking an option updates value and emits change', async () => {
     const el = await renderSelect(
       '',

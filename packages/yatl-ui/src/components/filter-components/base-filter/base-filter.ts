@@ -11,12 +11,32 @@ import {
 } from '@timlassiter11/yatl';
 import { YatlBase } from '../../base/base';
 
+/**
+ * Reads the `value` attribute: JSON for arrays and objects
+ * (`value='["a","b"]'`), otherwise the plain string (`value="active"`), so
+ * values like "90" or "true" stay strings like the options they match.
+ */
+const valueConverter = {
+  fromAttribute(value: string | null) {
+    if (value === null) {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        // Not JSON after all, so use it as is
+      }
+    }
+    return value;
+  },
+};
+
 export class YatlBaseFilter<
   TValue,
   TData extends object = UnspecifiedRecord,
 > extends YatlBase {
-  private _filterOptions?: FilterOption[];
-
   private _controller?: YatlTableController<TData>;
 
   public get controller() {
@@ -46,8 +66,12 @@ export class YatlBaseFilter<
   public get value() {
     return this._value;
   }
-  /** The current filter value. */
-  @property({ attribute: false })
+  /**
+   * The current filter value.
+   * @attr value - The initial value. Arrays and objects are JSON, anything
+   *  else is a string.
+   */
+  @property({ attribute: 'value', converter: valueConverter })
   public set value(value) {
     const oldValue = this._value;
     if (oldValue === value) {
@@ -96,25 +120,24 @@ export class YatlBaseFilter<
     this.controller.filters = filters;
   }
 
-  protected get options() {
+  protected get options(): FilterOption[] {
     // No controller, just return an empty map.
     if (!this.controller) {
       return [];
     }
 
-    // If we don't have a value, we want to keep updating
-    // the current options. Once the user sets a value we need
-    // to lock in the current options so we don't filter ourselves.
-    if (!this.value || !this._filterOptions) {
-      this._filterOptions = this.controller.getColumnFilterValues(
-        this.field as NestedKeyOf<TData>,
-      );
+    // Leave this filter's own value out, so picking an option doesn't
+    // hide the others. The other filters and the search still narrow the
+    // options and their counts, and they follow new data.
+    const options = this.controller.getColumnFilterValues(
+      this.field as NestedKeyOf<TData>,
+      false,
+      true,
+    );
 
-      // Sort options. This keeps them consistent when sorting
-      // changes and makes it easier for the user to find things.
-      this._filterOptions.sort((a, b) => a.label.localeCompare(b.label));
-    }
-    return this._filterOptions;
+    // Sort options. This keeps them consistent when sorting
+    // changes and makes it easier for the user to find things.
+    return options.sort((a, b) => a.label.localeCompare(b.label));
   }
 
   protected override willUpdate(changedProperties: PropertyValues) {

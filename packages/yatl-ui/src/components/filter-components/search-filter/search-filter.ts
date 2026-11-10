@@ -8,6 +8,20 @@ import { FilterOption } from '@timlassiter11/yatl';
 
 @customElement('yatl-search-filter')
 export class YatlSearchFilter extends YatlBaseFilter<string[]> {
+  // Redeclared with this filter's type, so template type checkers
+  // (like lit-analyzer) don't see the base class's generic TValue.
+  // It only passes through to YatlBaseFilter's value.
+  /**
+   * The selected values.
+   * @attr value - The initial values as JSON, e.g. `value='["a","b"]'`.
+   */
+  public override get value(): string[] | undefined {
+    return super.value;
+  }
+  public override set value(value: string[] | undefined) {
+    super.value = value;
+  }
+
   public static override styles = [...super.styles, styles];
 
   /**

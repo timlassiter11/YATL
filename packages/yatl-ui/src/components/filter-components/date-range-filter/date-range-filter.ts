@@ -11,6 +11,19 @@ type FilterFunction = (value: Date) => boolean;
 
 @customElement('yatl-date-range-filter')
 export class YatlDateRangeFilter extends YatlBaseFilter<FilterFunction> {
+  // Redeclared with this filter's type, so template type checkers
+  // (like lit-analyzer) don't see the base class's generic TValue.
+  // It only passes through to YatlBaseFilter's value.
+  /**
+   * The function that keeps rows in the picked range. Set the range with `start-date` and `end-date`.
+   */
+  public override get value(): FilterFunction | undefined {
+    return super.value;
+  }
+  public override set value(value: FilterFunction | undefined) {
+    super.value = value;
+  }
+
   public static override styles = [...super.styles, styles];
 
   // Store original dates for reset

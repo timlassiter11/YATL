@@ -7,6 +7,20 @@ import styles from './group-filter.styles';
 
 @customElement('yatl-group-filter')
 export class YatlGroupFilter extends YatlBaseFilter<unknown | unknown[]> {
+  // Redeclared with this filter's type, so template type checkers
+  // (like lit-analyzer) don't see the base class's generic TValue.
+  // It only passes through to YatlBaseFilter's value.
+  /**
+   * The selected value, or the selected values when `multi` is set.
+   * @attr value - The initial value. JSON for several values, e.g. `value='["a","b"]'`.
+   */
+  public override get value(): unknown | unknown[] | undefined {
+    return super.value;
+  }
+  public override set value(value: unknown | unknown[] | undefined) {
+    super.value = value;
+  }
+
   public static override styles = [styles];
 
   /**

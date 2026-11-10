@@ -8,6 +8,20 @@ import { FilterOption } from '@timlassiter11/yatl';
 
 @customElement('yatl-select-filter')
 export class YatlSelectFilter extends YatlBaseFilter<string | string[]> {
+  // Redeclared with this filter's type, so template type checkers
+  // (like lit-analyzer) don't see the base class's generic TValue.
+  // It only passes through to YatlBaseFilter's value.
+  /**
+   * The selected option's value, or the selected values when `multi` is set.
+   * @attr value - The initial value. JSON for several values, e.g. `value='["a","b"]'`.
+   */
+  public override get value(): string | string[] | undefined {
+    return super.value;
+  }
+  public override set value(value: string | string[] | undefined) {
+    super.value = value;
+  }
+
   public static override styles = [...super.styles, styles];
 
   /**

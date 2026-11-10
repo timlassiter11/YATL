@@ -6,6 +6,20 @@ import { YatlTypeahead } from '../../form-controls/typeahead/typeahead';
 
 @customElement('yatl-typeahead-filter')
 export class YatlTypeaheadFilter extends YatlBaseFilter<string> {
+  // Redeclared with this filter's type, so template type checkers
+  // (like lit-analyzer) don't see the base class's generic TValue.
+  // It only passes through to YatlBaseFilter's value.
+  /**
+   * The picked value.
+   * @attr value - The initial value.
+   */
+  public override get value(): string | undefined {
+    return super.value;
+  }
+  public override set value(value: string | undefined) {
+    super.value = value;
+  }
+
   public static override styles = [...super.styles, styles];
 
   @property({ type: String })

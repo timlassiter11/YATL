@@ -5,6 +5,19 @@ import type { YatlSwitch } from '../../form-controls/switch/switch';
 
 @customElement('yatl-switch-filter')
 export class YatlSwitchFilter extends YatlBaseFilter<unknown> {
+  // Redeclared with this filter's type, so template type checkers
+  // (like lit-analyzer) don't see the base class's generic TValue.
+  // It only passes through to YatlBaseFilter's value.
+  /**
+   * The filter value: `onValue` when checked, `offValue` when not. Set it with `checked`.
+   */
+  public override get value(): unknown {
+    return super.value;
+  }
+  public override set value(value: unknown) {
+    super.value = value;
+  }
+
   private _onValue?: unknown;
   private _offValue?: unknown;
   private _checked = this.hasAttribute('checked');

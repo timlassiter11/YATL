@@ -7,6 +7,19 @@ import type { YatlDateInput } from '../../form-controls/date-input/date-input';
 
 @customElement('yatl-date-filter')
 export class YatlDateFilter extends YatlBaseFilter<Date> {
+  // Redeclared with this filter's type, so template type checkers
+  // (like lit-analyzer) don't see the base class's generic TValue.
+  // It only passes through to YatlBaseFilter's value.
+  /**
+   * The picked date.
+   */
+  public override get value(): Date | undefined {
+    return super.value;
+  }
+  public override set value(value: Date | undefined) {
+    super.value = value;
+  }
+
   public static override styles = [...super.styles, styles];
 
   protected override render() {

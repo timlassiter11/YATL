@@ -87,6 +87,21 @@ export class YatlSplitPanel extends YatlBase {
 
   private pointerId?: number;
 
+  // The clamped position depends on the host's size, which can change
+  // without any property changing: the window resizes, or the panel goes
+  // from hidden (0 wide) to shown. Re-render so --split-position follows.
+  private resizeObserver = new ResizeObserver(() => this.requestUpdate());
+
+  public override connectedCallback() {
+    super.connectedCallback();
+    this.resizeObserver.observe(this);
+  }
+
+  public override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.resizeObserver.disconnect();
+  }
+
   private get isHorizontal() {
     return this.orientation === 'horizontal';
   }
@@ -182,26 +197,26 @@ export class YatlSplitPanel extends YatlBase {
    * clamped percent out, honouring both panels' minimums. */
   private clamp(position: number) {
     const available = this.available;
-    const percent = this.normalizePosition(position, this.sizePolicy, 'ratio');
-
-    let clamped;
     if (available <= 0) {
-      clamped = Math.min(100, Math.max(0, percent));
-    } else {
-      let px = (percent / 100) * available;
-      // Start's minimum wins when the two can't both be satisfied, so the pane
-      // the user is dragging stays predictable in a cramped container.
-      px = Math.min(px, available - this.endMin);
-      px = Math.max(px, this.startMin);
-      px = Math.min(Math.max(px, 0), available);
-      clamped = (px / available) * 100;
+      // Not laid out yet, e.g. rendered inside a hidden tab, so there's
+      // nothing to clamp against. Use the position as is. Converting a fixed
+      // position through a percentage of 0 would collapse it to 0px, and
+      // the resize observer re-clamps once there's a size.
+      return this.sizePolicy === 'fixed'
+        ? Math.max(0, position)
+        : Math.min(100, Math.max(0, position));
     }
 
-    if (this.sizePolicy === 'fixed') {
-      clamped = (clamped / 100) * available;
-    }
+    const percent = this.normalizePosition(position, this.sizePolicy, 'ratio');
+    let px = (percent / 100) * available;
+    // Start's minimum wins when the two can't both be satisfied, so the pane
+    // the user is dragging stays predictable in a cramped container.
+    px = Math.min(px, available - this.endMin);
+    px = Math.max(px, this.startMin);
+    px = Math.min(Math.max(px, 0), available);
+    const clamped = (px / available) * 100;
 
-    return clamped;
+    return this.sizePolicy === 'fixed' ? (clamped / 100) * available : clamped;
   }
 
   private setPosition(position: number, dragging: boolean) {

@@ -1,5 +1,16 @@
 # @timlassiter11/yatl-ui
 
+## 9.1.0
+
+### Minor Changes
+
+- 15f794f: `yatl-flyout` has a new `no-backdrop` option. With it, the page isn't dimmed and stays usable while the flyout is open, and clicking the page doesn't close the flyout. Escape and the close button still close it (unless `modal` is set).
+
+### Patch Changes
+
+- a6398b9: Fixed `yatl-split-panel` (and so `yatl-table-view`'s filters panel) collapsing to 0 when it first renders while hidden, e.g. inside an inactive tab, with `size-policy="fixed"`. The panel now keeps its position until it has a size, and re-clamps whenever its size changes, including window resizes and being shown.
+- 83566a5: Each filter component now declares `value` with its own type (e.g. `string | string[]` for `yatl-select-filter`), so template type checkers like lit-analyzer accept bindings such as `value="active"` instead of reporting them against the base class's generic type. No runtime change.
+
 ## 9.0.0
 
 ### Patch Changes

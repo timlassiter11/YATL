@@ -26,15 +26,23 @@ export default css`
 
     --button-text: var(--yatl-button-text, var(--appearance-text));
     --button-bg: var(--yatl-button-bg, var(--appearance-color));
-    --button-border-width: var(--yatl-button-border-width, 0px);
+    /* Every button has a border, transparent unless it's an outline, so
+       all variants are the same height as an input of the same size */
+    --button-border-width: var(
+      --yatl-button-border-width,
+      var(--yatl-size-border-width)
+    );
     --button-border-color: var(--yatl-button-border, transparent);
 
     color: var(--yatl-text-1);
     font-weight: 500;
     font-size: var(--button-font-size);
+    line-height: var(--yatl-size-line-height);
     display: inline-block;
     box-sizing: border-box;
     overflow: hidden;
+    /* The background is on the host so it shows under a clear border */
+    background-color: var(--button-bg);
     border: var(--button-border-width) solid var(--button-border-color);
     border-radius: var(--button-radius);
     position: relative;
@@ -53,7 +61,8 @@ export default css`
     color: var(--button-text);
     font-size: inherit;
     font-weight: inherit;
-    background-color: var(--button-bg);
+    line-height: inherit;
+    background: none;
     border: none;
   }
 
@@ -67,6 +76,9 @@ export default css`
     justify-content: space-around;
     /* Between a start or end icon and the text */
     gap: 0.375em;
+    /* At least a line of text tall, so an icon-only button is as tall as
+       one with text */
+    min-height: calc(1em * var(--yatl-size-line-height));
     /** TODO: This needs to match the spinner animation */
     transition: opacity 0.5s linear;
     transition-delay: 0.5s;
@@ -110,7 +122,7 @@ export default css`
     cursor: not-allowed;
   }
 
-  :host(:not([disabled])) [part='base']:hover {
+  :host(:not([disabled]):hover) {
     background-color: var(--button-hover-bg);
   }
 
@@ -118,7 +130,6 @@ export default css`
     --button-bg: transparent;
     --button-text: var(--appearance-color);
     --button-border-color: var(--appearance-color);
-    --button-border-width: var(--yatl-button-border-width, 1px);
   }
 
   :host([variant='plain']) {

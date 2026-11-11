@@ -5,6 +5,7 @@ import {
   queryAssignedElements,
 } from 'lit/decorators.js';
 import { YatlFormControl } from '../form-control/form-control';
+import type { YatlSize } from '../../../types';
 import { repeat } from 'lit/directives/repeat.js';
 import { YatlDropdownSelectEvent } from '../../../events';
 import { YatlDropdown } from '../../dropdown/dropdown';
@@ -20,6 +21,14 @@ export class YatlSelect extends YatlFormControl<string | string[]> {
 
   @queryAssignedElements({ flatten: true })
   private assignedElements!: Array<HTMLElement>;
+
+  /**
+   * The size of the control. A control and a button of the same size are
+   * the same height.
+   * @attr size
+   */
+  @property({ type: String, reflect: true })
+  public size: YatlSize = 'medium';
 
   /**
    * Placeholder text shown when no option is selected.

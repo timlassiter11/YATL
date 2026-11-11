@@ -156,10 +156,14 @@ describe('YatlButton - size and variant styles', () => {
     expect(el.matches(':state(icon-only)')).toBe(false);
   });
 
-  test('the outline variant has a border', async () => {
+  test('the outline variant has a visible border, others a clear one', async () => {
     const el = await renderStyled('Cancel', 'variant="outline"');
     expect(getComputedStyle(el).borderTopWidth).toBe('1px');
+    expect(getComputedStyle(el).borderTopColor).not.toBe('rgba(0, 0, 0, 0)');
+
+    // The clear border keeps every variant the same height
     const plain = await renderStyled('Cancel', 'variant="plain"');
-    expect(getComputedStyle(plain).borderTopWidth).toBe('0px');
+    expect(getComputedStyle(plain).borderTopWidth).toBe('1px');
+    expect(getComputedStyle(plain).borderTopColor).toBe('rgba(0, 0, 0, 0)');
   });
 });

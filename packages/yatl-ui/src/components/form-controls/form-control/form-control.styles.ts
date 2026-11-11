@@ -9,16 +9,22 @@ export default css`
       var(--yatl-border-color)
     );
     --input-radius: var(--yatl-input-radius, var(--yatl-radius-m));
-    --input-padding: var(--yatl-input-padding, var(--yatl-spacing-s));
-    --input-font-size: var(
-      --yatl-input-font-size,
-      var(--yatl-size-font-size),
-      var(--yatl-font-size-m)
-    );
+    --input-padding: var(--yatl-input-padding, var(--yatl-size-padding));
+    --input-font-size: var(--yatl-input-font-size, var(--yatl-size-font-size));
     --input-bg: var(--yatl-input-bg, var(--yatl-surface-lowered));
     --input-text: var(--yatl-input-text, var(--yatl-text-1));
-    --input-line-height: var(--yatl-input-line-height, 1.2);
-    --input-height: var(--yatl-input-height, 42px);
+    --input-line-height: var(
+      --yatl-input-line-height,
+      var(--yatl-size-line-height)
+    );
+    /* The same height as a button of the same size (see size.styles) */
+    --input-height: var(
+      --yatl-input-height,
+      calc(
+        var(--input-font-size) * var(--input-line-height) +
+          var(--yatl-size-padding-block) * 2 + var(--input-border-width) * 2
+      )
+    );
     --input-outline-color: var(
       --yatl-input-outline-color,
       var(--yatl-color-brand)
@@ -102,7 +108,7 @@ export default css`
     color: var(--input-text);
     background-color: var(--input-bg);
     line-height: var(--input-line-height);
-    font-size: large;
+    font-size: var(--input-font-size);
     padding: var(--input-padding);
     width: 100%;
     height: var(--input-height);

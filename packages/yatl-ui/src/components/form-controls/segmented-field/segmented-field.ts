@@ -2,6 +2,7 @@ import { html, nothing, PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { YatlFormControl } from '../form-control/form-control';
+import type { YatlSize } from '../../../types';
 
 import styles from './segmented-field.styles';
 
@@ -54,6 +55,14 @@ const SEPARATORS = new Set(['/', '-', '.', ':', ' ', ',']);
  */
 export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
   public static override styles = [...super.styles, styles];
+
+  /**
+   * The size of the control. A control and a button of the same size are
+   * the same height.
+   * @attr size
+   */
+  @property({ type: String, reflect: true })
+  public size: YatlSize = 'medium';
 
   /**
    * Shown instead of the empty parts when there's no value and the field

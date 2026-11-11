@@ -2,6 +2,7 @@ import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { YatlFormControl } from '../form-control/form-control';
+import type { YatlSize } from '../../../types';
 import { live } from 'lit/directives/live.js';
 
 export type YatlInputType =
@@ -21,6 +22,14 @@ export type YatlInputType =
  */
 @customElement('yatl-input')
 export class YatlInput extends YatlFormControl<string> {
+  /**
+   * The size of the control. A control and a button of the same size are
+   * the same height.
+   * @attr size
+   */
+  @property({ type: String, reflect: true })
+  public size: YatlSize = 'medium';
+
   /**
    * The native HTML input type (e.g., 'text', 'email', 'password', 'date', 'time').
    * @attr type
@@ -48,10 +57,11 @@ export class YatlInput extends YatlFormControl<string> {
    * The visual width of the input, measured in average character widths.
    * Note: This only changes the physical width of the control; it does NOT restrict
    * the number of characters the user can type (use `maxlength` for that).
-   * @attr size
+   * Like a native input's `size`.
+   * @attr chars
    */
   @property({ type: Number })
-  public size?: number;
+  public chars?: number;
 
   /**
    * The minimum string length that the input will consider valid.
@@ -149,7 +159,7 @@ export class YatlInput extends YatlFormControl<string> {
         type=${type}
         title=${ifDefined(isMasked ? undefined : this.value)}
         autocomplete=${this.autocomplete}
-        size=${ifDefined(this.size)}
+        size=${ifDefined(this.chars)}
         .value=${live(this.value)}
         placeholder=${this.placeholder}
         minlength=${ifDefined(this.minlength)}

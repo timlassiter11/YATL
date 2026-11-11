@@ -2,6 +2,7 @@ import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { YatlFormControl } from '../form-control/form-control';
+import type { YatlSize } from '../../../types';
 import { live } from 'lit/directives/live.js';
 import styles from './number-input.styles';
 
@@ -14,6 +15,14 @@ export class YatlNumberInput extends YatlFormControl<number> {
   public static override styles = [...super.styles, styles];
 
   /**
+   * The size of the control. A control and a button of the same size are
+   * the same height.
+   * @attr size
+   */
+  @property({ type: String, reflect: true })
+  public size: YatlSize = 'medium';
+
+  /**
    * The placeholder text to display when the input is empty.
    * @attr placeholder
    */
@@ -22,10 +31,11 @@ export class YatlNumberInput extends YatlFormControl<number> {
 
   /**
    * The visual width of the input, measured in average character widths.
-   * @attr size
+   * Like a native input's `size`.
+   * @attr chars
    */
   @property({ type: Number })
-  public size?: number;
+  public chars?: number;
 
   /**
    * The minimum value that the input will consider valid.
@@ -111,7 +121,10 @@ export class YatlNumberInput extends YatlFormControl<number> {
         name=${this.name}
         type=${type}
         title=${value}
-        size=${ifDefined(this.size)}
+        style=${ifDefined(
+          // A number input ignores the native size, so set the width
+          this.chars ? `flex: 1 0 auto; width: ${this.chars}ch` : undefined,
+        )}
         min=${ifDefined(this.min)}
         max=${ifDefined(this.max)}
         step=${ifDefined(this.step)}

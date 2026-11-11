@@ -1,6 +1,7 @@
 import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlFormControl } from '../form-control/form-control';
+import type { YatlSize } from '../../../types';
 import { live } from 'lit/directives/live.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 
@@ -13,6 +14,14 @@ import styles from './textarea.styles';
 @customElement('yatl-textarea')
 export class YatlTextArea extends YatlFormControl<string> {
   public static override styles = [...super.styles, styles];
+
+  /**
+   * The size of the control. A control and a button of the same size are
+   * the same height.
+   * @attr size
+   */
+  @property({ type: String, reflect: true })
+  public size: YatlSize = 'medium';
 
   /**
    * The number of visible text lines.

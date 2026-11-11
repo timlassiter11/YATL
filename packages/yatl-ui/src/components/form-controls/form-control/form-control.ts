@@ -5,6 +5,7 @@ import { classMap } from 'lit/directives/class-map.js';
 import { YatlBase } from '../../base/base';
 import { YatlEvent } from '@timlassiter11/yatl';
 
+import sizeStyles from '../../../styles/components/size.styles';
 import styles from './form-control.styles';
 
 export type FormControl =
@@ -31,7 +32,7 @@ export abstract class YatlFormControl<TData = string>
     ...LitElement.shadowRootOptions,
     delegatesFocus: true,
   };
-  public static override styles = [...super.styles, styles];
+  public static override styles = [...super.styles, sizeStyles, styles];
 
   /** Used to associate the label with the control element */
   public readonly inputId = 'input';

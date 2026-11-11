@@ -1,5 +1,34 @@
 # @timlassiter11/yatl-ui
 
+## 10.0.0
+
+### Major Changes
+
+- 832c5d8: Form controls have a `size` (`small`, `medium` or `large`) like buttons, and a control is the same height as a button of the same size.
+
+  - **Breaking:** `yatl-input` and `yatl-number-input` used `size` for their width in characters. That's now `chars` (`<yatl-input chars="6">`). `chars` also works on an editable `yatl-number-input` now, where the native `size` was ignored.
+  - `size` is on `yatl-input` (and `yatl-typeahead`), `yatl-number-input`, `yatl-select`, `yatl-textarea`, `yatl-date-input`, `yatl-date-range-input` and `yatl-time-input`. It sets the text size, the padding and the height, using the shared size styles. `yatl-search-select` keeps `size` as its row count and is always medium (any `size` that isn't a size name gets medium).
+  - The height is the line height plus the block padding plus the border, the same as a button. Medium inputs are a few pixels shorter than the old fixed 42px. `--yatl-input-height` still overrides it.
+  - `--yatl-input-font-size` works now (the text was always `large` before), and inputs default to the size's font size.
+  - Every `yatl-button` has a border, clear unless it's an outline, so all variants are the same height. The button's background is on the host so it shows under the clear border, and an icon-only button is at least a line of text tall.
+  - The shared size styles add `--yatl-size-line-height` (1.2) and `--yatl-size-border-width` (1px).
+
+### Minor Changes
+
+- cf9bf1e: `yatl-button` has an `icon` property to show an icon without slotting a `yatl-icon`, and `icon-position` (`start` or `end`) to put it before or after the text. A button with only an icon, from the property or any slot, keeps the same padding all round so it stays square.
+- 511b503: `yatl-button` sizing and `yatl-button-group` size.
+
+  - Buttons have more padding at the sides than above and below (small `4px 10px`, medium `8px 14px`, large `12px 20px`), and small buttons use the theme's `--yatl-font-size-s` (now 0.875rem), so they no longer look cramped and heavy. The shared size styles have `--yatl-size-padding-block` and `--yatl-size-padding-inline` for this, with `--yatl-size-padding` combining them. A button holding only an icon keeps the same padding all round, so it stays square. `--yatl-button-padding` still overrides the padding.
+  - `variant="outline"` now has a 1px border (it had none, so it looked like `plain`). `--yatl-button-border-width` changes it. A neutral outline button uses the normal text color, with the dim neutral color only for its border.
+  - A start or end icon has a small gap before the text.
+  - `yatl-button-group` has a `size` that sets the size of all its buttons. Leave it unset to let each button keep its own.
+
+### Patch Changes
+
+- 87b5eee: A typed date, date range or time now always fires `change` when focus leaves the control. Leaving through the calendar or clock button used to skip it, so `yatl-date-range-filter` and `yatl-date-filter` didn't apply a typed value until it was picked from the calendar. Enter also fires `change` for a typed value now, like a native input.
+- Updated dependencies [807ff86]
+  - @timlassiter11/yatl@1.10.0
+
 ## 9.2.0
 
 ### Minor Changes

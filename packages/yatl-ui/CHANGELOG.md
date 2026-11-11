@@ -1,5 +1,49 @@
 # @timlassiter11/yatl-ui
 
+## 9.2.0
+
+### Minor Changes
+
+- 94a6da2: `yatl-date-grid` (and so the date pickers and date inputs) can be used from the keyboard and can jump to a month or year.
+
+  - Only one day is in the tab order. Arrow keys move a day or a week (into the next or previous month), Home and End go to the start and end of the week, Page Up and Page Down change the month (with Shift, the year), and Enter or Space picks the day. Focus stays within `min` and `max`.
+  - Clicking the month title shows the months of that year, and clicking the year shows a page of years. The arrows page by year or by 12 years there, and Escape goes back to the days. Months and years outside `min` and `max` are disabled. The calendar keeps the same size in all three views, so its dropdown doesn't change shape.
+  - Days have full date labels for screen readers, today is marked `aria-current="date"`, and selected days are marked selected.
+  - `focusCalendar()` on the grid, `yatl-date-picker` and `yatl-date-range-picker` puts focus on the selected (or today's) day. The date inputs call it when their calendar opens.
+
+- 28dc12d: `yatl-input` has `min`, `max` and `step`, passed to the native input. With `type="date"` or `type="time"`, a value outside them (or off-step) makes the input invalid, like a native input.
+- ccb8d19: `yatl-date-input` and `yatl-date-range-input` can be typed into. They're built on the same segmented field as `yatl-time-input`: month, day and year in the locale's order, with the calendar opened from the icon.
+
+  - Dates keep their `Date` values, `min`/`max` and form values.
+  - A partly typed or impossible date (e.g. February 30) has no value and reports `badInput`.
+  - Both fire `input` on every edit, and `change` when focus leaves with a different value or a date is picked.
+  - A range end can be left empty for an open range, as before.
+
+  Changes to watch for:
+
+  - `yatl-date-input` only shows the calendar's Clear button with the new `clearable` attribute. Backspace clears the typed parts either way. The calendar also has a Today button.
+  - `placeholder` now defaults to "" and only shows when the input is empty and unfocused (or read-only). Otherwise the parts' hints (e.g. "mm/dd/yyyy") show.
+  - `yatl-date-range-input`'s `formatter` is only used for a read-only or disabled range now.
+  - The unused `size` property is gone from both.
+
+- 35646b2: New `yatl-time-input`: a time of day typed in parts (hour, minute and AM/PM, in the locale's order and clock) or picked from columns. The value is "HH:MM" in 24 hour time (like a native time input), or "" when empty.
+
+  - `min`, `max` and `step` (minutes) limit it and report `rangeUnderflow`, `rangeOverflow` and `stepMismatch`. The minute arrows move by `step`.
+  - `hour-cycle` (`h12` or `h23`) overrides the locale's clock. It only changes how the time is shown; the value is always 24 hour.
+  - The clock button opens a picker with a column each for the hour, the minute (every `step` minutes) and AM/PM, like a native time picker. The selected time sits in the middle row and long columns wrap around (23, 00, 01). Spin a column with the mouse wheel, its arrows, the keyboard or a touch drag, or click a time. Hours outside `min` and `max` are disabled. `no-picker` hides the button.
+  - Type digits (the next part gets focus when one is full), use the arrow keys to change a part, Backspace to clear it, and Left/Right or the separator key to move. A partly filled time has no value and reports `badInput`.
+
+  It's built on a new `YatlSegmentedField` base class for inputs typed in parts. Typing goes through key events, so on phones (where the parts don't bring up a keyboard) the picker is the way to pick a time.
+
+  The picker is also its own element, `yatl-time-picker` (`value`, `hour-cycle`, `step`, `min`, `max`). Up and Down change the focused column, Left and Right move between columns, and Enter fires `done`.
+
+  Also adds a `clock` icon.
+
+### Patch Changes
+
+- eb70db9: - `yatl-radio-group`: setting `value` from code after the first render now checks the matching radio. Before, the radios kept the old selection until a click or a slot change.
+  - `yatl-input`: `type` accepts `date` and `time`, for the browser's native pickers, without a type error.
+
 ## 9.1.0
 
 ### Minor Changes

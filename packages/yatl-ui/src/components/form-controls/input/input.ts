@@ -75,6 +75,29 @@ export class YatlInput extends YatlFormControl<string> {
   public pattern?: string;
 
   /**
+   * The earliest allowed value, in the native input's format for `type`:
+   * "YYYY-MM-DD" for `date`, "HH:MM" for `time`. Ignored by text types.
+   * @attr min
+   */
+  @property()
+  public min?: string;
+
+  /**
+   * The latest allowed value, in the same format as `min`.
+   * @attr max
+   */
+  @property()
+  public max?: string;
+
+  /**
+   * The allowed granularity, as the native input reads it: days for
+   * `date`, seconds for `time` (e.g. "900" for 15 minutes).
+   * @attr step
+   */
+  @property()
+  public step?: string;
+
+  /**
    * Displays a button at the end of the input to toggle the visibility of the text.
    * Typically used for password fields to let the user see what they typed.
    * @attr password-toggle
@@ -132,6 +155,9 @@ export class YatlInput extends YatlFormControl<string> {
         minlength=${ifDefined(this.minlength)}
         maxlength=${ifDefined(this.maxlength)}
         pattern=${ifDefined(this.pattern)}
+        min=${ifDefined(this.min)}
+        max=${ifDefined(this.max)}
+        step=${ifDefined(this.step)}
         ?readonly=${this.readonly}
         ?disabled=${this.isDisabled}
         ?required=${this.required}

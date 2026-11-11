@@ -73,4 +73,40 @@ describe('YatlInput', () => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     expect(time.value).toBe('06:30');
   });
+
+  test('min and max make a date outside them invalid', async () => {
+    const el = await renderInput(
+      'type="date" min="2026-11-01" max="2026-11-30"',
+    );
+    const input = el.shadowRoot!.querySelector('input')!;
+    expect(input.min).toBe('2026-11-01');
+
+    const enter = async (value: string) => {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+    };
+
+    await enter('2026-10-31');
+    expect(el.validity.rangeUnderflow).toBe(true);
+    await enter('2026-12-01');
+    expect(el.validity.rangeOverflow).toBe(true);
+    await enter('2026-11-15');
+    expect(el.validity.valid).toBe(true);
+  });
+
+  test('step makes an off-step time invalid', async () => {
+    // 15 minutes, in seconds
+    const el = await renderInput('type="time" step="900"');
+    const input = el.shadowRoot!.querySelector('input')!;
+    input.value = '06:10';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.validity.stepMismatch).toBe(true);
+
+    input.value = '06:15';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.validity.valid).toBe(true);
+  });
 });

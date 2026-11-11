@@ -54,3 +54,31 @@ describe('YatlButtonGroup - disabled propagation', () => {
     expect(b.disabled).toBe(false);
   });
 });
+
+describe('YatlButtonGroup - size propagation', () => {
+  test('size sets every button, including ones added later', async () => {
+    const el = await renderGroup(
+      '<yatl-button>A</yatl-button><yatl-button size="large">B</yatl-button>',
+      'size="small"',
+    );
+    const added = document.createElement('yatl-button');
+    el.append(added);
+    await new Promise(resolve => setTimeout(resolve));
+
+    const buttons = [...el.querySelectorAll('yatl-button')] as YatlButton[];
+    expect(buttons.map(b => b.size)).toEqual(['small', 'small', 'small']);
+
+    el.size = 'large';
+    await el.updateComplete;
+    expect(buttons.map(b => b.size)).toEqual(['large', 'large', 'large']);
+  });
+
+  test('leaving size unset lets each button keep its own', async () => {
+    const el = await renderGroup(
+      '<yatl-button size="small">A</yatl-button><yatl-button>B</yatl-button>',
+    );
+    const [a, b] = [...el.querySelectorAll('yatl-button')] as YatlButton[];
+    expect(a.size).toBe('small');
+    expect(b.size).toBe('medium');
+  });
+});

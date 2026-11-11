@@ -4,7 +4,13 @@ export default css`
   :host {
     --button-border-style: var(--yatl-button-border-style, solid);
     --button-radius: var(--yatl-button-radius, var(--yatl-radius-s));
+    /* Text needs more room at the sides than above and below. An icon on
+       its own gets the block padding all round, so it stays square. */
     --button-padding: var(--yatl-button-padding, var(--yatl-size-padding));
+    --button-icon-padding: var(
+      --yatl-button-padding,
+      var(--yatl-size-padding-block)
+    );
     --button-font-size: var(
       --yatl-button-font-size,
       var(--yatl-size-font-size)
@@ -34,6 +40,10 @@ export default css`
     position: relative;
   }
 
+  :host(:state(icon-only)) {
+    --button-padding: var(--button-icon-padding);
+  }
+
   [part='base'] {
     box-sizing: border-box;
     width: 100%;
@@ -55,6 +65,8 @@ export default css`
     flex-direction: row;
     align-items: center;
     justify-content: space-around;
+    /* Between a start or end icon and the text */
+    gap: 0.375em;
     /** TODO: This needs to match the spinner animation */
     transition: opacity 0.5s linear;
     transition-delay: 0.5s;
@@ -66,7 +78,7 @@ export default css`
     inset: 0;
     height: 100%;
     width: 100%;
-    padding: var(--button-padding);
+    padding: var(--button-icon-padding);
   }
 
   .state-icon {
@@ -106,6 +118,7 @@ export default css`
     --button-bg: transparent;
     --button-text: var(--appearance-color);
     --button-border-color: var(--appearance-color);
+    --button-border-width: var(--yatl-button-border-width, 1px);
   }
 
   :host([variant='plain']) {
@@ -116,5 +129,10 @@ export default css`
   /* Neutral color is too dim to be used without BG */
   :host([variant='plain'][color='neutral']) {
     --appearance-color: currentColor;
+  }
+
+  /* ...and as outline text, so only the border uses it */
+  :host([variant='outline'][color='neutral']) {
+    --button-text: currentColor;
   }
 `;

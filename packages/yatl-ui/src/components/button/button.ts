@@ -160,7 +160,7 @@ export class YatlButton extends YatlFormControl {
       >
         <div part="contents">
           <slot name="start"></slot>
-          <slot></slot>
+          <slot @slotchange=${this.handleSlotChange}></slot>
           <slot name="end"></slot>
         </div>
         <div class="state-wrapper">
@@ -180,6 +180,22 @@ export class YatlButton extends YatlFormControl {
 
   // Satisfy the base class
   protected override renderInput() {}
+
+  /**
+   * A button holding only an icon gets the same padding all round, so it
+   * stays square rather than getting the wider padding text needs.
+   */
+  private handleSlotChange(event: Event) {
+    const nodes = (event.target as HTMLSlotElement).assignedNodes();
+    const iconOnly =
+      nodes.some(node => node instanceof Element) &&
+      nodes.every(node =>
+        node instanceof Element
+          ? node.localName === 'yatl-icon'
+          : !node.textContent?.trim(),
+      );
+    this.toggleState('icon-only', iconOnly);
+  }
 
   private handleSpinnerStateChange(event: YatlSpinnerStateChangeEvent) {
     this.state = event.state;

@@ -51,6 +51,8 @@ export default css`
   .day-button {
     width: 100%;
     height: 100%;
+    /* Days are packed tight, so they skip a small button's side padding */
+    --button-padding: var(--yatl-spacing-xs);
     font-weight: 100;
     --button-font-size: 0.8rem;
   }

@@ -1,5 +1,6 @@
 import { html, PropertyValues } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
+import type { YatlSize } from '../../types';
 import { getEffectiveChildren } from '../../utils';
 import { YatlBase } from '../base/base';
 import { YatlButton } from '../button/button';
@@ -20,10 +21,18 @@ export class YatlButtonGroup extends YatlBase {
   @property({ type: Boolean })
   public disabled?: boolean;
 
+  /**
+   * When set, sets the size of all child buttons. Leave unset to let each
+   * button keep its own size.
+   * @attr size
+   */
+  @property({ type: String })
+  public size?: YatlSize;
+
   protected override willUpdate(
     changedProperties: PropertyValues<YatlButtonGroup>,
   ): void {
-    if (changedProperties.has('disabled')) {
+    if (changedProperties.has('disabled') || changedProperties.has('size')) {
       this.updateChildStates();
     }
   }
@@ -50,13 +59,16 @@ export class YatlButtonGroup extends YatlBase {
   }
 
   private updateChildStates() {
-    if (this.disabled === undefined) {
+    // Before the first render, slotchange applies these once there's a slot
+    if (!this.defaultSlot) {
       return;
     }
-
     for (const child of this.getAllChildren()) {
-      if ('disabled' in child) {
+      if (this.disabled !== undefined && 'disabled' in child) {
         child.disabled = this.disabled;
+      }
+      if (this.size !== undefined && child instanceof YatlButton) {
+        child.size = this.size;
       }
     }
   }

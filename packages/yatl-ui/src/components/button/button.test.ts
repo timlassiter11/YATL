@@ -120,3 +120,46 @@ describe('YatlButton - form association', () => {
     expect(submitted).toBe(true);
   });
 });
+
+describe('YatlButton - size and variant styles', () => {
+  async function renderStyled(inner: string, attrs = '') {
+    // Tests run without a theme, so set the tokens these styles use
+    document.body.innerHTML = `<yatl-button style="--yatl-spacing-xs: 4px; --yatl-color-neutral: gray" ${attrs}>${inner}</yatl-button>`;
+    const el = document.querySelector<YatlButton>('yatl-button')!;
+    await el.updateComplete;
+    await new Promise(resolve => setTimeout(resolve));
+    return el;
+  }
+
+  function padding(el: YatlButton) {
+    const style = getComputedStyle(el.shadowRoot!.querySelector('button')!);
+    return [style.paddingTop, style.paddingLeft];
+  }
+
+  test('text gets more padding at the sides than above and below', async () => {
+    const el = await renderStyled('Save', 'size="small"');
+    expect(padding(el)).toEqual(['4px', '10px']);
+    expect(el.matches(':state(icon-only)')).toBe(false);
+  });
+
+  test('an icon on its own gets the same padding all round', async () => {
+    const el = await renderStyled(
+      ' <yatl-icon name="close"></yatl-icon> ',
+      'size="small"',
+    );
+    expect(el.matches(':state(icon-only)')).toBe(true);
+    expect(padding(el)).toEqual(['4px', '4px']);
+  });
+
+  test('an icon with text is not icon only', async () => {
+    const el = await renderStyled('<yatl-icon name="close"></yatl-icon> Close');
+    expect(el.matches(':state(icon-only)')).toBe(false);
+  });
+
+  test('the outline variant has a border', async () => {
+    const el = await renderStyled('Cancel', 'variant="outline"');
+    expect(getComputedStyle(el).borderTopWidth).toBe('1px');
+    const plain = await renderStyled('Cancel', 'variant="plain"');
+    expect(getComputedStyle(plain).borderTopWidth).toBe('0px');
+  });
+});

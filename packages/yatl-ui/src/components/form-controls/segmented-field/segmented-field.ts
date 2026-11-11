@@ -121,6 +121,31 @@ export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
     return this.segments.filter(s => this.segmentValues[s.key] != null).length;
   }
 
+  /**
+   * The value segments make, and what's wrong with them if anything:
+   * "incomplete" when only some are filled in, "invalid" when they're all
+   * filled in but don't make a value. By default the field is all or
+   * nothing. Override it for fields with optional groups, like a range
+   * with an open end.
+   */
+  protected resolveSegments(values: SegmentValues): {
+    value: TData | undefined;
+    problem?: 'incomplete' | 'invalid';
+  } {
+    const segments = this.segments;
+    const filled = segments.filter(s => values[s.key] != null).length;
+    if (filled === 0) {
+      return { value: this.emptyValue };
+    }
+    if (filled < segments.length) {
+      return { value: this.emptyValue, problem: 'incomplete' };
+    }
+    const value = this.fromSegmentValues(values as Record<string, number>);
+    return value === undefined
+      ? { value: this.emptyValue, problem: 'invalid' }
+      : { value };
+  }
+
   protected override willUpdate(changedProps: PropertyValues<this>) {
     super.willUpdate(changedProps);
     // Rebuild the segments when the value is set from outside (or first
@@ -219,12 +244,7 @@ export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
   }
 
   private commitSegments() {
-    const segments = this.segments;
-    const complete = segments.every(s => this.segmentValues[s.key] != null);
-    const next = complete
-      ? this.fromSegmentValues(this.segmentValues as Record<string, number>)
-      : undefined;
-    const value = next ?? this.emptyValue;
+    const { value } = this.resolveSegments(this.segmentValues);
     if (this.valueKey(value) !== this.valueKey(this.value)) {
       this.fromSegments = true;
       this.value = value;
@@ -431,14 +451,12 @@ export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
 
   protected override updateValidity() {
     if (!this.errorText) {
-      const filled = this.filledCount;
-      const total = this.segments.length;
-      if (filled > 0 && filled < total) {
-        this.setValidity({ badInput: true }, this.incompleteText);
-        return;
-      }
-      if (filled === total && this.valueKey(this.value) === null) {
-        this.setValidity({ badInput: true }, this.invalidText);
+      const { problem } = this.resolveSegments(this.segmentValues);
+      if (problem) {
+        this.setValidity(
+          { badInput: true },
+          problem === 'incomplete' ? this.incompleteText : this.invalidText,
+        );
         return;
       }
     }

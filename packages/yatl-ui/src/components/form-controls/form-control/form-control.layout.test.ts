@@ -212,7 +212,7 @@ describe('form control layout - sizing', () => {
 
   // The shared #input rule stretches an element to the box's full height,
   // which pins a single line of text to the top of it.
-  test.each(['yatl-date-input', 'yatl-date-range-input'])(
+  test.each(['yatl-date-input', 'yatl-date-range-input', 'yatl-time-input'])(
     '%s: the text is centered vertically in the box',
     async tag => {
       const { el } = await render(tag, 'label="Label"');
@@ -231,11 +231,24 @@ describe('form control layout - sizing', () => {
     },
   );
 
-  // Both set `color` on the same element, so only the more specific wins.
-  test.each(['yatl-date-input', 'yatl-date-range-input'])(
-    '%s: the placeholder is dimmed',
+  // Empty, each typed part shows its hint (e.g. "mm") dimmed
+  test.each(['yatl-date-input', 'yatl-date-range-input', 'yatl-time-input'])(
+    '%s: the empty parts are dimmed',
     async tag => {
       const { el } = await render(tag, 'label="Label"');
+
+      const inputColor = getComputedStyle(part(el, '.input')).color;
+      expect(getComputedStyle(part(el, '[part="segment"]')).color).not.toBe(
+        inputColor,
+      );
+    },
+  );
+
+  // Both set `color` on the same element, so only the more specific wins.
+  test.each(['yatl-date-input', 'yatl-date-range-input', 'yatl-time-input'])(
+    '%s: a placeholder is dimmed',
+    async tag => {
+      const { el } = await render(tag, 'label="Label" placeholder="Any"');
 
       const inputColor = getComputedStyle(part(el, '.input')).color;
       expect(getComputedStyle(part(el, '#input')).color).not.toBe(inputColor);

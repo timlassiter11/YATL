@@ -275,7 +275,7 @@ export class YatlTimeInput extends YatlSegmentedField<string> {
         <button
           slot="trigger"
           part="list-button"
-          class="list-button"
+          class="trigger-button"
           type="button"
           title="Pick a time"
           aria-label="Pick a time"

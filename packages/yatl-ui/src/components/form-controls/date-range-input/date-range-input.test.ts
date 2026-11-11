@@ -174,3 +174,77 @@ describe('YatlDateRangeInput - form reset', () => {
     expect(el.endDate?.getTime()).toBe(new Date(2024, 0, 10).getTime());
   });
 });
+
+function segment(el: YatlDateRangeInput, key: string) {
+  return el.shadowRoot!.querySelector<HTMLElement>(
+    `[part="segment"][data-key="${key}"]`,
+  )!;
+}
+
+async function press(el: YatlDateRangeInput, ...keys: string[]) {
+  for (const key of keys) {
+    const target = el.shadowRoot!.activeElement as HTMLElement;
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { key, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+  }
+}
+
+async function typeDate(
+  el: YatlDateRangeInput,
+  prefix: 'start' | 'end',
+  month: string,
+  day: string,
+  year: string,
+) {
+  segment(el, `${prefix}Month`).focus();
+  await press(el, ...month);
+  segment(el, `${prefix}Day`).focus();
+  await press(el, ...day);
+  segment(el, `${prefix}Year`).focus();
+  await press(el, ...year);
+}
+
+describe('YatlDateRangeInput - typing', () => {
+  test('typing both dates sets the range', async () => {
+    const el = await renderDateRangeInput();
+    await typeDate(el, 'start', '11', '01', '2026');
+    await typeDate(el, 'end', '11', '30', '2026');
+    expect(el.startDate?.getTime()).toBe(new Date(2026, 10, 1).getTime());
+    expect(el.endDate?.getTime()).toBe(new Date(2026, 10, 30).getTime());
+    expect(el.checkValidity()).toBe(true);
+  });
+
+  test('only a start date is an open range', async () => {
+    const el = await renderDateRangeInput();
+    await typeDate(el, 'start', '11', '01', '2026');
+    expect(el.startDate?.getTime()).toBe(new Date(2026, 10, 1).getTime());
+    expect(el.endDate).toBeUndefined();
+    expect(el.checkValidity()).toBe(true);
+  });
+
+  test('a partly typed end date is incomplete', async () => {
+    const el = await renderDateRangeInput();
+    await typeDate(el, 'start', '11', '01', '2026');
+    segment(el, 'endMonth').focus();
+    await press(el, '1', '2');
+    expect(el.value).toBeUndefined();
+    expect(el.validity.badInput).toBe(true);
+  });
+
+  test('setting startDate from code updates the segments', async () => {
+    const el = await renderDateRangeInput();
+    el.startDate = new Date(2026, 2, 4);
+    await el.updateComplete;
+    expect(segment(el, 'startMonth').textContent!.trim()).toBe('03');
+    expect(segment(el, 'startDay').textContent!.trim()).toBe('04');
+    expect(segment(el, 'endMonth').textContent!.trim()).toBe('mm');
+  });
+
+  test('a read-only range shows the formatted text', async () => {
+    const el = await renderDateRangeInput('start-date="2026-11-01" readonly');
+    const input = el.shadowRoot!.querySelector('#input')!;
+    expect(input.textContent!.trim()).toMatch(/^After /);
+  });
+});

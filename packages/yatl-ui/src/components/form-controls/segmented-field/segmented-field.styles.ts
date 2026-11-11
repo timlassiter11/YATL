@@ -52,4 +52,28 @@ export default css`
   :host(:state(readonly)) .input:has(.segments:focus-within) {
     outline: none;
   }
+
+  /* The icon button at the end that opens a picker, e.g. a calendar */
+  .trigger-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin-inline-start: var(--yatl-spacing-xs);
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .trigger-button:disabled {
+    cursor: default;
+    opacity: 0.8;
+  }
+
+  .trigger-button:focus-visible {
+    outline: var(--input-outline-width) solid var(--input-outline-color);
+    border-radius: var(--yatl-radius-s, 3px);
+  }
 `;

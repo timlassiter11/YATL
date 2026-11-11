@@ -1,13 +1,21 @@
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { dateConverter, getDateOnly } from '../../../utils';
-import { YatlFormControl } from '../form-control/form-control';
+import type { YatlDatePicker } from '../../date-picker/date-picker';
+import type { YatlDropdown } from '../../dropdown/dropdown';
+import {
+  dateParts,
+  dateToSegments,
+  segmentsToDate,
+} from '../segmented-field/date-segments';
+import {
+  type FieldPart,
+  type SegmentValues,
+  YatlSegmentedField,
+} from '../segmented-field/segmented-field';
 
-import { YatlDatePicker } from '../../date-picker/date-picker';
-import { YatlDropdown } from '../../dropdown/dropdown';
 import styles from './date-input.styles';
-import { classMap } from 'lit/directives/class-map.js';
 
 const dayFormatter = Intl.DateTimeFormat(undefined, {
   month: '2-digit',
@@ -16,27 +24,18 @@ const dayFormatter = Intl.DateTimeFormat(undefined, {
 });
 
 /**
- * @fires change - Fired when the selected date changes.
+ * A date, typed in parts (month, day and year in the locale's order) or
+ * picked from a calendar.
+ *
+ * @fires input - Fired on every edit.
+ * @fires change - Fired when a date is picked, or focus leaves with a
+ *  different date than it had.
  */
 @customElement('yatl-date-input')
-export class YatlDateInput extends YatlFormControl<Date> {
+export class YatlDateInput extends YatlSegmentedField<Date> {
   public static override styles = [...super.styles, styles];
 
   @state() private open = false;
-
-  /**
-   * The placeholder text to display when no date is selected.
-   * @attr placeholder
-   */
-  @property({ type: String })
-  public placeholder = 'Pick a date';
-
-  /**
-   * The visual width of the input, measured in average character widths.
-   * @attr size
-   */
-  @property({ type: Number })
-  public size?: number;
 
   /**
    * The earliest selectable date.
@@ -51,6 +50,14 @@ export class YatlDateInput extends YatlFormControl<Date> {
    */
   @property({ converter: dateConverter, reflect: true })
   public max?: Date;
+
+  /**
+   * Shows a Clear button in the calendar. Backspace clears the typed parts
+   * either way.
+   * @attr clearable
+   */
+  @property({ type: Boolean })
+  public clearable = false;
 
   /**
    * The initial, uncontrolled value of the input.
@@ -71,11 +78,6 @@ export class YatlDateInput extends YatlFormControl<Date> {
     if (typeof value === 'string') {
       value = dateConverter.fromAttribute(value);
     }
-
-    if (this._value?.getTime() === value?.getTime()) {
-      return;
-    }
-
     this._value = value ? new Date(value) : undefined;
   }
 
@@ -83,114 +85,130 @@ export class YatlDateInput extends YatlFormControl<Date> {
     return dateConverter.toAttribute(this.value);
   }
 
-  protected override renderBase(contents: unknown) {
-    return html`
-      <yatl-dropdown
-        .open=${live(this.open)}
-        @yatl-dropdown-toggle=${this.handleDropdownToggle}
-      >
-        <button
-          part="input"
-          class="input"
-          slot="trigger"
-          ?disabled=${this.isDisabled || this.readonly}
-        >
-          ${contents}
-          <yatl-icon part="end" class="input-end" name="calendar"></yatl-icon>
-        </button>
-        <yatl-date-picker
-          .min=${this.min}
-          .max=${this.max}
-          .date=${this.value}
-          @change=${this.handleChange}
-        >
-          <div slot="footer" class="footer">
-            <yatl-button
-              variant="plain"
-              color="danger"
-              size="small"
-              title="Clear date"
-              ?disabled=${this.isDisabled}
-              @click=${this.handleClearClick}
-              >Clear</yatl-button
-            >
-          </div>
-        </yatl-date-picker>
-      </yatl-dropdown>
-    `;
+  protected override get parts(): FieldPart[] {
+    return dateParts();
   }
 
-  protected override renderInput() {
-    const classes = {
-      value: true,
-      'has-placeholder': this.value === undefined,
-    };
-    const valueText = this.value
-      ? dayFormatter.format(this.value)
-      : this.placeholder;
+  protected override get emptyValue() {
+    return undefined;
+  }
+
+  protected override valueKey(value: Date | undefined) {
+    return dateConverter.toAttribute(value);
+  }
+
+  protected override toSegments(value: Date | undefined): SegmentValues {
+    return dateToSegments(value);
+  }
+
+  protected override fromSegmentValues(values: Record<string, number>) {
+    return segmentsToDate(values);
+  }
+
+  protected override renderBase(contents: unknown) {
+    const disabled = this.isDisabled || this.readonly;
+    const today = getDateOnly(new Date());
+    const todayAllowed =
+      (!this.min || today >= getDateOnly(this.min)) &&
+      (!this.max || today <= getDateOnly(this.max));
+
     return html`
-      <div id="${this.inputId}" class=${classMap(classes)} title=${valueText}>
-        ${valueText}
+      <div part="input" class="input">
+        <slot part="start" class="input-start" name="start"></slot>
+        ${contents}
+        <yatl-dropdown
+          part="picker"
+          .open=${live(this.open)}
+          @yatl-dropdown-toggle=${this.handleDropdownToggle}
+        >
+          <button
+            slot="trigger"
+            part="picker-button"
+            class="trigger-button"
+            type="button"
+            title="Pick a date"
+            aria-label="Pick a date"
+            ?disabled=${disabled}
+          >
+            <yatl-icon name="calendar"></yatl-icon>
+          </button>
+          <yatl-date-picker
+            .min=${this.min}
+            .max=${this.max}
+            .date=${this.value}
+            @change=${this.handlePickerChange}
+          >
+            <div slot="footer" class="footer">
+              ${this.clearable
+                ? html`<yatl-button
+                    part="clear-button"
+                    variant="plain"
+                    color="danger"
+                    size="small"
+                    title="Clear date"
+                    ?disabled=${disabled}
+                    @click=${this.handleClearClick}
+                    >Clear</yatl-button
+                  >`
+                : nothing}
+              <yatl-button
+                part="today-button"
+                variant="plain"
+                size="small"
+                title=${todayAllowed ? 'Pick today' : "Today isn't allowed"}
+                ?disabled=${disabled || !todayAllowed}
+                @click=${this.handleTodayClick}
+                >Today</yatl-button
+              >
+            </div>
+          </yatl-date-picker>
+        </yatl-dropdown>
+        <slot part="end" class="input-end" name="end"></slot>
       </div>
     `;
   }
 
-  private handleChange(event: Event) {
+  private pick(date: Date | undefined) {
     if (this.isDisabled || this.readonly) {
       return;
     }
-    const target = event.target as YatlDatePicker;
-    this.value = target.date;
+    this.setFromPicker(date);
+    this.commitChange();
     this.open = false;
-    this.emitInteraction('change');
+  }
+
+  private handlePickerChange(event: Event) {
+    event.stopPropagation();
+    this.pick((event.target as YatlDatePicker).date);
   }
 
   private handleClearClick() {
-    if (this.isDisabled) {
-      return;
-    }
-    this.value = undefined;
-    this.open = false;
-    this.emitInteraction('change');
+    this.pick(undefined);
+  }
+
+  private handleTodayClick() {
+    this.pick(getDateOnly(new Date()));
   }
 
   private handleDropdownToggle(event: Event) {
-    const target = event.target as YatlDropdown;
-    this.open = target.open;
+    this.open = (event.target as YatlDropdown).open;
   }
 
-  protected override updateValidity() {
-    super.updateValidity();
-
-    // If the base class already flagged an error, stop here.
-    if (!this.validity.valid) {
+  protected override updateValueValidity() {
+    if (!this.value) {
       return;
     }
-
-    const valueTime = this.value
-      ? getDateOnly(this.value).getTime()
-      : -Infinity;
-
-    if (this.min) {
-      const minTime = getDateOnly(this.min).getTime();
-      if (valueTime < minTime) {
-        this.setValidity(
-          { rangeUnderflow: true },
-          `Date must be on or after ${dayFormatter.format(this.min)}.`,
-        );
-        return;
-      }
-    }
-
-    if (this.max) {
-      const maxTime = getDateOnly(this.max).getTime();
-      if (valueTime > maxTime) {
-        this.setValidity(
-          { rangeOverflow: true },
-          `Date must be on or before ${dayFormatter.format(this.max)}.`,
-        );
-        return;
-      }
+    const time = getDateOnly(this.value).getTime();
+    if (this.min && time < getDateOnly(this.min).getTime()) {
+      this.setValidity(
+        { rangeUnderflow: true },
+        `Date must be on or after ${dayFormatter.format(this.min)}.`,
+      );
+    } else if (this.max && time > getDateOnly(this.max).getTime()) {
+      this.setValidity(
+        { rangeOverflow: true },
+        `Date must be on or before ${dayFormatter.format(this.max)}.`,
+      );
     }
   }
 }

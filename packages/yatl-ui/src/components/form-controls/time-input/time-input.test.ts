@@ -246,7 +246,8 @@ describe('YatlTimeInput - pick list', () => {
     let changes = 0;
     el.addEventListener('change', () => changes++);
 
-    const button = el.shadowRoot!.querySelector<HTMLElement>('.list-button')!;
+    const button =
+      el.shadowRoot!.querySelector<HTMLElement>('.trigger-button')!;
     button.click();
     const dropdown = el.shadowRoot!.querySelector('yatl-dropdown')!;
     await dropdown.updateComplete;
@@ -273,6 +274,6 @@ describe('YatlTimeInput - pick list', () => {
 
   test('no-list hides the list button', async () => {
     const el = await renderTime('no-list');
-    expect(el.shadowRoot!.querySelector('.list-button')).toBeNull();
+    expect(el.shadowRoot!.querySelector('.trigger-button')).toBeNull();
   });
 });

@@ -2,10 +2,19 @@ import { html, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { dateConverter, datesEqual, getDateOnly } from '../../../utils';
-import { YatlDateRangePicker } from '../../date-range-picker/date-range-picker';
-import { YatlDropdown } from '../../dropdown/dropdown';
-import { YatlFormControl } from '../form-control/form-control';
-import { classMap } from 'lit/directives/class-map.js';
+import type { YatlDateRangePicker } from '../../date-range-picker/date-range-picker';
+import type { YatlDropdown } from '../../dropdown/dropdown';
+import {
+  dateParts,
+  dateToSegments,
+  filledDateSegments,
+  segmentsToDate,
+} from '../segmented-field/date-segments';
+import {
+  type FieldPart,
+  type SegmentValues,
+  YatlSegmentedField,
+} from '../segmented-field/segmented-field';
 
 import styles from './date-range-input.styles';
 
@@ -41,10 +50,15 @@ const defaultFormatter: DateRangeFormatter = range => {
 };
 
 /**
- * @fires change - Fired when the selected start or end date changes.
+ * A start and end date, typed in parts or picked from a calendar. Either
+ * end can be left empty for an open range ("after" or "before" a date).
+ *
+ * @fires input - Fired on every edit.
+ * @fires change - Fired when a range is applied from the calendar, or
+ *  focus leaves with a different range than it had.
  */
 @customElement('yatl-date-range-input')
-export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
+export class YatlDateRangeInput extends YatlSegmentedField<YatlDateRange> {
   public static override styles = [...super.styles, styles];
 
   @state() private startDateDraft?: Date;
@@ -53,22 +67,11 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   @state() private open = false;
 
   /**
-   * The placeholder text to display when no range is selected.
-   * @attr placeholder
+   * Formats the range a read-only or disabled input shows, e.g.
+   * "After Nov 1, 2026".
    */
-  @property({ type: String })
-  public placeholder = 'Pick a range';
-
-  /** A function used to format the displayed value of the selected range. */
   @property({ attribute: false })
   public formatter: DateRangeFormatter = defaultFormatter;
-
-  /**
-   * The visual width of the input, measured in average character widths.
-   * @attr size
-   */
-  @property({ type: Number })
-  public size?: number;
 
   /**
    * The minimum allowable date value
@@ -124,15 +127,8 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
 
   @property({ attribute: false })
   public set value(value) {
-    if (!value) {
-      this.startDate = undefined;
-      this.endDate = undefined;
-      return;
-    }
-
-    const { start, end } = value;
-    this.startDate = start;
-    this.endDate = end;
+    this.startDate = value?.start;
+    this.endDate = value?.end;
   }
 
   public get formValue() {
@@ -159,90 +155,163 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     return data;
   }
 
-  protected override renderBase(contents: unknown) {
-    const hasNoSelection = !this.startDateDraft && !this.endDateDraft;
+  protected override get parts(): FieldPart[] {
+    return [
+      ...dateParts('start'),
+      // Non-breaking, since spaces at the edges of a flex item collapse
+      { type: 'literal', text: ' – ' },
+      ...dateParts('end'),
+    ];
+  }
 
-    return html`
-      <yatl-dropdown
-        .open=${live(this.open)}
-        @yatl-dropdown-toggle=${this.handleDropdownToggle}
-      >
-        <button
-          part="input"
-          class="input"
-          slot="trigger"
-          ?disabled=${this.isDisabled || this.readonly}
-        >
-          ${contents}
-          <yatl-icon part="end" class="input-end" name="calendar"></yatl-icon>
-        </button>
-        <yatl-date-range-picker
-          .min=${this.min}
-          .max=${this.max}
-          .startDate=${this.startDateDraft}
-          .endDate=${this.endDateDraft}
-          @change=${this.handleDatePickerChange}
-          ><div class="footer" slot="footer">
-            <yatl-button
-              variant="plain"
-              color="danger"
-              size="small"
-              title="Clear dates"
-              ?disabled=${this.isDisabled}
-              @click=${this.handleClearClick}
-              >Clear</yatl-button
-            >
-            <div class="spacer"></div>
-            <yatl-button
-              variant="plain"
-              color="muted"
-              size="small"
-              title="Cancel"
-              ?disabled=${this.isDisabled}
-              @click=${this.handleCancelClick}
-              >Cancel</yatl-button
-            >
-            <yatl-button
-              variant="neutral"
-              color="brand"
-              size="small"
-              title="Apply"
-              ?disabled=${hasNoSelection || this.isDisabled}
-              @click=${this.handleApplyClick}
-              >Apply</yatl-button
-            >
-          </div>
-        </yatl-date-range-picker>
-      </yatl-dropdown>
-    `;
+  protected override get emptyValue() {
+    return undefined;
+  }
+
+  protected override valueKey(value: YatlDateRange | undefined) {
+    if (!value?.start && !value?.end) {
+      return null;
+    }
+    return `${dateConverter.toAttribute(value.start) ?? ''}|${
+      dateConverter.toAttribute(value.end) ?? ''
+    }`;
+  }
+
+  protected override toSegments(value: YatlDateRange | undefined) {
+    return {
+      ...dateToSegments(value?.start, 'start'),
+      ...dateToSegments(value?.end, 'end'),
+    };
+  }
+
+  /** Each end is complete or empty, so the range can be open */
+  protected override resolveSegments(values: SegmentValues) {
+    let problem: 'incomplete' | 'invalid' | undefined;
+    const resolve = (prefix: 'start' | 'end') => {
+      const filled = filledDateSegments(values, prefix);
+      if (filled === 0) return undefined;
+      if (filled < 3) {
+        problem ??= 'incomplete';
+        return undefined;
+      }
+      const date = segmentsToDate(values, prefix);
+      if (!date) problem ??= 'invalid';
+      return date;
+    };
+    const start = resolve('start');
+    const end = resolve('end');
+    const value = problem || (!start && !end) ? undefined : { start, end };
+    return { value, problem };
+  }
+
+  protected override fromSegmentValues(values: Record<string, number>) {
+    return this.resolveSegments(values).value;
+  }
+
+  protected override willUpdate(changedProps: PropertyValues<this>) {
+    // The value is made of startDate and endDate, so setting either one
+    // from outside should update the segments like setting value does
+    if (
+      (changedProps.has('startDate') || changedProps.has('endDate')) &&
+      !changedProps.has('value')
+    ) {
+      this.segmentValues = this.toSegments(this.value);
+    }
+    super.willUpdate(changedProps);
   }
 
   protected override renderInput() {
-    const classes = {
-      value: true,
-      'has-placeholder': !this.value,
-    };
+    // A read-only range reads better as a sentence than as parts
+    const value = this.value;
+    if ((this.readonly || this.isDisabled) && value) {
+      const text = this.formatter(value) ?? '';
+      return html`<div id=${this.inputId} class="formatted" title=${text}>
+        ${text}
+      </div>`;
+    }
+    return super.renderInput();
+  }
 
-    const valueText = this.value
-      ? this.formatter(this.value)!
-      : this.placeholder;
+  protected override renderBase(contents: unknown) {
+    const hasNoSelection = !this.startDateDraft && !this.endDateDraft;
+    const disabled = this.isDisabled || this.readonly;
 
     return html`
-      <div id=${this.inputId} class=${classMap(classes)} title=${valueText}>
-        ${valueText}
+      <div part="input" class="input">
+        <slot part="start" class="input-start" name="start"></slot>
+        ${contents}
+        <yatl-dropdown
+          part="picker"
+          .open=${live(this.open)}
+          @yatl-dropdown-toggle=${this.handleDropdownToggle}
+        >
+          <button
+            slot="trigger"
+            part="picker-button"
+            class="trigger-button"
+            type="button"
+            title="Pick dates"
+            aria-label="Pick dates"
+            ?disabled=${disabled}
+          >
+            <yatl-icon name="calendar"></yatl-icon>
+          </button>
+          <yatl-date-range-picker
+            .min=${this.min}
+            .max=${this.max}
+            .startDate=${this.startDateDraft}
+            .endDate=${this.endDateDraft}
+            @change=${this.handleDatePickerChange}
+            ><div class="footer" slot="footer">
+              <yatl-button
+                variant="plain"
+                color="danger"
+                size="small"
+                title="Clear dates"
+                ?disabled=${this.isDisabled}
+                @click=${this.handleClearClick}
+                >Clear</yatl-button
+              >
+              <div class="spacer"></div>
+              <yatl-button
+                variant="plain"
+                color="muted"
+                size="small"
+                title="Cancel"
+                ?disabled=${this.isDisabled}
+                @click=${this.handleCancelClick}
+                >Cancel</yatl-button
+              >
+              <yatl-button
+                variant="neutral"
+                color="brand"
+                size="small"
+                title="Apply"
+                ?disabled=${hasNoSelection || this.isDisabled}
+                @click=${this.handleApplyClick}
+                >Apply</yatl-button
+              >
+            </div>
+          </yatl-date-range-picker>
+        </yatl-dropdown>
+        <slot part="end" class="input-end" name="end"></slot>
       </div>
     `;
   }
 
-  private handleClearClick() {
+  private pick(range: YatlDateRange | undefined) {
     if (this.isDisabled) {
       return;
     }
-    this.value = undefined;
+    this.setFromPicker(range);
+    this.commitChange();
+    this.open = false;
+  }
+
+  private handleClearClick() {
     this.startDateDraft = undefined;
     this.endDateDraft = undefined;
-    this.open = false;
-    this.emitInteraction('change');
+    this.pick(undefined);
   }
 
   private handleCancelClick() {
@@ -250,16 +319,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
   }
 
   private handleApplyClick() {
-    if (this.isDisabled) {
-      return;
-    }
-    // Always update the value so it triggers the form save
-    this.value = {
-      start: this.startDateDraft,
-      end: this.endDateDraft,
-    };
-    this.open = false;
-    this.emitInteraction('change');
+    this.pick({ start: this.startDateDraft, end: this.endDateDraft });
   }
 
   private handleDatePickerChange(event: Event) {
@@ -281,14 +341,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     }
   }
 
-  protected override updateValidity() {
-    super.updateValidity();
-
-    // If the base class already flagged an error, stop here.
-    if (!this.validity.valid) {
-      return;
-    }
-
+  protected override updateValueValidity() {
     const startTime = this.startDate
       ? getDateOnly(this.startDate).getTime()
       : -Infinity;
@@ -336,6 +389,7 @@ export class YatlDateRangeInput extends YatlFormControl<YatlDateRange> {
     if (this.defaultValue) {
       this.value = this.defaultValue;
     }
+    this.segmentValues = this.toSegments(this.value);
   }
 
   protected override firstUpdated(

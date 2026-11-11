@@ -200,3 +200,200 @@ describe('YatlDateGrid - relevant initial month', () => {
     expect(monthLabel(el)).toBe(monthYearFormatter.format(new Date()));
   });
 });
+
+/** A grid showing `date`'s month, with `date` selected */
+async function renderGridAt(date: Date, attrs = '') {
+  document.body.innerHTML = `<yatl-date-grid ${attrs}></yatl-date-grid>`;
+  const el = document.querySelector<YatlDateGrid>('yatl-date-grid')!;
+  el.ranges = [{ start: date, end: date, color: 'brand' }];
+  await el.updateComplete;
+  return el;
+}
+
+function dayHost(el: YatlDateGrid, date: Date) {
+  return el.shadowRoot!.querySelector<HTMLElement>(
+    `[data-date="${new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+    ).getTime()}"]`,
+  )!;
+}
+
+/** The date of the day whose button has keyboard focus */
+function focusedDay(el: YatlDateGrid) {
+  const host = el.shadowRoot!.activeElement as HTMLElement | null;
+  return host?.dataset.date ? new Date(Number(host.dataset.date)) : undefined;
+}
+
+async function pressOnCalendar(
+  el: YatlDateGrid,
+  key: string,
+  shiftKey = false,
+) {
+  const calendar = el.shadowRoot!.querySelector('[part="calendar"]')!;
+  calendar.dispatchEvent(
+    new KeyboardEvent('keydown', { key, shiftKey, bubbles: true }),
+  );
+  await el.updateComplete;
+  // Focus moves after the update the key caused
+  await new Promise(r => setTimeout(r));
+}
+
+describe('YatlDateGrid - keyboard', () => {
+  test('only one day is in the tab order: the selected one', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    const days = [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="day-button"]'),
+    ];
+    const tabbable = days.filter(d => !d.hasAttribute('tabindex'));
+    expect(tabbable).toEqual([dayHost(el, new Date(2026, 10, 11))]);
+  });
+
+  test('arrow keys move by a day or a week, into the next month', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 27));
+    await el.focusCalendar();
+    expect(focusedDay(el)?.getDate()).toBe(27);
+
+    await pressOnCalendar(el, 'ArrowRight');
+    expect(focusedDay(el)?.getDate()).toBe(28);
+    await pressOnCalendar(el, 'ArrowDown');
+    // Nov 28 + 7 is Dec 5, so the grid moves to December
+    expect(focusedDay(el)?.toDateString()).toBe(
+      new Date(2026, 11, 5).toDateString(),
+    );
+    expect(monthLabel(el)).toBe(
+      monthYearFormatter.format(new Date(2026, 11, 1)),
+    );
+    await pressOnCalendar(el, 'ArrowUp');
+    await pressOnCalendar(el, 'ArrowLeft');
+    expect(focusedDay(el)?.toDateString()).toBe(
+      new Date(2026, 10, 27).toDateString(),
+    );
+  });
+
+  test('Home and End go to the start and end of the week', async () => {
+    // Wednesday
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    await el.focusCalendar();
+    await pressOnCalendar(el, 'Home');
+    expect(focusedDay(el)?.getDay()).toBe(0);
+    await pressOnCalendar(el, 'End');
+    expect(focusedDay(el)?.getDay()).toBe(6);
+  });
+
+  test('Page Up/Down change the month, with Shift the year', async () => {
+    const el = await renderGridAt(new Date(2026, 0, 31));
+    await el.focusCalendar();
+    await pressOnCalendar(el, 'PageDown');
+    // February has no 31st, so it lands on the last day
+    expect(focusedDay(el)?.toDateString()).toBe(
+      new Date(2026, 1, 28).toDateString(),
+    );
+    await pressOnCalendar(el, 'PageUp', true);
+    expect(focusedDay(el)?.toDateString()).toBe(
+      new Date(2025, 1, 28).toDateString(),
+    );
+  });
+
+  test('focus stays within min', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11), 'min="2026-11-11"');
+    await el.focusCalendar();
+    await pressOnCalendar(el, 'ArrowLeft');
+    expect(focusedDay(el)?.getDate()).toBe(11);
+  });
+
+  test('days have full date labels, and today is marked', async () => {
+    const el = await renderGrid();
+    const today = new Date();
+    const host = dayHost(el, today);
+    expect(host.getAttribute('aria-current')).toBe('date');
+    expect(host.getAttribute('aria-label')).toContain(
+      String(today.getFullYear()),
+    );
+  });
+
+  test('the selected day is marked selected', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    const cell = dayHost(el, new Date(2026, 10, 11)).parentElement!;
+    expect(cell.getAttribute('aria-selected')).toBe('true');
+  });
+});
+
+describe('YatlDateGrid - month and year views', () => {
+  test('clicking the month shows months, and picking one shows its days', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    await clickButton(el, 'month-button');
+    expect(monthLabel(el)).toBe('2026');
+    const months = [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="month-option"]'),
+    ];
+    expect(months).toHaveLength(12);
+
+    months[2].click();
+    await el.updateComplete;
+    expect(monthLabel(el)).toBe(
+      monthYearFormatter.format(new Date(2026, 2, 1)),
+    );
+    expect(el.shadowRoot!.querySelector('[part="calendar"]')).not.toBeNull();
+  });
+
+  test('clicking the year shows years, and picking one goes back to months', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    await clickButton(el, 'month-button');
+    await clickButton(el, 'month-button');
+    const years = [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="year-option"]'),
+    ];
+    expect(years.map(y => y.textContent!.trim())).toContain('2026');
+
+    years.find(y => y.textContent!.trim() === '2030')!.click();
+    await el.updateComplete;
+    expect(monthLabel(el)).toBe('2030');
+  });
+
+  test('the arrows page by year in the month view', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    await clickButton(el, 'month-button');
+    await clickButton(el, 'next-button');
+    expect(monthLabel(el)).toBe('2027');
+  });
+
+  test('months and years outside min and max are disabled', async () => {
+    const el = await renderGridAt(
+      new Date(2026, 5, 15),
+      'min="2026-03-15" max="2026-08-01"',
+    );
+    await clickButton(el, 'month-button');
+    const months = [
+      ...el.shadowRoot!.querySelectorAll<
+        HTMLButtonElement & { disabled: boolean }
+      >('[part~="month-option"]'),
+    ];
+    // Feb is before min, March (min is in it) through August are allowed
+    expect(months.map(m => m.disabled)).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  test('Escape goes back to the days', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    await clickButton(el, 'month-button');
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="calendar"]')).not.toBeNull();
+  });
+});

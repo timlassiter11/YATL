@@ -92,6 +92,12 @@ export class YatlDateRangePicker extends YatlBase {
     `;
   }
 
+  /** Puts keyboard focus on the calendar's selected (or today's) day */
+  public async focusCalendar() {
+    await this.updateComplete;
+    await this.renderRoot.querySelector('yatl-date-grid')?.focusCalendar();
+  }
+
   private handleDateSelected(event: YatlDateSelected) {
     const date = event.date;
     if (this.currentSelection === 'start') {

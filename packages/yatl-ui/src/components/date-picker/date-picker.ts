@@ -59,6 +59,12 @@ export class YatlDatePicker extends YatlBase {
     `;
   }
 
+  /** Puts keyboard focus on the calendar's selected (or today's) day */
+  public async focusCalendar() {
+    await this.updateComplete;
+    await this.renderRoot.querySelector('yatl-date-grid')?.focusCalendar();
+  }
+
   private handleDateSelected(event: YatlDateSelected) {
     this.date = event.date;
     this.dispatchEvent(new YatlEvent('change'));

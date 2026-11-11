@@ -338,6 +338,8 @@ export class YatlDateRangeInput extends YatlSegmentedField<YatlDateRange> {
         ? getDateOnly(this.startDate)
         : undefined;
       this.endDateDraft = this.endDate ? getDateOnly(this.endDate) : undefined;
+      // So the arrow keys move around the calendar right away
+      this.renderRoot.querySelector('yatl-date-range-picker')?.focusCalendar();
     }
   }
 

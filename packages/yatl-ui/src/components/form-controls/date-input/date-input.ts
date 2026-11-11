@@ -192,6 +192,10 @@ export class YatlDateInput extends YatlSegmentedField<Date> {
 
   private handleDropdownToggle(event: Event) {
     this.open = (event.target as YatlDropdown).open;
+    if (this.open) {
+      // So the arrow keys move around the calendar right away
+      this.renderRoot.querySelector('yatl-date-picker')?.focusCalendar();
+    }
   }
 
   protected override updateValueValidity() {

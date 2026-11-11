@@ -74,4 +74,23 @@ export default css`
   .day-button.is-outside-month {
     color: var(--yatl-text-2);
   }
+
+  /* The month and year views: a 3 x 4 grid, as tall as the day grid */
+  .picker {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 1fr;
+    gap: var(--yatl-spacing-xs);
+    min-height: 15rem;
+  }
+
+  .picker-button {
+    width: 100%;
+    height: 100%;
+    --button-font-size: 0.85rem;
+  }
+
+  .picker-button.is-selected {
+    --button-bg: var(--yatl-color-brand);
+  }
 `;

@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html, nothing, PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { YatlSpinnerStateChangeEvent } from '../../events';
 import { MaybePromise, YatlSize } from '../../types';
@@ -68,6 +68,20 @@ export class YatlButton extends YatlFormControl {
    */
   @property({ type: String, reflect: true })
   public color: YatlButtonColor = 'neutral';
+
+  /**
+   * An icon to use
+   */
+  @property({ type: String })
+  public icon: string = '';
+
+  /**
+   * The location of the icon, if provided.
+   * Does nothing if the icon property is not set.
+   * @attr icon-position
+   */
+  @property({ type: String, attribute: 'icon-position' })
+  public iconPosition: 'start' | 'end' = 'start';
 
   /**
    * The current state of the button, shown via the embedded spinner.
@@ -159,9 +173,11 @@ export class YatlButton extends YatlFormControl {
         @click=${this.handleClick}
       >
         <div part="contents">
-          <slot name="start"></slot>
-          <slot @slotchange=${this.handleSlotChange}></slot>
-          <slot name="end"></slot>
+          <slot name="start" @slotchange=${this.updateIconOnly}></slot>
+          ${this.renderIcon('start')}
+          <slot @slotchange=${this.updateIconOnly}></slot>
+          ${this.renderIcon('end')}
+          <slot name="end" @slotchange=${this.updateIconOnly}></slot>
         </div>
         <div class="state-wrapper">
           <yatl-spinner
@@ -178,23 +194,45 @@ export class YatlButton extends YatlFormControl {
     `;
   }
 
+  private renderIcon(position: 'start' | 'end') {
+    return this.icon && this.iconPosition === position
+      ? html`<yatl-icon name=${this.icon}></yatl-icon>`
+      : nothing;
+  }
+
   // Satisfy the base class
   protected override renderInput() {}
 
+  protected override updated(changedProps: PropertyValues<this>) {
+    super.updated(changedProps);
+    // An empty slot never fires slotchange, so the icon prop is checked here
+    if (changedProps.has('icon')) {
+      this.updateIconOnly();
+    }
+  }
+
   /**
-   * A button holding only an icon gets the same padding all round, so it
-   * stays square rather than getting the wider padding text needs.
+   * A button holding only icons (the `icon` property or icons in any slot)
+   * gets the same padding all round, so it stays square rather than
+   * getting the wider padding text needs.
    */
-  private handleSlotChange(event: Event) {
-    const nodes = (event.target as HTMLSlotElement).assignedNodes();
-    const iconOnly =
-      nodes.some(node => node instanceof Element) &&
-      nodes.every(node =>
-        node instanceof Element
-          ? node.localName === 'yatl-icon'
-          : !node.textContent?.trim(),
-      );
-    this.toggleState('icon-only', iconOnly);
+  private updateIconOnly() {
+    let icons = this.icon ? 1 : 0;
+    let other = false;
+    for (const slot of this.renderRoot.querySelectorAll('slot')) {
+      for (const node of slot.assignedNodes({ flatten: true })) {
+        if (node instanceof Element) {
+          if (node.localName === 'yatl-icon') {
+            icons++;
+          } else {
+            other = true;
+          }
+        } else if (node.textContent?.trim()) {
+          other = true;
+        }
+      }
+    }
+    this.toggleState('icon-only', icons > 0 && !other);
   }
 
   private handleSpinnerStateChange(event: YatlSpinnerStateChangeEvent) {

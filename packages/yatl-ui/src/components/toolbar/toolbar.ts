@@ -219,13 +219,11 @@ export class YatlToolbar<
         type="button"
         color="raised"
         title=${title}
+        icon=${isSortPriority ? 'sort-priority' : 'search-priority'}
         aria-pressed=${isSortPriority ? 'true' : 'false'}
         ?disabled=${!hasActiveSort || !hasActiveSearch}
         @click=${this.onToggleSearchSortPriority}
       >
-        <yatl-icon
-          name=${isSortPriority ? 'sort-priority' : 'search-priority'}
-        ></yatl-icon>
       </yatl-button>
     `;
   }

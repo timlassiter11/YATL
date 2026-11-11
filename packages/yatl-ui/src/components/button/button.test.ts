@@ -156,6 +156,43 @@ describe('YatlButton - size and variant styles', () => {
     expect(el.matches(':state(icon-only)')).toBe(false);
   });
 
+  test('the icon property on its own is icon only', async () => {
+    const el = await renderStyled('', 'size="small" icon="close"');
+    expect(
+      el.shadowRoot!.querySelector('yatl-icon')!.getAttribute('name'),
+    ).toBe('close');
+    expect(el.matches(':state(icon-only)')).toBe(true);
+    expect(padding(el)).toEqual(['4px', '4px']);
+
+    // Adding text, or removing the icon, makes it a text button again
+    el.append('Close');
+    await new Promise(resolve => setTimeout(resolve));
+    expect(el.matches(':state(icon-only)')).toBe(false);
+    el.textContent = '';
+    el.icon = '';
+    await el.updateComplete;
+    expect(el.matches(':state(icon-only)')).toBe(false);
+  });
+
+  test('the icon property goes before or after the text', async () => {
+    const el = await renderStyled('Save', 'icon="clock" icon-position="end"');
+    const contents = el.shadowRoot!.querySelector('[part="contents"]')!;
+    const order = [...contents.children].map(c =>
+      c.localName === 'slot'
+        ? c.getAttribute('name') ?? 'default'
+        : c.localName,
+    );
+    expect(order).toEqual(['start', 'default', 'yatl-icon', 'end']);
+    expect(el.matches(':state(icon-only)')).toBe(false);
+  });
+
+  test('an icon in the start slot with no text is icon only', async () => {
+    const el = await renderStyled(
+      '<yatl-icon slot="start" name="close"></yatl-icon>',
+    );
+    expect(el.matches(':state(icon-only)')).toBe(true);
+  });
+
   test('the outline variant has a visible border, others a clear one', async () => {
     const el = await renderStyled('Cancel', 'variant="outline"');
     expect(getComputedStyle(el).borderTopWidth).toBe('1px');

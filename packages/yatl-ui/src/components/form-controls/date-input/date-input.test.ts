@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { userEvent } from 'vitest/browser';
 
 import '../../../index';
 import { YatlDateInput } from './date-input';
@@ -187,5 +188,37 @@ describe('YatlDateInput - typing', () => {
       '[part="today-button"]',
     )!;
     expect(today.disabled).toBe(true);
+  });
+});
+
+describe('YatlDateInput - change from typing', () => {
+  test('a typed date fires change once focus leaves, even via the calendar button', async () => {
+    document.body.innerHTML = `
+      <yatl-date-input></yatl-date-input>
+      <button id="after">after</button>`;
+    const el = document.querySelector<YatlDateInput>('yatl-date-input')!;
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+
+    el.shadowRoot!.querySelector<HTMLElement>('[part="segment"]')!.focus();
+    await userEvent.keyboard('03152024');
+    await userEvent.tab();
+    expect(changes).toBe(0);
+    document.getElementById('after')!.focus();
+    await el.updateComplete;
+    expect(changes).toBe(1);
+  });
+
+  test('Enter fires change for a typed date', async () => {
+    document.body.innerHTML = '<yatl-date-input></yatl-date-input>';
+    const el = document.querySelector<YatlDateInput>('yatl-date-input')!;
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+
+    el.shadowRoot!.querySelector<HTMLElement>('[part="segment"]')!.focus();
+    await userEvent.keyboard('03152024{Enter}');
+    expect(changes).toBe(1);
   });
 });

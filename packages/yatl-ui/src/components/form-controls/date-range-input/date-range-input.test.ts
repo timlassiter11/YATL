@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { userEvent } from 'vitest/browser';
 
 import '../../../index';
 import { YatlDateRangeInput } from './date-range-input';
@@ -246,5 +247,53 @@ describe('YatlDateRangeInput - typing', () => {
     const el = await renderDateRangeInput('start-date="2026-11-01" readonly');
     const input = el.shadowRoot!.querySelector('#input')!;
     expect(input.textContent!.trim()).toMatch(/^After /);
+  });
+});
+
+describe('YatlDateRangeInput - change from typing', () => {
+  test('a typed range fires change once focus leaves, even via the calendar button', async () => {
+    document.body.innerHTML = `
+      <yatl-date-range-input></yatl-date-range-input>
+      <button id="after">after</button>`;
+    const el = document.querySelector<YatlDateRangeInput>(
+      'yatl-date-range-input',
+    )!;
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+
+    el.shadowRoot!.querySelector<HTMLElement>('[part="segment"]')!.focus();
+    await userEvent.keyboard('0101202401102024');
+    await el.updateComplete;
+    expect(el.startDate?.getTime()).toBe(new Date(2024, 0, 1).getTime());
+    expect(el.endDate?.getTime()).toBe(new Date(2024, 0, 10).getTime());
+    expect(changes).toBe(0);
+
+    // Tab to the calendar button (still inside), then out
+    await userEvent.tab();
+    expect(changes).toBe(0);
+    document.getElementById('after')!.focus();
+    await el.updateComplete;
+    expect(changes).toBe(1);
+  });
+});
+
+describe('YatlDateRangeInput - Enter', () => {
+  test('Enter fires change for a typed range, once', async () => {
+    const el = await renderDateRangeInput();
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+
+    el.shadowRoot!.querySelector<HTMLElement>('[part="segment"]')!.focus();
+    await userEvent.keyboard('0101202401102024');
+    await userEvent.keyboard('{Enter}');
+    expect(changes).toBe(1);
+
+    // Nothing new to commit, so neither Enter nor leaving fires again
+    await userEvent.keyboard('{Enter}');
+    (document.activeElement as HTMLElement | null)?.blur();
+    el.blur();
+    await el.updateComplete;
+    expect(changes).toBe(1);
   });
 });

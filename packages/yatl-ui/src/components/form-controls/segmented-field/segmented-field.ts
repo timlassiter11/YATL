@@ -99,6 +99,12 @@ export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
   /** The value when focus came in, to fire `change` when it leaves */
   private valueOnFocus: string | null = null;
 
+  constructor() {
+    super();
+    this.addEventListener('focusin', this.handleFocusIn);
+    this.addEventListener('focusout', this.handleFocusOut);
+  }
+
   /** The parts in display order */
   protected abstract get parts(): FieldPart[];
 
@@ -192,8 +198,6 @@ export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
         class="segments"
         role="group"
         aria-label=${this.label || nothing}
-        @focusin=${this.handleFocusIn}
-        @focusout=${this.handleFocusOut}
       >
         ${this.parts.map(part =>
           part.type === 'literal'
@@ -281,7 +285,8 @@ export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
       case 'Tab':
         return;
       case 'Enter':
-        // Submit like a native input does
+        // Commit and submit like a native input does
+        this.commitIfChanged();
         this.form?.requestSubmit();
         return;
     }
@@ -420,29 +425,44 @@ export abstract class YatlSegmentedField<TData> extends YatlFormControl<TData> {
     this.segmentElements[0]?.focus();
   }
 
-  private handleFocusIn() {
-    if (!this.focused) {
-      this.focused = true;
+  /** Whether focus is anywhere in the control, e.g. its picker button */
+  private focusWithin = false;
+
+  /*
+   * Focus is tracked on the host, so moving between the parts, the picker
+   * button and an open picker is all "inside" (the browser doesn't even
+   * fire these on the host for moves within the shadow root). Only
+   * leaving the whole control fires change.
+   */
+  private handleFocusIn = () => {
+    this.focused = true;
+    if (!this.focusWithin) {
+      this.focusWithin = true;
       this.valueOnFocus = this.valueKey(this.value);
     }
-  }
+  };
 
-  private handleFocusOut(event: FocusEvent) {
+  private handleFocusOut = (event: FocusEvent) => {
     const next = event.relatedTarget as Node | null;
-    if (next && this.renderRoot.contains(next)) {
+    if (next && (next === this || this.contains(next))) {
       return;
     }
+    this.focusWithin = false;
     this.focused = false;
     this.typed = '';
+    this.commitIfChanged();
+  };
+
+  /** Fires change if the value differs from when it was last committed */
+  private commitIfChanged() {
     if (this.valueKey(this.value) !== this.valueOnFocus) {
-      this.valueOnFocus = this.valueKey(this.value);
-      this.emitInteraction('change');
+      this.commitChange();
     }
   }
 
   /**
    * Fires change for a value set by a picker. Typing fires it when focus
-   * leaves instead.
+   * leaves, or on Enter, instead.
    */
   protected commitChange() {
     this.valueOnFocus = this.valueKey(this.value);

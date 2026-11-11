@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { UnspecifiedRecord, YatlTableController } from '@timlassiter11/yatl';
 
 import '../../../index';
@@ -122,5 +123,39 @@ describe('YatlDateRangeFilter - min/max from field data', () => {
 
     expect(input(el).min).toBeUndefined();
     expect(input(el).max).toBeUndefined();
+  });
+});
+
+describe('YatlDateRangeFilter - typing', () => {
+  test('a typed range applies on Enter, without opening the calendar', async () => {
+    const controller = createController();
+    const el = await renderFilter(controller);
+
+    input(el)
+      .shadowRoot!.querySelector<HTMLElement>('[part="segment"]')!
+      .focus();
+    await userEvent.keyboard('0101202401312024{Enter}');
+    await el.updateComplete;
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 2]);
+  });
+
+  test('a typed range applies when focus leaves through the calendar button', async () => {
+    const controller = createController();
+    const el = await renderFilter(controller);
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<button id="after"></button>',
+    );
+
+    input(el)
+      .shadowRoot!.querySelector<HTMLElement>('[part="segment"]')!
+      .focus();
+    await userEvent.keyboard('0101202401312024');
+    await userEvent.tab();
+    document.getElementById('after')!.focus();
+    await el.updateComplete;
+
+    expect(controller.filteredData.map(r => r.id)).toEqual([1, 2]);
   });
 });

@@ -5,6 +5,7 @@ export * from './confirmation-dialog/confirmation-dialog';
 export * from './date-grid/date-grid';
 export * from './date-picker/date-picker';
 export * from './date-range-picker/date-range-picker';
+export * from './time-picker/time-picker';
 export * from './details/details';
 export * from './dialog/dialog';
 export * from './divider/divider';

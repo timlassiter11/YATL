@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import '../../../index';
-import type { YatlOption } from '../../option/option';
+import type { YatlTimePicker } from '../../time-picker/time-picker';
 import { YatlTimeInput } from './time-input';
 
 async function renderTime(attrs = '') {
@@ -149,6 +149,19 @@ describe('YatlTimeInput - 12 hour', () => {
     expect(el.value).toBe('02:30');
   });
 
+  test('changing hour-cycle shows the same time on the other clock', async () => {
+    const el = await renderTime('hour-cycle="h12" value="14:30"');
+    el.hourCycle = 'h23';
+    await el.updateComplete;
+    expect(segmentTexts(el)).toEqual(['14', '30']);
+    expect(el.value).toBe('14:30');
+
+    el.hourCycle = 'h12';
+    await el.updateComplete;
+    expect(segmentTexts(el).slice(0, 2)).toEqual(['02', '30']);
+    expect(el.value).toBe('14:30');
+  });
+
   test('12 AM is midnight and 12 PM is noon', async () => {
     const el = await renderTime('hour-cycle="h12" value="00:15"');
     expect(segmentTexts(el)[0]).toBe('12');
@@ -238,42 +251,57 @@ describe('YatlTimeInput - value from code and forms', () => {
   });
 });
 
-describe('YatlTimeInput - pick list', () => {
-  test('lists times every list step between min and max and picks one', async () => {
-    const el = await renderTime(
-      'hour-cycle="h23" min="08:00" max="10:00" list-step="30"',
-    );
-    let changes = 0;
-    el.addEventListener('change', () => changes++);
-
-    const button =
-      el.shadowRoot!.querySelector<HTMLElement>('.trigger-button')!;
-    button.click();
+describe('YatlTimeInput - picker', () => {
+  async function openPicker(el: YatlTimeInput) {
+    el.shadowRoot!.querySelector<HTMLElement>('.trigger-button')!.click();
     const dropdown = el.shadowRoot!.querySelector('yatl-dropdown')!;
     await dropdown.updateComplete;
     await el.updateComplete;
-    expect(dropdown.open).toBe(true);
+    return el.shadowRoot!.querySelector<YatlTimePicker>('yatl-time-picker')!;
+  }
 
-    const options = [
-      ...el.shadowRoot!.querySelectorAll<YatlOption>('yatl-option'),
-    ];
-    expect(options.map(o => o.value)).toEqual([
-      '08:00',
-      '08:30',
-      '09:00',
-      '09:30',
-      '10:00',
-    ]);
+  function option(picker: YatlTimePicker, column: string, label: string) {
+    return [
+      ...picker.shadowRoot!.querySelectorAll<HTMLElement>(
+        `[data-column="${column}"] .option`,
+      ),
+    ].find(o => o.textContent!.trim() === label)!;
+  }
 
-    options[2].click();
+  test('picks fire input, and change once when the picker closes', async () => {
+    const el = await renderTime('hour-cycle="h23" value="08:00" step="15"');
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener('input', () => inputs++);
+    el.addEventListener('change', () => changes++);
+
+    const picker = await openPicker(el);
+    option(picker, 'hour', '09').click();
     await el.updateComplete;
-    expect(el.value).toBe('09:00');
-    expect(segmentTexts(el)).toEqual(['09', '00']);
+    option(picker, 'minute', '45').click();
+    await el.updateComplete;
+    expect(el.value).toBe('09:45');
+    expect(segmentTexts(el)).toEqual(['09', '45']);
+    expect(inputs).toBe(2);
+    expect(changes).toBe(0);
+
+    const dropdown = el.shadowRoot!.querySelector('yatl-dropdown')!;
+    dropdown.open = false;
+    await dropdown.updateComplete;
+    await el.updateComplete;
     expect(changes).toBe(1);
   });
 
-  test('no-list hides the list button', async () => {
-    const el = await renderTime('no-list');
+  test('the picker gets the step, clock and value', async () => {
+    const el = await renderTime('hour-cycle="h12" value="14:30" step="15"');
+    const picker = await openPicker(el);
+    expect(picker.step).toBe(15);
+    expect(picker.hourCycle).toBe('h12');
+    expect(picker.value).toBe('14:30');
+  });
+
+  test('no-picker hides the picker button', async () => {
+    const el = await renderTime('no-picker');
     expect(el.shadowRoot!.querySelector('.trigger-button')).toBeNull();
   });
 });

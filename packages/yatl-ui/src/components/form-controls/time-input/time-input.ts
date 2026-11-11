@@ -1,8 +1,14 @@
-import { html, nothing } from 'lit';
+import { html, nothing, type PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
-import type { YatlDropdownSelectEvent } from '../../../events';
 import type { YatlDropdown } from '../../dropdown/dropdown';
+import {
+  formatTime,
+  localeHourCycle,
+  parseTime,
+  type YatlHourCycle,
+  type YatlTimePicker,
+} from '../../time-picker/time-picker';
 import {
   type FieldPart,
   type FieldSegment,
@@ -12,40 +18,9 @@ import {
 
 import styles from './time-input.styles';
 
-export type YatlHourCycle = 'h12' | 'h23';
-
-const TIME_PATTERN = /^(\d{1,2}):(\d{2})/;
-
-/** Minutes since midnight for "HH:MM", or undefined if it isn't one */
-export function parseTime(value: string | null | undefined) {
-  const match = value ? TIME_PATTERN.exec(value) : null;
-  if (!match) return undefined;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (hours > 23 || minutes > 59) return undefined;
-  return hours * 60 + minutes;
-}
-
-/** "HH:MM" for minutes since midnight */
-export function formatTime(minutes: number) {
-  const hours = Math.floor(minutes / 60);
-  return `${String(hours).padStart(2, '0')}:${String(minutes % 60).padStart(
-    2,
-    '0',
-  )}`;
-}
-
-/** The locale's hour cycle, as h12 or h23 */
-function localeHourCycle(): YatlHourCycle {
-  const cycle = new Intl.DateTimeFormat(undefined, {
-    hour: 'numeric',
-  }).resolvedOptions().hourCycle;
-  return cycle === 'h11' || cycle === 'h12' ? 'h12' : 'h23';
-}
-
 /**
  * A time of day, typed in parts (hour, minute and AM/PM in the locale's
- * order and clock) or picked from a list.
+ * order and clock) or picked from columns of hours and minutes.
  *
  * The value is "HH:MM" in 24 hour time, like a native time input, or ""
  * when empty. It has no date or time zone.
@@ -90,19 +65,11 @@ export class YatlTimeInput extends YatlSegmentedField<string> {
   public hourCycle?: YatlHourCycle;
 
   /**
-   * Minutes between the times in the pick list. Defaults to `step`, or 30
-   * minutes when `step` is 1.
-   * @attr list-step
+   * Hides the button that opens the time picker.
+   * @attr no-picker
    */
-  @property({ type: Number, attribute: 'list-step' })
-  public listStep?: number;
-
-  /**
-   * Hides the button that opens the list of times.
-   * @attr no-list
-   */
-  @property({ type: Boolean, attribute: 'no-list' })
-  public noList = false;
+  @property({ type: Boolean, attribute: 'no-picker' })
+  public noPicker = false;
 
   /**
    * The initial, uncontrolled value, "HH:MM".
@@ -121,6 +88,15 @@ export class YatlTimeInput extends YatlSegmentedField<string> {
 
   private get is12Hour() {
     return (this.hourCycle ?? localeHourCycle()) === 'h12';
+  }
+
+  protected override willUpdate(changedProps: PropertyValues<this>) {
+    super.willUpdate(changedProps);
+    // The segments are split for one clock: 14:30 is 02 + PM on a 12 hour
+    // clock but 14 on a 24 hour one, so split the value again
+    if (changedProps.has('hourCycle') && this.hasUpdated) {
+      this.segmentValues = this.toSegments(this.value);
+    }
   }
 
   /** Formats a time for people, in the field's clock */
@@ -241,40 +217,29 @@ export class YatlTimeInput extends YatlSegmentedField<string> {
     return html`
       <div part="input" class="input">
         <slot part="start" class="input-start" name="start"></slot>
-        ${contents} ${this.renderList()}
+        ${contents} ${this.renderPicker()}
         <slot part="end" class="input-end" name="end"></slot>
       </div>
     `;
   }
 
-  /** The times in the pick list, as minutes since midnight */
-  private get listTimes() {
-    const step = Math.max(1, this.listStep ?? (this.step > 1 ? this.step : 30));
-    const start = parseTime(this.min) ?? 0;
-    const end = parseTime(this.max) ?? 24 * 60 - 1;
-    const times: number[] = [];
-    for (let minutes = start; minutes <= end; minutes += step) {
-      times.push(minutes);
-    }
-    return times;
-  }
+  /** The value when the picker opened, to fire change when it closes */
+  private valueOnOpen = '';
 
-  private renderList() {
-    if (this.noList) {
+  private renderPicker() {
+    if (this.noPicker) {
       return nothing;
     }
-    const current = parseTime(this.value);
     const disabled = this.isDisabled || this.readonly;
     return html`
       <yatl-dropdown
-        part="list"
+        part="picker"
         .open=${live(this.open)}
         @yatl-dropdown-toggle=${this.handleDropdownToggle}
-        @yatl-dropdown-select=${this.handleListSelect}
       >
         <button
           slot="trigger"
-          part="list-button"
+          part="picker-button"
           class="trigger-button"
           type="button"
           title="Pick a time"
@@ -283,29 +248,44 @@ export class YatlTimeInput extends YatlSegmentedField<string> {
         >
           <yatl-icon name="clock"></yatl-icon>
         </button>
-        ${this.listTimes.map(
-          minutes =>
-            html`<yatl-option
-              value=${formatTime(minutes)}
-              label=${this.formatForDisplay(minutes)}
-              checkable
-              .checked=${minutes === current}
-            ></yatl-option>`,
-        )}
+        <yatl-time-picker
+          .value=${this.value}
+          .hourCycle=${this.hourCycle}
+          .step=${this.step}
+          .min=${this.min}
+          .max=${this.max}
+          @change=${this.handlePickerChange}
+          @done=${this.handlePickerDone}
+        ></yatl-time-picker>
       </yatl-dropdown>
     `;
   }
 
-  private handleDropdownToggle(event: Event) {
-    this.open = (event.target as YatlDropdown).open;
+  private get picker() {
+    return this.renderRoot.querySelector('yatl-time-picker');
   }
 
-  private handleListSelect(event: YatlDropdownSelectEvent) {
+  private handleDropdownToggle(event: Event) {
+    this.open = (event.target as YatlDropdown).open;
+    if (this.open) {
+      this.valueOnOpen = this.value;
+      // So the arrow keys work in the columns right away
+      this.picker?.focusPicker();
+    } else if (this.value !== this.valueOnOpen) {
+      // Each pick fires input. Change waits until the picker closes.
+      this.commitChange();
+    }
+  }
+
+  private handlePickerChange(event: Event) {
+    event.stopPropagation();
     if (this.isDisabled || this.readonly) {
       return;
     }
-    this.setFromPicker(event.item.value);
-    this.commitChange();
+    this.setFromPicker((event.target as YatlTimePicker).value);
+  }
+
+  private handlePickerDone() {
     this.open = false;
   }
 

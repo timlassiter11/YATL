@@ -61,7 +61,7 @@ export default css`
     color: var(--input-text);
     background-color: var(--input-bg);
     line-height: var(--input-line-height);
-    font-size: large;
+    font-size: var(--input-font-size);
   }
 
   .trash-icon {

@@ -55,6 +55,15 @@ describe('size', () => {
     expect(medium).toBeLessThan(large);
   });
 
+  test('a size that is not a size name (search-select rows) is medium', async () => {
+    document.body.innerHTML = `
+      <yatl-input></yatl-input>
+      <yatl-search-select size="4"></yatl-search-select>`;
+    await frame();
+    const [input, searchSelect] = [...document.body.children].map(boxHeight);
+    expect(searchSelect).toBeCloseTo(input, 0);
+  });
+
   test('chars sets the width in characters', async () => {
     document.body.innerHTML = `
       <div style="display: flex; gap: 8px">

@@ -22,6 +22,11 @@ export const calendar = svg`
   <line class="icon calendar" x1="3" y1="10" x2="21" y2="10"></line>
 `;
 
+export const clock = svg`
+  <circle class="icon clock" cx="12" cy="12" r="9"></circle>
+  <polyline class="icon clock" points="12 7 12 12 15.5 14"></polyline>
+`;
+
 export const check = svg`
   <path class="icon check" d="M6 12l4 4 8-8" stroke-linecap="round" stroke-linejoin="round" pathLength="100" />
 `;
@@ -291,6 +296,7 @@ export const icons: Record<string, TemplateResult<2>> = {
   bell: bell,
   calendar: calendar,
   check: check,
+  clock: clock,
   'chevron-down': chevronDown,
   'chevron-left': chevronLeft,
   'chevron-right': chevronRight,

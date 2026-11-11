@@ -320,7 +320,38 @@ describe('YatlDateGrid - keyboard', () => {
   });
 });
 
+/** The view that isn't hidden: days, months or years */
+function activeView(el: YatlDateGrid) {
+  return el.shadowRoot!.querySelector<HTMLElement>('.view:not([inert])')
+    ?.dataset.view;
+}
+
 describe('YatlDateGrid - month and year views', () => {
+  test('the calendar keeps its size when switching views', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    const size = () => {
+      const rect = el.getBoundingClientRect();
+      return [Math.round(rect.width), Math.round(rect.height)];
+    };
+    const days = size();
+    await clickButton(el, 'month-button');
+    expect(activeView(el)).toBe('months');
+    expect(size()).toEqual(days);
+    await clickButton(el, 'month-button');
+    expect(activeView(el)).toBe('years');
+    expect(size()).toEqual(days);
+  });
+
+  test('hidden views are inert, so their buttons are out of reach', async () => {
+    const el = await renderGridAt(new Date(2026, 10, 11));
+    const months = el.shadowRoot!.querySelector<HTMLElement>(
+      '[data-view="months"]',
+    )!;
+    expect(months.inert).toBe(true);
+    await clickButton(el, 'month-button');
+    expect(months.inert).toBe(false);
+  });
+
   test('clicking the month shows months, and picking one shows its days', async () => {
     const el = await renderGridAt(new Date(2026, 10, 11));
     await clickButton(el, 'month-button');
@@ -335,7 +366,7 @@ describe('YatlDateGrid - month and year views', () => {
     expect(monthLabel(el)).toBe(
       monthYearFormatter.format(new Date(2026, 2, 1)),
     );
-    expect(el.shadowRoot!.querySelector('[part="calendar"]')).not.toBeNull();
+    expect(activeView(el)).toBe('days');
   });
 
   test('clicking the year shows years, and picking one goes back to months', async () => {
@@ -394,6 +425,6 @@ describe('YatlDateGrid - month and year views', () => {
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="calendar"]')).not.toBeNull();
+    expect(activeView(el)).toBe('days');
   });
 });

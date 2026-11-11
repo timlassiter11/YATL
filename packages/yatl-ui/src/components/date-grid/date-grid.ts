@@ -232,14 +232,30 @@ export class YatlDateGrid extends YatlBase {
           ></yatl-button>
         </div>
         <slot name="toolbar"></slot>
-        ${this.view === 'days'
-          ? this.renderDays(normalizedRanges)
-          : this.view === 'months'
-          ? this.renderMonths()
-          : this.renderYears()}
+        <!-- Every view is drawn in the same cell, with the inactive ones
+             hidden, so the calendar keeps the size of the largest (the
+             days) instead of changing shape when you switch -->
+        <div class="views">
+          ${this.renderView('days', this.renderDays(normalizedRanges))}
+          ${this.renderView('months', this.renderMonths())}
+          ${this.renderView('years', this.renderYears())}
+        </div>
         <slot name="footer"></slot>
       </div>
     `;
+  }
+
+  /** A view, hidden and out of reach (inert) unless it's the current one */
+  private renderView(view: YatlDateGridView, contents: unknown) {
+    const active = this.view === view;
+    return html`<div
+      class=${classMap({ view: true, hidden: !active })}
+      data-view=${view}
+      ?inert=${!active}
+      aria-hidden=${active ? 'false' : 'true'}
+    >
+      ${contents}
+    </div>`;
   }
 
   /** The header's title and arrows for the current view */
@@ -260,7 +276,7 @@ export class YatlDateGrid extends YatlBase {
     if (this.view === 'years') {
       const last = this.yearPageStart + YEARS_PER_PAGE - 1;
       return {
-        title: `${this.yearPageStart} – ${last}`,
+        title: `${this.yearPageStart}–${last}`,
         previousTitle: 'Previous years',
         nextTitle: 'Next years',
         disablePrev: minYear !== undefined && this.yearPageStart <= minYear,

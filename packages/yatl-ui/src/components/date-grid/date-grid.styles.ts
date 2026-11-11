@@ -21,6 +21,15 @@ export default css`
     align-items: center;
     justify-content: space-around;
     gap: var(--yatl-spacing-xs);
+    /* Fill the calendar's width without setting it, so a longer title
+       (a range of years) doesn't make the calendar wider */
+    width: 0;
+    min-width: 100%;
+  }
+
+  [part~='month-button'] {
+    min-width: 0;
+    white-space: nowrap;
   }
 
   .calendar {
@@ -75,13 +84,28 @@ export default css`
     color: var(--yatl-text-2);
   }
 
-  /* The month and year views: a 3 x 4 grid, as tall as the day grid */
+  /* All the views share one cell, so it's as big as the biggest of them */
+  .views {
+    display: grid;
+  }
+
+  .view {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .view.hidden {
+    visibility: hidden;
+  }
+
+  /* The month and year views: a 3 x 4 grid filling the days' space */
   .picker {
+    flex: 1 1 auto;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-auto-rows: 1fr;
     gap: var(--yatl-spacing-xs);
-    min-height: 15rem;
   }
 
   .picker-button {

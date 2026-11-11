@@ -67,6 +67,33 @@ describe('YatlRadioGroup - selection', () => {
     expect(changeCount).toBe(1);
   });
 
+  test('setting value from code after the first render checks the matching radio', async () => {
+    document.body.innerHTML = `
+      <yatl-radio-group value="a">
+        <yatl-radio value="a"></yatl-radio>
+        <yatl-radio value="b"></yatl-radio>
+      </yatl-radio-group>
+    `;
+    const group = document.querySelector<YatlRadioGroup>('yatl-radio-group')!;
+    const [a, b] = [...group.querySelectorAll('yatl-radio')] as YatlRadio[];
+    await updateAll(group, a, b);
+    expect([a.checked, b.checked]).toEqual([true, false]);
+
+    let changeCount = 0;
+    group.addEventListener('change', () => changeCount++);
+
+    group.value = 'b';
+    await updateAll(group, a, b);
+    expect([a.checked, b.checked]).toEqual([false, true]);
+
+    group.value = '';
+    await updateAll(group, a, b);
+    expect([a.checked, b.checked]).toEqual([false, false]);
+
+    // Setting it from code isn't a user change
+    expect(changeCount).toBe(0);
+  });
+
   test('a required group re-checks the last selection if a switch child is unchecked', async () => {
     document.body.innerHTML = `
       <yatl-radio-group required>

@@ -64,6 +64,16 @@ export class YatlRadioGroup extends YatlFormControl<string> {
     }
   }
 
+  protected override updated(changedProperties: PropertyValues<this>) {
+    super.updated(changedProperties);
+    // willUpdate() only checks the children on the first render, so keep
+    // them in step when `value` is set from code later, e.g. a dialog
+    // reused for a different record.
+    if (this.hasUpdated && changedProperties.has('value')) {
+      this.syncChildStates();
+    }
+  }
+
   protected override firstUpdated(
     changedProperties: PropertyValues<YatlRadioGroup>,
   ) {

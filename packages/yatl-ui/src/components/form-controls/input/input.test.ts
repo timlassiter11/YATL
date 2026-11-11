@@ -60,4 +60,17 @@ describe('YatlInput', () => {
 
     expect(input.type).toBe('text');
   });
+
+  test('date and time use the native inputs and their value formats', async () => {
+    const date = await renderInput('type="date" value="2026-11-11"');
+    expect(date.shadowRoot!.querySelector('input')!.type).toBe('date');
+    expect(date.value).toBe('2026-11-11');
+
+    const time = await renderInput('type="time"');
+    const input = time.shadowRoot!.querySelector('input')!;
+    expect(input.type).toBe('time');
+    input.value = '06:30';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(time.value).toBe('06:30');
+  });
 });

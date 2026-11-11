@@ -10,7 +10,10 @@ export type YatlInputType =
   | 'search'
   | 'text'
   | 'tel'
-  | 'url';
+  | 'url'
+  // The browser's own picker. The value is "YYYY-MM-DD" or "HH:MM".
+  | 'date'
+  | 'time';
 
 /**
  * @fires input - Fired synchronously as the user types.
@@ -19,7 +22,7 @@ export type YatlInputType =
 @customElement('yatl-input')
 export class YatlInput extends YatlFormControl<string> {
   /**
-   * The native HTML input type (e.g., 'text', 'email', 'password', 'number').
+   * The native HTML input type (e.g., 'text', 'email', 'password', 'date', 'time').
    * @attr type
    */
   @property({ type: String })

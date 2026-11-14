@@ -55,6 +55,7 @@ import {
 } from '../events';
 import { YatlSearchEngine } from '../search/search';
 import { throwRowNotFound, YatlError } from '../utils/errors';
+import { randomUUID } from '../utils/random-uuid';
 import { TypedEventTarget } from '../utils/typed-event-target';
 import { compareNullTo, getComparableValue } from './utils';
 
@@ -1020,7 +1021,7 @@ export class YatlTableController<T extends object = UnspecifiedRecord>
   }
 
   public createCommitTransaction(): YatlCommitTransaction | null {
-    const transactionId = crypto.randomUUID();
+    const transactionId = randomUUID();
     const records = this.getTransactionRecords(transactionId);
     if (records.length === 0) return null;
 

@@ -10,6 +10,21 @@ describe('ToastStore', () => {
     store = new ToastStore();
   });
 
+  test('add() works without crypto.randomUUID (plain HTTP)', () => {
+    const real = globalThis.crypto;
+    vi.stubGlobal('crypto', {
+      getRandomValues: real.getRandomValues.bind(real),
+    });
+    try {
+      const id = store.add({ message: 'Hello' });
+
+      expect(id).toBeTruthy();
+      expect(store.history[0].id).toBe(id);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('add() creates a record with a generated id and fires change', () => {
     const onChange = vi.fn();
     store.addEventListener('change', onChange);

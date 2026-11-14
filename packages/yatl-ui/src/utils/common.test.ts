@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import {
   formatRelativeTime,
@@ -19,6 +19,21 @@ describe('toast', () => {
 
     expect(id).toBeTruthy();
     expect(toastStore.history[0].id).toBe(id);
+  });
+
+  test('works without crypto.randomUUID (plain HTTP)', () => {
+    const real = globalThis.crypto;
+    vi.stubGlobal('crypto', {
+      getRandomValues: real.getRandomValues.bind(real),
+    });
+    try {
+      const id = toast({ message: 'Saved' });
+
+      expect(id).toBeTruthy();
+      expect(toastStore.history[0].id).toBe(id);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   test('returns the given id unchanged, for later updates', () => {

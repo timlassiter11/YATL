@@ -1,5 +1,6 @@
 import { YatlToastHideReason, YatlToastRequest } from '../events/toast';
 import { YatlToastData } from '../types';
+import { randomUUID } from './random-uuid';
 
 export type ToastRecord = YatlToastData & {
   id: string;
@@ -49,7 +50,7 @@ export class ToastStore extends EventTarget {
    * front of history - only whether it's currently showing is left alone.
    */
   public add(data: YatlToastData): string {
-    const id = data.id ?? crypto.randomUUID();
+    const id = data.id ?? randomUUID();
     const now = Date.now();
     const existingIndex = this.records.findIndex(r => r.id === id);
     const isUpdate = existingIndex >= 0;

@@ -1,6 +1,7 @@
 import { ComplexAttributeConverter } from 'lit';
 import { YatlToastData, YatlToastVariant } from '../types';
 import { YatlToastRequest } from '../events/toast';
+import { randomUUID } from './random-uuid';
 
 /**
  * Retrieves the flattened list of elements assigned to a slot.
@@ -145,7 +146,7 @@ export async function getAnimationPromise(
  * call to update the same toast in place instead of creating a new one.
  */
 export function toast(data: YatlToastData): string {
-  const id = data.id ?? crypto.randomUUID();
+  const id = data.id ?? randomUUID();
   window.dispatchEvent(new YatlToastRequest({ ...data, id }));
   return id;
 }

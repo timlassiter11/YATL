@@ -261,6 +261,21 @@ describe('YatlTableController - pending edits across a data reload', () => {
 });
 
 describe('YatlTableController - commit transactions', () => {
+  test('createCommitTransaction works without crypto.randomUUID (plain HTTP)', () => {
+    const real = globalThis.crypto;
+    vi.stubGlobal('crypto', {
+      getRandomValues: real.getRandomValues.bind(real),
+    });
+    try {
+      const controller = createEditableController();
+      controller.setPendingValue(controller.data[0], 'name', 'Alicia');
+
+      expect(controller.createCommitTransaction()?.id).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('createCommitTransaction returns null when there are no pending edits', () => {
     const controller = createController();
     expect(controller.createCommitTransaction()).toBeNull();

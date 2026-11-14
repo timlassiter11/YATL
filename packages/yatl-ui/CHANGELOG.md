@@ -1,5 +1,13 @@
 # @timlassiter11/yatl-ui
 
+## 10.0.1
+
+### Patch Changes
+
+- b34c126: Work on pages served over plain HTTP. `toast()`, the toast store and the table controller's `createCommitTransaction()` used `crypto.randomUUID()`, which browsers only provide in secure contexts (HTTPS or localhost), so they threw `crypto.randomUUID is not a function` elsewhere. They now fall back to `crypto.getRandomValues()`, which is available everywhere.
+- Updated dependencies [b34c126]
+  - @timlassiter11/yatl@1.10.1
+
 ## 10.0.0
 
 ### Major Changes
